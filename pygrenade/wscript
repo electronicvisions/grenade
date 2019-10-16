@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import os
+from os.path import join
+from waflib.extras.gtest import summary
+from waflib.extras.symwaf2ic import get_toplevel_path
+
+def depends(ctx):
+    ctx('pyublas')
+    ctx('pywrap')
+    ctx('grenade')
+    ctx('haldls', 'dlens')
+    ctx('halco', 'pyhalco')
+    ctx('code-format')
+
+def options(opt):
+    opt.load('compiler_cxx')
+    opt.load('pytest')
+    opt.load('pylint')
+    opt.load('pycodestyle')
+
+def configure(cfg):
+    cfg.load('compiler_cxx')
+    cfg.load('python')
+    cfg.check_python_version()
+    cfg.check_python_headers()
+    cfg.load('pytest')
+    cfg.load('genpybind')
+    cfg.load('pylint')
+    cfg.load('pycodestyle')
+
+    if cfg.env.with_pybind:
+        cfg.check(
+            compiler='cxx',
+            features='cxx pyembed',
+            uselib_store='PYBIND11GRENADE',
+            mandatory=True,
+            header_name='pybind11/pybind11.h',
+        )
+
+def build(bld):
+    if not bld.env.with_pybind:
+        bld.fatal('building pygrenade requires pybind')
+
+    bld(
+        target='pygrenade_vx',
+        source='../include/grenade/vx/grenade.h',
+        genpybind_tags='grenade_vx',
+        features='genpybind cxx cxxshlib pyext pyembed',
+        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx', 'pylola_vx', 'pyhalco_hicann_dls_vx'],
+        install_path='${PREFIX}/lib',
+        linkflags='-Wl,-z,defs',
+    )
+
+    bld(
+        name='pygrenade_swtest_vx',
+        tests='test/pygrenade_swtest_vx.py',
+        features='use pytest pylint pycodestyle',
+        use=['pygrenade_vx', 'dlens_vx'],
+        install_path='${PREFIX}/bin',
+        pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
+        pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")
+    )
+
+
+    bld.add_post_fun(summary)
