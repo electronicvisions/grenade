@@ -18,6 +18,5 @@ TEST(JITGraphExecutor, Empty)
 	auto const result_map =
 	    grenade::vx::JITGraphExecutor::run(g, input_list, executors, config_map);
 
-	EXPECT_TRUE(result_map.spike_events.empty());
-	EXPECT_TRUE(result_map.int8.empty());
+	EXPECT_TRUE(result_map.empty());
 }

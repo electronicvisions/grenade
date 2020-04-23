@@ -85,9 +85,10 @@ TEST(ComputeSingleMAC, generate_input_events)
 	std::vector<grenade::vx::ComputeSingleMAC::SynramHandle> synram_handles = {
 	    synram_handle_top, synram_handle_bottom};
 
-	grenade::vx::ComputeSingleMAC::Activations activations(25);
-	for (size_t i = 0; i < activations.size(); ++i) {
-		activations.at(i) = grenade::vx::UInt5(i);
+	grenade::vx::ComputeSingleMAC::Activations activations(1);
+	activations.at(0).resize(25);
+	for (size_t i = 0; i < activations.at(0).size(); ++i) {
+		activations.at(0).at(i) = grenade::vx::UInt5(i);
 	}
 
 	size_t num_sends = 2;
@@ -100,7 +101,9 @@ TEST(ComputeSingleMAC, generate_input_events)
 	EXPECT_EQ(events.spike_events.size(), 1);
 
 	auto const spikes = events.spike_events.at(0);
-	EXPECT_EQ(spikes.size(), (10 - 1 /* first activation value = 0 */ + 13) * 2 /* num_sends */);
+	EXPECT_EQ(spikes.size(), 1);
+	EXPECT_EQ(
+	    spikes.at(0).size(), (10 - 1 /* first activation value = 0 */ + 13) * 2 /* num_sends */);
 
 	// TODO: test the content of the spike train
 }

@@ -11,7 +11,6 @@
 #include "hate/math.h"
 
 #include <algorithm>
-#include <iostream>
 
 namespace grenade::vx {
 
@@ -258,26 +257,32 @@ DataMap ComputeSingleMAC::generate_input_events(
 {
 	DataMap data_map;
 
-	for (auto const& synram_handle : synram_handles) {
-		auto const input_vertex = synram_handle.input_vertex;
-		auto const input_size = synram_handle.input_size;
-		auto const input_offset = synram_handle.input_offset;
-		auto const hemisphere = synram_handle.hemisphere;
+	size_t const batch_size = inputs.size();
+	for (size_t i = 0; i < synram_handles.size(); ++i) {
+		auto const& local_synram_handle = synram_handles.at(i);
+		auto const input_vertex = local_synram_handle.input_vertex;
+		auto const input_size = local_synram_handle.input_size;
+		auto const input_offset = local_synram_handle.input_offset;
+		auto const hemisphere = local_synram_handle.hemisphere;
 
-		auto& events = data_map.spike_events[input_vertex];
-		TimedSpike::Time time(0);
-		// pack all events from one hemisphere after one another
-		for (size_t i = 0; i < num_sends; ++i) {
-			for (size_t j = 0; j < input_size; ++j) {
-				auto const label = get_spike_label(
-				    halco::hicann_dls::vx::SynapseRowOnDLS(
-				        halco::hicann_dls::vx::SynapseRowOnSynram(j), hemisphere.toSynramOnDLS()),
-				    inputs.at(input_offset + j));
-				if (label) {
-					haldls::vx::SpikePack1ToChip const payload(
-					    haldls::vx::SpikePack1ToChip::labels_type{*label});
-					events.push_back(TimedSpike{time, payload});
-					time = TimedSpike::Time(time + wait_between_events);
+		data_map.spike_events[input_vertex].resize(batch_size);
+		for (size_t batch = 0; batch < batch_size; ++batch) {
+			auto& events = data_map.spike_events[input_vertex].at(batch);
+			TimedSpike::Time time(0);
+			// pack all events from one hemisphere after one another
+			for (size_t i = 0; i < num_sends; ++i) {
+				for (size_t j = 0; j < input_size; ++j) {
+					auto const label = get_spike_label(
+					    halco::hicann_dls::vx::SynapseRowOnDLS(
+					        halco::hicann_dls::vx::SynapseRowOnSynram(j),
+					        hemisphere.toSynramOnDLS()),
+					    inputs.at(batch).at(input_offset + j));
+					if (label) {
+						haldls::vx::SpikePack1ToChip const payload(
+						    haldls::vx::SpikePack1ToChip::labels_type{*label});
+						events.push_back(TimedSpike{time, payload});
+						time = TimedSpike::Time(time + wait_between_events);
+					}
 				}
 			}
 		}
@@ -285,26 +290,41 @@ DataMap ComputeSingleMAC::generate_input_events(
 
 	// sort all events from both hemishperes together so that they are sent in pairs for top and
 	// bottom hemisphere
-	for (auto& events : data_map.spike_events) {
-		std::sort(events.second.begin(), events.second.end(), [](auto const& a, auto const& b) {
-			return a.time < b.time;
-		});
+	for (auto& events_batch : data_map.spike_events) {
+		for (auto& events : events_batch.second) {
+			std::sort(events.begin(), events.end(), [](auto const& a, auto const& b) {
+				return a.time < b.time;
+			});
+		}
 	}
 
 	return data_map;
 }
 
-std::vector<Int8> ComputeSingleMAC::run(
+std::vector<std::vector<Int8>> ComputeSingleMAC::run(
     Activations const& inputs, hxcomm::vx::ConnectionVariant& connection)
 {
 	using namespace halco::hicann_dls::vx;
+
 
 	// Construct map of one executor and connect to HW
 	JITGraphExecutor::ExecutorMap executors;
 	executors.insert(std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
 
+	if (inputs.size() == 0) {
+		throw std::runtime_error("Provided inputs are empty.");
+	}
+
+	// FIXME: inputs.at(i).size() equality check missing
+	size_t const batch_entry_size = inputs.front().size();
+	for (auto const& batch_entry : inputs) {
+		if (batch_entry.size() != batch_entry_size) {
+			throw std::runtime_error("Provided batch entries don't share a common size.");
+		}
+	}
+
 	// fill graph inputs (with UInt5(0))
-	if (inputs.size() != input_size()) {
+	if (batch_entry_size != input_size()) {
 		throw std::runtime_error("Provided inputs size does not match MAC input size.");
 	}
 	auto const input_list =
@@ -314,12 +334,17 @@ std::vector<Int8> ComputeSingleMAC::run(
 	auto const output_activation_map =
 	    JITGraphExecutor::run(m_graph, input_list, executors, m_config_map);
 
-	std::vector<Int8> output(output_size());
-	size_t o_offset = 0;
-	for (auto const vertex : m_output_vertices) {
-		auto const& o = output_activation_map.int8.at(vertex);
-		std::copy(o.begin(), o.end(), output.begin() + o_offset);
-		o_offset += o.size();
+	std::vector<std::vector<Int8>> output(output_activation_map.batch_size());
+	for (auto& entry : output) {
+		entry.resize(output_size());
+	}
+	for (size_t i = 0; i < output.size(); ++i) {
+		size_t o_offset = 0;
+		for (auto const vertex : m_output_vertices) {
+			auto const& o = output_activation_map.int8.at(vertex).at(i);
+			std::copy(o.begin(), o.end(), output.at(i).begin() + o_offset);
+			o_offset += o.size();
+		}
 	}
 	return output;
 }

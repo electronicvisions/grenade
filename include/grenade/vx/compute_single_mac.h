@@ -32,7 +32,8 @@ class ComputeSingleMAC
 public:
 	typedef std::vector<std::vector<lola::vx::SynapseMatrix::Weight>> Weights;
 	typedef std::vector<haldls::vx::SynapseDriverConfig::RowMode> RowModes;
-	typedef std::vector<UInt5> Activations;
+	/** Activations with batch as outer dimension and weight row size as inner dimension. */
+	typedef std::vector<std::vector<UInt5>> Activations;
 
 	/**
 	 * Create single MAC compute graph wrapper.
@@ -55,8 +56,8 @@ public:
 	 * @param connection Connection backend to use
 	 * @return Resulting accumulated membrane potentials
 	 */
-	std::vector<Int8> run(Activations const& inputs, hxcomm::vx::ConnectionVariant& connection)
-	    SYMBOL_VISIBLE;
+	std::vector<std::vector<Int8>> run(
+	    Activations const& inputs, hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
 
 private:
 	FRIEND_TEST(::ComputeSingleMAC, get_spike_label);

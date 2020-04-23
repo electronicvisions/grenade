@@ -96,8 +96,6 @@ private:
 	stadls::vx::PlaybackProgramBuilder m_builder_epilogue;
 	stadls::vx::PlaybackProgramBuilder m_builder_prologue;
 
-	stadls::vx::PlaybackProgramBuilder m_builder_input;
-
 	stadls::vx::PlaybackProgramBuilder m_builder_neuron_reset;
 
 	std::vector<Graph::vertex_descriptor> m_post_vertices;
@@ -114,12 +112,25 @@ private:
 	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::HemisphereOnDLS>
 	    ticket_request_type;
 	ticket_request_type m_ticket_requests;
-	typedef std::optional<stadls::vx::PlaybackProgram::ContainerTicket<lola::vx::CADCSamples>>
-	    ticket_type;
-	ticket_type m_ticket;
-	ticket_type m_ticket_baseline;
-	stadls::vx::PlaybackProgramBuilder m_builder_cadc_readout;
-	stadls::vx::PlaybackProgramBuilder m_builder_cadc_readout_baseline;
+
+	struct BatchEntry
+	{
+		typedef std::optional<stadls::vx::PlaybackProgram::ContainerTicket<lola::vx::CADCSamples>>
+		    ticket_type;
+
+		ticket_type m_ticket;
+		ticket_type m_ticket_baseline;
+
+		/* TODO: remove once HXv2 present. */
+		halco::common::
+		    typed_array<lola::vx::SynapseLabelMatrix, halco::hicann_dls::vx::HemisphereOnDLS>
+		        m_synapse_labels;
+
+		stadls::vx::PlaybackProgramBuilder m_builder_cadc_readout;
+		stadls::vx::PlaybackProgramBuilder m_builder_cadc_readout_baseline;
+	};
+
+	std::vector<BatchEntry> m_batch_entries;
 
 	halco::common::typed_array<bool, halco::hicann_dls::vx::NeuronResetOnDLS> m_neuron_resets;
 	halco::common::typed_array<bool, halco::hicann_dls::vx::PADIBusOnDLS> m_used_padi_busses;

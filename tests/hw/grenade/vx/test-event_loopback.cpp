@@ -71,7 +71,8 @@ grenade::vx::TimedSpikeFromChipSequence test_event_loopback_single_crossbar_node
 	EXPECT_EQ(result_map.spike_event_output.size(), 1);
 
 	EXPECT_TRUE(result_map.spike_event_output.find(v5) != result_map.spike_event_output.end());
-	return result_map.spike_event_output.at(v5);
+	EXPECT_EQ(result_map.spike_event_output.at(v5).size(), 1);
+	return result_map.spike_event_output.at(v5).at(0);
 }
 
 TEST(JITGraphExecutor, EventLoopback)

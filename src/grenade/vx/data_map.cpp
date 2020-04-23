@@ -46,4 +46,52 @@ void DataMap::clear()
 	spike_event_output.clear();
 }
 
+bool DataMap::empty() const
+{
+	return int8.empty() && spike_events.empty() && spike_event_output.empty();
+}
+
+namespace {
+
+/**
+ * Get batch size via the first entry (any) internal data type.
+ */
+size_t unsafe_batch_size(DataMap const& map)
+{
+	size_t size = 0;
+	if (map.int8.size()) {
+		size = map.int8.begin()->second.size();
+	} else if (map.spike_events.size()) {
+		size = map.spike_events.begin()->second.size();
+	} else if (map.spike_event_output.size()) {
+		size = map.spike_event_output.begin()->second.size();
+	}
+	return size;
+}
+
+} // namespace
+
+size_t DataMap::batch_size() const
+{
+	if (!valid()) {
+		throw std::runtime_error("DataMap not valid.");
+	}
+	return unsafe_batch_size(*this);
+}
+
+bool DataMap::valid() const
+{
+	size_t size = unsafe_batch_size(*this);
+	bool const int8_value = std::all_of(int8.cbegin(), int8.cend(), [size](auto const& list) {
+		return list.second.size() == size;
+	});
+	bool const spike_events_value = std::all_of(
+	    spike_events.cbegin(), spike_events.cend(),
+	    [size](auto const& list) { return list.second.size() == size; });
+	bool const spike_event_output_value = std::all_of(
+	    spike_event_output.cbegin(), spike_event_output.cend(),
+	    [size](auto const& list) { return list.second.size() == size; });
+	return int8_value && spike_events_value && spike_event_output_value;
+}
+
 } // namespace grenade::vx

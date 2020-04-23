@@ -64,7 +64,7 @@ TEST(Addition, Single)
 	for (intmax_t i = -128; i < 127; ++i) {
 		inputs.at(i + 128) = grenade::vx::Int8(i);
 	}
-	input_list.int8.insert(std::make_pair(v1, inputs));
+	input_list.int8[v1] = {inputs};
 
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 	grenade::vx::JITGraphExecutor::ConfigMap config_map;
@@ -77,11 +77,12 @@ TEST(Addition, Single)
 	EXPECT_EQ(result_map.int8.size(), 1);
 
 	EXPECT_TRUE(result_map.int8.find(v4) != result_map.int8.end());
-	EXPECT_EQ(result_map.int8.at(v4).size(), size);
+	EXPECT_EQ(result_map.int8.at(v4).size(), 1);
+	EXPECT_EQ(result_map.int8.at(v4).at(0).size(), size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		EXPECT_EQ(
 		    static_cast<uint8_t>(
 		        std::min(std::max(intmax_t(2 * i), intmax_t(-128)), intmax_t(127))),
-		    static_cast<uint8_t>(result_map.int8.at(v4).at(i + 128)));
+		    static_cast<uint8_t>(result_map.int8.at(v4).at(0).at(i + 128)));
 	}
 }

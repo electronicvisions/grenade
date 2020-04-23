@@ -15,9 +15,20 @@ namespace grenade::vx {
  */
 struct DataMap
 {
-	std::map<Graph::vertex_descriptor, std::vector<Int8>> int8;
-	std::map<Graph::vertex_descriptor, TimedSpikeSequence> spike_events;
-	std::map<Graph::vertex_descriptor, TimedSpikeFromChipSequence> spike_event_output;
+	/**
+	 * Data is connected to specified vertex descriptors.
+	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
+	 * @tparam Data Batch-entry data type
+	 */
+	template <typename Data>
+	using DataTypeMap = std::map<Graph::vertex_descriptor, std::vector<Data>>;
+
+	/** Int8 data. */
+	DataTypeMap<std::vector<Int8>> int8;
+	/** Spike input events. */
+	DataTypeMap<TimedSpikeSequence> spike_events;
+	/** Spike output events. */
+	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
 
 	DataMap() SYMBOL_VISIBLE;
 
@@ -43,6 +54,24 @@ struct DataMap
 	 * Clear content of map.
 	 */
 	void clear() SYMBOL_VISIBLE;
+
+	/**
+	 * Get whether the map does not contain any elements.
+	 * @return Boolean value
+	 */
+	bool empty() const SYMBOL_VISIBLE;
+
+	/**
+	 * Get number of elements in each batch of data.
+	 * @return Number of elements in batch
+	 */
+	size_t batch_size() const SYMBOL_VISIBLE;
+
+	/**
+	 * Check that all map entries feature the same batch_size value.
+	 * @return Boolean value
+	 */
+	bool valid() const SYMBOL_VISIBLE;
 
 private:
 	/**

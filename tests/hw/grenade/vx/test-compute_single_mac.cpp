@@ -58,6 +58,7 @@ TEST(ComputeSingleMAC, Single)
 
 	grenade::vx::ComputeSingleMAC mac(weights, row_modes, *chip);
 
-	auto const res = mac.run(inputs, connection);
+	auto const res = mac.run({inputs}, connection);
 	EXPECT_EQ(res.size(), 1);
+	EXPECT_EQ(res.at(0).size(), 1);
 }
