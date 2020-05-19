@@ -5,6 +5,7 @@
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
 #include <boost/bimap/set_of.hpp>
+#include <boost/bimap/unordered_set_of.hpp>
 #include <boost/graph/adjacency_list.hpp>
 
 #include "grenade/vx/execution_instance.h"
@@ -53,16 +54,21 @@ public:
 	typedef graph_type::vertex_descriptor vertex_descriptor;
 
 	typedef std::unordered_map<vertex_descriptor, Vertex> vertex_property_map_type;
-	typedef boost::bimap<vertex_descriptor, coordinate::ExecutionInstance>
-	    execution_instance_map_type;
+	typedef boost::
+	    bimap<vertex_descriptor, boost::bimaps::unordered_set_of<coordinate::ExecutionInstance>>
+	        execution_instance_map_type;
 	// TODO: maybe make vertex descriptors of the two graphs unique?
 	typedef boost::bimap<
 	    boost::bimaps::set_of<vertex_descriptor>,
 	    boost::bimaps::multiset_of<vertex_descriptor>>
 	    vertex_descriptor_map_type;
 
-	/** Default constructor. */
-	Graph() SYMBOL_VISIBLE;
+	/**
+	 * Construct graph.
+	 * @param enable_acyclicity_check Enable check for acyclicity in execution instance graph on
+	 * every add call where a connection between previously unconnected execution instances is made.
+	 */
+	Graph(bool enable_acyclicity_check = true) SYMBOL_VISIBLE;
 
 	/**
 	 * Add vertex on specified execution instance with specified inputs.
@@ -120,7 +126,15 @@ public:
 	    std::map<halco::hicann_dls::vx::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
 	    ordered_vertices_type;
 
+	/**
+	 * Get whether the underlying execution instance graph is acyclic.
+	 * This is a necessary requirement for executability.
+	 * @return Boolean value
+	 */
+	bool is_acyclic_execution_instance_graph() const;
+
 private:
+	bool m_enable_acyclicity_check;
 	graph_type m_graph;
 	graph_type m_execution_instance_graph;
 	vertex_property_map_type m_vertex_property_map;

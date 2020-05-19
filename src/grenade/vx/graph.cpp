@@ -1,6 +1,9 @@
 #include "grenade/vx/graph.h"
 
+#include <iterator>
 #include <sstream>
+#include <boost/graph/exception.hpp>
+#include <boost/graph/topological_sort.hpp>
 #include <log4cxx/logger.h>
 #include "grenade/vx/execution_instance.h"
 #include "halco/hicann-dls/vx/chip.h"
@@ -10,7 +13,8 @@
 
 namespace grenade::vx {
 
-Graph::Graph() :
+Graph::Graph(bool enable_acyclicity_check) :
+    m_enable_acyclicity_check(enable_acyclicity_check),
     m_graph(),
     m_execution_instance_graph(),
     m_vertex_property_map(),
@@ -73,7 +77,7 @@ Graph::vertex_descriptor Graph::add(
 				        connection_type) != std::cend(can_connect_different_execution_instances);
 				if (connection_type_can_connect && v.can_connect_different_execution_instances &&
 				    w.can_connect_different_execution_instances) {
-					if (!(execution_instance > out_execution_instance)) {
+					if (execution_instance == out_execution_instance) {
 						throw std::runtime_error(
 						    "Connection does not go forward in time dimension.");
 					}
@@ -111,6 +115,7 @@ Graph::vertex_descriptor Graph::add(
 	}
 	m_vertex_descriptor_map.insert({descriptor, execution_instance_descriptor});
 
+	bool new_edges_across_execution_instances = false;
 	for (auto const& input : inputs) {
 		// add edge to vertex graph
 		{
@@ -128,6 +133,7 @@ Graph::vertex_descriptor Graph::add(
 				    return boost::source(i, m_execution_instance_graph) ==
 				           input_execution_instance_descriptor;
 			    })) {
+				new_edges_across_execution_instances = true;
 				auto const [_, success] = boost::add_edge(
 				    input_execution_instance_descriptor, execution_instance_descriptor,
 				    m_execution_instance_graph);
@@ -135,6 +141,12 @@ Graph::vertex_descriptor Graph::add(
 					throw std::logic_error("Adding edge to execution instance graph unsuccessful.");
 				}
 			}
+		}
+	}
+
+	if (m_enable_acyclicity_check && new_edges_across_execution_instances) {
+		if (!is_acyclic_execution_instance_graph()) {
+			throw std::runtime_error("Execution instance graph cyclic.");
 		}
 	}
 
@@ -167,6 +179,43 @@ Graph::execution_instance_map_type const& Graph::get_execution_instance_map() co
 Graph::vertex_descriptor_map_type const& Graph::get_vertex_descriptor_map() const
 {
 	return m_vertex_descriptor_map;
+}
+
+namespace detail {
+
+template <typename T>
+class NullOutputIterator : public std::iterator<std::output_iterator_tag, void, void, void, void>
+{
+public:
+	NullOutputIterator& operator=(const T&)
+	{
+		return *this;
+	}
+	NullOutputIterator& operator*()
+	{
+		return *this;
+	}
+	NullOutputIterator& operator++()
+	{
+		return *this;
+	}
+	NullOutputIterator operator++(int)
+	{
+		return *this;
+	}
+};
+
+} // namespace detail
+
+bool Graph::is_acyclic_execution_instance_graph() const
+{
+	try {
+		boost::topological_sort(
+		    m_execution_instance_graph, detail::NullOutputIterator<vertex_descriptor>{});
+	} catch (boost::not_a_dag const&) {
+		return false;
+	}
+	return true;
 }
 
 } // namespace grenade::vx

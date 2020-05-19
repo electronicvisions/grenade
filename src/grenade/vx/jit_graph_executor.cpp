@@ -169,6 +169,11 @@ void JITGraphExecutor::check(
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	hate::Timer const timer;
 
+	// check execution instance graph is acyclic
+	if (!graph.is_acyclic_execution_instance_graph()) {
+		throw std::runtime_error("Execution instance graph is not acyclic.");
+	}
+
 	// check all DLSGlobal physical chips used in the graph are present in the provided executor map
 	if (!is_executable_on(graph, executor_map)) {
 		throw std::runtime_error("Graph requests executors not provided.");

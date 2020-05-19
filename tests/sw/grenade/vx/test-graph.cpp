@@ -86,3 +86,42 @@ TEST(Graph, check_execution_instances)
 	// DataOutput -> DataInput only allowed over differrent execution instances
 	EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v2}), std::runtime_error);
 }
+
+void test_check_acyclicity(bool enable_check)
+{
+	Graph graph(enable_check);
+
+	// Graph: v0
+	ExternalInput vertex(ConnectionType::DataOutputInt8, 123);
+	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+
+	// Graph: v0 -> v1
+	DataInput vertex2(ConnectionType::Int8, 123);
+	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	// Graph: v0 -> v1 -> v2
+	DataOutput vertex4(ConnectionType::Int8, 123);
+	auto const v2 = graph.add(vertex4, ExecutionInstance(), {v1});
+
+	// Graph: v0 -> v1 -> v2 ==> v3
+	auto const v3 = graph.add(vertex2, ExecutionInstance(ExecutionIndex(1), DLSGlobal()), {v2});
+
+	// Graph: v0 -> v1 -> v2 ==> v3 -> v4
+	auto const v4 = graph.add(vertex4, ExecutionInstance(ExecutionIndex(1), DLSGlobal()), {v3});
+
+	// DataOutput -> DataInput back to ExecutionIndex(0) leads to cyclicity
+	if (enable_check) {
+		EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v4}), std::runtime_error);
+	} else {
+		// Note that the graph still won't be executable and the executor will raise the exact same
+		// exception.
+		EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstance(), {v4}));
+	}
+}
+
+TEST(Graph, check_acyclic_execution_instances)
+
+{
+	test_check_acyclicity(true);
+	test_check_acyclicity(false);
+}

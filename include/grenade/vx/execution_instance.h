@@ -28,24 +28,22 @@ struct ExecutionInstance
 {
 	ExecutionInstance() = default;
 
-	explicit ExecutionInstance(ExecutionIndex temporal_index, halco::hicann_dls::vx::DLSGlobal dls)
+	explicit ExecutionInstance(ExecutionIndex execution_index, halco::hicann_dls::vx::DLSGlobal dls)
 	    SYMBOL_VISIBLE;
 
 	halco::hicann_dls::vx::DLSGlobal toDLSGlobal() const SYMBOL_VISIBLE;
 	ExecutionIndex toExecutionIndex() const SYMBOL_VISIBLE;
 
-	bool operator<(ExecutionInstance const& other) const SYMBOL_VISIBLE;
-	bool operator>(ExecutionInstance const& other) const SYMBOL_VISIBLE;
-	bool operator<=(ExecutionInstance const& other) const SYMBOL_VISIBLE;
-	bool operator>=(ExecutionInstance const& other) const SYMBOL_VISIBLE;
 	bool operator==(ExecutionInstance const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ExecutionInstance const& other) const SYMBOL_VISIBLE;
 
 	friend std::ostream& operator<<(std::ostream& os, ExecutionInstance const& instance)
 	    SYMBOL_VISIBLE;
 
+	friend size_t hash_value(ExecutionInstance const& e) SYMBOL_VISIBLE;
+
 private:
-	ExecutionIndex m_temporal_index;
+	ExecutionIndex m_execution_index;
 	halco::hicann_dls::vx::DLSGlobal m_dls_global;
 };
 
