@@ -28,6 +28,8 @@ def configure(cfg):
     cfg.load('local_rpath')
     cfg.load('doxygen')
 
+    cfg.check_cxx(lib='tbb', uselib_store="TBB")
+
     cfg.env.CXXFLAGS_GRENADE_LIBRARIES = [
         '-fvisibility=hidden',
         '-fvisibility-inlines-hidden',
@@ -52,7 +54,7 @@ def build(bld):
         features = 'cxx cxxshlib pyembed',
         source = bld.path.ant_glob('src/grenade/vx/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'halco_hicann_dls_vx', 'lola_vx', 'haldls_vx', 'stadls_vx'],
+        use = ['grenade_inc', 'halco_hicann_dls_vx', 'lola_vx', 'haldls_vx', 'stadls_vx', 'TBB'],
         uselib = 'GRENADE_LIBRARIES',
     )
 

@@ -10,7 +10,14 @@
 
 namespace grenade::vx {
 
-Graph::Graph() : m_graph(), m_logger(log4cxx::Logger::getLogger("grenade.Graph")) {}
+Graph::Graph() :
+    m_graph(),
+    m_execution_instance_graph(),
+    m_vertex_property_map(),
+    m_vertex_descriptor_map(),
+    m_execution_instance_map(),
+    m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
+{}
 
 Graph::vertex_descriptor Graph::add(
     Vertex const& vertex,
@@ -57,7 +64,7 @@ Graph::vertex_descriptor Graph::add(
 
 				// check connection goes forward in time
 				auto const& out_execution_instance =
-				    m_vertex_property_map.at(inputs.at(input_index)).execution_instance;
+				    m_execution_instance_map.left.at(m_vertex_descriptor_map.left.at(input));
 				auto const connection_type = w.output().type;
 				auto const connection_type_can_connect =
 				    std::find(
@@ -79,7 +86,7 @@ Graph::vertex_descriptor Graph::add(
 				}
 			};
 
-			std::visit(check_single_input, m_vertex_property_map.at(input).vertex);
+			std::visit(check_single_input, m_vertex_property_map.at(input));
 		}
 		LOG4CXX_TRACE(m_logger, "add(): Adding vertex " << v << ".");
 	};
@@ -88,17 +95,46 @@ Graph::vertex_descriptor Graph::add(
 
 	auto const descriptor = boost::add_vertex(m_graph);
 	{
-		auto const [_, success] =
-		    m_vertex_property_map.emplace(descriptor, VertexProperty{execution_instance, vertex});
+		auto const [_, success] = m_vertex_property_map.emplace(descriptor, vertex);
 		if (!success) {
 			throw std::logic_error("Adding vertex property graph unsuccessful.");
 		}
 	}
 
+	vertex_descriptor execution_instance_descriptor;
+	auto const execution_instance_map_it = m_execution_instance_map.right.find(execution_instance);
+	if (execution_instance_map_it == m_execution_instance_map.right.end()) {
+		execution_instance_descriptor = boost::add_vertex(m_execution_instance_graph);
+		m_execution_instance_map.insert({execution_instance_descriptor, execution_instance});
+	} else {
+		execution_instance_descriptor = execution_instance_map_it->second;
+	}
+	m_vertex_descriptor_map.insert({descriptor, execution_instance_descriptor});
+
 	for (auto const& input : inputs) {
-		auto const [_, success] = boost::add_edge(input, descriptor, m_graph);
-		if (!success) {
-			throw std::logic_error("Adding edge to graph unsuccessful.");
+		// add edge to vertex graph
+		{
+			auto const [_, success] = boost::add_edge(input, descriptor, m_graph);
+			if (!success) {
+				throw std::logic_error("Adding edge to graph unsuccessful.");
+			}
+		}
+		// maybe add edge to execution instance graph
+		auto const input_execution_instance_descriptor = m_vertex_descriptor_map.left.at(input);
+		if (input_execution_instance_descriptor != execution_instance_descriptor) {
+			auto const in_edges =
+			    boost::in_edges(execution_instance_descriptor, m_execution_instance_graph);
+			if (std::none_of(in_edges.first, in_edges.second, [&](auto const& i) {
+				    return boost::source(i, m_execution_instance_graph) ==
+				           input_execution_instance_descriptor;
+			    })) {
+				auto const [_, success] = boost::add_edge(
+				    input_execution_instance_descriptor, execution_instance_descriptor,
+				    m_execution_instance_graph);
+				if (!success) {
+					throw std::logic_error("Adding edge to execution instance graph unsuccessful.");
+				}
+			}
 		}
 	}
 
@@ -113,25 +149,24 @@ Graph::graph_type const& Graph::get_graph() const
 	return m_graph;
 }
 
+Graph::graph_type const& Graph::get_execution_instance_graph() const
+{
+	return m_execution_instance_graph;
+}
+
 Graph::vertex_property_map_type const& Graph::get_vertex_property_map() const
 {
 	return m_vertex_property_map;
 }
 
-Graph::ordered_vertices_type Graph::get_ordered_vertices() const
+Graph::execution_instance_map_type const& Graph::get_execution_instance_map() const
 {
-	hate::Timer const timer;
-	ordered_vertices_type ordered_vertices;
-	for (auto const vertex : boost::make_iterator_range(boost::vertices(m_graph))) {
-		auto const execution_instance = m_vertex_property_map.at(vertex).execution_instance;
-		auto const execution_index = execution_instance.toExecutionIndex();
-		auto const dls_global = execution_instance.toDLSGlobal();
-		ordered_vertices[execution_index][dls_global].push_back(vertex_descriptor(vertex));
-	}
-	LOG4CXX_TRACE(
-	    m_logger,
-	    "get_ordered_vertices(): Generated ordered vertex map in " << timer.print() << ".");
-	return ordered_vertices;
+	return m_execution_instance_map;
+}
+
+Graph::vertex_descriptor_map_type const& Graph::get_vertex_descriptor_map() const
+{
+	return m_vertex_descriptor_map;
 }
 
 } // namespace grenade::vx

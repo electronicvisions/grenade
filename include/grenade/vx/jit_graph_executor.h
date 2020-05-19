@@ -1,6 +1,5 @@
 #pragma once
 #include <map>
-#include <vector>
 
 #include "grenade/vx/graph.h"
 #include "halco/common/typed_array.h"
@@ -23,7 +22,7 @@ class ExecutionInstanceBuilder;
  * Just-in-time graph executor.
  * No partial playback stream is pre-generated and nothing is reused for another run with e.g.
  * different input. This especially allows implementation without promise support, since before
- * processing each new chip instance, all results are already available by value.
+ * processing each new chip instance, all necessary results are already available by value.
  */
 class JITGraphExecutor
 {
@@ -47,18 +46,6 @@ public:
 	    ConfigMap const& config_map) SYMBOL_VISIBLE;
 
 private:
-	/**
-	 * Run a single chip instance of the specified graph with specified inputs using the specified
-	 * executor.
-	 * @param builder ExecutionInstanceBuilder to use
-	 * @param connection Connection tied to the specific chip instance
-	 * @param vertices Vertices tied to the specified chip instance
-	 */
-	static DataMap run_chip_instance(
-	    ExecutionInstanceBuilder& builder,
-	    hxcomm::vx::ConnectionVariant& connection,
-	    std::vector<Graph::vertex_descriptor> const& vertices);
-
 	/**
 	 * Check whether the given graph can be executed on the given map of executors.
 	 * @param graph Graph instance

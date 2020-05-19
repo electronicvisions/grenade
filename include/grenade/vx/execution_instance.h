@@ -8,9 +8,9 @@
 namespace grenade::vx::coordinate {
 
 /**
- * Temporal identifier for a execution instance.
- * Vertices on the same physical hemisphere core are executed in ExecutionIndex order.
+ * Unique temporal identifier for a execution instance.
  * ExecutionIndex separates execution where a memory barrier is needed for data movement completion.
+ * No guarantees are made on execution order
  * TODO: move to halco? Is this a hardware abstraction layer coordinate?
  */
 struct ExecutionIndex : public halco::common::detail::BaseType<ExecutionIndex, size_t>
@@ -21,8 +21,8 @@ struct ExecutionIndex : public halco::common::detail::BaseType<ExecutionIndex, s
 
 /**
  * Execution instance identifier.
- * An execution instance describes two dimensional placement in the physical and temporal dimension.
- * It is placed physically on a vertical half on a global DLS instance.
+ * An execution instance describes a unique physically placed isolated execution.
+ * It is placed physically on a global DLS instance.
  */
 struct ExecutionInstance
 {

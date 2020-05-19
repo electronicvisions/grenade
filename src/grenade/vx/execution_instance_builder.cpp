@@ -154,7 +154,7 @@ void ExecutionInstanceBuilder::process(
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 		auto const in_vertex = boost::source(edge, m_graph.get_graph());
 		auto const& input_values =
-		    ((std::holds_alternative<vertex::ExternalInput>(vertex_map.at(in_vertex).vertex))
+		    ((std::holds_alternative<vertex::ExternalInput>(vertex_map.at(in_vertex)))
 		         ? m_local_external_data.int8.at(in_vertex)
 		         : m_data_output.int8.at(in_vertex));
 
@@ -231,7 +231,7 @@ void ExecutionInstanceBuilder::process(
 			auto const process_crossbar_node = [&](auto const& out_edge) {
 				auto const crossbar_node_vertex = boost::target(out_edge, m_graph.get_graph());
 				auto const& crossbar_node =
-				    std::get<vertex::CrossbarNode>(vertex_map.at(crossbar_node_vertex).vertex);
+				    std::get<vertex::CrossbarNode>(vertex_map.at(crossbar_node_vertex));
 				auto const crossbar_node_out_edges =
 				    boost::out_edges(crossbar_node_vertex, m_graph.get_graph());
 				for (auto const crossbar_node_out_edge :
@@ -239,7 +239,7 @@ void ExecutionInstanceBuilder::process(
 					auto const crossbar_node_target_vertex =
 					    boost::target(crossbar_node_out_edge, m_graph.get_graph());
 					if (std::holds_alternative<vertex::PADIBus>(
-					        vertex_map.at(crossbar_node_target_vertex).vertex)) {
+					        vertex_map.at(crossbar_node_target_vertex))) {
 						auto const padi_bus_out_edges =
 						    boost::out_edges(crossbar_node_target_vertex, m_graph.get_graph());
 						for (auto const padi_bus_out_edge :
@@ -247,7 +247,7 @@ void ExecutionInstanceBuilder::process(
 							auto const synapse_driver_vertex =
 							    boost::target(padi_bus_out_edge, m_graph.get_graph());
 							auto const& synapse_driver = std::get<vertex::SynapseDriver>(
-							    vertex_map.at(synapse_driver_vertex).vertex);
+							    vertex_map.at(synapse_driver_vertex));
 							auto const syndrv_out_edges =
 							    boost::out_edges(synapse_driver_vertex, m_graph.get_graph());
 							for (auto const syndrv_out_edge :
@@ -255,7 +255,7 @@ void ExecutionInstanceBuilder::process(
 								auto const synapse_array_vertex =
 								    boost::target(syndrv_out_edge, m_graph.get_graph());
 								auto const& synapse_array = std::get<vertex::SynapseArrayView>(
-								    vertex_map.at(synapse_array_vertex).vertex);
+								    vertex_map.at(synapse_array_vertex));
 								process_events(crossbar_node, synapse_driver, synapse_array);
 							}
 						}
@@ -391,7 +391,7 @@ void ExecutionInstanceBuilder::process(Graph::vertex_descriptor const vertex)
 			                    << name<hate::remove_all_qualifiers_t<decltype(value)>>() << " in "
 			                    << timer.print() << ".");
 		    },
-		    vertex_map.at(vertex).vertex);
+		    vertex_map.at(vertex));
 	} else {
 		m_post_vertices.push_back(vertex);
 	}
@@ -400,7 +400,7 @@ void ExecutionInstanceBuilder::process(Graph::vertex_descriptor const vertex)
 void ExecutionInstanceBuilder::post_process(Graph::vertex_descriptor const vertex)
 {
 	auto const& vertex_map = m_graph.get_vertex_property_map();
-	std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex).vertex);
+	std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex));
 }
 
 DataMap ExecutionInstanceBuilder::post_process()

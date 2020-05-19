@@ -1,5 +1,7 @@
 #pragma once
 #include <map>
+#include <memory>
+#include <mutex>
 #include "grenade/vx/event.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/types.h"
@@ -15,6 +17,14 @@ struct DataMap
 {
 	std::map<Graph::vertex_descriptor, std::vector<Int8>> int8;
 	std::map<Graph::vertex_descriptor, TimedSpikeEventSequence> spike_events;
+
+	DataMap() SYMBOL_VISIBLE;
+
+	DataMap(DataMap const&) = delete;
+
+	DataMap(DataMap&& other) SYMBOL_VISIBLE;
+
+	DataMap& operator=(DataMap&& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Merge other map content into this one's.
@@ -32,6 +42,13 @@ struct DataMap
 	 * Clear content of map.
 	 */
 	void clear() SYMBOL_VISIBLE;
+
+private:
+	/**
+	 * Mutex guarding mutable operation merge() and clear().
+	 * Mutable access to map content shall be guarded with this mutex.
+	 */
+	std::unique_ptr<std::mutex> mutex;
 };
 
 } // namespace grenade::vx

@@ -2,6 +2,9 @@
 #include <cstddef>
 #include <map>
 #include <unordered_map>
+#include <boost/bimap.hpp>
+#include <boost/bimap/multiset_of.hpp>
+#include <boost/bimap/set_of.hpp>
 #include <boost/graph/adjacency_list.hpp>
 
 #include "grenade/vx/execution_instance.h"
@@ -20,11 +23,25 @@ struct HemisphereOnDLS;
 
 namespace grenade::vx {
 
-/** Placed computation graph. */
+/**
+ * Placed computation graph.
+ *
+ * A vertex represent a unit which processes data.
+ * An edge represents the data flow.
+ *
+ * Vertices are physically and temporally placed on a specific ExecutionInstance.
+ * Data flow between different execution instances is restricted to off-chip data.
+ * Access to execution instance subgraphs and mapping between execution instance dependency graph
+ * and the complete data-flow graph is provided.
+ *
+ * The dependence graph of execution instances has to be acyclic in order to be executable, while
+ * a subgraph tied to a execution instance can partly be cyclic, e.g. via recurrent routing of
+ * on-chip events. This is enforced by checks on addition of vertices/edges.
+ */
 class Graph
 {
 public:
-	/** Directed graph without parallel edges. */
+	/** Bidirectional graph without parallel edges. */
 	typedef boost::adjacency_list<
 	    boost::vecS,
 	    boost::vecS,
@@ -35,13 +52,14 @@ public:
 
 	typedef graph_type::vertex_descriptor vertex_descriptor;
 
-	struct VertexProperty
-	{
-		coordinate::ExecutionInstance execution_instance;
-		Vertex vertex;
-	};
-
-	typedef std::unordered_map<vertex_descriptor, VertexProperty> vertex_property_map_type;
+	typedef std::unordered_map<vertex_descriptor, Vertex> vertex_property_map_type;
+	typedef boost::bimap<vertex_descriptor, coordinate::ExecutionInstance>
+	    execution_instance_map_type;
+	// TODO: maybe make vertex descriptors of the two graphs unique?
+	typedef boost::bimap<
+	    boost::bimaps::set_of<vertex_descriptor>,
+	    boost::bimaps::multiset_of<vertex_descriptor>>
+	    vertex_descriptor_map_type;
 
 	/** Default constructor. */
 	Graph() SYMBOL_VISIBLE;
@@ -74,25 +92,40 @@ public:
 	graph_type const& get_graph() const SYMBOL_VISIBLE;
 
 	/**
+	 * Get constant reference to underlying graph of execution instances.
+	 * @return Constant reference to underlying graph of execution instances
+	 */
+	graph_type const& get_execution_instance_graph() const SYMBOL_VISIBLE;
+
+	/**
 	 * Get constant reference to vertex property map.
 	 * @return Constant reference to vertex property map
 	 */
 	vertex_property_map_type const& get_vertex_property_map() const SYMBOL_VISIBLE;
+
+	/**
+	 * Get constant reference to vertex property map.
+	 * @return Constant reference to vertex property map
+	 */
+	execution_instance_map_type const& get_execution_instance_map() const SYMBOL_VISIBLE;
+
+	/**
+	 * Get constant reference to vertex descriptor map.
+	 * @return Constant reference to vertex descriptor map
+	 */
+	vertex_descriptor_map_type const& get_vertex_descriptor_map() const SYMBOL_VISIBLE;
 
 	typedef std::map<
 	    coordinate::ExecutionIndex,
 	    std::map<halco::hicann_dls::vx::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
 	    ordered_vertices_type;
 
-	/**
-	 * Get two dimensional map of vertex lists with physical and temporal dimension.
-	 * @return Map of vertex lists
-	 */
-	ordered_vertices_type get_ordered_vertices() const;
-
 private:
 	graph_type m_graph;
+	graph_type m_execution_instance_graph;
 	vertex_property_map_type m_vertex_property_map;
+	vertex_descriptor_map_type m_vertex_descriptor_map;
+	execution_instance_map_type m_execution_instance_map;
 	log4cxx::Logger* m_logger;
 };
 
