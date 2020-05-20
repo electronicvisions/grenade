@@ -2,6 +2,8 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/input.h"
+#include "grenade/vx/vertex/crossbar_node.h"
 #include "grenade/vx/vertex/data_input.h"
 #include "grenade/vx/vertex/data_output.h"
 #include "grenade/vx/vertex/external_input.h"
@@ -51,6 +53,20 @@ TEST(Graph, check_input_port)
 	// wrong port shape
 	DataInput vertex3(ConnectionType::Int8, 42);
 	EXPECT_THROW(graph.add(vertex3, ExecutionInstance(), {v0}), std::runtime_error);
+
+	// invalid port restriction
+	EXPECT_THROW(
+	    graph.add(vertex3, ExecutionInstance(), {{v0, {100, 141} /*size=42 but out-of-range*/}}),
+	    std::runtime_error);
+
+	// port restriction not matching input port of vertex (wrong size)
+	EXPECT_THROW(
+	    graph.add(vertex3, ExecutionInstance(), {{v0, {10, 52} /*arbitrary offset, size=43*/}}),
+	    std::runtime_error);
+
+	// correct port restriction
+	EXPECT_NO_THROW(
+	    graph.add(vertex3, ExecutionInstance(), {{v0, {10, 51} /*arbitrary offset, size=42*/}}));
 
 	// wrong port type
 	EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v1}), std::runtime_error);

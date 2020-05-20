@@ -5,6 +5,7 @@
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/input.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "hate/math.h"
@@ -38,7 +39,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	auto const num_padi_bus = std::min(
 	    hate::math::round_up_integer_division(y_size, 2),
 	    static_cast<size_t>(PADIBusOnPADIBusBlock::size));
-	std::vector<Graph::vertex_descriptor> padi_bus_vertices(num_padi_bus);
+	std::vector<Input> padi_bus_vertices;
 	for (size_t i = 0; i < num_padi_bus; ++i) {
 		CrossbarNodeOnDLS coordinate(
 		    CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(i + (hemisphere.toEnum() * 4)));
@@ -47,10 +48,10 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 		config.set_target(CrossbarNode::neuron_label_type((hemisphere.toEnum() << 13)));
 		vertex::CrossbarNode crossbar_node(coordinate, config);
 		auto const v1 = graph.add(crossbar_node, instance, {crossbar_input_vertex});
-		padi_bus_vertices.at(i) = graph.add(
+		padi_bus_vertices.push_back(graph.add(
 		    vertex::PADIBus(vertex::PADIBus::Coordinate(
 		        PADIBusOnPADIBusBlock(i), hemisphere.toPADIBusBlockOnDLS())),
-		    instance, {v1});
+		    instance, {v1}));
 	}
 
 	vertex::SynapseArrayView::Labels labels(y_size);
@@ -66,7 +67,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	// add synapse driver
 	auto const num_syndrv = y_size / 2;
 	auto const rest_syndrv = y_size % 2;
-	std::vector<Graph::vertex_descriptor> synapse_driver_vertices;
+	std::vector<Input> synapse_driver_vertices;
 	for (size_t i = 0; i < num_syndrv; ++i) {
 		auto const padi_bus_vertex = padi_bus_vertices.at(i % PADIBusOnPADIBusBlock::size);
 		vertex::SynapseDriver synapse_driver(
@@ -154,7 +155,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 		size_t const local_o_size = std::min(NeuronColumnOnDLS::size, output_size() - o_offset);
 
 		i_offset = 0;
-		std::vector<Graph::vertex_descriptor> local_output_vertices;
+		std::vector<Input> local_output_vertices;
 		while (i_offset < input_size()) {
 			if (instance != last_instance) {
 				input_vertex = m_graph.add(external_input, instance, {});
@@ -193,7 +194,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 			// add additions
 			// load all data
 			vertex::DataInput data_input(ConnectionType::Int8, local_o_size);
-			std::vector<Graph::vertex_descriptor> local_inputs;
+			std::vector<Input> local_inputs;
 			for (auto const vertex : local_output_vertices) {
 				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
 			}
@@ -204,9 +205,9 @@ ComputeSingleMAC::ComputeSingleMAC(
 			auto const v_out = m_graph.add(data_output, instance, {v_add});
 			m_output_vertices.push_back(v_out);
 		} else {
-			std::copy(
+			std::transform(
 			    local_output_vertices.begin(), local_output_vertices.end(),
-			    std::back_inserter(m_output_vertices));
+			    std::back_inserter(m_output_vertices), [](auto const& i) { return i.descriptor; });
 		}
 
 		o_offset += local_o_size;

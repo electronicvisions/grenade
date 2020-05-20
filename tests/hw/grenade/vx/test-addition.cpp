@@ -4,6 +4,7 @@
 #include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/input.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex.h"

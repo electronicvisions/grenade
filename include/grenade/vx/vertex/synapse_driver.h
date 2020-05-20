@@ -8,7 +8,11 @@
 #include "haldls/vx/synapse_driver.h"
 #include "hate/visibility.h"
 
-namespace grenade::vx::vertex {
+namespace grenade::vx {
+
+struct PortRestriction;
+
+namespace vertex {
 
 struct PADIBus;
 
@@ -45,7 +49,9 @@ struct SynapseDriver
 		return Port(1, ConnectionType::SynapseInputLabel);
 	}
 
-	bool supports_input_from(PADIBus const& input) const SYMBOL_VISIBLE;
+	bool supports_input_from(
+	    PADIBus const& input,
+	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
 	Coordinate get_coordinate() const SYMBOL_VISIBLE;
 	Config get_config() const SYMBOL_VISIBLE;
@@ -59,4 +65,6 @@ private:
 	RowModes m_row_modes;
 };
 
-} // grenade::vx::vertex
+} // vertex
+
+} // grenade::vx

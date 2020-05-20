@@ -149,6 +149,9 @@ void ExecutionInstanceBuilder::process(
 	if (data.output().type == ConnectionType::Int8) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		if (m_graph.get_edge_property_map().at(edge)) {
+			throw std::logic_error("Edge with port restriction unsupported.");
+		}
 		auto const in_vertex = boost::source(edge, m_graph.get_graph());
 		auto const& input_values =
 		    ((std::holds_alternative<vertex::ExternalInput>(vertex_map.at(in_vertex)))

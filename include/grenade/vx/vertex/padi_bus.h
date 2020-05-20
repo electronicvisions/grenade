@@ -1,11 +1,17 @@
 #pragma once
+#include <array>
+#include <optional>
 #include <ostream>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "halco/hicann-dls/vx/padi.h"
 #include "hate/visibility.h"
 
-namespace grenade::vx::vertex {
+namespace grenade::vx {
+
+struct PortRestriction;
+
+namespace vertex {
 
 struct CrossbarNode;
 
@@ -35,7 +41,9 @@ struct PADIBus
 		return Port(1, ConnectionType::SynapseDriverInputLabel);
 	}
 
-	bool supports_input_from(CrossbarNode const& input) const SYMBOL_VISIBLE;
+	bool supports_input_from(
+	    CrossbarNode const& input,
+	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
 	Coordinate const& get_coordinate() const SYMBOL_VISIBLE;
 
@@ -45,4 +53,6 @@ private:
 	Coordinate m_coordinate;
 };
 
-} // grenade::vx::vertex
+} // vertex
+
+} // grenade::vx

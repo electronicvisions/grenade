@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <ostream>
 #include <stddef.h>
 #include <vector>
@@ -8,7 +9,11 @@
 #include "halco/hicann-dls/vx/neuron.h"
 #include "hate/visibility.h"
 
-namespace grenade::vx::vertex {
+namespace grenade::vx {
+
+struct PortRestriction;
+
+namespace vertex {
 
 struct SynapseArrayView;
 
@@ -40,11 +45,15 @@ struct NeuronView
 
 	friend std::ostream& operator<<(std::ostream& os, NeuronView const& config) SYMBOL_VISIBLE;
 
-	bool supports_input_from(SynapseArrayView const& input) const SYMBOL_VISIBLE;
+	bool supports_input_from(
+	    SynapseArrayView const& input,
+	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
 private:
 	Columns m_columns;
 	Row m_row;
 };
 
-} // grenade::vx::vertex
+} // vertex
+
+} // grenade::vx

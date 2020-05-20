@@ -1,5 +1,6 @@
 #include "grenade/vx/vertex/synapse_driver.h"
 
+#include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex/padi_bus.h"
 
 namespace grenade::vx::vertex {
@@ -24,7 +25,8 @@ SynapseDriver::RowModes SynapseDriver::get_row_modes() const
 	return m_row_modes;
 }
 
-bool SynapseDriver::supports_input_from(PADIBus const& input) const
+bool SynapseDriver::supports_input_from(
+    PADIBus const& input, std::optional<PortRestriction> const&) const
 {
 	return halco::hicann_dls::vx::PADIBusOnDLS(
 	           m_coordinate.toSynapseDriverOnSynapseDriverBlock().toPADIBusOnPADIBusBlock(),

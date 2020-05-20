@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <ostream>
 #include <stddef.h>
 #include <vector>
@@ -8,8 +9,11 @@
 #include "halco/hicann-dls/vx/cadc.h"
 #include "hate/visibility.h"
 
+namespace grenade::vx {
 
-namespace grenade::vx::vertex {
+struct PortRestriction;
+
+namespace vertex {
 
 struct NeuronView;
 
@@ -40,11 +44,15 @@ struct CADCMembraneReadoutView
 	friend std::ostream& operator<<(std::ostream& os, CADCMembraneReadoutView const& config)
 	    SYMBOL_VISIBLE;
 
-	bool supports_input_from(NeuronView const& input) const SYMBOL_VISIBLE;
+	bool supports_input_from(
+	    NeuronView const& input,
+	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
 private:
 	Columns m_columns;
 	Synram m_synram;
 };
 
-} // grenade::vx::vertex
+} // vertex
+
+} // grenade::vx

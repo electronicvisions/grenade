@@ -1,7 +1,6 @@
 #pragma once
 #include <array>
 #include <ostream>
-#include "hate/type_traits.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -31,23 +30,5 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type) SYMBOL_VI
  */
 constexpr auto can_connect_different_execution_instances =
     std::array{ConnectionType::DataOutputInt8, ConnectionType::DataOutputUInt16};
-
-
-namespace detail {
-
-template <typename Vertex, typename InputVertex>
-using has_supports_input_from =
-    decltype(std::declval<Vertex>().supports_input_from(std::declval<InputVertex>()));
-
-} // namespace detail
-
-template <typename Vertex, typename InputVertex>
-bool supports_input_from(Vertex const& vertex, InputVertex const& input)
-{
-	if constexpr (hate::is_detected_v<detail::has_supports_input_from, Vertex, InputVertex>) {
-		return vertex.supports_input_from(input);
-	}
-	return true;
-}
 
 } // namespace grenade::vx

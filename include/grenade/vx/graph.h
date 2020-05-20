@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <map>
+#include <optional>
 #include <unordered_map>
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
@@ -9,6 +10,8 @@
 #include <boost/graph/adjacency_list.hpp>
 
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/graph_representation.h"
+#include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex.h"
 #include "halco/common/typed_array.h"
 #include "hate/visibility.h"
@@ -23,6 +26,8 @@ struct HemisphereOnDLS;
 } // namespace halco::hicann_dls::vx
 
 namespace grenade::vx {
+
+struct Input;
 
 /**
  * Placed computation graph.
@@ -42,18 +47,13 @@ namespace grenade::vx {
 class Graph
 {
 public:
-	/** Bidirectional graph without parallel edges. */
-	typedef boost::adjacency_list<
-	    boost::vecS,
-	    boost::vecS,
-	    boost::bidirectionalS,
-	    boost::no_property,
-	    boost::no_property>
-	    graph_type;
-
-	typedef graph_type::vertex_descriptor vertex_descriptor;
+	typedef detail::graph_type graph_type;
+	typedef detail::vertex_descriptor vertex_descriptor;
+	typedef detail::edge_descriptor edge_descriptor;
 
 	typedef std::unordered_map<vertex_descriptor, Vertex> vertex_property_map_type;
+	typedef std::unordered_map<edge_descriptor, std::optional<PortRestriction>>
+	    edge_property_map_type;
 	typedef boost::
 	    bimap<vertex_descriptor, boost::bimaps::unordered_set_of<coordinate::ExecutionInstance>>
 	        execution_instance_map_type;
@@ -83,13 +83,13 @@ public:
 	 *  - connection goes forward in time
 	 * @param vertex Vertex configuration
 	 * @param execution_instance Execution instance to place on
-	 * @param inputs Positional list input vertex descriptors
+	 * @param inputs Positional list input vertex descriptors (with optional port restriction)
 	 * @return Vertex descriptor of added vertex
 	 */
 	vertex_descriptor add(
 	    Vertex const& vertex,
 	    coordinate::ExecutionInstance const& execution_instance,
-	    std::vector<vertex_descriptor> inputs) SYMBOL_VISIBLE;
+	    std::vector<Input> inputs) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to underlying graph.
@@ -108,6 +108,12 @@ public:
 	 * @return Constant reference to vertex property map
 	 */
 	vertex_property_map_type const& get_vertex_property_map() const SYMBOL_VISIBLE;
+
+	/**
+	 * Get constant reference to edge property map.
+	 * @return Constant reference to edge property map
+	 */
+	edge_property_map_type const& get_edge_property_map() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to vertex property map.
@@ -137,6 +143,7 @@ private:
 	bool m_enable_acyclicity_check;
 	graph_type m_graph;
 	graph_type m_execution_instance_graph;
+	edge_property_map_type m_edge_property_map;
 	vertex_property_map_type m_vertex_property_map;
 	vertex_descriptor_map_type m_vertex_descriptor_map;
 	execution_instance_map_type m_execution_instance_map;
