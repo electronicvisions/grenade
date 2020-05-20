@@ -16,7 +16,8 @@ namespace grenade::vx {
 struct DataMap
 {
 	std::map<Graph::vertex_descriptor, std::vector<Int8>> int8;
-	std::map<Graph::vertex_descriptor, TimedSpikeEventSequence> spike_events;
+	std::map<Graph::vertex_descriptor, TimedSpikeSequence> spike_events;
+	std::map<Graph::vertex_descriptor, TimedSpikeFromChipSequence> spike_event_output;
 
 	DataMap() SYMBOL_VISIBLE;
 

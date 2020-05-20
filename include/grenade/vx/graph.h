@@ -148,6 +148,33 @@ private:
 	vertex_descriptor_map_type m_vertex_descriptor_map;
 	execution_instance_map_type m_execution_instance_map;
 	log4cxx::Logger* m_logger;
+
+	template <bool VariadicInput>
+	static void check_inputs_size(size_t vertex_inputs_size, size_t inputs_size);
+
+	template <typename VertexPort, typename InputVertexPort>
+	static void check_input_port(
+	    VertexPort const& vertex_port,
+	    InputVertexPort const& input_vertex_port,
+	    std::optional<PortRestriction> const& input_vertex_port_restriction);
+
+	template <typename Vertex, typename InputVertex>
+	static void check_supports_input_from(
+	    Vertex const& vertex,
+	    InputVertex const& input_vertex,
+	    std::optional<PortRestriction> const& input_port_restriction);
+
+	template <typename Vertex, typename InputVertex>
+	void check_execution_instances(
+	    Vertex const& vertex,
+	    InputVertex const& input_vertex,
+	    coordinate::ExecutionInstance const& vertex_execution_instance,
+	    coordinate::ExecutionInstance const& input_vertex_execution_instance);
+
+	void check_inputs(
+	    Vertex const& vertex,
+	    coordinate::ExecutionInstance const& execution_instance,
+	    std::vector<Input> const& inputs);
 };
 
 } // namespace grenade::vx

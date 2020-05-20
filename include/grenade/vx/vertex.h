@@ -3,10 +3,12 @@
 
 #include "grenade/vx/vertex/addition.h"
 #include "grenade/vx/vertex/cadc_readout.h"
+#include "grenade/vx/vertex/crossbar_l2_output.h"
 #include "grenade/vx/vertex/crossbar_node.h"
 #include "grenade/vx/vertex/data_input.h"
 #include "grenade/vx/vertex/data_output.h"
 #include "grenade/vx/vertex/external_input.h"
+#include "grenade/vx/vertex/neuron_event_output.h"
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/padi_bus.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
@@ -23,6 +25,7 @@ namespace grenade::vx {
 
 /** Vertex as variant over possible types. */
 typedef std::variant<
+    vertex::CrossbarL2Output,
     vertex::CrossbarNode,
     vertex::PADIBus,
     vertex::SynapseDriver,
@@ -32,6 +35,7 @@ typedef std::variant<
     vertex::DataInput,
     vertex::DataOutput,
     vertex::NeuronView,
+    vertex::NeuronEventOutputView,
     vertex::CADCMembraneReadoutView>
     Vertex;
 

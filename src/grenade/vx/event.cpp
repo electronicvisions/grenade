@@ -2,12 +2,12 @@
 
 namespace grenade::vx {
 
-bool TimedSpikeEvent::operator==(TimedSpikeEvent const& other) const
+bool TimedSpike::operator==(TimedSpike const& other) const
 {
 	return time == other.time && payload == other.payload;
 }
 
-bool TimedSpikeEvent::operator!=(TimedSpikeEvent const& other) const
+bool TimedSpike::operator!=(TimedSpike const& other) const
 {
 	return !(*this == other);
 }

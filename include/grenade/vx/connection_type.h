@@ -17,7 +17,8 @@ enum class ConnectionType
 	SynapticInput,       // Accumulated (analog) synaptic input for a neuron
 	MembraneVoltage,     // Neuron membrane voltage for input of CADC readout
 	DataOutputInt8,      // PPU computation or CADC readout value
-	DataOutputUInt16,    // Spike label data
+	DataInputUInt16,     // Spike label data input
+	DataOutputUInt16,    // Spike label data output
 	CrossbarInputLabel,  // 14Bit label into crossbar
 	CrossbarOutputLabel, // 14Bit label out of crossbar
 	SynapseDriverInputLabel
@@ -29,6 +30,7 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type) SYMBOL_VI
  * Only memory operations are allowed to connect between different execution instances.
  */
 constexpr auto can_connect_different_execution_instances =
-    std::array{ConnectionType::DataOutputInt8, ConnectionType::DataOutputUInt16};
+    std::array{ConnectionType::DataOutputInt8, ConnectionType::DataInputUInt16,
+               ConnectionType::DataOutputUInt16};
 
 } // namespace grenade::vx

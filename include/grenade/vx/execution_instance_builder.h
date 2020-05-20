@@ -104,6 +104,8 @@ private:
 
 	stadls::vx::PlaybackProgram m_program;
 
+	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
+
 	bool m_postprocessing;
 
 	DataMap m_local_data;

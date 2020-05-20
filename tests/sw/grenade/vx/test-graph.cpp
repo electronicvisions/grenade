@@ -3,6 +3,7 @@
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
+#include "grenade/vx/vertex/crossbar_l2_output.h"
 #include "grenade/vx/vertex/crossbar_node.h"
 #include "grenade/vx/vertex/data_input.h"
 #include "grenade/vx/vertex/data_output.h"
@@ -140,4 +141,46 @@ TEST(Graph, check_acyclic_execution_instances)
 {
 	test_check_acyclicity(true);
 	test_check_acyclicity(false);
+}
+
+
+TEST(Graph, check_supports_input_from)
+{
+	Graph graph;
+
+	// Graph: v0
+	ExternalInput vertex(ConnectionType::DataInputUInt16, 1);
+	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+
+	// Graph: v0 -> v1
+	DataInput vertex2(ConnectionType::CrossbarInputLabel, 1);
+	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	// connect loopback via crossbar
+	CrossbarNode vertex3(
+	    CrossbarNodeOnDLS(
+	        SPL1Address().toCrossbarInputOnDLS(),
+	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
+	    haldls::vx::CrossbarNode());
+
+	// Graph: v0 -> v1 -> v2
+	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+
+	// Graph: v0 -> v1 -> v2 -> v3
+	CrossbarL2Output vertex4;
+	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
+
+	DataOutput vertex5(ConnectionType::DataOutputUInt16, 1);
+	EXPECT_NO_THROW(graph.add(vertex5, ExecutionInstance(), {v3}));
+
+	// crossbar node not connecting loopback
+	CrossbarNode vertex6(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
+	    haldls::vx::CrossbarNode());
+
+	// Graph: v0 -> v1 -> v4
+	auto const v4 = graph.add(vertex6, ExecutionInstance(), {v1});
+
+	// Input from crossbar node not connecting to output not supported
+	EXPECT_THROW(graph.add(vertex5, ExecutionInstance(), {v4}), std::runtime_error);
 }

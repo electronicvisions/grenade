@@ -11,7 +11,7 @@ namespace grenade::vx {
 /**
  * Timed to-chip spike.
  */
-struct TimedSpikeEvent
+struct TimedSpike
 {
 	typedef haldls::vx::Timer::Value Time;
 	/** Time value when to emit spike. */
@@ -26,11 +26,14 @@ struct TimedSpikeEvent
 	/** Spike payload data. */
 	Payload payload;
 
-	bool operator==(TimedSpikeEvent const& other) const SYMBOL_VISIBLE;
-	bool operator!=(TimedSpikeEvent const& other) const SYMBOL_VISIBLE;
+	bool operator==(TimedSpike const& other) const SYMBOL_VISIBLE;
+	bool operator!=(TimedSpike const& other) const SYMBOL_VISIBLE;
 };
 
 /** Sequence of timed to-chip spike events. */
-typedef std::vector<TimedSpikeEvent> TimedSpikeEventSequence;
+typedef std::vector<TimedSpike> TimedSpikeSequence;
+
+/** Sequence of time-annotated from-chip spike events. */
+typedef std::vector<haldls::vx::SpikeFromChip> TimedSpikeFromChipSequence;
 
 } // namespace grenade::vx

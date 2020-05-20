@@ -151,7 +151,7 @@ bool JITGraphExecutor::is_complete_input_list_for(DataMap const& input_list, Gra
 				} else if (input_list.int8.at(vertex).size() != input_vertex.output().size) {
 					return true;
 				}
-			} else if (input_vertex.output().type == ConnectionType::DataOutputUInt16) {
+			} else if (input_vertex.output().type == ConnectionType::DataInputUInt16) {
 				if (input_list.spike_events.find(vertex) == input_list.spike_events.end()) {
 					return true;
 				}

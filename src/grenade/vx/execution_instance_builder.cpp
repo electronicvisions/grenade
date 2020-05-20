@@ -139,6 +139,11 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::CrossbarL2Output const&)
+{}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
 {
 	using namespace lola::vx;
@@ -335,11 +340,16 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /*vertex*/, vertex::NeuronEventOutputView const& /* data */)
+{}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
 {
 	if (data.output().type == ConnectionType::DataOutputInt8) {
 		m_local_external_data.int8[vertex] = m_input_list.int8.at(vertex);
-	} else if (data.output().type == ConnectionType::DataOutputUInt16) {
+	} else if (data.output().type == ConnectionType::DataInputUInt16) {
 		m_local_external_data.spike_events[vertex] = m_input_list.spike_events.at(vertex);
 	} else {
 		throw std::runtime_error("ExternalInput output type processing not implemented.");
@@ -380,6 +390,11 @@ void ExecutionInstanceBuilder::process(
 			}
 		}
 		m_local_data_output.int8[vertex] = values;
+	} else if (data.inputs().front().type == ConnectionType::DataOutputUInt16) {
+		if (m_event_output_vertex) {
+			throw std::logic_error("Only one event output vertex allowed.");
+		}
+		m_event_output_vertex = vertex;
 	} else {
 		throw std::logic_error("DataOutput data type not implemented.");
 	}
@@ -434,6 +449,13 @@ DataMap ExecutionInstanceBuilder::post_process()
 	m_postprocessing = false;
 	m_ticket.reset();
 	m_ticket_baseline.reset();
+	// FIXME: some split needed
+	if (m_event_output_vertex) {
+		auto const spikes = m_program.get_spikes();
+		m_local_data_output.spike_event_output[*m_event_output_vertex] =
+		    TimedSpikeFromChipSequence(spikes.begin(), spikes.end());
+	}
+	m_event_output_vertex.reset();
 	m_post_vertices.clear();
 	m_local_external_data.clear();
 	m_local_data.clear();
@@ -454,7 +476,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 	}
 	if (m_local_data.spike_events.size() > 0) {
 		m_builder_input.write(TimerOnDLS(), Timer());
-		TimedSpikeEvent::Time current_time(0);
+		TimedSpike::Time current_time(0);
 		for (auto const& event : m_local_data.spike_events.begin()->second) {
 			if (event.time > current_time) {
 				current_time = event.time;

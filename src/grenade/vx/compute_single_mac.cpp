@@ -143,7 +143,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 	SingleChipExecutionInstanceManager execution_instance_manager;
 	auto instance = coordinate::ExecutionInstance();
 
-	vertex::ExternalInput external_input(ConnectionType::DataOutputUInt16, 1);
+	vertex::ExternalInput external_input(ConnectionType::DataInputUInt16, 1);
 	vertex::DataInput data_input(ConnectionType::CrossbarInputLabel, 1);
 	auto last_instance = instance;
 
@@ -265,7 +265,7 @@ DataMap ComputeSingleMAC::generate_input_events(
 		auto const hemisphere = synram_handle.hemisphere;
 
 		auto& events = data_map.spike_events[input_vertex];
-		TimedSpikeEvent::Time time(0);
+		TimedSpike::Time time(0);
 		// pack all events from one hemisphere after one another
 		for (size_t i = 0; i < num_sends; ++i) {
 			for (size_t j = 0; j < input_size; ++j) {
@@ -276,8 +276,8 @@ DataMap ComputeSingleMAC::generate_input_events(
 				if (label) {
 					haldls::vx::SpikePack1ToChip const payload(
 					    haldls::vx::SpikePack1ToChip::labels_type{*label});
-					events.push_back(TimedSpikeEvent{time, payload});
-					time = TimedSpikeEvent::Time(time + wait_between_events);
+					events.push_back(TimedSpike{time, payload});
+					time = TimedSpike::Time(time + wait_between_events);
 				}
 			}
 		}

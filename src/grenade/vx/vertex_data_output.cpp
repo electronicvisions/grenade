@@ -1,5 +1,9 @@
 #include "grenade/vx/vertex/data_output.h"
 
+#include "grenade/vx/port_restriction.h"
+#include "grenade/vx/vertex/crossbar_node.h"
+#include "halco/hicann-dls/vx/padi.h"
+
 #include <stdexcept>
 
 namespace grenade::vx::vertex {
@@ -10,6 +14,13 @@ DataOutput::DataOutput(ConnectionType const input_type, size_t const size) :
 	switch (input_type) {
 		case ConnectionType::Int8: {
 			m_input_type = input_type;
+			break;
+		}
+		case ConnectionType::DataOutputUInt16: {
+			m_input_type = input_type;
+			if (m_size > 1) {
+				throw std::runtime_error("DataOutput only supports size(1) for DataOutputUInt16.");
+			}
 			break;
 		}
 		default: {
@@ -29,6 +40,9 @@ Port DataOutput::output() const
 		switch (m_input_type) {
 			case ConnectionType::Int8: {
 				return ConnectionType::DataOutputInt8;
+			}
+			case ConnectionType::DataOutputUInt16: {
+				return ConnectionType::DataOutputUInt16;
 			}
 			default: {
 				throw std::logic_error("Field m_input_type value of DataOutput not supported.");

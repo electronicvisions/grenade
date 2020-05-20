@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <ostream>
 #include <stddef.h>
 #include "grenade/vx/connection_type.h"
