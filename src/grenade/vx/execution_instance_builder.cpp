@@ -32,10 +32,12 @@ std::string name()
 
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     Graph const& graph,
+    coordinate::ExecutionInstance const& execution_instance,
     DataMap const& input_list,
     DataMap const& data_output,
     ChipConfig const& chip_config) :
     m_graph(graph),
+    m_execution_instance(execution_instance),
     m_input_list(input_list),
     m_data_output(data_output),
     m_local_external_data(),
@@ -79,20 +81,15 @@ void ExecutionInstanceBuilder::process(
 	auto const& columns = data.get_columns();
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
-	// set synaptic weights and addresses
+	// set synaptic weights and labels (in HAGEN-mode labels are set in DataInput vertex processing)
 	if (enable_hagen_workarounds) { // TODO: remove once HAGEN-mode bug is resolved
-		for (auto const& var :
-		     boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
+		for (auto const& var : boost::combine(data.get_weights(), data.get_rows())) {
 			auto const& weights = boost::get<0>(var);
-			[[maybe_unused]] auto const& labels = boost::get<1>(var);
-			auto const& row = boost::get<2>(var);
+			auto const& row = boost::get<1>(var);
 			auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
-			auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
 			for (size_t index = 0; index < columns.size(); ++index) {
 				auto const syn_column = columns[index];
 				weight_row[syn_column] = weights.at(index);
-				label_row[syn_column] =
-				    m_hagen_addresses[halco::hicann_dls::vx::SynapseRowOnDLS(row, synram)];
 			}
 		}
 	} else {
@@ -197,7 +194,10 @@ void ExecutionInstanceBuilder::process(
 				}
 				auto const synapse_rows = synapse_driver.get_coordinate().toSynapseRowOnSynram();
 				auto const synapse_label = label.get_synapse_label();
-				// FIXME: add all two allowed values per row (i.e. two)
+				auto& config = *m_config;
+				auto const synram = synapse_array.get_synram();
+				auto const hemisphere = synram.toHemisphereOnDLS();
+				auto& labels_config = config.hemispheres[hemisphere].synapse_matrix.labels;
 				for (auto const& row : synapse_rows) {
 					auto const it = std::find(
 					    synapse_array.get_rows().begin(), synapse_array.get_rows().end(), row);
@@ -206,8 +206,13 @@ void ExecutionInstanceBuilder::process(
 						auto const& label_row = synapse_array.get_labels()[i];
 						if ((label_row.at(0) & (1 << 5)) ==
 						    (synapse_label & (1 << 5))) { // right hagen address
-							m_hagen_addresses[SynapseRowOnDLS(row, synapse_array.get_synram())] =
-							    synapse_label;
+							// apply derived label to configuration
+							auto const& columns = synapse_array.get_columns();
+							auto& labels_config_row = labels_config[row];
+							for (size_t index = 0; index < columns.size(); ++index) {
+								auto const syn_column = columns[index];
+								labels_config_row[syn_column] = synapse_label;
+							}
 						}
 					}
 				}
@@ -377,37 +382,51 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
-void ExecutionInstanceBuilder::process(Graph::vertex_descriptor const vertex)
+void ExecutionInstanceBuilder::register_epilogue(stadls::vx::PlaybackProgramBuilder&& builder)
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
-	if (inputs_available(vertex)) {
-		auto const& vertex_map = m_graph.get_vertex_property_map();
-		std::visit(
-		    [&](auto const& value) {
-			    hate::Timer timer;
-			    process(vertex, value);
-			    LOG4CXX_TRACE(
-			        logger, "process(): Preprocessed "
-			                    << name<hate::remove_all_qualifiers_t<decltype(value)>>() << " in "
-			                    << timer.print() << ".");
-		    },
-		    vertex_map.at(vertex));
-	} else {
-		m_post_vertices.push_back(vertex);
-	}
+	m_builder_epilogue = std::move(builder);
 }
 
-void ExecutionInstanceBuilder::post_process(Graph::vertex_descriptor const vertex)
+void ExecutionInstanceBuilder::register_prologue(stadls::vx::PlaybackProgramBuilder&& builder)
 {
-	auto const& vertex_map = m_graph.get_vertex_property_map();
-	std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex));
+	m_builder_prologue = std::move(builder);
+}
+
+void ExecutionInstanceBuilder::pre_process()
+{
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+	auto const execution_instance_vertex =
+	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
+	// Sequential preprocessing because vertices might depend on each other.
+	// This is only the case for DataInput -> SynapseArrayView with HAGEN-bug workaround enabled
+	// currently.
+	for (auto const p : boost::make_iterator_range(
+	         m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex))) {
+		auto const vertex = p.second;
+		if (inputs_available(vertex)) {
+			auto const& vertex_map = m_graph.get_vertex_property_map();
+			std::visit(
+			    [&](auto const& value) {
+				    hate::Timer timer;
+				    process(vertex, value);
+				    LOG4CXX_TRACE(
+				        logger, "process(): Preprocessed "
+				                    << name<hate::remove_all_qualifiers_t<decltype(value)>>()
+				                    << " in " << timer.print() << ".");
+			    },
+			    vertex_map.at(vertex));
+		} else {
+			m_post_vertices.push_back(vertex);
+		}
+	}
 }
 
 DataMap ExecutionInstanceBuilder::post_process()
 {
+	auto const& vertex_map = m_graph.get_vertex_property_map();
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
-		post_process(vertex);
+		std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex));
 	}
 	m_postprocessing = false;
 	m_ticket.reset();
@@ -418,7 +437,7 @@ DataMap ExecutionInstanceBuilder::post_process()
 	return std::move(m_local_data_output);
 }
 
-stadls::vx::PlaybackProgramBuilder ExecutionInstanceBuilder::generate()
+stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
@@ -466,6 +485,8 @@ stadls::vx::PlaybackProgramBuilder ExecutionInstanceBuilder::generate()
 	m_ticket_requests.fill(false);
 
 	PlaybackProgramBuilder builder;
+	builder.merge_back(m_builder_prologue);
+
 	// write static configuration
 	if (!m_config.has_history()) {
 		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
@@ -523,9 +544,6 @@ stadls::vx::PlaybackProgramBuilder ExecutionInstanceBuilder::generate()
 			    haldls::vx::SynapseDriverConfig::RowMode::disabled);
 		}
 	}
-	for (auto& a : m_hagen_addresses) {
-		a = lola::vx::SynapseMatrix::Label(0);
-	}
 	m_used_padi_busses.fill(false);
 	// build neuron resets
 	for (auto const neuron : iter_all<NeuronResetOnDLS>()) {
@@ -564,7 +582,9 @@ stadls::vx::PlaybackProgramBuilder ExecutionInstanceBuilder::generate()
 		builder.wait_until(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer::Value(100000));
 	}
 
-	return builder;
+	builder.merge_back(m_builder_epilogue);
+	m_program = builder.done();
+	return m_program;
 }
 
 } // namespace grenade::vx

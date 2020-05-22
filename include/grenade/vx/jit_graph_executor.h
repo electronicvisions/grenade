@@ -1,8 +1,6 @@
 #pragma once
 #include <map>
 
-#include "grenade/vx/graph.h"
-#include "halco/common/typed_array.h"
 #include "hate/visibility.h"
 #include "hxcomm/vx/connection_variant.h"
 
@@ -13,10 +11,9 @@ struct HemishereOnDLS;
 
 namespace grenade::vx {
 
+class Graph;
 class DataMap;
 class ChipConfig;
-class ExecutionInstanceBuilder;
-
 
 /**
  * Just-in-time graph executor.

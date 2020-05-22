@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/data_map.h"
@@ -25,8 +24,7 @@ struct ExecutionInstanceNode
 	ExecutionInstanceNode(
 	    DataMap& data_map,
 	    ExecutionInstanceBuilder& builder,
-	    hxcomm::vx::ConnectionVariant& connection,
-	    std::vector<Graph::vertex_descriptor> vertices) SYMBOL_VISIBLE;
+	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
@@ -35,7 +33,6 @@ private:
 	ExecutionInstanceBuilder& builder;
 	hxcomm::vx::ConnectionVariant& connection;
 	log4cxx::Logger* logger;
-	std::vector<Graph::vertex_descriptor> vertices;
 };
 
 } // namespace grenade::vx

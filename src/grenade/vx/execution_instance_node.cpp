@@ -11,13 +11,11 @@ namespace grenade::vx {
 ExecutionInstanceNode::ExecutionInstanceNode(
     DataMap& data_map,
     ExecutionInstanceBuilder& builder,
-    hxcomm::vx::ConnectionVariant& connection,
-    std::vector<Graph::vertex_descriptor> vertices) :
+    hxcomm::vx::ConnectionVariant& connection) :
     data_map(data_map),
     builder(builder),
     connection(connection),
-    logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode")),
-    vertices(vertices)
+    logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
 
 void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
@@ -27,21 +25,18 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace halco::hicann_dls::vx;
 
 	hate::Timer const preprocess_timer;
-	for (auto const v : vertices) {
-		builder.process(v);
-	}
+	builder.pre_process();
 	LOG4CXX_TRACE(
 	    logger, "operator(): Preprocessed local vertices in " << preprocess_timer.print() << ".");
 
 	// build PlaybackProgram
 	hate::Timer const build_timer;
-	auto playback_program_builder = builder.generate();
+	auto program = builder.generate();
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackProgram in " << build_timer.print() << ".");
 
 	// execute
 	hate::Timer const exec_timer;
-	if (!playback_program_builder.empty()) {
-		auto program = playback_program_builder.done();
+	if (!program.empty()) {
 		stadls::vx::run(connection, program);
 	}
 	LOG4CXX_TRACE(

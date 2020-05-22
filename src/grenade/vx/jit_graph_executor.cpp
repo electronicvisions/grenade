@@ -15,6 +15,7 @@
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/execution_instance_node.h"
+#include "grenade/vx/graph.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/chip.h"
 #include "haldls/vx/padi.h"
@@ -41,7 +42,6 @@ DataMap JITGraphExecutor::run(
 
 	auto const& execution_instance_graph = graph.get_execution_instance_graph();
 	auto const& execution_instance_map = graph.get_execution_instance_map();
-	auto const& vertex_descriptor_map = graph.get_vertex_descriptor_map();
 
 	// execution graph
 	tbb::flow::graph execution_graph;
@@ -69,18 +69,15 @@ DataMap JITGraphExecutor::run(
 	// build execution nodes
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
-		auto const dls_global = execution_instance_map.left.at(vertex).toDLSGlobal();
+		auto const execution_instance = execution_instance_map.left.at(vertex);
+		auto const dls_global = execution_instance.toDLSGlobal();
 		execution_instance_builder_map.insert(std::make_pair(
 		    vertex, ExecutionInstanceBuilder(
-		                graph, input_list, output_activation_map, config_map.at(dls_global))));
+		                graph, execution_instance, input_list, output_activation_map,
+		                config_map.at(dls_global))));
 		auto& builder = execution_instance_builder_map.at(vertex);
-		std::vector<Graph::vertex_descriptor> vertices;
-		for (auto const p :
-		     boost::make_iterator_range(vertex_descriptor_map.right.equal_range(vertex))) {
-			vertices.push_back(p.second);
-		}
 		ExecutionInstanceNode node_body(
-		    output_activation_map, builder, executor_map.at(dls_global), vertices);
+		    output_activation_map, builder, executor_map.at(dls_global));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}
