@@ -42,7 +42,6 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_data_output(data_output),
     m_local_external_data(),
     m_config(),
-    m_builder_neuron_reset(),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output()
@@ -54,7 +53,6 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 
 	*m_config = chip_config;
 
-	m_neuron_resets.fill(false);
 	m_ticket_requests.fill(false);
 	m_used_padi_busses.fill(false);
 
@@ -396,7 +394,7 @@ void ExecutionInstanceBuilder::process(
 	// result: -> make property of each neuron view entry
 	for (auto const column : data.get_columns()) {
 		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
-		m_neuron_resets[neuron_reset] = true;
+		m_neuron_resets.enable_resets[neuron_reset] = true;
 	}
 	// TODO: once we have neuron configuration, it should be placed here
 }
@@ -673,12 +671,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 	}
 	m_used_padi_busses.fill(false);
 	// build neuron resets
-	for (auto const neuron : iter_all<NeuronResetOnDLS>()) {
-		if (m_neuron_resets[neuron]) {
-			m_builder_neuron_reset.write(neuron, NeuronReset());
-		}
-	}
-	m_neuron_resets.fill(false);
+	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 	// insert batches
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		if (enable_hagen_workarounds) {
@@ -689,7 +682,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 			}
 		}
 		// reset neurons (baseline read)
-		builder.copy_back(m_builder_neuron_reset);
+		builder.copy_back(builder_neuron_reset);
 		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
 		if (!builder.empty()) {
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
@@ -700,7 +693,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 		// readout baselines of neurons
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout_baseline);
 		// reset neurons
-		builder.copy_back(m_builder_neuron_reset);
+		builder.copy_back(builder_neuron_reset);
 		// send input
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle

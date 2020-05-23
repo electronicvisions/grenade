@@ -8,6 +8,7 @@
 #include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/neuron_reset_mask_generator.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/chip.h"
 #include "haldls/vx/synapse_driver.h"
@@ -96,8 +97,6 @@ private:
 	stadls::vx::PlaybackProgramBuilder m_builder_epilogue;
 	stadls::vx::PlaybackProgramBuilder m_builder_prologue;
 
-	stadls::vx::PlaybackProgramBuilder m_builder_neuron_reset;
-
 	std::vector<Graph::vertex_descriptor> m_post_vertices;
 
 	stadls::vx::PlaybackProgram m_program;
@@ -139,7 +138,7 @@ private:
 
 	std::vector<BatchEntry> m_batch_entries;
 
-	halco::common::typed_array<bool, halco::hicann_dls::vx::NeuronResetOnDLS> m_neuron_resets;
+	NeuronResetMaskGenerator m_neuron_resets;
 	halco::common::typed_array<bool, halco::hicann_dls::vx::PADIBusOnDLS> m_used_padi_busses;
 
 	/**
