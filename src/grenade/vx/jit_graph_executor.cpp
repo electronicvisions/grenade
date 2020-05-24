@@ -38,7 +38,7 @@ DataMap JITGraphExecutor::run(
 	using namespace halco::hicann_dls::vx;
 	hate::Timer const timer;
 
-	check(graph, input_list, executor_map);
+	check(graph, executor_map);
 
 	auto const& execution_instance_graph = graph.get_execution_instance_graph();
 	auto const& execution_instance_map = graph.get_execution_instance_map();
@@ -135,36 +135,7 @@ bool JITGraphExecutor::is_executable_on(Graph const& graph, ExecutorMap const& e
 	});
 }
 
-#include <iostream>
-
-bool JITGraphExecutor::is_complete_input_list_for(DataMap const& input_list, Graph const& graph)
-{
-	auto const& vertex_property_map = graph.get_vertex_property_map();
-	auto const vertices = boost::make_iterator_range(boost::vertices(graph.get_graph()));
-	return std::none_of(vertices.begin(), vertices.end(), [&](auto const vertex) {
-		if (std::holds_alternative<vertex::ExternalInput>(vertex_property_map.at(vertex))) {
-			auto const& input_vertex =
-			    std::get<vertex::ExternalInput>(vertex_property_map.at(vertex));
-			if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
-				if (input_list.int8.find(vertex) == input_list.int8.end()) {
-					return true;
-				} else if (input_list.int8.at(vertex).size() != input_vertex.output().size) {
-					return true;
-				}
-			} else if (input_vertex.output().type == ConnectionType::DataInputUInt16) {
-				if (input_list.spike_events.find(vertex) == input_list.spike_events.end()) {
-					return true;
-				}
-			} else {
-				throw std::runtime_error("ExternalInput output type not supported.");
-			}
-		}
-		return false;
-	});
-}
-
-void JITGraphExecutor::check(
-    Graph const& graph, DataMap const& input_list, ExecutorMap const& executor_map)
+void JITGraphExecutor::check(Graph const& graph, ExecutorMap const& executor_map)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	hate::Timer const timer;
@@ -177,11 +148,6 @@ void JITGraphExecutor::check(
 	// check all DLSGlobal physical chips used in the graph are present in the provided executor map
 	if (!is_executable_on(graph, executor_map)) {
 		throw std::runtime_error("Graph requests executors not provided.");
-	}
-
-	// check that input list provides all requested input for graph
-	if (!is_complete_input_list_for(input_list, graph)) {
-		throw std::runtime_error("Graph requests unprovided input.");
 	}
 
 	LOG4CXX_TRACE(

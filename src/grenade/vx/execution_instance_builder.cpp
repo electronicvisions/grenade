@@ -49,6 +49,11 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_local_data_output(),
     m_ticket()
 {
+	// check that input list provides all requested input for local graph
+	if (!has_complete_input_list()) {
+		throw std::runtime_error("Graph requests unprovided input.");
+	}
+
 	*m_config = chip_config;
 
 	m_neuron_resets.fill(false);
@@ -61,6 +66,36 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 	}
 
 	m_postprocessing = false;
+}
+
+bool ExecutionInstanceBuilder::has_complete_input_list() const
+{
+	auto const& vertex_property_map = m_graph.get_vertex_property_map();
+	auto const execution_instance_vertex =
+	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
+	auto const vertices = boost::make_iterator_range(
+	    m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex));
+	return std::none_of(vertices.begin(), vertices.end(), [&](auto const& p) {
+		auto const vertex = p.second;
+		if (std::holds_alternative<vertex::ExternalInput>(vertex_property_map.at(vertex))) {
+			auto const& input_vertex =
+			    std::get<vertex::ExternalInput>(vertex_property_map.at(vertex));
+			if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
+				if (m_input_list.int8.find(vertex) == m_input_list.int8.end()) {
+					return true;
+				} else if (m_input_list.int8.at(vertex).size() != input_vertex.output().size) {
+					return true;
+				}
+			} else if (input_vertex.output().type == ConnectionType::DataInputUInt16) {
+				if (m_input_list.spike_events.find(vertex) == m_input_list.spike_events.end()) {
+					return true;
+				}
+			} else {
+				throw std::runtime_error("ExternalInput output type not supported.");
+			}
+		}
+		return false;
+	});
 }
 
 bool ExecutionInstanceBuilder::inputs_available(Graph::vertex_descriptor const descriptor) const

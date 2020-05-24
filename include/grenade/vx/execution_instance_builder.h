@@ -140,6 +140,12 @@ private:
 	 */
 	template <typename Vertex>
 	void process(Graph::vertex_descriptor const vertex, Vertex const& data);
+
+	/**
+	 * Get whether input list is complete for the local execution instance.
+	 * @return Boolean value
+	 */
+	bool has_complete_input_list() const;
 };
 
 } // namespace grenade::vx
