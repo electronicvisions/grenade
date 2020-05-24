@@ -16,10 +16,18 @@ NeuronResetMaskGenerator::generate() const
 	using namespace lola::vx;
 
 	PlaybackProgramBuilder builder;
-	NeuronReset const reset;
-	for (auto const neuron : iter_all<NeuronResetOnDLS>()) {
-		if (enable_resets[neuron]) {
-			builder.write(neuron, reset);
+	for (auto const quad : iter_all<NeuronResetQuadOnDLS>()) {
+		auto const single_resets = quad.toNeuronResetOnDLS();
+		if (std::all_of(single_resets.begin(), single_resets.end(), [&](auto const& n) {
+			    return enable_resets[n];
+		    })) {
+			builder.write(quad, NeuronResetQuad());
+		} else {
+			for (auto const& n : single_resets) {
+				if (enable_resets[n]) {
+					builder.write(n, NeuronReset());
+				}
+			}
 		}
 	}
 	return {std::move(builder), Result{}};
