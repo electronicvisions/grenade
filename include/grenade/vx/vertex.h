@@ -13,17 +13,11 @@
 #include "grenade/vx/vertex/padi_bus.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
 #include "grenade/vx/vertex/synapse_driver.h"
+#include "grenade/vx/vertex_concept.h"
 
 namespace grenade::vx {
 
-/**
- * A vertex is an entity which has a defined number of inputs and outputs with defined type.
- * If they are the same, one size() / connection_type() function is provided, else input_size() and
- * output_size() / input_connection_type() and output_connection_type() are used if the number /
- * type of inputs and outputs differs.
- */
-
-/** Vertex as variant over possible types. */
+/** Vertex configuration as variant over possible types. */
 typedef std::variant<
     vertex::CrossbarL2Output,
     vertex::CrossbarNode,
@@ -38,5 +32,8 @@ typedef std::variant<
     vertex::NeuronEventOutputView,
     vertex::CADCMembraneReadoutView>
     Vertex;
+
+static_assert(
+    sizeof(detail::CheckVertexConcept<Vertex>), "Vertices don't adhere to VertexConcept.");
 
 } // namespace grenade::vx
