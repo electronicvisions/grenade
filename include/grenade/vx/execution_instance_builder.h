@@ -30,17 +30,16 @@ class ExecutionInstanceBuilder
 public:
 	/**
 	 * Construct builder.
-	 * @param graph Graph to use for property lookup
+	 * @param graph Graph to use for locality and property lookup
 	 * @param input_list Input list to use for input data lookup
-	 * @param data_output Data output from previous time steps to use for data lookup
-	 * @param hemisphere Hemisphere of a chip to use for configuration placement
+	 * @param data_output Data output from depended-on executions to use for data lookup
+	 * @param chip_config Chip configuration to use
 	 */
 	ExecutionInstanceBuilder(
 	    Graph const& graph,
 	    DataMap const& input_list,
 	    DataMap const& data_output,
-	    halco::hicann_dls::vx::HemisphereOnDLS hemisphere,
-	    HemisphereConfig const& hemisphere_config) SYMBOL_VISIBLE;
+	    ChipConfig const& chip_config) SYMBOL_VISIBLE;
 
 	/**
 	 * Process a vertex.
@@ -64,22 +63,30 @@ public:
 	DataMap post_process() SYMBOL_VISIBLE;
 	void post_process(Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
+	/**
+	 * Switch to enable HAGEN-mode workarounds needed for HXv1.
+	 * TODO: remove once HXv2 is working.
+	 */
+	bool enable_hagen_workarounds = true;
+
 private:
 	Graph const& m_graph;
 	DataMap const& m_input_list;
 	DataMap const& m_data_output;
 	DataMap m_local_external_data;
-	hate::HistoryWrapper<HemisphereConfig> m_config;
+	hate::HistoryWrapper<ChipConfig> m_config;
 	stadls::vx::PlaybackProgramBuilder m_builder_input;
 	stadls::vx::PlaybackProgramBuilder m_builder_neuron_reset;
-	halco::hicann_dls::vx::HemisphereOnDLS m_hemisphere;
 	std::vector<Graph::vertex_descriptor> m_post_vertices;
 	bool m_postprocessing;
 
 	DataMap m_local_data;
 	DataMap m_local_data_output;
 
-	typedef std::optional<stadls::vx::PlaybackProgram::ContainerTicket<lola::vx::CADCSampleRow>>
+	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::HemisphereOnDLS>
+	    ticket_request_type;
+	ticket_request_type m_ticket_requests;
+	typedef std::optional<stadls::vx::PlaybackProgram::ContainerTicket<lola::vx::CADCSamples>>
 	    ticket_type;
 	ticket_type m_ticket;
 	ticket_type m_ticket_baseline;
@@ -89,41 +96,22 @@ private:
 	bool inputs_available(Graph::vertex_descriptor const descriptor) const SYMBOL_VISIBLE;
 
 	/**
-	 * Extract input activations for the given vertex.
-	 * @param descriptor Vertex descriptor on the graph to extract for
-	 */
-	typename std::map<Graph::vertex_descriptor, std::vector<UInt5>>::const_reference
-	get_input_activations(Graph::vertex_descriptor descriptor);
-	std::vector<Int8> get_input_data(Graph::vertex_descriptor descriptor);
-
-	/**
-	 * Visit neuron columns for a given vertex with a given functor.
+	 * Process single vertex.
+	 * This function is called in both preprocess and postprocess depending on whether the vertex
+	 * requires post-execution processing.
 	 * @param vertex Vertex descriptor
-	 * @param f Functor
+	 * @param data Data associated with vertex
 	 */
-	template <typename F>
-	void visit_columns(Graph::vertex_descriptor const vertex, F&& f);
+	template <typename Vertex>
+	void process(Graph::vertex_descriptor const vertex, Vertex const& data);
 
-	std::unordered_map<size_t, halco::hicann_dls::vx::SynapseOnSynapseRow> get_column_map(
-	    Graph::vertex_descriptor const vertex);
+	halco::common::typed_array<bool, halco::hicann_dls::vx::NeuronResetOnDLS> m_neuron_resets;
+	halco::common::typed_array<bool, halco::hicann_dls::vx::PADIBusOnDLS> m_used_padi_busses;
 
-	void process(Graph::vertex_descriptor const vertex, vertex::SynapseArrayView const& data);
-
-	void process(Graph::vertex_descriptor const vertex, vertex::DataInput const& data);
-
-	void process(
-	    Graph::vertex_descriptor const vertex, vertex::CADCMembraneReadoutView const& data);
-
-	void process(Graph::vertex_descriptor const vertex, vertex::NeuronView const& data);
-
-	void process(Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data);
-
-	void process(
-	    Graph::vertex_descriptor const vertex, vertex::ConvertInt8ToSynapseInputLabel const& data);
-
-	void process(Graph::vertex_descriptor const vertex, vertex::DataOutput const& data);
-
-	void process(Graph::vertex_descriptor const vertex, vertex::Addition const& data);
+	// TODO: remove once Billy-bug is resolved
+	halco::common::
+	    typed_array<lola::vx::SynapseMatrix::Label, halco::hicann_dls::vx::SynapseRowOnDLS>
+	        m_hagen_addresses;
 };
 
 } // namespace grenade::vx

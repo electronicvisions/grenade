@@ -38,6 +38,7 @@ public:
 	 * @param graph Graph to execute
 	 * @param input_list List of input values to use
 	 * @param executor_map Map of executors tied to a specific chip instance
+	 * @param config_map Map of static configuration tied to a specific chip instance
 	 */
 	static DataMap run(
 	    Graph const& graph,
@@ -49,21 +50,14 @@ private:
 	/**
 	 * Run a single chip instance of the specified graph with specified inputs using the specified
 	 * executor.
-	 * @param graph Graph to execute
-	 * @param top_builder ExecutionInstanceBuilder for the top hemisphere of the chip
-	 * @param bot_builder ExecutionInstanceBuilder for the bottom hemisphere of the chip
-	 * @param input_list List of input values to use
+	 * @param builder ExecutionInstanceBuilder to use
 	 * @param connection Connection tied to the specific chip instance
 	 * @param vertices Vertices tied to the specified chip instance
 	 */
 	static DataMap run_chip_instance(
-	    ExecutionInstanceBuilder& top_builder,
-	    ExecutionInstanceBuilder& bot_builder,
+	    ExecutionInstanceBuilder& builder,
 	    hxcomm::vx::ConnectionVariant& connection,
-	    halco::common::typed_array<
-	        std::vector<Graph::vertex_descriptor>,
-	        halco::hicann_dls::vx::HemisphereOnDLS> const& vertices);
-
+	    std::vector<Graph::vertex_descriptor> const& vertices);
 
 	/**
 	 * Check whether the given graph can be executed on the given map of executors.

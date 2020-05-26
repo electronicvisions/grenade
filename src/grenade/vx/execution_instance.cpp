@@ -3,11 +3,11 @@
 namespace grenade::vx::coordinate {
 
 ExecutionInstance::ExecutionInstance(
-    ExecutionIndex const temporal_index, halco::hicann_dls::vx::HemisphereGlobal const dls) :
-    m_dls_global(dls), m_temporal_index(temporal_index)
+    ExecutionIndex const temporal_index, halco::hicann_dls::vx::DLSGlobal const dls) :
+    m_temporal_index(temporal_index), m_dls_global(dls)
 {}
 
-halco::hicann_dls::vx::HemisphereGlobal ExecutionInstance::toHemisphereGlobal() const
+halco::hicann_dls::vx::DLSGlobal ExecutionInstance::toDLSGlobal() const
 {
 	return m_dls_global;
 }

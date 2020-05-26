@@ -7,14 +7,24 @@ using namespace grenade::vx::vertex;
 
 TEST(CADCMembraneReadoutView, General)
 {
-	EXPECT_NO_THROW(CADCMembraneReadoutView(256));
-	EXPECT_THROW(CADCMembraneReadoutView(257), std::out_of_range);
+	CADCMembraneReadoutView::Columns columns{CADCMembraneReadoutView::Columns::value_type(0),
+	                                         CADCMembraneReadoutView::Columns::value_type(1)};
+	CADCMembraneReadoutView::Synram synram(0);
+	EXPECT_NO_THROW(CADCMembraneReadoutView(columns, synram));
+	CADCMembraneReadoutView::Columns non_unique_columns{
+	    CADCMembraneReadoutView::Columns::value_type(0),
+	    CADCMembraneReadoutView::Columns::value_type(0)};
+	EXPECT_THROW(CADCMembraneReadoutView(non_unique_columns, synram), std::runtime_error);
 
-	CADCMembraneReadoutView vertex(123);
-	EXPECT_EQ(vertex.inputs().size(), 1);
-	EXPECT_EQ(vertex.inputs().front().size, 123);
-	EXPECT_EQ(vertex.output().size, 123);
+	CADCMembraneReadoutView config(columns, synram);
 
-	EXPECT_EQ(vertex.inputs().front().type, ConnectionType::MembraneVoltage);
-	EXPECT_EQ(vertex.output().type, ConnectionType::Int8);
+	EXPECT_EQ(config.get_columns(), columns);
+	EXPECT_EQ(config.get_synram(), synram);
+
+	EXPECT_EQ(config.inputs().size(), 1);
+	EXPECT_EQ(config.inputs().front().size, 2);
+	EXPECT_EQ(config.output().size, 2);
+
+	EXPECT_EQ(config.inputs().front().type, ConnectionType::MembraneVoltage);
+	EXPECT_EQ(config.output().type, ConnectionType::Int8);
 }

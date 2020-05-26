@@ -40,7 +40,7 @@ DataMap JITGraphExecutor::run(
 	// generate map of map of vertex descriptors with temporal index and dls global as keys
 	auto const ordered_vertices = graph.get_ordered_vertices();
 
-	std::map<halco::hicann_dls::vx::HemisphereGlobal, ExecutionInstanceBuilder>
+	std::map<halco::hicann_dls::vx::DLSGlobal, ExecutionInstanceBuilder>
 	    execution_instance_builder_map;
 	DataMap output_activation_map;
 	// unroll time steps sequentially
@@ -49,32 +49,19 @@ DataMap JITGraphExecutor::run(
 		std::map<halco::hicann_dls::vx::DLSGlobal, std::future<DataMap>> time_step_results;
 		for (auto const& [dls_global, vertices] : dls_global_vertices_map) {
 			time_step_results[dls_global] = std::async(detail::launch_policy, [&]() {
-				auto const local_vertex_count = [vertices]() {
-					return std::accumulate(
-					    vertices.begin(), vertices.end(), 0,
-					    [](auto const& a, auto const& b) { return a + b.size(); });
-				};
 				auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 				LOG4CXX_DEBUG(
-				    logger, "run(): Executing " << local_vertex_count() << " vertices for "
+				    logger, "run(): Executing " << vertices.size() << " vertices for "
 				                                << temporal_index << " on " << dls_global);
 
-				for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
-					HemisphereGlobal hemisphere_core_global(hemisphere, dls_global);
-					if (!execution_instance_builder_map.count(hemisphere_core_global)) {
-						execution_instance_builder_map.insert(std::make_pair(
-						    hemisphere_core_global,
-						    ExecutionInstanceBuilder(
-						        graph, input_list, output_activation_map, hemisphere,
-						        config_map.at(dls_global).hemispheres[hemisphere])));
-					}
+				if (!execution_instance_builder_map.count(dls_global)) {
+					execution_instance_builder_map.insert(std::make_pair(
+					    dls_global,
+					    ExecutionInstanceBuilder(
+					        graph, input_list, output_activation_map, config_map.at(dls_global))));
 				}
-				auto& top_builder = execution_instance_builder_map.at(
-				    HemisphereGlobal(HemisphereOnDLS(0), dls_global));
-				auto& bot_builder = execution_instance_builder_map.at(
-				    HemisphereGlobal(HemisphereOnDLS(1), dls_global));
-				return run_chip_instance(
-				    top_builder, bot_builder, executor_map.at(dls_global), vertices);
+				auto& builder = execution_instance_builder_map.at(dls_global);
+				return run_chip_instance(builder, executor_map.at(dls_global), vertices);
 			});
 		}
 		for (auto& result : time_step_results) {
@@ -89,12 +76,9 @@ DataMap JITGraphExecutor::run(
 }
 
 DataMap JITGraphExecutor::run_chip_instance(
-    ExecutionInstanceBuilder& top_builder,
-    ExecutionInstanceBuilder& bot_builder,
+    ExecutionInstanceBuilder& builder,
     hxcomm::vx::ConnectionVariant& connection,
-    halco::common::typed_array<
-        std::vector<Graph::vertex_descriptor>,
-        halco::hicann_dls::vx::HemisphereOnDLS> const& vertices)
+    std::vector<Graph::vertex_descriptor> const& vertices)
 {
 	using namespace stadls::vx;
 	using namespace halco::common;
@@ -103,31 +87,25 @@ DataMap JITGraphExecutor::run_chip_instance(
 
 	DataMap output_activation_map;
 
-	hate::Timer const build_timer;
+	hate::Timer const preprocess_timer;
 	// visit vertices
-	halco::common::typed_array<std::future<PlaybackProgramBuilder>, HemisphereOnDLS> results;
-	auto const process = [vertices, &top_builder, &bot_builder](auto const core) {
-		auto& builder = core ? bot_builder : top_builder;
-		for (auto const vertex : vertices[core]) {
-			builder.process(vertex);
-		}
-		return builder.generate();
-	};
-	for (auto const core : iter_all<HemisphereOnDLS>()) {
-		results[core] = std::async(detail::launch_policy, process, core);
+	for (auto const vertex : vertices) {
+		builder.process(vertex);
 	}
+	LOG4CXX_TRACE(
+	    logger,
+	    "run_chip_instance(): Preprocessed local vertices in " << preprocess_timer.print() << ".");
 
 	// build PlaybackProgram
-	auto builder = results[HemisphereOnDLS(0)].get();
-	auto ppb_bot = results[HemisphereOnDLS(1)].get();
-	builder.merge_back(ppb_bot);
+	hate::Timer const build_timer;
+	auto playback_program_builder = builder.generate();
 	LOG4CXX_TRACE(
 	    logger, "run_chip_instance(): Built PlaybackProgram in " << build_timer.print() << ".");
 
 	// execute
 	hate::Timer const exec_timer;
-	if (!builder.empty()) {
-		auto program = builder.done();
+	if (!playback_program_builder.empty()) {
+		auto program = playback_program_builder.done();
 		stadls::vx::run(connection, program);
 	}
 	LOG4CXX_TRACE(
@@ -136,17 +114,7 @@ DataMap JITGraphExecutor::run_chip_instance(
 
 	// extract output activations and place in map
 	hate::Timer const post_timer;
-	halco::common::typed_array<std::future<DataMap>, HemisphereOnDLS> activation_maps;
-	for (auto const core : iter_all<HemisphereOnDLS>()) {
-		auto process_result = [&bot_builder, &top_builder](auto const core) -> DataMap {
-			auto& builder = core ? bot_builder : top_builder;
-			return builder.post_process();
-		};
-		activation_maps[core] = std::async(detail::launch_policy, process_result, core);
-	}
-	for (auto const core : iter_all<HemisphereOnDLS>()) {
-		output_activation_map.merge(activation_maps[core].get());
-	}
+	output_activation_map.merge(builder.post_process());
 	LOG4CXX_TRACE(logger, "run_chip_instance(): Evaluated in " << post_timer.print() << ".");
 
 	return output_activation_map;
@@ -156,35 +124,35 @@ DataMap JITGraphExecutor::run_chip_instance(
 bool JITGraphExecutor::is_executable_on(Graph const& graph, ExecutorMap const& executor_map)
 {
 	auto const executor_dls_globals = boost::adaptors::keys(executor_map);
-	auto const& execution_instance_map =
-	    boost::get(Graph::ExecutionInstancePropertyTag(), graph.get_graph());
+	auto const& vertex_property_map = graph.get_vertex_property_map();
 
 	auto const vertices = boost::make_iterator_range(boost::vertices(graph.get_graph()));
 	return std::none_of(vertices.begin(), vertices.end(), [&](auto const vertex) {
 		return std::find(
 		           executor_dls_globals.begin(), executor_dls_globals.end(),
-		           execution_instance_map[vertex].toHemisphereGlobal().toDLSGlobal()) ==
+		           vertex_property_map.at(vertex).execution_instance.toDLSGlobal()) ==
 		       executor_dls_globals.end();
 	});
 }
 
+#include <iostream>
+
 bool JITGraphExecutor::is_complete_input_list_for(DataMap const& input_list, Graph const& graph)
 {
-	auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), graph.get_graph());
+	auto const& vertex_property_map = graph.get_vertex_property_map();
 	auto const vertices = boost::make_iterator_range(boost::vertices(graph.get_graph()));
 	return std::none_of(vertices.begin(), vertices.end(), [&](auto const vertex) {
-		if (std::holds_alternative<vertex::ExternalInput>(vertex_map[vertex])) {
-			auto const& input_vertex = std::get<vertex::ExternalInput>(vertex_map[vertex]);
-			if (input_vertex.output().type == ConnectionType::DataOutputUInt5) {
-				if (input_list.uint5.find(vertex) == input_list.uint5.end()) {
-					return true;
-				} else if (input_list.uint5.at(vertex).size() != input_vertex.output().size) {
-					return true;
-				}
-			} else if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
+		if (std::holds_alternative<vertex::ExternalInput>(vertex_property_map.at(vertex).vertex)) {
+			auto const& input_vertex =
+			    std::get<vertex::ExternalInput>(vertex_property_map.at(vertex).vertex);
+			if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
 				if (input_list.int8.find(vertex) == input_list.int8.end()) {
 					return true;
 				} else if (input_list.int8.at(vertex).size() != input_vertex.output().size) {
+					return true;
+				}
+			} else if (input_vertex.output().type == ConnectionType::DataOutputUInt16) {
+				if (input_list.spike_events.find(vertex) == input_list.spike_events.end()) {
 					return true;
 				}
 			} else {

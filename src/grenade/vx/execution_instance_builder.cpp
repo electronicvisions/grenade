@@ -5,20 +5,36 @@
 #include <set>
 #include <vector>
 
+#include <boost/range/combine.hpp>
+#include <boost/type_index.hpp>
+#include <log4cxx/logger.h>
+#include <tbb/parallel_for_each.h>
+
 #include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
-#include "grenade/vx/helper.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/padi.h"
+#include "hate/timer.h"
+#include "hate/type_traits.h"
 
 namespace grenade::vx {
+
+namespace {
+
+template <typename T>
+std::string name()
+{
+	auto const full = boost::typeindex::type_id<T>().pretty_name();
+	return full.substr(full.rfind(':') + 1);
+}
+
+} // namespace
 
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     Graph const& graph,
     DataMap const& input_list,
     DataMap const& data_output,
-    halco::hicann_dls::vx::HemisphereOnDLS hemisphere,
-    HemisphereConfig const& hemisphere_config) :
+    ChipConfig const& chip_config) :
     m_graph(graph),
     m_input_list(input_list),
     m_data_output(data_output),
@@ -26,13 +42,22 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_config(),
     m_builder_input(),
     m_builder_neuron_reset(),
-    m_hemisphere(hemisphere),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output(),
     m_ticket()
 {
-	*m_config = hemisphere_config;
+	*m_config = chip_config;
+
+	m_neuron_resets.fill(false);
+	m_ticket_requests.fill(false);
+	m_used_padi_busses.fill(false);
+
+	/** Silence everything which is not set in the graph. */
+	for (auto& node : m_config->crossbar_nodes) {
+		node = haldls::vx::CrossbarNode::drop_all;
+	}
+
 	m_postprocessing = false;
 }
 
@@ -46,126 +71,76 @@ bool ExecutionInstanceBuilder::inputs_available(Graph::vertex_descriptor const d
 	});
 }
 
-typename std::map<Graph::vertex_descriptor, std::vector<UInt5>>::const_reference
-ExecutionInstanceBuilder::get_input_activations(Graph::vertex_descriptor descriptor)
-{
-	auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-	return std::visit(
-	    [&](auto const& vertex) ->
-	    typename std::map<Graph::vertex_descriptor, std::vector<UInt5>>::const_reference {
-		    if (vertex.inputs().size() > 1) {
-			    throw std::logic_error(
-			        "get_input_activations can only be used with input count one.");
-		    }
-		    size_t const size_expected = vertex.inputs().front().size;
-		    auto const edge =
-		        *(boost::make_iterator_range(boost::in_edges(descriptor, m_graph.get_graph()))
-		              .begin());
-		    auto const in_vertex = boost::source(edge, m_graph.get_graph());
-		    if (std::holds_alternative<vertex::ExternalInput>(vertex_map[in_vertex])) {
-			    auto const& ret = *(m_local_external_data.uint5.find(in_vertex));
-			    if (ret.second.size() != size_expected) {
-				    throw std::logic_error(
-				        "Shape of data to be loaded does not match expectation.");
-			    }
-			    return ret;
-		    } else {
-			    auto const& ret = *(m_data_output.uint5.find(in_vertex));
-			    if (ret.second.size() != size_expected) {
-				    throw std::logic_error(
-				        "Shape of data to be loaded does not match expectation.");
-			    }
-			    return ret;
-		    }
-	    },
-	    vertex_map[descriptor]);
-}
-
-std::vector<Int8> ExecutionInstanceBuilder::get_input_data(Graph::vertex_descriptor descriptor)
-{
-	auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-	return std::visit(
-	    [&](auto const& vertex) -> std::vector<Int8> {
-		    std::vector<Int8> activation(vertex.inputs().front().size);
-		    size_t offset = 0;
-		    for (auto const edge :
-		         boost::make_iterator_range(boost::in_edges(descriptor, m_graph.get_graph()))) {
-			    auto const in_vertex = boost::source(edge, m_graph.get_graph());
-			    if (std::holds_alternative<vertex::ExternalInput>(vertex_map[in_vertex])) {
-				    for (size_t i = 0; i < vertex.inputs().front().size; ++i) {
-					    activation.at(i + offset) = m_local_external_data.int8.at(in_vertex).at(i);
-				    }
-				    offset += std::get<vertex::ExternalInput>(vertex_map[in_vertex]).output().size;
-			    } else {
-				    for (size_t i = 0; i < vertex.inputs().front().size; ++i) {
-					    activation.at(i + offset) = m_data_output.int8.at(in_vertex).at(i);
-				    }
-				    offset += std::get<vertex::DataOutput>(vertex_map[in_vertex]).output().size;
-			    }
-		    }
-		    return activation;
-	    },
-	    vertex_map[descriptor]);
-}
-
-template <typename F>
-void ExecutionInstanceBuilder::visit_columns(Graph::vertex_descriptor const vertex, F&& f)
-{
-	// get column mapping from outgoing NeuronView(s)
-	auto const out_edges = boost::out_edges(vertex, m_graph.get_graph());
-	auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-	for (auto const out_edge : boost::make_iterator_range(out_edges)) {
-		auto const& neuron_view =
-		    std::get<vertex::NeuronView>(vertex_map[boost::target(out_edge, m_graph.get_graph())]);
-		for (size_t i = 0; i < neuron_view.output().size; ++i) {
-			f(i, (neuron_view.begin() + i)->toSynapseOnSynapseRow());
-		}
-	}
-}
-
-std::unordered_map<size_t, halco::hicann_dls::vx::SynapseOnSynapseRow>
-ExecutionInstanceBuilder::get_column_map(Graph::vertex_descriptor const vertex)
-{
-	// get column mapping from outgoing NeuronView(s)
-	auto const out_edges = boost::out_edges(vertex, m_graph.get_graph());
-	auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-	std::unordered_map<size_t, halco::hicann_dls::vx::SynapseOnSynapseRow> column_map;
-	size_t offset = 0;
-	for (auto const out_edge : boost::make_iterator_range(out_edges)) {
-		auto const& neuron_view =
-		    std::get<vertex::NeuronView>(vertex_map[boost::target(out_edge, m_graph.get_graph())]);
-		for (size_t i = 0; i < neuron_view.output().size; ++i) {
-			column_map[i + offset] = (neuron_view.begin() + i)->toSynapseOnSynapseRow();
-		}
-		offset += neuron_view.output().size;
-	}
-	return column_map;
-}
-
+template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::SynapseArrayView const& data)
+    Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayView const& data)
 {
 	auto& config = *m_config;
-	// set synapse driver configuration
-	for (auto const& synapse_row : data.synapse_rows()) {
-		auto const synapse_driver = synapse_row.coordinate.toSynapseDriverOnSynapseDriverBlock();
-		auto& synapse_driver_config = config.synapse_driver_block[synapse_driver];
-		if (synapse_row.coordinate.toEnum() % 2) {
-			synapse_driver_config.set_row_mode_top(synapse_row.mode);
-		} else {
-			synapse_driver_config.set_row_mode_bottom(synapse_row.mode);
+	auto const& columns = data.get_columns();
+	auto const synram = data.get_synram();
+	auto const hemisphere = synram.toHemisphereOnDLS();
+	// set synaptic weights and addresses
+	if (enable_hagen_workarounds) { // TODO: remove once HAGEN-mode bug is resolved
+		for (auto const& var :
+		     boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
+			auto const& weights = boost::get<0>(var);
+			[[maybe_unused]] auto const& labels = boost::get<1>(var);
+			auto const& row = boost::get<2>(var);
+			auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
+			auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
+			for (size_t index = 0; index < columns.size(); ++index) {
+				auto const syn_column = columns[index];
+				weight_row[syn_column] = weights.at(index);
+				label_row[syn_column] =
+				    m_hagen_addresses[halco::hicann_dls::vx::SynapseRowOnDLS(row, synram)];
+			}
+		}
+	} else {
+		for (auto const& var :
+		     boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
+			auto const& weights = boost::get<0>(var);
+			auto const& labels = boost::get<1>(var);
+			auto const& row = boost::get<2>(var);
+			auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
+			auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
+			for (size_t index = 0; index < columns.size(); ++index) {
+				auto const syn_column = columns[index];
+				weight_row[syn_column] = weights.at(index);
+				label_row[syn_column] = labels.at(index);
+			}
 		}
 	}
-	// set synaptic weights
-	visit_columns(
-	    vertex, [&](size_t const index, halco::hicann_dls::vx::SynapseOnSynapseRow const column) {
-		    for (auto const& synapse_row : data.synapse_rows()) {
-			    config.synapse_matrix.weights[synapse_row.coordinate][column] =
-			        synapse_row.weights.at(index);
-		    }
-	    });
 }
 
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
+{
+	auto& synapse_driver_config =
+	    m_config->hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
+	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
+	synapse_driver_config.set_row_mode_top(
+	    data.get_row_modes()[halco::hicann_dls::vx::SynapseRowOnSynapseDriver::top]);
+	synapse_driver_config.set_row_mode_bottom(
+	    data.get_row_modes()[halco::hicann_dls::vx::SynapseRowOnSynapseDriver::bottom]);
+	synapse_driver_config.set_row_address_compare_mask(data.get_config());
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::PADIBus const& data)
+{
+	m_used_padi_busses[data.get_coordinate()] = true;
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::CrossbarNode const& data)
+{
+	m_config->crossbar_nodes[data.get_coordinate()] = data.get_config();
+}
+
+template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
 {
@@ -173,89 +148,168 @@ void ExecutionInstanceBuilder::process(
 	using namespace haldls::vx;
 	using namespace halco::hicann_dls::vx;
 	using namespace halco::common;
-	if (data.output().type == ConnectionType::SynapseInputLabel) {
-		// get data input values
-		auto const& [_, activations] = get_input_activations(vertex);
+	auto const& vertex_map = m_graph.get_vertex_property_map();
+	if (data.output().type == ConnectionType::Int8) {
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		auto const in_vertex = boost::source(edge, m_graph.get_graph());
+		auto const& input_values =
+		    ((std::holds_alternative<vertex::ExternalInput>(vertex_map.at(in_vertex).vertex))
+		         ? m_local_external_data.int8.at(in_vertex)
+		         : m_data_output.int8.at(in_vertex));
 
-		// get row mapping from outgoing SynapseArrayView(s)
-		auto& config = *m_config;
-		auto const out_edges = boost::out_edges(vertex, m_graph.get_graph());
-		auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-		for (auto const out_edge : boost::make_iterator_range(out_edges)) {
-			auto const target = boost::target(out_edge, m_graph.get_graph());
-			auto const& synapse_array_view = std::get<vertex::SynapseArrayView>(vertex_map[target]);
-			for (size_t send = 0; send < synapse_array_view.num_sends; ++send) {
-				auto const column_map = get_column_map(target);
-				for (size_t i = 0; i < synapse_array_view.inputs().front().size; ++i) {
-					// set synapse labels (bug workaround)
-					auto const synapse_row =
-					    (synapse_array_view.synapse_rows().begin() + i)->coordinate;
-					auto const label = get_address(synapse_row, activations.at(i));
-					if (label) {
-						for (auto const& column : column_map) {
-							config.synapse_matrix.labels[synapse_row][column.second] = *label;
+		m_local_data.int8[vertex] = input_values;
+	} else if (data.output().type == ConnectionType::CrossbarInputLabel) {
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
+
+		m_local_data.spike_events[vertex] = m_local_external_data.spike_events.at(in_vertex);
+
+		if (enable_hagen_workarounds) { // TODO: remove once HAGEN-mode bug is resolved
+			auto const out_edges = boost::out_edges(vertex, m_graph.get_graph());
+
+			auto const process_label = [&](vertex::CrossbarNode const& crossbar_node,
+			                               vertex::SynapseDriver const& synapse_driver,
+			                               vertex::SynapseArrayView const& synapse_array,
+			                               haldls::vx::SpikeLabel const& label) {
+				auto const spl1_address =
+				    crossbar_node.get_coordinate().toCrossbarInputOnDLS().toSPL1Address();
+				if (!spl1_address) { // no spl1 channel
+					return;
+				}
+				if (*spl1_address != label.get_spl1_address()) { // wrong spl1 channel
+					return;
+				}
+				auto const neuron_label = label.get_neuron_label();
+				auto const target = crossbar_node.get_config().get_target();
+				auto const mask = crossbar_node.get_config().get_mask();
+				if ((neuron_label & mask) != target) { // crossbar node drops event
+					return;
+				}
+				auto const syndrv_mask = synapse_driver.get_config().value();
+				if ((synapse_driver.get_coordinate()
+				         .toSynapseDriverOnSynapseDriverBlock()
+				         .toSynapseDriverOnPADIBus() &
+				     syndrv_mask) !=
+				    (label.get_row_select_address() & syndrv_mask)) { // synapse driver drops event
+					return;
+				}
+				auto const synapse_rows = synapse_driver.get_coordinate().toSynapseRowOnSynram();
+				auto const synapse_label = label.get_synapse_label();
+				// FIXME: add all two allowed values per row (i.e. two)
+				for (auto const& row : synapse_rows) {
+					auto const it = std::find(
+					    synapse_array.get_rows().begin(), synapse_array.get_rows().end(), row);
+					if (it != synapse_array.get_rows().end()) {
+						size_t const i = std::distance(synapse_array.get_rows().begin(), it);
+						auto const& label_row = synapse_array.get_labels()[i];
+						if ((label_row.at(0) & (1 << 5)) ==
+						    (synapse_label & (1 << 5))) { // right hagen address
+							m_hagen_addresses[SynapseRowOnDLS(row, synapse_array.get_synram())] =
+							    synapse_label;
 						}
-
-						// add event
-						m_builder_input.write(
-						    PADIEventOnDLS(m_hemisphere),
-						    get_padi_event(
-						        synapse_row.toSynapseDriverOnSynapseDriverBlock(), *label));
 					}
 				}
+			};
+
+			auto const process_events = [&](vertex::CrossbarNode const& crossbar_node,
+			                                vertex::SynapseDriver const& synapse_driver,
+			                                vertex::SynapseArrayView const& synapse_array) {
+				auto const& events = m_local_data.spike_events.at(vertex);
+				for (auto const& event : events) {
+					std::visit(
+					    [&](auto const& e) {
+						    for (auto const& label : e.get_labels()) {
+							    process_label(crossbar_node, synapse_driver, synapse_array, label);
+						    }
+					    },
+					    event.payload);
+				}
+			};
+
+			auto const process_crossbar_node = [&](auto const& out_edge) {
+				auto const crossbar_node_vertex = boost::target(out_edge, m_graph.get_graph());
+				auto const& crossbar_node =
+				    std::get<vertex::CrossbarNode>(vertex_map.at(crossbar_node_vertex).vertex);
+				auto const crossbar_node_out_edges =
+				    boost::out_edges(crossbar_node_vertex, m_graph.get_graph());
+				for (auto const crossbar_node_out_edge :
+				     boost::make_iterator_range(crossbar_node_out_edges)) {
+					auto const crossbar_node_target_vertex =
+					    boost::target(crossbar_node_out_edge, m_graph.get_graph());
+					if (std::holds_alternative<vertex::PADIBus>(
+					        vertex_map.at(crossbar_node_target_vertex).vertex)) {
+						auto const padi_bus_out_edges =
+						    boost::out_edges(crossbar_node_target_vertex, m_graph.get_graph());
+						for (auto const padi_bus_out_edge :
+						     boost::make_iterator_range(padi_bus_out_edges)) {
+							auto const synapse_driver_vertex =
+							    boost::target(padi_bus_out_edge, m_graph.get_graph());
+							auto const& synapse_driver = std::get<vertex::SynapseDriver>(
+							    vertex_map.at(synapse_driver_vertex).vertex);
+							auto const syndrv_out_edges =
+							    boost::out_edges(synapse_driver_vertex, m_graph.get_graph());
+							for (auto const syndrv_out_edge :
+							     boost::make_iterator_range(syndrv_out_edges)) {
+								auto const synapse_array_vertex =
+								    boost::target(syndrv_out_edge, m_graph.get_graph());
+								auto const& synapse_array = std::get<vertex::SynapseArrayView>(
+								    vertex_map.at(synapse_array_vertex).vertex);
+								process_events(crossbar_node, synapse_driver, synapse_array);
+							}
+						}
+					}
+				}
+			};
+			for (auto const out_edge : boost::make_iterator_range(out_edges)) {
+				process_crossbar_node(out_edge);
 			}
 		}
-	} else if (data.output().type == ConnectionType::Int8) {
-		m_local_data.int8[vertex] = get_input_data(vertex);
 	} else {
 		throw std::logic_error("DataInput output connection type processing not implemented.");
 	}
 }
 
+template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::CADCMembraneReadoutView const& data)
 {
+	// CADCMembraneReadoutView inputs size equals 1
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+
+	// get source NeuronView
+	auto const hemisphere = data.get_synram().toHemisphereOnDLS();
+
+	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
 	using namespace lola::vx;
+	using namespace haldls::vx;
 	if (!m_postprocessing) { // pre-hw-run processing
-		if (!m_ticket) {
-			m_ticket_baseline = m_builder_cadc_readout_baseline.read(
-			    CADCSampleRowOnDLS(SynapseRowOnSynram(), SynramOnDLS(m_hemisphere)));
-			m_ticket = m_builder_cadc_readout.read(
-			    CADCSampleRowOnDLS(SynapseRowOnSynram(), SynramOnDLS(m_hemisphere)));
-		}
+		m_ticket_requests[hemisphere] = true;
 		// results need hardware execution
 		m_post_vertices.push_back(vertex);
 	} else { // post-hw-run processing
-		auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
 		// extract Int8 values
-		auto const cadc_sample_row = std::make_unique<CADCSampleRow>(m_ticket->get());
-		auto const cadc_sample_row_baseline =
-		    std::make_unique<CADCSampleRow>(m_ticket_baseline->get());
+		assert(m_ticket);
+		auto const values = m_ticket->get();
+		assert(m_ticket_baseline);
+		auto const values_baseline = m_ticket_baseline->get();
 		std::vector<Int8> samples(data.output().size);
 
-		// get samples via neuron mapping from incoming NeuronView(s)
-		size_t offset = 0;
-		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-			auto const& neuron_view = std::get<vertex::NeuronView>(
-			    vertex_map[boost::source(in_edge, m_graph.get_graph())]);
-			for (size_t i = 0; i < neuron_view.output().size; ++i) {
-				samples.at(i + offset) = Int8(
-				    static_cast<intmax_t>(
-				        cadc_sample_row->causal[(neuron_view.begin() + i)->toSynapseOnSynapseRow()]
-				            .value()) -
-				    static_cast<intmax_t>(
-				        cadc_sample_row_baseline
-				            ->causal[(neuron_view.begin() + i)->toSynapseOnSynapseRow()]
-				            .value()));
-			}
-			offset += neuron_view.output().size;
+		// get samples via neuron mapping from incoming NeuronView
+		size_t i = 0;
+		for (auto const& column : data.get_columns()) {
+			samples.at(i) = Int8(
+			    static_cast<intmax_t>(values.causal[data.get_synram()][column].value()) -
+			    static_cast<intmax_t>(values_baseline.causal[data.get_synram()][column].value()));
+			i++;
 		}
 		m_local_data.int8[vertex] = samples;
 	}
 }
 
+template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
@@ -264,45 +318,27 @@ void ExecutionInstanceBuilder::process(
 	// TODO: This reset does not really belong here / how do we say when and whether it should
 	// be triggered?
 	// result: -> make property of each neuron view entry
-	for (auto const neuron : data) {
-		auto const neuron_reset =
-		    AtomicNeuronOnDLS(neuron, NeuronRowOnDLS(m_hemisphere)).toNeuronResetOnDLS();
-		m_builder_neuron_reset.write(neuron_reset, NeuronReset());
+	for (auto const column : data.get_columns()) {
+		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
+		m_neuron_resets[neuron_reset] = true;
 	}
 	// TODO: once we have neuron configuration, it should be placed here
 }
 
+template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
 {
-	if (data.output().type == ConnectionType::DataOutputUInt5) {
-		m_local_external_data.uint5[vertex] = m_input_list.uint5.at(vertex);
-	} else if (data.output().type == ConnectionType::DataOutputInt8) {
+	if (data.output().type == ConnectionType::DataOutputInt8) {
 		m_local_external_data.int8[vertex] = m_input_list.int8.at(vertex);
+	} else if (data.output().type == ConnectionType::DataOutputUInt16) {
+		m_local_external_data.spike_events[vertex] = m_input_list.spike_events.at(vertex);
 	} else {
 		throw std::runtime_error("ExternalInput output type processing not implemented.");
 	}
 }
 
-void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::ConvertInt8ToSynapseInputLabel const& data)
-{
-	std::vector<UInt5> activations(data.output().size);
-
-	// get input value mapping
-	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-	size_t offset = 0;
-	for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-		for (size_t i = 0; i < data.output().size; ++i) {
-			// perform conversion
-			activations.at(i + offset) = UInt5(static_cast<uint8_t>(
-			    m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph())).at(i) >> 3));
-		}
-		offset += data.output().size;
-	}
-	m_local_data.uint5[vertex] = activations;
-}
-
+template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::Addition const& data)
 {
@@ -320,24 +356,11 @@ void ExecutionInstanceBuilder::process(
 	m_local_data.int8[vertex] = values;
 }
 
+template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataOutput const& data)
 {
-	if (data.inputs().front().type == ConnectionType::SynapseInputLabel) {
-		// filter data output from activation values
-		std::vector<UInt5> activations(data.output().size);
-
-		// get activation mapping
-		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-			for (size_t i = 0; i < activations.size(); ++i) {
-				// perform lookup
-				activations.at(i) =
-				    m_local_data.uint5.at(boost::source(in_edge, m_graph.get_graph())).at(i);
-			}
-		}
-		m_local_data_output.uint5[vertex] = activations;
-	} else if (data.inputs().front().type == ConnectionType::Int8) {
+	if (data.inputs().front().type == ConnectionType::Int8) {
 		std::vector<Int8> values(data.output().size);
 		// get mapping
 		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
@@ -356,9 +379,19 @@ void ExecutionInstanceBuilder::process(
 
 void ExecutionInstanceBuilder::process(Graph::vertex_descriptor const vertex)
 {
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 	if (inputs_available(vertex)) {
-		auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-		std::visit([&](auto const& value) { process(vertex, value); }, vertex_map[vertex]);
+		auto const& vertex_map = m_graph.get_vertex_property_map();
+		std::visit(
+		    [&](auto const& value) {
+			    hate::Timer timer;
+			    process(vertex, value);
+			    LOG4CXX_TRACE(
+			        logger, "process(): Preprocessed "
+			                    << name<hate::remove_all_qualifiers_t<decltype(value)>>() << " in "
+			                    << timer.print() << ".");
+		    },
+		    vertex_map.at(vertex).vertex);
 	} else {
 		m_post_vertices.push_back(vertex);
 	}
@@ -366,8 +399,8 @@ void ExecutionInstanceBuilder::process(Graph::vertex_descriptor const vertex)
 
 void ExecutionInstanceBuilder::post_process(Graph::vertex_descriptor const vertex)
 {
-	auto const& vertex_map = boost::get(Graph::VertexPropertyTag(), m_graph.get_graph());
-	std::visit([&](auto const& value) { process(vertex, value); }, vertex_map[vertex]);
+	auto const& vertex_map = m_graph.get_vertex_property_map();
+	std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex).vertex);
 }
 
 DataMap ExecutionInstanceBuilder::post_process()
@@ -393,40 +426,114 @@ stadls::vx::PlaybackProgramBuilder ExecutionInstanceBuilder::generate()
 	using namespace stadls::vx;
 	using namespace lola::vx;
 
+	// generate input event sequence
+	if (m_local_data.spike_events.size() > 1) {
+		throw std::logic_error("Expected only one spike input vertex.");
+	}
+	if (m_local_data.spike_events.size() > 0) {
+		m_builder_input.write(TimerOnDLS(), Timer());
+		TimedSpikeEvent::Time current_time(0);
+		for (auto const& event : m_local_data.spike_events.begin()->second) {
+			if (event.time > current_time) {
+				current_time = event.time;
+				m_builder_input.wait_until(TimerOnDLS(), current_time);
+			}
+			std::visit(
+			    [&](auto const& p) {
+				    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
+				    m_builder_input.write(typename container_type::coordinate_type(), p);
+			    },
+			    event.payload);
+		}
+	}
+
+	// apply padi bus configuration
+	for (auto const bus : iter_all<PADIBusOnDLS>()) {
+		auto& config = m_config->hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()]
+		                   .common_padi_bus_config;
+		auto enable_config = m_config->hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()]
+		                         .common_padi_bus_config.get_enable_spl1();
+		enable_config[bus.toPADIBusOnPADIBusBlock()] = m_used_padi_busses[bus];
+		config.set_enable_spl1(enable_config);
+	}
+
+	// build cadc readouts
+	if (std::any_of(
+	        m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; })) {
+		m_ticket_baseline = m_builder_cadc_readout_baseline.read(CADCSamplesOnDLS());
+		m_ticket = m_builder_cadc_readout.read(CADCSamplesOnDLS());
+	}
+	m_ticket_requests.fill(false);
+
 	PlaybackProgramBuilder builder;
-	PlaybackProgramBuilder driver_builder;
 	// write static configuration
 	if (!m_config.has_history()) {
-		builder.write(SynramOnDLS(m_hemisphere), m_config->synapse_matrix);
-		for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			driver_builder.write(
-			    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(m_hemisphere)),
-			    m_config->synapse_driver_block[synapse_driver]);
+		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+			builder.write(
+			    SynramOnDLS(hemisphere), m_config->hemispheres[hemisphere].synapse_matrix);
+			for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
+				builder.write(
+				    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
+				    m_config->hemispheres[hemisphere].synapse_driver_block[synapse_driver]);
+			}
+			builder.write(
+			    hemisphere.toCommonPADIBusConfigOnDLS(),
+			    m_config->hemispheres[hemisphere].common_padi_bus_config);
+		}
+		for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
+			builder.write(coord, m_config->crossbar_nodes[coord]);
 		}
 	} else {
-		builder.write(
-		    SynramOnDLS(m_hemisphere), m_config->synapse_matrix,
-		    m_config.get_history().synapse_matrix);
-		for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			driver_builder.write(
-			    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(m_hemisphere)),
-			    m_config->synapse_driver_block[synapse_driver],
-			    m_config.get_history().synapse_driver_block[synapse_driver]);
+		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+			builder.write(
+			    SynramOnDLS(hemisphere), m_config->hemispheres[hemisphere].synapse_matrix,
+			    m_config.get_history().hemispheres[hemisphere].synapse_matrix);
+			for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
+				builder.write(
+				    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
+				    m_config->hemispheres[hemisphere].synapse_driver_block[synapse_driver],
+				    m_config.get_history()
+				        .hemispheres[hemisphere]
+				        .synapse_driver_block[synapse_driver]);
+			}
+			builder.write(
+			    hemisphere.toCommonPADIBusConfigOnDLS(),
+			    m_config->hemispheres[hemisphere].common_padi_bus_config);
+		}
+		for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
+			builder.write(coord, m_config->crossbar_nodes[coord]);
 		}
 	}
 	m_config.save();
 	// reset
 	{
 		auto const new_matrix = std::make_unique<lola::vx::SynapseMatrix>();
-		m_config->synapse_matrix = *new_matrix;
+		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+			m_config->hemispheres[hemisphere].synapse_matrix = *new_matrix;
+		}
 	}
-	for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-		m_config->synapse_driver_block[drv].set_row_mode_top(
-		    haldls::vx::SynapseDriverConfig::RowMode::disabled);
-		m_config->synapse_driver_block[drv].set_row_mode_bottom(
-		    haldls::vx::SynapseDriverConfig::RowMode::disabled);
+	for (auto& node : m_config->crossbar_nodes) {
+		node = CrossbarNode::drop_all;
 	}
-	builder.merge_back(driver_builder);
+	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
+			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
+			    haldls::vx::SynapseDriverConfig::RowMode::disabled);
+			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
+			    haldls::vx::SynapseDriverConfig::RowMode::disabled);
+		}
+	}
+	for (auto& a : m_hagen_addresses) {
+		a = lola::vx::SynapseMatrix::Label(0);
+	}
+	m_used_padi_busses.fill(false);
+	// build neuron resets
+	for (auto const neuron : iter_all<NeuronResetOnDLS>()) {
+		if (m_neuron_resets[neuron]) {
+			m_builder_neuron_reset.write(neuron, NeuronReset());
+		}
+	}
+	m_neuron_resets.fill(false);
 	// reset neurons (baseline read)
 	builder.copy_back(m_builder_neuron_reset);
 	// wait sufficient amount of time (30us) before baseline reads for membrane to settle
@@ -442,6 +549,13 @@ stadls::vx::PlaybackProgramBuilder ExecutionInstanceBuilder::generate()
 	builder.merge_back(m_builder_neuron_reset);
 	// send input
 	builder.merge_back(m_builder_input);
+	// wait for membrane to settle
+	if (!builder.empty()) {
+		builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+		builder.wait_until(
+		    halco::hicann_dls::vx::TimerOnDLS(),
+		    haldls::vx::Timer::Value(2 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+	}
 	// read out neuron membranes
 	builder.merge_back(m_builder_cadc_readout);
 	// wait for response data

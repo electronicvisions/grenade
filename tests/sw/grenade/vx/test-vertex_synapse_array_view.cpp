@@ -12,30 +12,34 @@ using namespace grenade::vx::vertex;
 TEST(SynapseArrayView, General)
 {
 	// construct SynapseArrayView on one vertical half with size 256 (x) * 256 (y)
-	SynapseArrayView::synapse_rows_type synapse_rows;
-	// fill synapse array view
-	for (auto synapse_row : iter_all<SynapseRowOnSynram>()) {
-		// all synapse rows
-		synapse_rows.push_back(SynapseArrayView::SynapseRow());
-		synapse_rows.back().coordinate = synapse_row;
-		synapse_rows.back().weights = std::vector<SynapseRow::Weight>(123);
-		// even rows inhibitory, odd rows excitatory
-		synapse_rows.back().mode = synapse_row.toEnum() % 2
-		                               ? SynapseDriverConfig::RowMode::excitatory
-		                               : SynapseDriverConfig::RowMode::inhibitory;
+	SynapseArrayView::Columns columns;
+	for (auto c : iter_all<SynapseOnSynapseRow>()) {
+		columns.push_back(c);
 	}
 
-	EXPECT_NO_THROW(auto _ = SynapseArrayView(synapse_rows););
+	SynapseArrayView::Rows rows;
+	for (auto synapse_row : iter_all<SynapseRowOnSynram>()) {
+		rows.push_back(synapse_row);
+	}
 
-	// weight shape not rectangular
-	synapse_rows.back().weights.clear();
-	EXPECT_THROW(auto _ = SynapseArrayView(synapse_rows);, std::runtime_error);
-	synapse_rows.back().weights = std::vector<SynapseRow::Weight>(123);
+	SynapseArrayView::Synram synram(0);
 
-	SynapseArrayView vertex(synapse_rows);
-	EXPECT_EQ(vertex.inputs().size(), 1);
-	EXPECT_EQ(vertex.inputs().front().size, 256);
-	EXPECT_EQ(vertex.output().size, 123);
+	SynapseArrayView::Weights weights(SynapseRowOnSynram::size);
+	for (auto& row : weights) {
+		row.resize(SynapseOnSynapseRow::size);
+	}
+
+	SynapseArrayView::Labels labels(SynapseRowOnSynram::size);
+	for (auto& row : labels) {
+		row.resize(SynapseOnSynapseRow::size);
+	}
+
+	EXPECT_NO_THROW(SynapseArrayView(synram, rows, columns, weights, labels));
+
+	SynapseArrayView vertex(synram, rows, columns, weights, labels);
+	EXPECT_EQ(vertex.inputs().size(), 128);     // synapse drivers
+	EXPECT_EQ(vertex.inputs().front().size, 1); // input size per synapse driver
+	EXPECT_EQ(vertex.output().size, 256);       // neurons
 
 	EXPECT_EQ(vertex.inputs().front().type, ConnectionType::SynapseInputLabel);
 	EXPECT_EQ(vertex.output().type, ConnectionType::SynapticInput);

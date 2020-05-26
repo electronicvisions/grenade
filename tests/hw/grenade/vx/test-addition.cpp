@@ -37,8 +37,7 @@ TEST(Addition, Single)
 
 	grenade::vx::Graph g;
 
-	grenade::vx::coordinate::ExecutionInstance instance(
-	    grenade::vx::coordinate::ExecutionIndex(0), HemisphereGlobal());
+	grenade::vx::coordinate::ExecutionInstance instance;
 
 	auto const v1 = g.add(external_input, instance, {});
 	auto const v2 = g.add(data_input, instance, {v1});
@@ -58,7 +57,7 @@ TEST(Addition, Single)
 		stadls::vx::run(executors.at(DLSGlobal()), program);
 	}
 
-	// fill graph inputs (with UInt5(0))
+	// fill graph inputs
 	grenade::vx::DataMap input_list;
 	std::vector<grenade::vx::Int8> inputs(size);
 	for (intmax_t i = -128; i < 127; ++i) {
@@ -71,17 +70,17 @@ TEST(Addition, Single)
 	config_map[DLSGlobal()] = *chip;
 
 	// run Graph with given inputs and return results
-	auto const output_activation_map =
+	auto const result_map =
 	    grenade::vx::JITGraphExecutor::run(g, input_list, executors, config_map);
 
-	EXPECT_EQ(output_activation_map.int8.size(), 1);
+	EXPECT_EQ(result_map.int8.size(), 1);
 
-	EXPECT_TRUE(output_activation_map.int8.find(v4) != output_activation_map.int8.end());
-	EXPECT_EQ(output_activation_map.int8.at(v4).size(), size);
+	EXPECT_TRUE(result_map.int8.find(v4) != result_map.int8.end());
+	EXPECT_EQ(result_map.int8.at(v4).size(), size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		EXPECT_EQ(
 		    static_cast<uint8_t>(
 		        std::min(std::max(intmax_t(2 * i), intmax_t(-128)), intmax_t(127))),
-		    static_cast<uint8_t>(output_activation_map.int8.at(v4).at(i + 128)));
+		    static_cast<uint8_t>(result_map.int8.at(v4).at(i + 128)));
 	}
 }

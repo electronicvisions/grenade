@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <ostream>
 #include <stddef.h>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
@@ -22,9 +23,12 @@ struct DataInput
 	 */
 	explicit DataInput(ConnectionType output_type, size_t size) SYMBOL_VISIBLE;
 
+	constexpr static bool variadic_input = false;
 	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
 
 	Port output() const SYMBOL_VISIBLE;
+
+	friend std::ostream& operator<<(std::ostream& os, DataInput const& config) SYMBOL_VISIBLE;
 
 private:
 	size_t m_size;

@@ -4,8 +4,8 @@ namespace grenade::vx {
 
 void DataMap::merge(DataMap&& other)
 {
-	uint5.merge(other.uint5);
 	int8.merge(other.int8);
+	spike_events.merge(other.spike_events);
 }
 
 void DataMap::merge(DataMap& other)
@@ -15,8 +15,8 @@ void DataMap::merge(DataMap& other)
 
 void DataMap::clear()
 {
-	uint5.clear();
 	int8.clear();
+	spike_events.clear();
 }
 
 } // namespace grenade::vx

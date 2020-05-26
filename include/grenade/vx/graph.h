@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <map>
+#include <unordered_map>
 #include <boost/graph/adjacency_list.hpp>
 
 #include "grenade/vx/execution_instance.h"
@@ -23,33 +24,24 @@ namespace grenade::vx {
 class Graph
 {
 public:
-	struct ExecutionInstancePropertyTag
-	{
-		typedef boost::vertex_property_tag kind;
-	};
-	struct VertexPropertyTag
-	{
-		typedef boost::vertex_property_tag kind;
-	};
-	typedef boost::property<
-	    boost::vertex_index_t,
-	    size_t,
-	    boost::property<
-	        VertexPropertyTag,
-	        Vertex,
-	        boost::property<ExecutionInstancePropertyTag, coordinate::ExecutionInstance>>>
-	    VertexProperty;
-
 	/** Directed graph without parallel edges. */
 	typedef boost::adjacency_list<
 	    boost::vecS,
 	    boost::vecS,
 	    boost::bidirectionalS,
-	    VertexProperty,
+	    boost::no_property,
 	    boost::no_property>
 	    graph_type;
 
 	typedef graph_type::vertex_descriptor vertex_descriptor;
+
+	struct VertexProperty
+	{
+		coordinate::ExecutionInstance execution_instance;
+		Vertex vertex;
+	};
+
+	typedef std::unordered_map<vertex_descriptor, VertexProperty> vertex_property_map_type;
 
 	/** Default constructor. */
 	Graph() SYMBOL_VISIBLE;
@@ -81,13 +73,15 @@ public:
 	 */
 	graph_type const& get_graph() const SYMBOL_VISIBLE;
 
+	/**
+	 * Get constant reference to vertex property map.
+	 * @return Constant reference to vertex property map
+	 */
+	vertex_property_map_type const& get_vertex_property_map() const SYMBOL_VISIBLE;
+
 	typedef std::map<
 	    coordinate::ExecutionIndex,
-	    std::map<
-	        halco::hicann_dls::vx::DLSGlobal,
-	        halco::common::typed_array<
-	            std::vector<Graph::vertex_descriptor>,
-	            halco::hicann_dls::vx::HemisphereOnDLS>>>
+	    std::map<halco::hicann_dls::vx::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
 	    ordered_vertices_type;
 
 	/**
@@ -98,6 +92,7 @@ public:
 
 private:
 	graph_type m_graph;
+	vertex_property_map_type m_vertex_property_map;
 	log4cxx::Logger* m_logger;
 };
 

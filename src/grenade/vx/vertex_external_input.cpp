@@ -13,4 +13,11 @@ Port ExternalInput::output() const
 	return Port(m_size, m_output_type);
 }
 
+std::ostream& operator<<(std::ostream& os, ExternalInput const& config)
+{
+	os << "ExternalInput(size: " << config.m_size << ", output_type: " << config.m_output_type
+	   << ")";
+	return os;
+}
+
 } // namespace grenade::vx

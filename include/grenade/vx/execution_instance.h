@@ -28,10 +28,10 @@ struct ExecutionInstance
 {
 	ExecutionInstance() = default;
 
-	explicit ExecutionInstance(
-	    ExecutionIndex temporal_index, halco::hicann_dls::vx::HemisphereGlobal dls) SYMBOL_VISIBLE;
+	explicit ExecutionInstance(ExecutionIndex temporal_index, halco::hicann_dls::vx::DLSGlobal dls)
+	    SYMBOL_VISIBLE;
 
-	halco::hicann_dls::vx::HemisphereGlobal toHemisphereGlobal() const SYMBOL_VISIBLE;
+	halco::hicann_dls::vx::DLSGlobal toDLSGlobal() const SYMBOL_VISIBLE;
 	ExecutionIndex toExecutionIndex() const SYMBOL_VISIBLE;
 
 	bool operator<(ExecutionInstance const& other) const SYMBOL_VISIBLE;
@@ -45,8 +45,8 @@ struct ExecutionInstance
 	    SYMBOL_VISIBLE;
 
 private:
-	halco::hicann_dls::vx::HemisphereGlobal m_dls_global;
 	ExecutionIndex m_temporal_index;
+	halco::hicann_dls::vx::DLSGlobal m_dls_global;
 };
 
 } // namespace grenade::vx::coordinate

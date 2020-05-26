@@ -12,23 +12,27 @@ using namespace grenade::vx::vertex;
 
 TEST(NeuronView, General)
 {
-	typename NeuronView::neurons_type nrns;
+	typename NeuronView::Columns columns;
 	for (auto nrn : iter_all<NeuronColumnOnDLS>()) {
-		nrns.push_back(nrn);
+		columns.push_back(nrn);
 	}
+	NeuronView::Row row(0);
 
-	EXPECT_NO_THROW(auto _ = NeuronView(nrns););
+	EXPECT_NO_THROW(NeuronView(columns, row));
 
 	// produce duplicate entry
-	nrns.at(1) = NeuronColumnOnDLS(0);
-	EXPECT_THROW(auto _ = NeuronView(nrns);, std::runtime_error);
-	nrns.at(1) = NeuronColumnOnDLS(1);
+	columns.at(1) = NeuronColumnOnDLS(0);
+	EXPECT_THROW(NeuronView(columns, row);, std::runtime_error);
+	columns.at(1) = NeuronColumnOnDLS(1);
 
-	NeuronView vertex(nrns);
-	EXPECT_EQ(vertex.inputs().size(), 1);
-	EXPECT_EQ(vertex.inputs().front().size, NeuronColumnOnDLS::size);
-	EXPECT_EQ(vertex.output().size, NeuronColumnOnDLS::size);
+	NeuronView config(columns, row);
+	EXPECT_EQ(config.get_columns(), columns);
+	EXPECT_EQ(config.get_row(), row);
+	EXPECT_EQ(config.inputs().size(), 1);
+	EXPECT_EQ(config.inputs().front().size, NeuronColumnOnDLS::size);
+	EXPECT_EQ(config.output().size, NeuronColumnOnDLS::size);
 
-	EXPECT_EQ(vertex.inputs().front().type, ConnectionType::SynapticInput);
-	EXPECT_EQ(vertex.output().type, ConnectionType::MembraneVoltage);
+	EXPECT_EQ(config.inputs().front().type, ConnectionType::SynapticInput);
+
+	EXPECT_EQ(config.output().type, ConnectionType::MembraneVoltage);
 }

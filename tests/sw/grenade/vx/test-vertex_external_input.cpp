@@ -7,11 +7,11 @@ using namespace grenade::vx::vertex;
 
 TEST(ExternalInput, General)
 {
-	EXPECT_NO_THROW(ExternalInput(ConnectionType::DataOutputUInt5, 123));
+	EXPECT_NO_THROW(ExternalInput(ConnectionType::DataOutputInt8, 123));
 
-	ExternalInput vertex(ConnectionType::DataOutputUInt5, 123);
+	ExternalInput vertex(ConnectionType::DataOutputInt8, 123);
 	EXPECT_EQ(vertex.inputs().size(), 0);
 	EXPECT_EQ(vertex.output().size, 123);
 
-	EXPECT_EQ(vertex.output().type, ConnectionType::DataOutputUInt5);
+	EXPECT_EQ(vertex.output().type, ConnectionType::DataOutputInt8);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include "grenade/vx/event.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/types.h"
 #include "hate/visibility.h"
@@ -12,8 +13,8 @@ namespace grenade::vx {
  */
 struct DataMap
 {
-	std::map<Graph::vertex_descriptor, std::vector<UInt5>> uint5;
 	std::map<Graph::vertex_descriptor, std::vector<Int8>> int8;
+	std::map<Graph::vertex_descriptor, TimedSpikeEventSequence> spike_events;
 
 	/**
 	 * Merge other map content into this one's.

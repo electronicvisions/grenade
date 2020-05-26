@@ -1,60 +1,84 @@
 #pragma once
 #include <array>
+#include <ostream>
 #include <stddef.h>
 #include <vector>
 #include <boost/range/iterator_range.hpp>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "haldls/vx/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/synapse.h"
-
-namespace halco::hicann_dls::vx {
-struct SynapseRowOnSynram;
-} // namespace halco::hicann_dls::vx
 
 namespace grenade::vx::vertex {
 
 /**
- * A rectangular (not necessarily consecutive) view of synapses.
- * TODO: split out synapse rows
+ * A rectangular view of synapses connected to a set of synapse drivers.
  */
 struct SynapseArrayView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
-	constexpr static bool single_outgoing_vertex = true;
 
-	struct SynapseRow
-	{
-		typedef lola::vx::SynapseMatrix::Weight Weight;
-
-		haldls::vx::SynapseDriverConfig::RowMode mode;
-
-		halco::hicann_dls::vx::SynapseRowOnSynram coordinate;
-
-		std::vector<Weight> weights;
-	};
-
-	typedef std::vector<SynapseRow> synapse_rows_type;
-
-	SynapseArrayView() SYMBOL_VISIBLE;
-
-	explicit SynapseArrayView(synapse_rows_type const& synapse_rows) SYMBOL_VISIBLE;
-
-	size_t num_sends;
+	typedef std::vector<halco::hicann_dls::vx::SynapseRowOnSynram> Rows;
+	typedef halco::hicann_dls::vx::SynramOnDLS Synram;
+	typedef std::vector<halco::hicann_dls::vx::SynapseOnSynapseRow> Columns;
+	typedef std::vector<std::vector<lola::vx::SynapseMatrix::Label>> Labels;
+	typedef std::vector<std::vector<lola::vx::SynapseMatrix::Weight>> Weights;
 
 	/**
-	 * Accessor to synapse row configuration via a range.
-	 * @return Range of synapse row configuration
+	 * Construct synapse array view.
+	 * @param synram Synram location of synapses
+	 * @param rows Coordinates of rows
+	 * @param columns Coordinates of columns
+	 * @param weights Weight values
+	 * @param labels Label values
 	 */
-	boost::iterator_range<synapse_rows_type::const_iterator> synapse_rows() const SYMBOL_VISIBLE;
+	explicit SynapseArrayView(
+	    Synram const& synram,
+	    Rows const& rows,
+	    Columns const& columns,
+	    Weights const& weights,
+	    Labels const& labels) SYMBOL_VISIBLE;
 
-	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
+	/**
+	 * Accessor to synapse row coordinates via a range.
+	 * @return Range of synapse row coordinates
+	 */
+	boost::iterator_range<Rows::const_iterator> get_rows() const SYMBOL_VISIBLE;
+
+	/**
+	 * Accessor to synapse column coordinates via a range.
+	 * @return Range of synapse column coordinates
+	 */
+	boost::iterator_range<Columns::const_iterator> get_columns() const SYMBOL_VISIBLE;
+
+	/**
+	 * Accessor to weight configuration via a range.
+	 * @return Range of weight configuration
+	 */
+	boost::iterator_range<Weights::const_iterator> get_weights() const SYMBOL_VISIBLE;
+
+	/**
+	 * Accessor to label configuration via a range.
+	 * @return Range of label configuration
+	 */
+	boost::iterator_range<Labels::const_iterator> get_labels() const SYMBOL_VISIBLE;
+
+	Synram const& get_synram() const SYMBOL_VISIBLE;
+
+	constexpr static bool variadic_input = false;
+	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 
 	Port output() const SYMBOL_VISIBLE;
 
+	friend std::ostream& operator<<(std::ostream& os, SynapseArrayView const& config)
+	    SYMBOL_VISIBLE;
+
 private:
-	synapse_rows_type m_synapse_rows;
+	Synram m_synram;
+	Rows m_rows;
+	Columns m_columns;
+	Weights m_weights;
+	Labels m_labels;
 };
 
 } // grenade::vx::vertex

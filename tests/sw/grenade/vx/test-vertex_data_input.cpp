@@ -7,14 +7,14 @@ using namespace grenade::vx::vertex;
 
 TEST(DataInput, General)
 {
-	EXPECT_NO_THROW(DataInput(ConnectionType::SynapseInputLabel, 123));
+	EXPECT_NO_THROW(DataInput(ConnectionType::Int8, 123));
 	EXPECT_THROW(DataInput(ConnectionType::SynapticInput, 123), std::runtime_error);
 
-	DataInput vertex(ConnectionType::SynapseInputLabel, 123);
+	DataInput vertex(ConnectionType::Int8, 123);
 	EXPECT_EQ(vertex.inputs().size(), 1);
 	EXPECT_EQ(vertex.inputs().front().size, 123);
 	EXPECT_EQ(vertex.output().size, 123);
 
-	EXPECT_EQ(vertex.inputs().front().type, ConnectionType::DataOutputUInt5);
-	EXPECT_EQ(vertex.output().type, ConnectionType::SynapseInputLabel);
+	EXPECT_EQ(vertex.inputs().front().type, ConnectionType::DataOutputInt8);
+	EXPECT_EQ(vertex.output().type, ConnectionType::Int8);
 }

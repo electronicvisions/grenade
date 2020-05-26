@@ -22,36 +22,42 @@ Graph::vertex_descriptor Graph::add(
 	auto const check_inputs = [&](auto const& v) {
 		size_t const num_inputs = v.inputs().size();
 
-		if (num_inputs != inputs.size()) {
-			std::stringstream ss;
-			ss << "Number of supplied inputs (" << inputs.size() << ") does not match expected ("
-			   << num_inputs << ") from vertex.";
-			throw std::runtime_error(ss.str());
+		if constexpr (v.variadic_input) {
+			if (num_inputs > inputs.size()) {
+				std::stringstream ss;
+				ss << "Number of supplied inputs (" << inputs.size()
+				   << ") does not match expected minimal (" << num_inputs << ") from vertex.";
+				throw std::runtime_error(ss.str());
+			}
+		} else {
+			if (num_inputs != inputs.size()) {
+				std::stringstream ss;
+				ss << "Number of supplied inputs (" << inputs.size()
+				   << ") does not match expected (" << num_inputs << ") from vertex.";
+				throw std::runtime_error(ss.str());
+			}
 		}
 
-		for (size_t input_index = 0; input_index < inputs.size(); ++input_index) {
+		for (size_t i = 0; i < inputs.size(); ++i) {
+			auto const& input = inputs.at(i);
+			size_t const input_index = std::min(input, num_inputs - 1);
+
 			auto const check_single_input = [&](auto const& w) {
 				// check incoming port matches positional input port
 				if (v.inputs().at(input_index) != w.output()) {
 					std::stringstream ss;
-					ss << "Vertex port " << v.inputs().at(input_index) << " at input index ("
-					   << input_index << ") does not match provided port " << w.output()
-					   << " of input vertex.";
+					ss << "Vertex port " << v.inputs().at(input_index) << " at input index (" << i
+					   << ") does not match provided port " << w.output() << " of input vertex.";
 					throw std::runtime_error(ss.str());
 				}
 
-				if (single_outgoing_vertex(w)) {
-					if (boost::out_degree(inputs.at(input_index), m_graph) != 0) {
-						throw std::runtime_error(
-						    "Input vertex port does not allow more than one edge.");
-					}
+				if (!supports_input_from(v, w)) {
+					throw std::runtime_error("Vertex does not support input from incoming vertex.");
 				}
 
 				// check connection goes forward in time
-				auto const& execution_instance_property_map =
-				    boost::get(ExecutionInstancePropertyTag(), m_graph);
 				auto const& out_execution_instance =
-				    execution_instance_property_map[inputs.at(input_index)];
+				    m_vertex_property_map.at(inputs.at(input_index)).execution_instance;
 				auto const connection_type = w.output().type;
 				auto const connection_type_can_connect =
 				    std::find(
@@ -73,18 +79,23 @@ Graph::vertex_descriptor Graph::add(
 				}
 			};
 
-			auto const& vertex_property_map = boost::get(VertexPropertyTag(), m_graph);
-			std::visit(check_single_input, vertex_property_map[inputs.at(input_index)]);
+			std::visit(check_single_input, m_vertex_property_map.at(input).vertex);
 		}
+		LOG4CXX_TRACE(m_logger, "add(): Adding vertex " << v << ".");
 	};
 
 	std::visit(check_inputs, vertex);
 
 	auto const descriptor = boost::add_vertex(m_graph);
-	boost::put(VertexPropertyTag(), m_graph, descriptor, vertex);
-	boost::put(ExecutionInstancePropertyTag(), m_graph, descriptor, execution_instance);
+	{
+		auto const [_, success] =
+		    m_vertex_property_map.emplace(descriptor, VertexProperty{execution_instance, vertex});
+		if (!success) {
+			throw std::logic_error("Adding vertex property graph unsuccessful.");
+		}
+	}
 
-	for (auto const input : inputs) {
+	for (auto const& input : inputs) {
 		auto const [_, success] = boost::add_edge(input, descriptor, m_graph);
 		if (!success) {
 			throw std::logic_error("Adding edge to graph unsuccessful.");
@@ -102,18 +113,20 @@ Graph::graph_type const& Graph::get_graph() const
 	return m_graph;
 }
 
+Graph::vertex_property_map_type const& Graph::get_vertex_property_map() const
+{
+	return m_vertex_property_map;
+}
+
 Graph::ordered_vertices_type Graph::get_ordered_vertices() const
 {
 	hate::Timer const timer;
 	ordered_vertices_type ordered_vertices;
-	auto const& execution_instance_map = boost::get(ExecutionInstancePropertyTag(), m_graph);
 	for (auto const vertex : boost::make_iterator_range(boost::vertices(m_graph))) {
-		auto const execution_instance = execution_instance_map[vertex];
+		auto const execution_instance = m_vertex_property_map.at(vertex).execution_instance;
 		auto const execution_index = execution_instance.toExecutionIndex();
-		auto const dls_global = execution_instance.toHemisphereGlobal().toDLSGlobal();
-		auto const hemisphere = execution_instance.toHemisphereGlobal().toHemisphereOnDLS();
-		ordered_vertices[execution_index][dls_global][hemisphere].push_back(
-		    vertex_descriptor(vertex));
+		auto const dls_global = execution_instance.toDLSGlobal();
+		ordered_vertices[execution_index][dls_global].push_back(vertex_descriptor(vertex));
 	}
 	LOG4CXX_TRACE(
 	    m_logger,

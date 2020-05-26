@@ -4,23 +4,22 @@
 
 namespace grenade::vx::vertex {
 
-Addition::Addition(size_t const size, size_t const num_inputs) :
-    m_size(size), m_num_inputs(num_inputs)
-{}
+Addition::Addition(size_t const size) : m_size(size) {}
 
-std::vector<Port> Addition::inputs() const
+std::array<Port, 1> Addition::inputs() const
 {
-	Port const port(m_size, ConnectionType::Int8);
-	std::vector<Port> ret;
-	for (size_t i = 0; i < m_num_inputs; ++i) {
-		ret.emplace_back(port);
-	}
-	return ret;
+	return {Port(m_size, ConnectionType::Int8)};
 }
 
 Port Addition::output() const
 {
 	return Port(m_size, ConnectionType::Int8);
+}
+
+std::ostream& operator<<(std::ostream& os, Addition const& config)
+{
+	os << "Addition(size: " << config.m_size << ")";
+	return os;
 }
 
 } // namespace grenade::vx::vertex
