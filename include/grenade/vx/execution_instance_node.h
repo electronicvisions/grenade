@@ -23,14 +23,20 @@ struct ExecutionInstanceNode
 {
 	ExecutionInstanceNode(
 	    DataMap& data_map,
-	    ExecutionInstanceBuilder& builder,
+	    DataMap const& input_data_map,
+	    Graph const& graph,
+	    coordinate::ExecutionInstance const& execution_instance,
+	    ChipConfig const& chip_config,
 	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
 private:
 	DataMap& data_map;
-	ExecutionInstanceBuilder& builder;
+	DataMap const& input_data_map;
+	Graph const& graph;
+	coordinate::ExecutionInstance execution_instance;
+	ChipConfig const& chip_config;
 	hxcomm::vx::ConnectionVariant& connection;
 	log4cxx::Logger* logger;
 };

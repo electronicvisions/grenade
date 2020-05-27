@@ -48,10 +48,6 @@ DataMap JITGraphExecutor::run(
 	// start trigger node
 	tbb::flow::broadcast_node<tbb::flow::continue_msg> start(execution_graph);
 
-	// execution instance builders
-	std::unordered_map<Graph::vertex_descriptor, ExecutionInstanceBuilder>
-	    execution_instance_builder_map;
-
 	// execution nodes
 	std::unordered_map<Graph::vertex_descriptor, tbb::flow::continue_node<tbb::flow::continue_msg>>
 	    nodes;
@@ -71,13 +67,9 @@ DataMap JITGraphExecutor::run(
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
 		auto const execution_instance = execution_instance_map.left.at(vertex);
 		auto const dls_global = execution_instance.toDLSGlobal();
-		execution_instance_builder_map.insert(std::make_pair(
-		    vertex, ExecutionInstanceBuilder(
-		                graph, execution_instance, input_list, output_activation_map,
-		                config_map.at(dls_global))));
-		auto& builder = execution_instance_builder_map.at(vertex);
 		ExecutionInstanceNode node_body(
-		    output_activation_map, builder, executor_map.at(dls_global));
+		    output_activation_map, input_list, graph, execution_instance, config_map.at(dls_global),
+		    executor_map.at(dls_global));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}

@@ -10,10 +10,16 @@ namespace grenade::vx {
 
 ExecutionInstanceNode::ExecutionInstanceNode(
     DataMap& data_map,
-    ExecutionInstanceBuilder& builder,
+    DataMap const& input_data_map,
+    Graph const& graph,
+    coordinate::ExecutionInstance const& execution_instance,
+    ChipConfig const& chip_config,
     hxcomm::vx::ConnectionVariant& connection) :
     data_map(data_map),
-    builder(builder),
+    input_data_map(input_data_map),
+    graph(graph),
+    execution_instance(execution_instance),
+    chip_config(chip_config),
     connection(connection),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
@@ -23,6 +29,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace stadls::vx::v2;
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
+
+	ExecutionInstanceBuilder builder(
+	    graph, execution_instance, input_data_map, data_map, chip_config);
 
 	hate::Timer const preprocess_timer;
 	builder.pre_process();
