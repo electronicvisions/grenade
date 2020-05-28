@@ -85,7 +85,7 @@ private:
 	DataMap const& m_input_list;
 	DataMap const& m_data_output;
 
-	DataMap m_local_external_data;
+	ConstantReferenceDataMap m_local_external_data;
 
 	hate::HistoryWrapper<ChipConfig> m_config;
 

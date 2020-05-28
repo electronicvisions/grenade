@@ -94,4 +94,15 @@ bool DataMap::valid() const
 	return int8_value && spike_events_value && spike_event_output_value;
 }
 
+
+ConstantReferenceDataMap::ConstantReferenceDataMap() : int8(), spike_events(), spike_event_output()
+{}
+
+void ConstantReferenceDataMap::clear()
+{
+	int8.clear();
+	spike_events.clear();
+	spike_event_output.clear();
+}
+
 } // namespace grenade::vx

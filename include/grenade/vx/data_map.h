@@ -81,4 +81,34 @@ private:
 	std::unique_ptr<std::mutex> mutex;
 };
 
+
+/**
+ * Data map of constant references to data used for external data input in graph execution.
+ * For each type of data a separate member allows access.
+ */
+struct ConstantReferenceDataMap
+{
+	/**
+	 * Data is connected to specified vertex descriptors.
+	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
+	 * @tparam Data Batch-entry data type
+	 */
+	template <typename Data>
+	using DataTypeMap = std::map<Graph::vertex_descriptor, std::vector<Data> const&>;
+
+	/** Int8 data. */
+	DataTypeMap<std::vector<Int8>> int8;
+	/** Spike input events. */
+	DataTypeMap<TimedSpikeSequence> spike_events;
+	/** Spike output events. */
+	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
+
+	ConstantReferenceDataMap() SYMBOL_VISIBLE;
+
+	/**
+	 * Clear content of map.
+	 */
+	void clear() SYMBOL_VISIBLE;
+};
+
 } // namespace grenade::vx

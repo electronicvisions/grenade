@@ -274,9 +274,9 @@ void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
 {
 	if (data.output().type == ConnectionType::DataOutputInt8) {
-		m_local_external_data.int8[vertex] = m_input_list.int8.at(vertex);
+		m_local_external_data.int8.insert({vertex, m_input_list.int8.at(vertex)});
 	} else if (data.output().type == ConnectionType::DataInputUInt16) {
-		m_local_external_data.spike_events[vertex] = m_input_list.spike_events.at(vertex);
+		m_local_external_data.spike_events.insert({vertex, m_input_list.spike_events.at(vertex)});
 	} else {
 		throw std::runtime_error("ExternalInput output type processing not implemented.");
 	}
