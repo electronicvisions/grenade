@@ -426,31 +426,39 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
+	PlaybackProgramBuilder builder;
+	builder.merge_back(m_builder_prologue);
+
 	// generate input event sequence
 	std::vector<PlaybackProgramBuilder> builder_input(m_batch_entries.size());
-	if (m_local_data.spike_events.size() == 1) {
-		for (size_t b = 0; b < builder_input.size(); ++b) {
-			m_batch_entries.at(b).m_ticket_events_begin =
-			    builder_input.at(b).read(EventRecordingConfigOnFPGA());
-			builder_input.at(b).write(TimerOnDLS(), Timer());
-			TimedSpike::Time current_time(0);
-			for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
-				if (event.time > current_time) {
-					current_time = event.time;
-					builder_input.at(b).block_until(TimerOnDLS(), current_time);
-				}
-				std::visit(
-				    [&](auto const& p) {
-					    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
-					    builder_input.at(b).write(typename container_type::coordinate_type(), p);
-				    },
-				    event.payload);
-			}
-			m_batch_entries.at(b).m_ticket_events_end =
-			    builder_input.at(b).read(EventRecordingConfigOnFPGA());
-		}
-	} else if (m_local_data.spike_events.size() > 1) {
+	if (m_local_data.spike_events.size() > 1) {
 		throw std::logic_error("Expected only one spike input vertex.");
+	}
+	bool const has_computation = m_local_data.spike_events.size() == 1;
+	if (!has_computation) {
+		builder.merge_back(m_builder_epilogue);
+		m_program = builder.done();
+		return m_program;
+	}
+	for (size_t b = 0; b < builder_input.size(); ++b) {
+		m_batch_entries.at(b).m_ticket_events_begin =
+		    builder_input.at(b).read(EventRecordingConfigOnFPGA());
+		builder_input.at(b).write(TimerOnDLS(), Timer());
+		TimedSpike::Time current_time(0);
+		for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
+			if (event.time > current_time) {
+				current_time = event.time;
+				builder_input.at(b).block_until(TimerOnDLS(), current_time);
+			}
+			std::visit(
+			    [&](auto const& p) {
+				    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
+				    builder_input.at(b).write(typename container_type::coordinate_type(), p);
+			    },
+			    event.payload);
+		}
+		m_batch_entries.at(b).m_ticket_events_end =
+		    builder_input.at(b).read(EventRecordingConfigOnFPGA());
 	}
 
 	// apply padi bus configuration
@@ -473,9 +481,6 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		}
 	}
 	m_ticket_requests.fill(false);
-
-	PlaybackProgramBuilder builder;
-	builder.merge_back(m_builder_prologue);
 
 	// write static configuration
 	if (!m_config.has_history()) {
@@ -529,14 +534,14 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
 			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			    SynapseDriverConfig::RowMode::disabled);
 			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			    SynapseDriverConfig::RowMode::disabled);
 		}
 	}
 	m_used_padi_busses.fill(false);
 	// build neuron resets
-	auto [builder_neuron_reset, _] = stadls::vx::v2::generate(m_neuron_resets);
+	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 	// insert batches
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		// reset neurons (baseline read)
@@ -544,11 +549,10 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
 		if (!builder.empty()) {
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder.write(halco::hicann_dls::vx::v2::TimerOnDLS(), haldls::vx::v2::Timer());
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::v2::TimerOnDLS(),
-			    haldls::vx::v2::Timer::Value(
-			        30 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			    halco::hicann_dls::vx::TimerOnDLS(),
+			    haldls::vx::Timer::Value(30 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// readout baselines of neurons
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout_baseline);
@@ -559,11 +563,11 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(halco::hicann_dls::vx::v2::TimerOnDLS(), haldls::vx::v2::Timer());
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::v2::TimerOnDLS(),
+			    halco::hicann_dls::vx::TimerOnDLS(),
 			    haldls::vx::v2::Timer::Value(
-			        2 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			        2 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// read out neuron membranes
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout);
