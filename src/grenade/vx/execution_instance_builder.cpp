@@ -526,11 +526,27 @@ DataMap ExecutionInstanceBuilder::post_process()
 		batch_entry.m_ticket.reset();
 		batch_entry.m_ticket_baseline.reset();
 	}
-	// FIXME: some split needed
 	if (m_event_output_vertex) {
-		auto const spikes = m_program.get_spikes();
-		m_local_data_output.spike_event_output[*m_event_output_vertex] = {
-		    TimedSpikeFromChipSequence(spikes.begin(), spikes.end())};
+		auto spikes = m_program.get_spikes();
+		std::sort(spikes.begin(), spikes.end(), [](auto const& a, auto const& b) {
+			return a.get_fpga_time() < b.get_fpga_time();
+		});
+		std::vector<TimedSpikeFromChipSequence> spike_batches;
+		auto begin = spikes.begin();
+		for (auto const& e : m_batch_entries) {
+			assert(e.m_ticket_events_begin);
+			auto const begin_time = e.m_ticket_events_begin->get_fpga_time();
+			auto const end_time = e.m_ticket_events_end->get_fpga_time();
+			begin = std::find_if(begin, spikes.end(), [&](auto const& spike) {
+				return spike.get_fpga_time() > begin_time;
+			});
+			auto const end = std::find_if(begin, spikes.end(), [&](auto const& spike) {
+				return spike.get_fpga_time() > end_time;
+			});
+			spike_batches.push_back(TimedSpikeFromChipSequence(begin, end));
+			begin = end;
+		}
+		m_local_data_output.spike_event_output[*m_event_output_vertex] = spike_batches;
 	}
 	m_event_output_vertex.reset();
 	m_post_vertices.clear();
@@ -549,11 +565,10 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 
 	// generate input event sequence
 	std::vector<PlaybackProgramBuilder> builder_input(m_batch_entries.size());
-	if (m_local_data.spike_events.size() > 1) {
-		throw std::logic_error("Expected only one spike input vertex.");
-	}
-	if (m_local_data.spike_events.size() > 0) {
+	if (m_local_data.spike_events.size() == 1) {
 		for (size_t b = 0; b < builder_input.size(); ++b) {
+			m_batch_entries.at(b).m_ticket_events_begin =
+			    builder_input.at(b).read(EventRecordingConfigOnFPGA());
 			builder_input.at(b).write(TimerOnDLS(), Timer());
 			TimedSpike::Time current_time(0);
 			for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
@@ -568,7 +583,11 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 				    },
 				    event.payload);
 			}
+			m_batch_entries.at(b).m_ticket_events_end =
+			    builder_input.at(b).read(EventRecordingConfigOnFPGA());
 		}
+	} else if (m_local_data.spike_events.size() > 1) {
+		throw std::logic_error("Expected only one spike input vertex.");
 	}
 
 	// apply padi bus configuration

@@ -126,6 +126,13 @@ private:
 		    typed_array<lola::vx::SynapseLabelMatrix, halco::hicann_dls::vx::HemisphereOnDLS>
 		        m_synapse_labels;
 
+		// TODO: replace by read of "tick" once available
+		typedef std::optional<
+		    stadls::vx::PlaybackProgram::ContainerTicket<haldls::vx::EventRecordingConfig>>
+		    event_guard_ticket_type;
+		event_guard_ticket_type m_ticket_events_begin;
+		event_guard_ticket_type m_ticket_events_end;
+
 		stadls::vx::PlaybackProgramBuilder m_builder_cadc_readout;
 		stadls::vx::PlaybackProgramBuilder m_builder_cadc_readout_baseline;
 	};

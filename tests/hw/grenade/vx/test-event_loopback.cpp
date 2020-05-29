@@ -20,10 +20,10 @@ using namespace halco::hicann_dls::vx;
 using namespace stadls::vx;
 using namespace lola::vx;
 
-grenade::vx::TimedSpikeFromChipSequence test_event_loopback_single_crossbar_node(
+std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
-    SPL1Address const& address,
-    grenade::vx::JITGraphExecutor::ExecutorMap const& executors)
+    grenade::vx::JITGraphExecutor::ExecutorMap const& executors,
+    std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
 {
 	logger_default_config(log4cxx::Level::getTrace());
 
@@ -50,16 +50,8 @@ grenade::vx::TimedSpikeFromChipSequence test_event_loopback_single_crossbar_node
 	auto const v5 = g.add(data_output, instance, {v4});
 
 	// fill graph inputs
-	haldls::vx::SpikeLabel label;
-	label.set_spl1_address(address);
 	grenade::vx::DataMap input_list;
-	grenade::vx::TimedSpikeSequence inputs;
-	for (intmax_t i = 0; i < 1000; ++i) {
-		inputs.push_back(grenade::vx::TimedSpike{
-		    grenade::vx::TimedSpike::Time(i * 10),
-		    grenade::vx::TimedSpike::Payload(haldls::vx::SpikePack1ToChip({label}))});
-	}
-	input_list.spike_events[v1] = {inputs};
+	input_list.spike_events[v1] = inputs;
 
 	grenade::vx::JITGraphExecutor::ConfigMap config_map;
 	config_map.insert({DLSGlobal(), grenade::vx::ChipConfig()});
@@ -71,8 +63,8 @@ grenade::vx::TimedSpikeFromChipSequence test_event_loopback_single_crossbar_node
 	EXPECT_EQ(result_map.spike_event_output.size(), 1);
 
 	EXPECT_TRUE(result_map.spike_event_output.find(v5) != result_map.spike_event_output.end());
-	EXPECT_EQ(result_map.spike_event_output.at(v5).size(), 1);
-	return result_map.spike_event_output.at(v5).at(0);
+	EXPECT_EQ(result_map.spike_event_output.at(v5).size(), inputs.size());
+	return result_map.spike_event_output.at(v5);
 }
 
 TEST(JITGraphExecutor, EventLoopback)
@@ -90,20 +82,37 @@ TEST(JITGraphExecutor, EventLoopback)
 		stadls::vx::run(executors.at(DLSGlobal()), program);
 	}
 
-	for (auto const output : iter_all<CrossbarL2OutputOnDLS>()) {
-		for (auto const address : iter_all<SPL1Address>()) {
-			auto const spikes =
-			    test_event_loopback_single_crossbar_node(output, address, executors);
-			if (output.toEnum() == address.toEnum()) {
-				// node matches input channel, events should be propagated
-				EXPECT_LE(spikes.size(), 1100);
-				EXPECT_GE(spikes.size(), 900);
-				for (auto const spike : spikes) {
-					std::cout << spike.get_chip_time() << std::endl;
+	constexpr size_t max_batch_size = 5;
+
+	for (size_t b = 1; b < max_batch_size; ++b) {
+		for (auto const output : iter_all<CrossbarL2OutputOnDLS>()) {
+			for (auto const address : iter_all<SPL1Address>()) {
+				haldls::vx::SpikeLabel label;
+				label.set_spl1_address(address);
+				std::vector<grenade::vx::TimedSpikeSequence> inputs(b);
+				for (auto& in : inputs) {
+					for (intmax_t i = 0; i < 1000; ++i) {
+						in.push_back(
+						    grenade::vx::TimedSpike{grenade::vx::TimedSpike::Time(i * 10),
+						                            grenade::vx::TimedSpike::Payload(
+						                                haldls::vx::SpikePack1ToChip({label}))});
+					}
 				}
-			} else {
-				// node does not match input channel, events should not be propagated
-				EXPECT_LE(spikes.size(), 100);
+
+				auto const spike_batches =
+				    test_event_loopback_single_crossbar_node(output, executors, inputs);
+				if (output.toEnum() == address.toEnum()) {
+					// node matches input channel, events should be propagated
+					for (auto const spikes : spike_batches) {
+						EXPECT_LE(spikes.size(), 1100);
+						EXPECT_GE(spikes.size(), 900);
+					}
+				} else {
+					// node does not match input channel, events should not be propagated
+					for (auto const spikes : spike_batches) {
+						EXPECT_LE(spikes.size(), 100);
+					}
+				}
 			}
 		}
 	}
