@@ -103,7 +103,8 @@ TEST(ComputeSingleMAC, generate_input_events)
 	auto const spikes = events.spike_events.at(0);
 	EXPECT_EQ(spikes.size(), 1);
 	EXPECT_EQ(
-	    spikes.at(0).size(), (10 - 1 /* first activation value = 0 */ + 13) * 2 /* num_sends */);
+	    spikes.at(0).size(),
+	    std::max(10 - 1 /* first activation value = 0 */, 13) * 2 /* num_sends */);
 
 	// TODO: test the content of the spike train
 }

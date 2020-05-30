@@ -46,11 +46,11 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 		config.set_mask(CrossbarNode::neuron_label_type(0b1 << 13));
 		config.set_target(CrossbarNode::neuron_label_type((hemisphere.toEnum() << 13)));
 		vertex::CrossbarNode crossbar_node(coordinate, config);
-		auto const v2 = graph.add(crossbar_node, instance, {crossbar_input_vertex});
+		auto const v1 = graph.add(crossbar_node, instance, {crossbar_input_vertex});
 		padi_bus_vertices.push_back(graph.add(
 		    vertex::PADIBus(vertex::PADIBus::Coordinate(
 		        PADIBusOnPADIBusBlock(i), hemisphere.toPADIBusBlockOnDLS())),
-		    instance, {v2}));
+		    instance, {v1}));
 	}
 
 	vertex::SynapseArrayView::Labels labels(y_size);
@@ -278,9 +278,20 @@ DataMap ComputeSingleMAC::generate_input_events(
 					        hemisphere.toSynramOnDLS()),
 					    inputs.at(batch).at(input_offset + j));
 					if (label) {
-						haldls::vx::v2::SpikePack1ToChip const payload(
-						    haldls::vx::v2::SpikePack1ToChip::labels_type{*label});
-						events.push_back(TimedSpike{time, payload});
+						auto it = std::find_if(events.begin(), events.end(), [&](auto const& s) {
+							return s.time == time;
+						});
+						if (it != events.end()) {
+							it->payload = haldls::vx::v2::SpikePack2ToChip(
+							    haldls::vx::v2::SpikePack2ToChip::labels_type{
+							        std::get<haldls::vx::v2::SpikePack1ToChip>(it->payload)
+							            .get_labels()[0],
+							        *label});
+						} else {
+							haldls::vx::v2::SpikePack1ToChip const payload(
+							    haldls::vx::v2::SpikePack1ToChip::labels_type{*label});
+							events.push_back(TimedSpike{time, payload});
+						}
 						time = TimedSpike::Time(time + wait_between_events);
 					}
 				}
