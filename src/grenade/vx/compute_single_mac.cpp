@@ -10,6 +10,10 @@
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "hate/math.h"
 
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics.hpp>
+#include <log4cxx/logger.h>
+
 #include <algorithm>
 
 namespace grenade::vx {
@@ -110,7 +114,9 @@ ComputeSingleMAC::ComputeSingleMAC(
     RowModes const& row_modes,
     ChipConfig const& config,
     size_t num_sends,
-    haldls::vx::v2::Timer::Value wait_between_events) :
+    haldls::vx::v2::Timer::Value wait_between_events,
+    bool enable_loopback) :
+    m_enable_loopback(enable_loopback),
     m_graph(),
     m_synram_handles(),
     m_output_vertices(),
@@ -150,6 +156,24 @@ ComputeSingleMAC::ComputeSingleMAC(
 	Graph::vertex_descriptor crossbar_input_vertex =
 	    m_graph.add(data_input, instance, {input_vertex});
 
+	auto const set_enable_loopback = [&]() {
+		if (m_enable_loopback) {
+			std::vector<Input> loopback_vertices;
+			for (size_t i = 0; i < SPL1Address::size; ++i) {
+				CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
+				haldls::vx::CrossbarNode config;
+				vertex::CrossbarNode crossbar_node(coordinate, config);
+				loopback_vertices.push_back(
+				    m_graph.add(crossbar_node, instance, {crossbar_input_vertex}));
+			}
+			vertex::CrossbarL2Output l2_output;
+			auto const vl2 = m_graph.add(l2_output, instance, loopback_vertices);
+			vertex::DataOutput data_output_loopback(ConnectionType::DataOutputUInt16, 1);
+			m_graph.add(data_output_loopback, instance, {vl2});
+		}
+	};
+	set_enable_loopback();
+
 	while (o_offset < output_size()) {
 		size_t const local_o_size = std::min(NeuronColumnOnDLS::size, output_size() - o_offset);
 
@@ -159,6 +183,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 			if (instance != last_instance) {
 				input_vertex = m_graph.add(external_input, instance, {});
 				crossbar_input_vertex = m_graph.add(data_input, instance, {input_vertex});
+				set_enable_loopback();
 			}
 
 			size_t const local_i_size = std::min(input_size() - i_offset, SynapseRowOnSynram::size);
@@ -356,6 +381,34 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 			std::copy(o.begin(), o.end(), output.at(i).begin() + o_offset);
 			o_offset += o.size();
 		}
+	}
+
+	if (m_enable_loopback) {
+		boost::accumulators::accumulator_set<
+		    double, boost::accumulators::features<
+		                boost::accumulators::tag::mean, boost::accumulators::tag::variance>>
+		    acc;
+		for (auto const& l : output_activation_map.spike_event_output) {
+			for (auto const& b : l.second) {
+				halco::common::typed_array<std::vector<haldls::vx::ChipTime>, HemisphereOnDLS> t;
+				for (auto const& s : b) {
+					t[HemisphereOnDLS(s.get_label().get_neuron_label() & (1 << 13) ? 1 : 0)]
+					    .push_back(s.get_chip_time());
+				}
+				for (auto& ht : t) {
+					std::sort(ht.begin(), ht.end());
+					for (size_t i = 1; i < ht.size(); ++i) {
+						acc(static_cast<intmax_t>(ht.at(i)) - static_cast<intmax_t>(ht.at(i - 1)));
+					}
+				}
+			}
+		}
+		std::stringstream ss;
+		auto logger = log4cxx::Logger::getLogger("hwgraph.ComputeSingleMAC");
+		LOG4CXX_DEBUG(
+		    logger, "run(): event inter-spike-interval statistics: "
+		                << "mean(" << boost::accumulators::mean(acc) << "), std("
+		                << std::sqrt(boost::accumulators::variance(acc)) << ")" << std::endl);
 	}
 	return output;
 }

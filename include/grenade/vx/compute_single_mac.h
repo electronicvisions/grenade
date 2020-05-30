@@ -39,14 +39,15 @@ public:
 	 * @param config Static chip configuration to be used
 	 * @param num_sends Number of times a input activation is sent to the specific row
 	 * @param wait_between_events Wait time between input events in FPGA cycles
+	 * @param enable_loopback Enable loopback of events with statistic analysis
 	 */
 	ComputeSingleMAC(
 	    Weights const& weights,
 	    RowModes const& row_modes,
 	    ChipConfig const& config,
 	    size_t num_sends = 1,
-	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25))
-	    SYMBOL_VISIBLE;
+	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
+	    bool enable_loopback = true) SYMBOL_VISIBLE;
 
 	/**
 	 * Run given set of activations weights given on construction.
@@ -102,6 +103,7 @@ private:
 	    size_t num_sends,
 	    haldls::vx::v2::Timer::Value wait_between_events) SYMBOL_VISIBLE;
 
+	bool m_enable_loopback;
 	Graph m_graph;
 
 	std::vector<SynramHandle> m_synram_handles;
