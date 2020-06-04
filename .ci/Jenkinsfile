@@ -1,0 +1,7 @@
+@Library("jenlib") _
+
+wafDefaultPipeline(projects: ["grenade"],
+                   container: [app: "dls-core"],
+                   testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
+                   testOptions: "-j1 --test-execall",
+                   notificationChannel: "#dls-software")
