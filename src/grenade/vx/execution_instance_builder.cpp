@@ -559,6 +559,11 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		// reset neurons
 		builder.copy_back(builder_neuron_reset);
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		// wait for membrane to settle
+		if (!builder.empty()) {
+			builder.write(TimerOnDLS(), Timer());
+			builder.block_until(TimerOnDLS(), Timer::Value::fpga_clock_cycles_per_us);
+		}
 		// send input
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle
