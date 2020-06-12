@@ -283,6 +283,28 @@ DataMap ComputeSingleMAC::generate_input_events(
 	DataMap data_map;
 
 	size_t const batch_size = inputs.size();
+	// get event count for each batch entry
+	std::map<Graph::vertex_descriptor, std::vector<size_t>> maximal_event_count;
+	for (size_t i = 0; i < synram_handles.size(); ++i) {
+		auto const& local_synram_handle = synram_handles.at(i);
+		auto const input_vertex = local_synram_handle.input_vertex;
+		auto const input_size = local_synram_handle.input_size;
+		auto const input_offset = local_synram_handle.input_offset;
+
+		maximal_event_count[input_vertex].resize(batch_size, 0);
+		for (size_t batch = 0; batch < batch_size; ++batch) {
+			size_t local_event_count = 0;
+			auto const& local_inputs = inputs.at(batch);
+			for (size_t j = 0; j < input_size; ++j) {
+				if (local_inputs.at(input_offset + j) != 0) {
+					local_event_count++;
+				}
+			}
+			auto& event_count = maximal_event_count.at(input_vertex).at(batch);
+			event_count = std::max(event_count, local_event_count);
+		}
+	}
+
 	for (size_t i = 0; i < synram_handles.size(); ++i) {
 		auto const& local_synram_handle = synram_handles.at(i);
 		auto const input_vertex = local_synram_handle.input_vertex;
@@ -293,7 +315,8 @@ DataMap ComputeSingleMAC::generate_input_events(
 		data_map.spike_events[input_vertex].resize(batch_size);
 		for (size_t batch = 0; batch < batch_size; ++batch) {
 			auto& events = data_map.spike_events[input_vertex].at(batch);
-			TimedSpike::Time time(0);
+			TimedSpike::Time time(
+			    maximal_event_count.at(input_vertex).at(batch) * wait_between_events * num_sends);
 			// pack all events from one hemisphere after one another
 			for (size_t i = 0; i < num_sends; ++i) {
 				for (size_t j = 0; j < input_size; ++j) {
@@ -317,7 +340,7 @@ DataMap ComputeSingleMAC::generate_input_events(
 							    haldls::vx::v2::SpikePack1ToChip::labels_type{*label});
 							events.push_back(TimedSpike{time, payload});
 						}
-						time = TimedSpike::Time(time + wait_between_events);
+						time = TimedSpike::Time(time - wait_between_events);
 					}
 				}
 			}
