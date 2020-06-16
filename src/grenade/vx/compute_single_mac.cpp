@@ -9,10 +9,12 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "hate/math.h"
+#include "hate/timer.h"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 #include <log4cxx/logger.h>
+#include <tbb/parallel_for_each.h>
 
 #include <algorithm>
 
@@ -262,21 +264,17 @@ std::optional<haldls::vx::v2::SpikeLabel> ComputeSingleMAC::get_spike_label(
 	if (value == 0) {
 		return std::nullopt;
 	}
-	haldls::vx::v2::SpikeLabel label;
-	label.set_spl1_address(
-	    halco::hicann_dls::vx::v2::SPL1Address(row.toSynapseRowOnSynram()
-	                                               .toSynapseDriverOnSynapseDriverBlock()
-	                                               .toPADIBusOnPADIBusBlock()));
-	label.set_synapse_label(lola::vx::v2::SynapseMatrix::Label(
-	    ((row.toSynapseRowOnSynram() % 2) << 5) | UInt5((UInt5::max - value) + 1)));
-	label.set_row_select_address(
-	    haldls::vx::v2::PADIEvent::RowSelectAddress(row.toSynapseRowOnSynram()
-	                                                    .toSynapseDriverOnSynapseDriverBlock()
-	                                                    .toSynapseDriverOnPADIBus()));
-	label.set_neuron_label(halco::hicann_dls::vx::v2::NeuronLabel(
-	    label.get_neuron_label() |
-	    (static_cast<uint16_t>(row.toSynramOnDLS().toHemisphereOnDLS()) << 13)));
-	return label;
+	using namespace halco::hicann_dls::vx::v2;
+	// conversion impl. from halco inlined because it is faster (Issue #3702)
+	auto const local_row = row.toSynapseRowOnSynram();
+	auto const synapse_driver = (static_cast<size_t>(local_row) / SynapseRowOnSynapseDriver::size);
+	auto const spl1_address = synapse_driver % PADIBusOnPADIBusBlock::size;
+	auto const synapse_label =
+	    ((static_cast<size_t>(local_row) % SynapseRowOnSynapseDriver::size) << 5) |
+	    ((UInt5::max - value.value()) + 1);
+	auto const row_select = synapse_driver / PADIBusOnPADIBusBlock::size;
+	auto const h = (static_cast<size_t>(row.toSynramOnDLS()) << 13);
+	return haldls::vx::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
 DataMap ComputeSingleMAC::generate_input_events(
@@ -285,82 +283,103 @@ DataMap ComputeSingleMAC::generate_input_events(
     size_t const num_sends,
     haldls::vx::v2::Timer::Value const wait_between_events)
 {
+	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx;
+
 	DataMap data_map;
 
 	size_t const batch_size = inputs.size();
-	// get event count for each batch entry
-	std::map<Graph::vertex_descriptor, std::vector<size_t>> maximal_event_count;
+	// get synram_handle indices of the same input_vertex
+	std::map<Graph::vertex_descriptor, std::vector<size_t>> indices;
 	for (size_t i = 0; i < synram_handles.size(); ++i) {
-		auto const& local_synram_handle = synram_handles.at(i);
-		auto const input_vertex = local_synram_handle.input_vertex;
-		auto const input_size = local_synram_handle.input_size;
-		auto const input_offset = local_synram_handle.input_offset;
-
-		maximal_event_count[input_vertex].resize(batch_size, 0);
-		for (size_t batch = 0; batch < batch_size; ++batch) {
-			size_t local_event_count = 0;
-			auto const& local_inputs = inputs.at(batch);
-			for (size_t j = 0; j < input_size; ++j) {
-				if (local_inputs.at(input_offset + j) != 0) {
-					local_event_count++;
-				}
-			}
-			auto& event_count = maximal_event_count.at(input_vertex).at(batch);
-			event_count = std::max(event_count, local_event_count);
-		}
+		auto const input_vertex = synram_handles.at(i).input_vertex;
+		indices[input_vertex].push_back(i);
 	}
 
-	for (size_t i = 0; i < synram_handles.size(); ++i) {
-		auto const& local_synram_handle = synram_handles.at(i);
-		auto const input_vertex = local_synram_handle.input_vertex;
-		auto const input_size = local_synram_handle.input_size;
-		auto const input_offset = local_synram_handle.input_offset;
-		auto const hemisphere = local_synram_handle.hemisphere;
-
+	// resize event map sequentially
+	for (auto const& [input_vertex, _] : indices) {
 		data_map.spike_events[input_vertex].resize(batch_size);
-		for (size_t batch = 0; batch < batch_size; ++batch) {
-			auto& events = data_map.spike_events[input_vertex].at(batch);
-			TimedSpike::Time time(
-			    maximal_event_count.at(input_vertex).at(batch) * wait_between_events * num_sends);
-			// pack all events from one hemisphere after one another
-			for (size_t i = 0; i < num_sends; ++i) {
-				for (size_t j = 0; j < input_size; ++j) {
-					auto const label = get_spike_label(
-					    halco::hicann_dls::vx::v2::SynapseRowOnDLS(
-					        halco::hicann_dls::vx::v2::SynapseRowOnSynram(j),
-					        hemisphere.toSynramOnDLS()),
-					    inputs.at(batch).at(input_offset + j));
-					if (label) {
-						auto it = std::find_if(events.begin(), events.end(), [&](auto const& s) {
-							return s.time == time;
-						});
-						if (it != events.end()) {
-							it->payload = haldls::vx::v2::SpikePack2ToChip(
-							    haldls::vx::v2::SpikePack2ToChip::labels_type{
-							        std::get<haldls::vx::v2::SpikePack1ToChip>(it->payload)
-							            .get_labels()[0],
-							        *label});
-						} else {
-							haldls::vx::v2::SpikePack1ToChip const payload(
-							    haldls::vx::v2::SpikePack1ToChip::labels_type{*label});
-							events.push_back(TimedSpike{time, payload});
+	}
+
+	auto const generate_events_for_range = [&](tbb::blocked_range<size_t> const& r) {
+		// thread-local label storage
+		halco::common::typed_array<std::vector<SpikeLabel>, HemisphereOnDLS> labels;
+
+		for (size_t batch = r.begin(); batch < r.end(); ++batch) {
+			auto const& local_inputs = inputs.at(batch);
+			for (auto const& [input_vertex, index] : indices) {
+				// reserve thread-local labels
+				for (auto& l : labels) {
+					l.reserve(SynapseRowOnSynram::size);
+				}
+
+				// generate spike labels
+				assert(index.size() <= labels.size());
+				for (auto const i : index) {
+					auto const& local_synram_handle = synram_handles.at(i);
+					auto const input_size = local_synram_handle.input_size;
+					auto const input_offset = local_synram_handle.input_offset;
+					auto const hemisphere = local_synram_handle.hemisphere;
+					auto& local_labels = labels[hemisphere];
+
+					// pack all events from one hemisphere after one another
+					assert(local_inputs.size() >= input_offset + input_size);
+					for (size_t j = 0; j < input_size; ++j) {
+						auto const input = local_inputs[input_offset + j];
+						auto const label = get_spike_label(
+						    SynapseRowOnDLS(SynapseRowOnSynram(j), hemisphere.toSynramOnDLS()),
+						    input);
+						if (label) {
+							local_labels.push_back(*label);
 						}
-						time = TimedSpike::Time(time - wait_between_events);
 					}
 				}
+
+				auto const [labels_min_it, labels_max_it] = std::minmax_element(
+				    labels.begin(), labels.end(),
+				    [](auto const& a, auto const& b) { return a.size() < b.size(); });
+				auto const& labels_min = *labels_min_it;
+				auto const& labels_max = *labels_max_it;
+
+				auto& events = data_map.spike_events.at(input_vertex).at(batch);
+				events.reserve(labels_max.size() * num_sends);
+				// add events from back to unsure equal time between last event and readout
+				// for both hemispheres
+				TimedSpike::Time time(labels_max.size() * wait_between_events * num_sends);
+				// add 2-packed events (both hemispheres)
+				size_t const labels_min_size = labels_min.size();
+				size_t const labels_max_size = labels_max.size();
+				size_t const both_hemispheres = labels_min_size * num_sends;
+				for (size_t n = 0; n < both_hemispheres; ++n) {
+					auto const label_min = labels_min[n % labels_min_size];
+					auto const label_max = labels_max[n % labels_max_size];
+					SpikePack2ToChip const payload(
+					    SpikePack2ToChip::labels_type{label_min, label_max});
+					events.push_back(TimedSpike{time, payload});
+					time = TimedSpike::Time(time - wait_between_events);
+				}
+				// add 1-packed left events (hemisphere with more events)
+				size_t const one_hemisphere = labels_max_size * num_sends;
+				for (size_t n = both_hemispheres; n < one_hemisphere; ++n) {
+					auto const label = labels_max[n % labels_max_size];
+					SpikePack1ToChip const payload(SpikePack1ToChip::labels_type{label});
+					events.push_back(TimedSpike{time, payload});
+					time = TimedSpike::Time(time - wait_between_events);
+				}
+
+				// clear label storage
+				for (auto& l : labels) {
+					l.clear();
+				}
+
+				std::sort(events.begin(), events.end(), [](auto const& a, auto const& b) {
+					return a.time < b.time;
+				});
 			}
 		}
-	}
+	};
 
-	// sort all events from both hemishperes together so that they are sent in pairs for top and
-	// bottom hemisphere
-	for (auto& events_batch : data_map.spike_events) {
-		for (auto& events : events_batch.second) {
-			std::sort(events.begin(), events.end(), [](auto const& a, auto const& b) {
-				return a.time < b.time;
-			});
-		}
-	}
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, batch_size), generate_events_for_range);
 
 	return data_map;
 }
@@ -369,7 +388,7 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
     Activations const& inputs, hxcomm::vx::ConnectionVariant& connection)
 {
 	using namespace halco::hicann_dls::vx::v2;
-
+	auto logger = log4cxx::Logger::getLogger("grenade.ComputeSingleMAC");
 
 	// Construct map of one executor and connect to HW
 	JITGraphExecutor::ExecutorMap executors(
@@ -391,13 +410,17 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 	if (batch_entry_size != input_size()) {
 		throw std::runtime_error("Provided inputs size does not match MAC input size.");
 	}
+
+	hate::Timer input_timer;
 	auto const input_list =
 	    generate_input_events(inputs, m_synram_handles, m_num_sends, m_wait_between_events);
+	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
 	// run Graph with given inputs and return results
 	auto const output_activation_map =
 	    JITGraphExecutor::run(m_graph, input_list, executors, m_config_map);
 
+	hate::Timer output_timer;
 	std::vector<std::vector<Int8>> output(output_activation_map.batch_size());
 	for (auto& entry : output) {
 		entry.resize(output_size());
@@ -432,12 +455,12 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 			}
 		}
 		std::stringstream ss;
-		auto logger = log4cxx::Logger::getLogger("hwgraph.ComputeSingleMAC");
 		LOG4CXX_DEBUG(
 		    logger, "run(): event inter-spike-interval statistics: "
 		                << "mean(" << boost::accumulators::mean(acc) << "), std("
 		                << std::sqrt(boost::accumulators::variance(acc)) << ")" << std::endl);
 	}
+	LOG4CXX_DEBUG(logger, "run(): output processing time: " << output_timer.print());
 	return output;
 }
 
