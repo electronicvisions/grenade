@@ -12,7 +12,6 @@
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/synapse_driver.h"
-#include "hate/history_wrapper.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/cadc.h"
 #include "lola/vx/v2/synapse.h"
@@ -87,7 +86,7 @@ private:
 
 	ConstantReferenceDataMap m_local_external_data;
 
-	hate::HistoryWrapper<ChipConfig> m_config;
+	ChipConfig m_config;
 
 	stadls::vx::v2::PlaybackProgramBuilder m_builder_epilogue;
 	stadls::vx::v2::PlaybackProgramBuilder m_builder_prologue;
@@ -130,7 +129,6 @@ private:
 	std::vector<BatchEntry> m_batch_entries;
 
 	NeuronResetMaskGenerator m_neuron_resets;
-	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::PADIBusOnDLS> m_used_padi_busses;
 
 	/**
 	 * Check if any incoming vertex requires post processing.

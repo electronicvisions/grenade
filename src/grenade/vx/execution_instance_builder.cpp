@@ -42,7 +42,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_input_list(input_list),
     m_data_output(data_output),
     m_local_external_data(),
-    m_config(),
+    m_config(chip_config),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output()
@@ -52,13 +52,10 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 		throw std::runtime_error("Graph requests unprovided input.");
 	}
 
-	*m_config = chip_config;
-
 	m_ticket_requests.fill(false);
-	m_used_padi_busses.fill(false);
 
 	/** Silence everything which is not set in the graph. */
-	for (auto& node : m_config->crossbar_nodes) {
+	for (auto& node : m_config.crossbar_nodes) {
 		node = haldls::vx::v2::CrossbarNode::drop_all;
 	}
 
@@ -120,7 +117,7 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayView const& data)
 {
-	auto& config = *m_config;
+	auto& config = m_config;
 	auto const& columns = data.get_columns();
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
@@ -143,7 +140,7 @@ void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
 {
 	auto& synapse_driver_config =
-	    m_config->hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
+	    m_config.hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
 	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
@@ -156,14 +153,19 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::PADIBus const& data)
 {
-	m_used_padi_busses[data.get_coordinate()] = true;
+	auto const bus = data.get_coordinate();
+	auto& config =
+	    m_config.hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()].common_padi_bus_config;
+	auto enable_config = config.get_enable_spl1();
+	enable_config[bus.toPADIBusOnPADIBusBlock()] = true;
+	config.set_enable_spl1(enable_config);
 }
 
 template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::CrossbarNode const& data)
 {
-	m_config->crossbar_nodes[data.get_coordinate()] = data.get_config();
+	m_config.crossbar_nodes[data.get_coordinate()] = data.get_config();
 }
 
 template <>
@@ -461,16 +463,6 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		    builder_input.at(b).read(EventRecordingConfigOnFPGA());
 	}
 
-	// apply padi bus configuration
-	for (auto const bus : iter_all<PADIBusOnDLS>()) {
-		auto& config = m_config->hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()]
-		                   .common_padi_bus_config;
-		auto enable_config = m_config->hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()]
-		                         .common_padi_bus_config.get_enable_spl1();
-		enable_config[bus.toPADIBusOnPADIBusBlock()] = m_used_padi_busses[bus];
-		config.set_enable_spl1(enable_config);
-	}
-
 	// build cadc readouts
 	if (std::any_of(
 	        m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; })) {
@@ -483,63 +475,20 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	m_ticket_requests.fill(false);
 
 	// write static configuration
-	if (!m_config.has_history()) {
-		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
+		builder.write(SynramOnDLS(hemisphere), m_config.hemispheres[hemisphere].synapse_matrix);
+		for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
 			builder.write(
-			    SynramOnDLS(hemisphere), m_config->hemispheres[hemisphere].synapse_matrix);
-			for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-				builder.write(
-				    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
-				    m_config->hemispheres[hemisphere].synapse_driver_block[synapse_driver]);
-			}
-			builder.write(
-			    hemisphere.toCommonPADIBusConfigOnDLS(),
-			    m_config->hemispheres[hemisphere].common_padi_bus_config);
+			    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
+			    m_config.hemispheres[hemisphere].synapse_driver_block[synapse_driver]);
 		}
-		for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
-			builder.write(coord, m_config->crossbar_nodes[coord]);
-		}
-	} else {
-		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-			builder.write(
-			    SynramOnDLS(hemisphere), m_config->hemispheres[hemisphere].synapse_matrix,
-			    m_config.get_history().hemispheres[hemisphere].synapse_matrix);
-			for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-				builder.write(
-				    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
-				    m_config->hemispheres[hemisphere].synapse_driver_block[synapse_driver],
-				    m_config.get_history()
-				        .hemispheres[hemisphere]
-				        .synapse_driver_block[synapse_driver]);
-			}
-			builder.write(
-			    hemisphere.toCommonPADIBusConfigOnDLS(),
-			    m_config->hemispheres[hemisphere].common_padi_bus_config);
-		}
-		for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
-			builder.write(coord, m_config->crossbar_nodes[coord]);
-		}
+		builder.write(
+		    hemisphere.toCommonPADIBusConfigOnDLS(),
+		    m_config.hemispheres[hemisphere].common_padi_bus_config);
 	}
-	m_config.save();
-	// reset
-	{
-		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
-		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-			m_config->hemispheres[hemisphere].synapse_matrix = *new_matrix;
-		}
+	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
+		builder.write(coord, m_config.crossbar_nodes[coord]);
 	}
-	for (auto& node : m_config->crossbar_nodes) {
-		node = CrossbarNode::drop_all;
-	}
-	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
-			    SynapseDriverConfig::RowMode::disabled);
-			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
-			    SynapseDriverConfig::RowMode::disabled);
-		}
-	}
-	m_used_padi_busses.fill(false);
 	// build neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 	// insert batches
