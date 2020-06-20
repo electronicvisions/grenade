@@ -129,8 +129,8 @@ void ExecutionInstanceBuilder::process(
 		auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
 		for (size_t index = 0; index < columns.size(); ++index) {
 			auto const syn_column = columns[index];
-			weight_row[syn_column] = weights.at(index);
-			label_row[syn_column] = labels.at(index);
+			weight_row[syn_column] = weights[index];
+			label_row[syn_column] = labels[index];
 		}
 	}
 }
@@ -214,7 +214,9 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 
 	// get source NeuronView
-	auto const hemisphere = data.get_synram().toHemisphereOnDLS();
+	auto const synram = data.get_synram();
+	auto const hemisphere = synram.toHemisphereOnDLS();
+	auto const& columns = data.get_columns();
 
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
@@ -226,27 +228,46 @@ void ExecutionInstanceBuilder::process(
 		m_post_vertices.push_back(vertex);
 	} else { // post-hw-run processing
 		// extract Int8 values
-		std::vector<std::vector<Int8>> sample_batches;
-		for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-			assert(m_batch_entries.at(batch_index).m_ticket);
-			auto const values = m_batch_entries.at(batch_index).m_ticket->get();
-			assert(m_batch_entries.at(batch_index).m_ticket_baseline);
-			auto const values_baseline = m_batch_entries.at(batch_index).m_ticket_baseline->get();
-			std::vector<Int8> samples(data.output().size);
+		auto& sample_batches = m_local_data.int8[vertex];
+		sample_batches.resize(m_batch_entries.size());
+		if (enable_cadc_baseline) {
+			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+				assert(m_batch_entries.at(batch_index).m_cadc_values);
+				auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
+				auto const& synram_values = values.causal[synram];
+				assert(m_batch_entries.at(batch_index).m_cadc_baseline_values);
+				auto const& values_baseline =
+				    *(m_batch_entries.at(batch_index).m_cadc_baseline_values);
+				auto const& synram_values_baseline = values_baseline.causal[synram];
+				auto& samples = sample_batches.at(batch_index);
+				samples.resize(data.output().size);
 
-			// get samples via neuron mapping from incoming NeuronView
-			size_t i = 0;
-			for (auto const& column : data.get_columns()) {
-				auto const tmp =
-				    static_cast<intmax_t>(values.causal[data.get_synram()][column].value()) -
-				    static_cast<intmax_t>(
-				        values_baseline.causal[data.get_synram()][column].value());
-				samples.at(i) = Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
-				i++;
+				// get samples via neuron mapping from incoming NeuronView
+				size_t i = 0;
+				for (auto const& column : columns) {
+					auto const tmp = static_cast<intmax_t>(synram_values[column].value()) -
+					                 static_cast<intmax_t>(synram_values_baseline[column].value());
+					samples.at(i) = Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+					i++;
+				}
 			}
-			sample_batches.push_back(samples);
+		} else {
+			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+				assert(m_batch_entries.at(batch_index).m_cadc_values);
+				auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
+				auto const& synram_values = values.causal[synram];
+				auto& samples = sample_batches.at(batch_index);
+				samples.resize(data.output().size);
+
+				// get samples via neuron mapping from incoming NeuronView
+				size_t i = 0;
+				for (auto const& column : columns) {
+					samples.at(i) =
+					    Int8(static_cast<intmax_t>(synram_values[column].value()) - 128);
+					i++;
+				}
+			}
 		}
-		m_local_data.int8[vertex] = sample_batches;
 	}
 }
 
@@ -288,21 +309,28 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::Addition const& data)
 {
-	std::vector<std::vector<Int8>> values(m_input_list.batch_size());
+	auto const batch_size = m_input_list.batch_size();
+	std::vector<std::vector<Int8>> values(batch_size);
 	for (auto& entry : values) {
 		entry.resize(data.output().size);
 	}
+
+	std::vector<intmax_t> tmps(data.output().size, 0);
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
-		for (size_t i = 0; i < data.output().size; ++i) {
-			intmax_t tmp = 0;
-			for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-				tmp +=
-				    m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph())).at(j).at(i);
+		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
+			auto const& local_data =
+			    m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph())).at(j);
+			assert(tmps.size() == local_data.size());
+			for (size_t i = 0; i < data.output().size; ++i) {
+				tmps[i] += local_data[i];
 			}
-			// restrict to range [-128,127]
-			values.at(j).at(i) = Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
 		}
+		// restrict to range [-128,127]
+		std::transform(tmps.begin(), tmps.end(), values.at(j).begin(), [](auto const tmp) {
+			return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+		});
+		std::fill(tmps.begin(), tmps.end(), 0);
 	}
 	m_local_data.int8[vertex] = values;
 }
@@ -312,24 +340,13 @@ void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataOutput const& data)
 {
 	if (data.inputs().front().type == ConnectionType::Int8) {
-		std::vector<std::vector<Int8>> values(m_input_list.batch_size());
-		for (auto& entry : values) {
-			entry.resize(data.output().size);
-		}
-		// get mapping
-		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-			for (size_t j = 0; j < values.size(); ++j) {
-				for (size_t i = 0; i < data.output().size; ++i) {
-					// perform lookup
-					values.at(j).at(i) =
-					    m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph()))
-					        .at(j)
-					        .at(i);
-				}
-			}
-		}
-		m_local_data_output.int8[vertex] = values;
+		// get in edge
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		auto const& local_data = m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph()));
+		// check size match only for first because we know that the data map is valid
+		assert(!local_data.size() || (data.output().size == local_data.front().size()));
+		m_local_data_output.int8[vertex] = local_data;
 	} else if (data.inputs().front().type == ConnectionType::DataOutputUInt16) {
 		if (m_event_output_vertex) {
 			throw std::logic_error("Only one event output vertex allowed.");
@@ -381,16 +398,21 @@ void ExecutionInstanceBuilder::pre_process()
 
 DataMap ExecutionInstanceBuilder::post_process()
 {
+	for (auto& batch_entry : m_batch_entries) {
+		if (batch_entry.m_ticket) {
+			batch_entry.m_cadc_values = batch_entry.m_ticket->get();
+		}
+		if (batch_entry.m_ticket_baseline) {
+			batch_entry.m_cadc_baseline_values = batch_entry.m_ticket_baseline->get();
+		}
+	}
+
 	auto const& vertex_map = m_graph.get_vertex_property_map();
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
 		std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex));
 	}
 	m_postprocessing = false;
-	for (auto& batch_entry : m_batch_entries) {
-		batch_entry.m_ticket.reset();
-		batch_entry.m_ticket_baseline.reset();
-	}
 	if (m_event_output_vertex) {
 		auto spikes = m_program.get_spikes();
 		std::sort(spikes.begin(), spikes.end(), [](auto const& a, auto const& b) {
@@ -413,10 +435,6 @@ DataMap ExecutionInstanceBuilder::post_process()
 		}
 		m_local_data_output.spike_event_output[*m_event_output_vertex] = spike_batches;
 	}
-	m_event_output_vertex.reset();
-	m_post_vertices.clear();
-	m_local_external_data.clear();
-	m_local_data.clear();
 	return std::move(m_local_data_output);
 }
 
@@ -428,11 +446,9 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
-	PlaybackProgramBuilder builder;
-	builder.merge_back(m_builder_prologue);
+	PlaybackProgramBuilder builder = std::move(m_builder_prologue);
 
 	// generate input event sequence
-	std::vector<PlaybackProgramBuilder> builder_input(m_batch_entries.size());
 	if (m_local_data.spike_events.size() > 1) {
 		throw std::logic_error("Expected only one spike input vertex.");
 	}
@@ -442,37 +458,6 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		m_program = builder.done();
 		return m_program;
 	}
-	for (size_t b = 0; b < builder_input.size(); ++b) {
-		m_batch_entries.at(b).m_ticket_events_begin =
-		    builder_input.at(b).read(EventRecordingConfigOnFPGA());
-		builder_input.at(b).write(TimerOnDLS(), Timer());
-		TimedSpike::Time current_time(0);
-		for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
-			if (event.time > current_time) {
-				current_time = event.time;
-				builder_input.at(b).block_until(TimerOnDLS(), current_time);
-			}
-			std::visit(
-			    [&](auto const& p) {
-				    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
-				    builder_input.at(b).write(typename container_type::coordinate_type(), p);
-			    },
-			    event.payload);
-		}
-		m_batch_entries.at(b).m_ticket_events_end =
-		    builder_input.at(b).read(EventRecordingConfigOnFPGA());
-	}
-
-	// build cadc readouts
-	if (std::any_of(
-	        m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; })) {
-		for (auto& batch_entry : m_batch_entries) {
-			batch_entry.m_ticket_baseline =
-			    batch_entry.m_builder_cadc_readout_baseline.read(CADCSamplesOnDLS());
-			batch_entry.m_ticket = batch_entry.m_builder_cadc_readout.read(CADCSamplesOnDLS());
-		}
-	}
-	m_ticket_requests.fill(false);
 
 	// write static configuration
 	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
@@ -489,32 +474,70 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
 		builder.write(coord, m_config.crossbar_nodes[coord]);
 	}
+
 	// build neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
-	// insert batches
+
+	bool const has_cadc_readout = std::any_of(
+	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
+
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
-		// reset neurons (baseline read)
-		builder.copy_back(builder_neuron_reset);
-		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
-		if (!builder.empty()) {
-			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
-			builder.block_until(
-			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::Timer::Value(30 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+		auto& batch_entry = m_batch_entries.at(b);
+
+		// cadc baseline read
+		if (has_cadc_readout && enable_cadc_baseline) {
+			// reset neurons (baseline read)
+			builder.copy_back(builder_neuron_reset);
+			// wait sufficient amount of time (30us) before baseline reads for membrane
+			// to settle
+			if (!builder.empty()) {
+				builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+				builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+				builder.block_until(
+				    halco::hicann_dls::vx::TimerOnDLS(),
+				    haldls::vx::Timer::Value(
+				        30 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+			}
+			// readout baselines of neurons
+			batch_entry.m_ticket_baseline = builder.read(CADCSamplesOnDLS());
 		}
-		// readout baselines of neurons
-		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout_baseline);
+
 		// reset neurons
 		builder.copy_back(builder_neuron_reset);
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(TimerOnDLS(), Timer());
-			builder.block_until(TimerOnDLS(), Timer::Value::fpga_clock_cycles_per_us);
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+			builder.block_until(
+			    halco::hicann_dls::vx::TimerOnDLS(),
+			    haldls::vx::Timer::Value::fpga_clock_cycles_per_us);
 		}
+
 		// send input
-		builder.merge_back(builder_input.at(b));
+		if (m_event_output_vertex) {
+			batch_entry.m_ticket_events_begin = builder.read(EventRecordingConfigOnFPGA());
+		}
+		builder.write(TimerOnDLS(), Timer());
+		TimedSpike::Time current_time(0);
+		for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
+			if (event.time == current_time + 1) {
+				current_time = event.time;
+			} else if (event.time > current_time) {
+				current_time = event.time;
+				builder.block_until(TimerOnDLS(), current_time);
+			}
+			std::visit(
+			    [&](auto const& p) {
+				    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
+				    builder.write(typename container_type::coordinate_type(), p);
+			    },
+			    event.payload);
+		}
+		if (m_event_output_vertex) {
+			batch_entry.m_ticket_events_end = builder.read(EventRecordingConfigOnFPGA());
+		}
+
 		// wait for membrane to settle
 		if (!builder.empty()) {
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
@@ -523,9 +546,13 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 			    haldls::vx::v2::Timer::Value(
 			        2 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 		}
+
 		// read out neuron membranes
-		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout);
+		if (has_cadc_readout) {
+			batch_entry.m_ticket = builder.read(CADCSamplesOnDLS());
+		}
 	}
+
 	// wait for response data
 	if (!builder.empty()) {
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);

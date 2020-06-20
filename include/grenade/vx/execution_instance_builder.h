@@ -78,6 +78,12 @@ public:
 	DataMap post_process() SYMBOL_VISIBLE;
 	void post_process(Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
+	/**
+	 * Switch to enable CADC baseline read before each sent input vector.
+	 * If disabled, the membrane resting potential is assumed to reside at CADC value 128.
+	 */
+	bool enable_cadc_baseline = true;
+
 private:
 	Graph const& m_graph;
 	coordinate::ExecutionInstance m_execution_instance;
@@ -115,15 +121,17 @@ private:
 		ticket_type m_ticket;
 		ticket_type m_ticket_baseline;
 
+		typedef std::optional<lola::vx::v2::CADCSamples> value_type;
+		value_type m_cadc_values;
+		value_type m_cadc_baseline_values;
+
+
 		// TODO: replace by read of "tick" once available
 		typedef std::optional<
 		    stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::EventRecordingConfig>>
 		    event_guard_ticket_type;
 		event_guard_ticket_type m_ticket_events_begin;
 		event_guard_ticket_type m_ticket_events_end;
-
-		stadls::vx::v2::PlaybackProgramBuilder m_builder_cadc_readout;
-		stadls::vx::v2::PlaybackProgramBuilder m_builder_cadc_readout_baseline;
 	};
 
 	std::vector<BatchEntry> m_batch_entries;
