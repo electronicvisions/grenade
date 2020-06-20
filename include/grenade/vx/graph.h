@@ -17,6 +17,10 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 
+namespace hate {
+class Timer;
+} // namespace hate
+
 namespace log4cxx {
 class Logger;
 } // namespace log4cxx
@@ -82,10 +86,11 @@ public:
 	 * @param inputs Positional list input vertex descriptors (with optional port restriction)
 	 * @return Vertex descriptor of added vertex
 	 */
+	template <typename VertexT>
 	vertex_descriptor add(
-	    Vertex const& vertex,
-	    coordinate::ExecutionInstance const& execution_instance,
-	    std::vector<Input> inputs) SYMBOL_VISIBLE;
+	    VertexT&& vertex,
+	    coordinate::ExecutionInstance execution_instance,
+	    std::vector<Input> inputs);
 
 	/**
 	 * Get constant reference to underlying graph.
@@ -145,6 +150,15 @@ private:
 	execution_instance_map_type m_execution_instance_map;
 	log4cxx::Logger* m_logger;
 
+	void add_edges(
+	    vertex_descriptor descriptor,
+	    coordinate::ExecutionInstance const& execution_instance,
+	    std::vector<Input> const& inputs) SYMBOL_VISIBLE;
+	void add_log(
+	    vertex_descriptor descriptor,
+	    coordinate::ExecutionInstance const& execution_instance,
+	    hate::Timer const& timer) SYMBOL_VISIBLE;
+
 	template <bool VariadicInput>
 	static void check_inputs_size(size_t vertex_inputs_size, size_t inputs_size);
 
@@ -170,7 +184,9 @@ private:
 	void check_inputs(
 	    Vertex const& vertex,
 	    coordinate::ExecutionInstance const& execution_instance,
-	    std::vector<Input> const& inputs);
+	    std::vector<Input> const& inputs) SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx
+
+#include "grenade/vx/graph.tcc"

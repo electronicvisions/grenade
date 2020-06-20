@@ -41,13 +41,14 @@ public:
 	 * @param wait_between_events Wait time between input events in FPGA cycles
 	 * @param enable_loopback Enable loopback of events with statistic analysis
 	 */
+	template <typename WeightsT, typename RowModesT>
 	ComputeSingleMAC(
-	    Weights const& weights,
-	    RowModes const& row_modes,
+	    WeightsT&& weights,
+	    RowModesT&& row_modes,
 	    ChipConfig const& config,
 	    size_t num_sends = 1,
 	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
-	    bool enable_loopback = true) SYMBOL_VISIBLE;
+	    bool enable_loopback = true);
 
 	/**
 	 * Run given set of activations weights given on construction.
@@ -83,8 +84,8 @@ private:
 	 */
 	static Graph::vertex_descriptor insert_synram(
 	    Graph& graph,
-	    Weights const& weights,
-	    RowModes const& row_modes,
+	    Weights&& weights,
+	    RowModes&& row_modes,
 	    coordinate::ExecutionInstance const& instance,
 	    halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
 	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
@@ -112,6 +113,8 @@ private:
 	RowModes m_row_modes;
 	JITGraphExecutor::ConfigMap m_config_map;
 
+	void build_graph() SYMBOL_VISIBLE;
+
 	size_t input_size() const;
 	size_t output_size() const;
 
@@ -120,3 +123,5 @@ private:
 };
 
 } // namespace grenade::vx
+
+#include "grenade/vx/compute_single_mac.tcc"

@@ -26,24 +26,11 @@ Graph::Graph(bool enable_acyclicity_check) :
     m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
 {}
 
-Graph::vertex_descriptor Graph::add(
-    Vertex const& vertex,
+void Graph::add_edges(
+    vertex_descriptor descriptor,
     coordinate::ExecutionInstance const& execution_instance,
-    std::vector<Input> inputs)
+    std::vector<Input> const& inputs)
 {
-	hate::Timer const timer;
-	// check validity of inputs with regard to vertex to be added
-	check_inputs(vertex, execution_instance, inputs);
-
-	// add vertex to graph
-	auto const descriptor = boost::add_vertex(m_graph);
-	{
-		auto const [_, success] = m_vertex_property_map.emplace(descriptor, vertex);
-		if (!success) {
-			throw std::logic_error("Adding vertex property graph unsuccessful.");
-		}
-	}
-
 	// add execution instance (if not already present)
 	vertex_descriptor execution_instance_descriptor;
 	auto const execution_instance_map_it = m_execution_instance_map.right.find(execution_instance);
@@ -98,8 +85,13 @@ Graph::vertex_descriptor Graph::add(
 			throw std::runtime_error("Execution instance graph cyclic.");
 		}
 	}
+}
 
-	// log successfull add operation of vertex
+void Graph::add_log(
+    vertex_descriptor descriptor,
+    coordinate::ExecutionInstance const& execution_instance,
+    hate::Timer const& timer)
+{
 	auto const log = [&](auto const& v) {
 		LOG4CXX_TRACE(
 		    m_logger, "add(): Added vertex " << descriptor << " at " << execution_instance << " in "
@@ -107,9 +99,7 @@ Graph::vertex_descriptor Graph::add(
 		                                     << " with configuration: " << std::endl
 		                                     << v << ".");
 	};
-	std::visit(log, vertex);
-
-	return descriptor;
+	std::visit(log, m_vertex_property_map.at(descriptor));
 }
 
 Graph::graph_type const& Graph::get_graph() const

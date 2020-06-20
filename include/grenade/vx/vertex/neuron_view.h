@@ -33,7 +33,8 @@ struct NeuronView
 	 * @param columns Neuron columns
 	 * @param row Neuron row
 	 */
-	explicit NeuronView(Columns const& columns, Row const& row) SYMBOL_VISIBLE;
+	template <typename ColumnsT, typename RowT>
+	explicit NeuronView(ColumnsT&& columns, RowT&& row);
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Row const& get_row() const SYMBOL_VISIBLE;
@@ -50,6 +51,8 @@ struct NeuronView
 	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
 private:
+	void check(Columns const& columns) SYMBOL_VISIBLE;
+
 	Columns m_columns;
 	Row m_row;
 };
@@ -57,3 +60,5 @@ private:
 } // vertex
 
 } // grenade::vx
+
+#include "grenade/vx/vertex/neuron_view.tcc"

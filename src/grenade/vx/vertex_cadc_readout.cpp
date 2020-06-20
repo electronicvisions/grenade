@@ -8,14 +8,12 @@
 
 namespace grenade::vx::vertex {
 
-CADCMembraneReadoutView::CADCMembraneReadoutView(Columns const& columns, Synram const& synram) :
-    m_columns(), m_synram(synram)
+void CADCMembraneReadoutView::check(Columns const& columns)
 {
 	std::set<Columns::value_type> unique(columns.begin(), columns.end());
 	if (unique.size() != columns.size()) {
 		throw std::runtime_error("Column locations provided to CADCReadoutView are not unique.");
 	}
-	m_columns = columns;
 }
 
 CADCMembraneReadoutView::Columns const& CADCMembraneReadoutView::get_columns() const

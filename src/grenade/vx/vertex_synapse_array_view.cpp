@@ -6,13 +6,8 @@
 
 namespace grenade::vx::vertex {
 
-SynapseArrayView::SynapseArrayView(
-    Synram const& synram,
-    Rows const& rows,
-    Columns const& columns,
-    Weights const& weights,
-    Labels const& labels) :
-    m_synram(synram), m_rows(), m_columns(), m_weights(), m_labels()
+void SynapseArrayView::check(
+    Rows const& rows, Columns const& columns, Weights const& weights, Labels const& labels)
 {
 	if (rows.empty()) {
 		throw std::runtime_error("Row size(0) unsupported.");
@@ -44,10 +39,6 @@ SynapseArrayView::SynapseArrayView(
 			throw std::runtime_error("Weight row size does not match columns size.");
 		}
 	}
-	m_rows = rows;
-	m_columns = columns;
-	m_weights = weights;
-	m_labels = labels;
 }
 
 boost::iterator_range<SynapseArrayView::Rows::const_iterator> SynapseArrayView::get_rows() const

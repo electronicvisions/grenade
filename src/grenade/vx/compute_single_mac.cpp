@@ -22,8 +22,8 @@ namespace grenade::vx {
 
 Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
     Graph& graph,
-    Weights const& weights,
-    RowModes const& row_modes,
+    Weights&& weights,
+    RowModes&& row_modes,
     coordinate::ExecutionInstance const& instance,
     halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
     Graph::vertex_descriptor const crossbar_input_vertex)
@@ -97,57 +97,40 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	}
 	// add synapse array
 	vertex::SynapseArrayView synapse_array(
-	    hemisphere.toSynramOnDLS(), rows, columns, weights, labels);
-	auto const synapse_array_vertex = graph.add(synapse_array, instance, synapse_driver_vertices);
+	    hemisphere.toSynramOnDLS(), std::move(rows), columns, std::move(weights),
+	    std::move(labels));
+	auto const synapse_array_vertex =
+	    graph.add(std::move(synapse_array), instance, synapse_driver_vertices);
 	// add neurons
 	vertex::NeuronView::Columns nrns;
+	nrns.reserve(x_size);
 	for (size_t o = 0; o < x_size; ++o) {
 		auto const nrn = NeuronColumnOnDLS(o);
 		nrns.push_back(nrn);
 	}
-	vertex::NeuronView neurons(nrns, hemisphere.toNeuronRowOnDLS());
-	auto const v1 = graph.add(neurons, instance, {synapse_array_vertex});
+	vertex::NeuronView neurons(std::move(nrns), hemisphere.toNeuronRowOnDLS());
+	auto const v1 = graph.add(std::move(neurons), instance, {synapse_array_vertex});
 	// add readout
-	vertex::CADCMembraneReadoutView readout(columns, hemisphere.toSynramOnDLS());
+	vertex::CADCMembraneReadoutView readout(std::move(columns), hemisphere.toSynramOnDLS());
 	auto const v2 = graph.add(readout, instance, {v1});
 	// add store
 	vertex::DataOutput data_output(ConnectionType::Int8, x_size);
 	return graph.add(data_output, instance, {v2});
 }
 
-ComputeSingleMAC::ComputeSingleMAC(
-    Weights const& weights,
-    RowModes const& row_modes,
-    ChipConfig const& config,
-    size_t num_sends,
-    haldls::vx::v2::Timer::Value wait_between_events,
-    bool enable_loopback) :
-    m_enable_loopback(enable_loopback),
-    m_graph(),
-    m_synram_handles(),
-    m_output_vertices(),
-    m_weights(),
-    m_row_modes(),
-    m_config_map(),
-    m_num_sends(num_sends),
-    m_wait_between_events(wait_between_events)
+void ComputeSingleMAC::build_graph()
 {
 	using namespace halco::hicann_dls::vx::v2;
 
-	m_config_map[DLSGlobal()] = config;
-
-	if (std::adjacent_find(weights.begin(), weights.end(), [](auto const& a, auto const& b) {
+	if (std::adjacent_find(m_weights.begin(), m_weights.end(), [](auto const& a, auto const& b) {
 		    return a.size() != b.size();
-	    }) != weights.end()) {
+	    }) != m_weights.end()) {
 		throw std::runtime_error("Synapse weight matrix is not rectangular.");
 	}
 
-	if (weights.size() != row_modes.size()) {
+	if (m_weights.size() != m_row_modes.size()) {
 		throw std::runtime_error("Synapse weight matrix row size and row modes size don't match.");
 	}
-
-	m_weights = weights;
-	m_row_modes = row_modes;
 
 	size_t o_offset = 0;
 	size_t i_offset = 0;
@@ -207,7 +190,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 			    m_row_modes.begin() + i_offset, m_row_modes.begin() + i_offset + local_i_size);
 
 			local_output_vertices.push_back(insert_synram(
-			    m_graph, local_weights, local_row_modes, instance,
+			    m_graph, std::move(local_weights), std::move(local_row_modes), instance,
 			    execution_instance_manager.get_current_hemisphere(), crossbar_input_vertex));
 			m_synram_handles.push_back({input_vertex, local_i_size, i_offset,
 			                            execution_instance_manager.get_current_hemisphere()});

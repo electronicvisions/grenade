@@ -32,12 +32,14 @@ struct SynapseArrayView
 	 * @param weights Weight values
 	 * @param labels Label values
 	 */
+	template <
+	    typename SynramT,
+	    typename RowsT,
+	    typename ColumnsT,
+	    typename WeightsT,
+	    typename LabelsT>
 	explicit SynapseArrayView(
-	    Synram const& synram,
-	    Rows const& rows,
-	    Columns const& columns,
-	    Weights const& weights,
-	    Labels const& labels) SYMBOL_VISIBLE;
+	    SynramT&& synram, RowsT&& rows, ColumnsT&& columns, WeightsT&& weights, LabelsT&& labels);
 
 	/**
 	 * Accessor to synapse row coordinates via a range.
@@ -79,6 +81,12 @@ private:
 	Columns m_columns;
 	Weights m_weights;
 	Labels m_labels;
+
+	void check(
+	    Rows const& rows, Columns const& columns, Weights const& weights, Labels const& labels)
+	    SYMBOL_VISIBLE;
 };
 
 } // grenade::vx::vertex
+
+#include "grenade/vx/vertex/synapse_array_view.tcc"

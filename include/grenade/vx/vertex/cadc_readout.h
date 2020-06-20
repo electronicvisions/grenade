@@ -31,7 +31,8 @@ struct CADCMembraneReadoutView
 	 * Construct CADCMembraneReadoutView with specified size.
 	 * @param columns Columns to read out
 	 */
-	explicit CADCMembraneReadoutView(Columns const& columns, Synram const& synram) SYMBOL_VISIBLE;
+	template <typename ColumnsT, typename SynramT>
+	explicit CADCMembraneReadoutView(ColumnsT&& columns, SynramT&& synram);
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Synram const& get_synram() const SYMBOL_VISIBLE;
@@ -51,8 +52,12 @@ struct CADCMembraneReadoutView
 private:
 	Columns m_columns;
 	Synram m_synram;
+
+	void check(Columns const& columns) SYMBOL_VISIBLE;
 };
 
 } // vertex
 
 } // grenade::vx
+
+#include "grenade/vx/vertex/cadc_readout.tcc"
