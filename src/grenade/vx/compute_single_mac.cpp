@@ -33,6 +33,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	auto const y_size = weights.size();
 
 	vertex::SynapseArrayView::Columns columns;
+	columns.reserve(x_size);
 	for (size_t o = 0; o < x_size; ++o) {
 		auto const column = SynapseOnSynapseRow(o);
 		columns.push_back(column);
@@ -43,6 +44,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	    hate::math::round_up_integer_division(y_size, 2),
 	    static_cast<size_t>(PADIBusOnPADIBusBlock::size));
 	std::vector<Input> padi_bus_vertices;
+	padi_bus_vertices.reserve(num_padi_bus);
 	for (size_t i = 0; i < num_padi_bus; ++i) {
 		CrossbarNodeOnDLS coordinate(
 		    CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(i + (hemisphere.toEnum() * 4)));
@@ -59,11 +61,12 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 
 	vertex::SynapseArrayView::Labels labels(y_size);
 	vertex::SynapseArrayView::Rows rows;
+	rows.reserve(y_size);
 	size_t i = 0;
 	for (auto& l : labels) {
 		SynapseRowOnSynram const sr(i);
 		rows.push_back(sr);
-		l.insert(l.begin(), x_size, lola::vx::v2::SynapseMatrix::Label((i % 2) << 5));
+		l.insert(l.end(), x_size, lola::vx::v2::SynapseMatrix::Label((i % 2) << 5));
 		i++;
 	}
 
@@ -71,6 +74,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	auto const num_syndrv = y_size / 2;
 	auto const rest_syndrv = y_size % 2;
 	std::vector<Input> synapse_driver_vertices;
+	synapse_driver_vertices.reserve(num_syndrv);
 	for (size_t i = 0; i < num_syndrv; ++i) {
 		auto const padi_bus_vertex = padi_bus_vertices.at(i % PADIBusOnPADIBusBlock::size);
 		vertex::SynapseDriver synapse_driver(
@@ -159,6 +163,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 	auto const set_enable_loopback = [&]() {
 		if (m_enable_loopback) {
 			std::vector<Input> loopback_vertices;
+			loopback_vertices.reserve(SPL1Address::size);
 			for (size_t i = 0; i < SPL1Address::size; ++i) {
 				CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
 				haldls::vx::CrossbarNode config;
@@ -191,14 +196,13 @@ ComputeSingleMAC::ComputeSingleMAC(
 			Weights local_weights(local_i_size);
 			for (size_t i = 0; i < local_weights.size(); ++i) {
 				local_weights.at(i).insert(
-				    local_weights.at(i).begin(), m_weights.at(i + i_offset).begin() + o_offset,
+				    local_weights.at(i).end(), m_weights.at(i + i_offset).begin() + o_offset,
 				    m_weights.at(i + i_offset).begin() + o_offset + local_o_size);
 			}
 
-			RowModes local_row_modes(local_i_size);
-			for (size_t i = 0; i < local_weights.size(); ++i) {
-				local_row_modes.at(i) = m_row_modes.at(i + i_offset);
-			}
+			assert(m_row_modes.size() >= i_offset + local_i_size);
+			RowModes local_row_modes(
+			    m_row_modes.begin() + i_offset, m_row_modes.begin() + i_offset + local_i_size);
 
 			local_output_vertices.push_back(insert_synram(
 			    m_graph, local_weights, local_row_modes, instance,
@@ -219,6 +223,7 @@ ComputeSingleMAC::ComputeSingleMAC(
 			// load all data
 			vertex::DataInput data_input(ConnectionType::Int8, local_o_size);
 			std::vector<Input> local_inputs;
+			local_inputs.reserve(local_output_vertices.size());
 			for (auto const vertex : local_output_vertices) {
 				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
 			}
@@ -367,8 +372,8 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 
 
 	// Construct map of one executor and connect to HW
-	JITGraphExecutor::ExecutorMap executors;
-	executors.insert(std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	JITGraphExecutor::ExecutorMap executors(
+	    {std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection)});
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
