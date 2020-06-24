@@ -2,6 +2,8 @@
 #include "grenade/vx/input.h"
 #include "hate/timer.h"
 
+#include <boost/smart_ptr/make_local_shared.hpp>
+
 namespace grenade::vx {
 
 template <typename VertexT>
@@ -12,16 +14,21 @@ Graph::vertex_descriptor Graph::add(
 {
 	hate::Timer const timer;
 	// check validity of inputs with regard to vertex to be added
-	check_inputs(vertex, execution_instance, inputs);
+	if constexpr (std::is_same_v<std::decay_t<VertexT>, vertex_descriptor>) {
+		check_inputs(get_vertex_property(vertex), execution_instance, inputs);
+	} else {
+		check_inputs(vertex, execution_instance, inputs);
+	}
 
 	// add vertex to graph
 	auto const descriptor = boost::add_vertex(m_graph);
-	{
-		auto const [_, success] =
-		    m_vertex_property_map.emplace(descriptor, std::forward<VertexT>(vertex));
-		if (!success) {
-			throw std::logic_error("Adding vertex property graph unsuccessful.");
-		}
+	assert(descriptor == m_vertex_property_map.size());
+
+	if constexpr (std::is_same_v<std::decay_t<VertexT>, vertex_descriptor>) {
+		m_vertex_property_map.emplace_back(m_vertex_property_map.at(vertex));
+	} else {
+		m_vertex_property_map.emplace_back(
+		    boost::make_local_shared<Vertex>(std::forward<VertexT>(vertex)));
 	}
 
 	// add edges

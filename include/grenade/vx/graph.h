@@ -3,11 +3,13 @@
 #include <map>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
 #include <boost/bimap/set_of.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/smart_ptr/local_shared_ptr.hpp>
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph_representation.h"
@@ -51,7 +53,6 @@ public:
 	typedef detail::vertex_descriptor vertex_descriptor;
 	typedef detail::edge_descriptor edge_descriptor;
 
-	typedef std::unordered_map<vertex_descriptor, Vertex> vertex_property_map_type;
 	typedef std::unordered_map<edge_descriptor, std::optional<PortRestriction>>
 	    edge_property_map_type;
 	typedef boost::
@@ -93,6 +94,26 @@ public:
 	    std::vector<Input> inputs);
 
 	/**
+	 * Add vertex by reference on specified execution instance with specified inputs.
+	 * This is to be used to update input relations.
+	 * TODO: Do we want this and thereby have a separate resource manager?
+	 * TODO: We might want to have a more fancy vertex descriptor return type
+	 * Perform checks for:
+	 *  - connection between vertex types is allowed
+	 *  - vertex inputs match provided input descriptors output
+	 *  - connection does not lead to acyclicity
+	 *  - connection goes forward in time
+	 * @param vertex_reference Vertex reference configuration
+	 * @param execution_instance Execution instance to place on
+	 * @param inputs Positional list input vertex descriptors (with optional port restriction)
+	 * @return Vertex descriptor of added vertex
+	 */
+	vertex_descriptor add(
+	    vertex_descriptor vertex_reference,
+	    coordinate::ExecutionInstance execution_instance,
+	    std::vector<Input> inputs) SYMBOL_VISIBLE;
+
+	/**
 	 * Get constant reference to underlying graph.
 	 * @return Constant reference to underlying graph
 	 */
@@ -105,10 +126,11 @@ public:
 	graph_type const& get_execution_instance_graph() const SYMBOL_VISIBLE;
 
 	/**
-	 * Get constant reference to vertex property map.
-	 * @return Constant reference to vertex property map
+	 * Get constant reference to a vertex property.
+	 * @param descriptor Vertex descriptor to get property for
+	 * @return Constant reference to a vertex property
 	 */
-	vertex_property_map_type const& get_vertex_property_map() const SYMBOL_VISIBLE;
+	Vertex const& get_vertex_property(vertex_descriptor descriptor) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to edge property map.
@@ -141,6 +163,8 @@ public:
 	bool is_acyclic_execution_instance_graph() const;
 
 private:
+	typedef std::vector<boost::local_shared_ptr<Vertex>> vertex_property_map_type;
+
 	bool m_enable_acyclicity_check;
 	graph_type m_graph;
 	graph_type m_execution_instance_graph;

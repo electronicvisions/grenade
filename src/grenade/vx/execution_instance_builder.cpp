@@ -73,16 +73,15 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 		return false;
 	}
 	auto const batch_size = m_input_list.batch_size();
-	auto const& vertex_property_map = m_graph.get_vertex_property_map();
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
 	auto const vertices = boost::make_iterator_range(
 	    m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex));
 	return std::none_of(vertices.begin(), vertices.end(), [&](auto const& p) {
 		auto const vertex = p.second;
-		if (std::holds_alternative<vertex::ExternalInput>(vertex_property_map.at(vertex))) {
+		if (std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(vertex))) {
 			auto const& input_vertex =
-			    std::get<vertex::ExternalInput>(vertex_property_map.at(vertex));
+			    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
 			if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
 				if (m_input_list.int8.find(vertex) == m_input_list.int8.end()) {
 					return true;
@@ -181,7 +180,6 @@ void ExecutionInstanceBuilder::process(
 	using namespace haldls::vx::v2;
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace halco::common;
-	auto const& vertex_map = m_graph.get_vertex_property_map();
 	if (data.output().type == ConnectionType::Int8) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
@@ -190,7 +188,7 @@ void ExecutionInstanceBuilder::process(
 		}
 		auto const in_vertex = boost::source(edge, m_graph.get_graph());
 		auto const& input_values =
-		    ((std::holds_alternative<vertex::ExternalInput>(vertex_map.at(in_vertex)))
+		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
 		         ? m_local_external_data.int8.at(in_vertex)
 		         : m_data_output.int8.at(in_vertex));
 
@@ -379,7 +377,6 @@ void ExecutionInstanceBuilder::pre_process()
 	         m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex))) {
 		auto const vertex = p.second;
 		if (inputs_available(vertex)) {
-			auto const& vertex_map = m_graph.get_vertex_property_map();
 			std::visit(
 			    [&](auto const& value) {
 				    hate::Timer timer;
@@ -389,7 +386,7 @@ void ExecutionInstanceBuilder::pre_process()
 				                    << name<hate::remove_all_qualifiers_t<decltype(value)>>()
 				                    << " in " << timer.print() << ".");
 			    },
-			    vertex_map.at(vertex));
+			    m_graph.get_vertex_property(vertex));
 		} else {
 			m_post_vertices.push_back(vertex);
 		}
@@ -407,10 +404,11 @@ DataMap ExecutionInstanceBuilder::post_process()
 		}
 	}
 
-	auto const& vertex_map = m_graph.get_vertex_property_map();
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
-		std::visit([&](auto const& value) { process(vertex, value); }, vertex_map.at(vertex));
+		std::visit(
+		    [&](auto const& value) { process(vertex, value); },
+		    m_graph.get_vertex_property(vertex));
 	}
 	m_postprocessing = false;
 	if (m_event_output_vertex) {

@@ -185,3 +185,72 @@ TEST(Graph, check_supports_input_from)
 	// Input from crossbar node not connecting to output not supported
 	EXPECT_THROW(graph.add(vertex5, ExecutionInstance(), {v4}), std::runtime_error);
 }
+
+TEST(Graph, recurrence)
+{
+	Graph graph;
+
+	// Graph: v0
+	ExternalInput vertex(ConnectionType::DataInputUInt16, 1);
+	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+
+	// Graph: v0 -> v1
+	DataInput vertex2(ConnectionType::CrossbarInputLabel, 1);
+	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	CrossbarNode crossbar_in(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
+	    haldls::vx::v2::CrossbarNode());
+	auto const v2 = graph.add(crossbar_in, ExecutionInstance(), {v1});
+
+	PADIBus::Coordinate c;
+	PADIBus padi_bus(c);
+	auto const v3 = graph.add(padi_bus, ExecutionInstance(), {v2});
+
+	SynapseDriver synapse_driver(
+	    SynapseDriver::Coordinate(), SynapseDriver::Config(),
+	    {haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
+	     haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory});
+	auto const v4 = graph.add(synapse_driver, ExecutionInstance(), {v3});
+
+	SynapseArrayView synapses(
+	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
+	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
+	    SynapseArrayView::Weights{{lola::vx::v2::SynapseMatrix::Weight()}},
+	    SynapseArrayView::Labels{{lola::vx::v2::SynapseMatrix::Label()}});
+	auto const v5 = graph.add(synapses, ExecutionInstance(), {v4});
+
+	NeuronView neurons(NeuronView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
+	auto const v6 = graph.add(neurons, ExecutionInstance(), {v5});
+
+	NeuronEventOutputView neuron_outputs(
+	    NeuronEventOutputView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
+	auto const v7 = graph.add(neuron_outputs, ExecutionInstance(), {v6});
+
+	// recurrence
+	CrossbarNode crossbar_recurrent(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarOutputOnDLS(0)),
+	    haldls::vx::v2::CrossbarNode());
+	auto const v8 = graph.add(crossbar_recurrent, ExecutionInstance(), {v7});
+
+	auto const v9 = graph.add(v3, ExecutionInstance(), {v2, v8});
+
+	auto const v10 = graph.add(v4, ExecutionInstance(), {v9});
+
+	auto const v11 = graph.add(v5, ExecutionInstance(), {v10});
+
+	auto const v12 = graph.add(v6, ExecutionInstance(), {v11});
+
+	auto const v13 = graph.add(v7, ExecutionInstance(), {v12});
+
+	CrossbarNode crossbar_out(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
+	    haldls::vx::v2::CrossbarNode());
+	auto const v14 = graph.add(crossbar_out, ExecutionInstance(), {v13});
+
+	CrossbarL2Output crossbar_l2_output;
+	auto const v15 = graph.add(crossbar_l2_output, ExecutionInstance(), {v14});
+
+	DataOutput data_output(ConnectionType::DataOutputUInt16, 1);
+	graph.add(data_output, ExecutionInstance(), {v15});
+}

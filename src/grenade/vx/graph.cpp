@@ -26,6 +26,14 @@ Graph::Graph(bool enable_acyclicity_check) :
     m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
 {}
 
+Graph::vertex_descriptor Graph::add(
+    vertex_descriptor const vertex_reference,
+    coordinate::ExecutionInstance const execution_instance,
+    std::vector<Input> const inputs)
+{
+	return add<>(vertex_reference, execution_instance, inputs);
+}
+
 void Graph::add_edges(
     vertex_descriptor descriptor,
     coordinate::ExecutionInstance const& execution_instance,
@@ -99,7 +107,7 @@ void Graph::add_log(
 		                                     << " with configuration: " << std::endl
 		                                     << v << ".");
 	};
-	std::visit(log, m_vertex_property_map.at(descriptor));
+	std::visit(log, get_vertex_property(descriptor));
 }
 
 Graph::graph_type const& Graph::get_graph() const
@@ -112,9 +120,9 @@ Graph::graph_type const& Graph::get_execution_instance_graph() const
 	return m_execution_instance_graph;
 }
 
-Graph::vertex_property_map_type const& Graph::get_vertex_property_map() const
+Vertex const& Graph::get_vertex_property(vertex_descriptor const descriptor) const
 {
-	return m_vertex_property_map;
+	return *(m_vertex_property_map.at(descriptor));
 }
 
 Graph::edge_property_map_type const& Graph::get_edge_property_map() const
@@ -290,7 +298,7 @@ void Graph::check_inputs(
 				check_execution_instances(v, w, execution_instance, input_execution_instance);
 			};
 
-			std::visit(check_single_input, m_vertex_property_map.at(input.descriptor));
+			std::visit(check_single_input, get_vertex_property(input.descriptor));
 		}
 	};
 
