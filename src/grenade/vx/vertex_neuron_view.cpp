@@ -8,17 +8,26 @@
 
 namespace grenade::vx::vertex {
 
-void NeuronView::check(Columns const& columns)
+void NeuronView::check(Columns const& columns, EnableResets const& enable_resets)
 {
 	std::set<Columns::value_type> unique(columns.begin(), columns.end());
 	if (unique.size() != columns.size()) {
 		throw std::runtime_error("Neuron locations provided to NeuronView are not unique.");
+	}
+	if (enable_resets.size() != columns.size()) {
+		throw std::runtime_error("Neuron reset enable value size provided to NeuronView does not "
+		                         "match the number of neurons.");
 	}
 }
 
 NeuronView::Columns const& NeuronView::get_columns() const
 {
 	return m_columns;
+}
+
+NeuronView::EnableResets const& NeuronView::get_enable_resets() const
+{
+	return m_enable_resets;
 }
 
 NeuronView::Row const& NeuronView::get_row() const

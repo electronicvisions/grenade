@@ -220,7 +220,8 @@ TEST(Graph, recurrence)
 	    SynapseArrayView::Labels{{lola::vx::v2::SynapseMatrix::Label()}});
 	auto const v5 = graph.add(synapses, ExecutionInstance(), {v4});
 
-	NeuronView neurons(NeuronView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
+	NeuronView neurons(
+	    NeuronView::Columns{NeuronColumnOnDLS()}, NeuronView::EnableResets{true}, NeuronRowOnDLS());
 	auto const v6 = graph.add(neurons, ExecutionInstance(), {v5});
 
 	NeuronEventOutputView neuron_outputs(

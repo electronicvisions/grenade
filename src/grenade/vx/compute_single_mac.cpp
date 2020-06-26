@@ -108,7 +108,9 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 		auto const nrn = NeuronColumnOnDLS(o);
 		nrns.push_back(nrn);
 	}
-	vertex::NeuronView neurons(std::move(nrns), hemisphere.toNeuronRowOnDLS());
+	vertex::NeuronView::EnableResets enable_resets(x_size, true);
+	vertex::NeuronView neurons(
+	    std::move(nrns), std::move(enable_resets), hemisphere.toNeuronRowOnDLS());
 	auto const v1 = graph.add(std::move(neurons), instance, {synapse_array_vertex});
 	// add readout
 	vertex::CADCMembraneReadoutView readout(std::move(columns), hemisphere.toSynramOnDLS());

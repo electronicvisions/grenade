@@ -275,12 +275,12 @@ void ExecutionInstanceBuilder::process(
 {
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
-	// TODO: This reset does not really belong here / how do we say when and whether it should
-	// be triggered?
-	// result: -> make property of each neuron view entry
+	size_t i = 0;
+	auto const& enable_resets = data.get_enable_resets();
 	for (auto const column : data.get_columns()) {
 		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
-		m_neuron_resets.enable_resets[neuron_reset] = true;
+		m_neuron_resets.enable_resets[neuron_reset] = enable_resets.at(i);
+		i++;
 	}
 	// TODO: once we have neuron configuration, it should be placed here
 }
