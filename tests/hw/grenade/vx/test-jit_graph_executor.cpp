@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/config.h"
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 
 TEST(JITGraphExecutor, Empty)
@@ -11,7 +11,7 @@ TEST(JITGraphExecutor, Empty)
 
 	grenade::vx::JITGraphExecutor::Connections connections;
 
-	grenade::vx::DataMap input_list;
+	grenade::vx::IODataMap input_list;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 

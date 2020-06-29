@@ -11,11 +11,11 @@
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/config.h"
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/execution_instance_node.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/padi.h"
@@ -28,9 +28,9 @@
 
 namespace grenade::vx {
 
-DataMap JITGraphExecutor::run(
+IODataMap JITGraphExecutor::run(
     Graph const& graph,
-    DataMap const& input_list,
+    IODataMap const& input_list,
     Connections const& connections,
     ChipConfigs const& chip_configs)
 {
@@ -53,7 +53,7 @@ DataMap JITGraphExecutor::run(
 	    nodes;
 
 	// global data map
-	DataMap output_activation_map;
+	IODataMap output_activation_map;
 
 	std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::ConnectionTimeInfo>
 	    connection_time_info_begin;

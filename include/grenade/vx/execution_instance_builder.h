@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "grenade/vx/config.h"
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/neuron_reset_mask_generator.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
@@ -41,8 +41,8 @@ public:
 	ExecutionInstanceBuilder(
 	    Graph const& graph,
 	    coordinate::ExecutionInstance const& execution_instance,
-	    DataMap const& input_list,
-	    DataMap const& data_output,
+	    IODataMap const& input_list,
+	    IODataMap const& data_output,
 	    ChipConfig const& chip_config) SYMBOL_VISIBLE;
 
 	/**
@@ -73,9 +73,9 @@ public:
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
 	 * This resets the internal state of the builder to be ready for the next time step.
-	 * @return DataMap of locally computed results
+	 * @return IODataMap of locally computed results
 	 */
-	DataMap post_process() SYMBOL_VISIBLE;
+	IODataMap post_process() SYMBOL_VISIBLE;
 	void post_process(Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
 	/**
@@ -87,10 +87,10 @@ public:
 private:
 	Graph const& m_graph;
 	coordinate::ExecutionInstance m_execution_instance;
-	DataMap const& m_input_list;
-	DataMap const& m_data_output;
+	IODataMap const& m_input_list;
+	IODataMap const& m_data_output;
 
-	ConstantReferenceDataMap m_local_external_data;
+	ConstantReferenceIODataMap m_local_external_data;
 
 	ChipConfig m_config;
 
@@ -105,8 +105,8 @@ private:
 
 	bool m_postprocessing;
 
-	DataMap m_local_data;
-	DataMap m_local_data_output;
+	IODataMap m_local_data;
+	IODataMap m_local_data_output;
 
 	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v2::HemisphereOnDLS>
 	    ticket_request_type;

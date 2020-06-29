@@ -9,8 +9,8 @@
 namespace grenade::vx {
 
 ExecutionInstanceNode::ExecutionInstanceNode(
-    DataMap& data_map,
-    DataMap const& input_data_map,
+    IODataMap& data_map,
+    IODataMap const& input_data_map,
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
     ChipConfig const& chip_config,

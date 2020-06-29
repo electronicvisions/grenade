@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/config.h"
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
@@ -50,7 +50,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	auto const v5 = g.add(data_output, instance, {v4});
 
 	// fill graph inputs
-	grenade::vx::DataMap input_list;
+	grenade::vx::IODataMap input_list;
 	input_list.spike_events[v1] = inputs;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;

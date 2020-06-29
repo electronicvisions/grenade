@@ -8,7 +8,7 @@
 namespace grenade::vx {
 
 class Graph;
-class DataMap;
+class IODataMap;
 class ChipConfig;
 
 /**
@@ -33,9 +33,9 @@ public:
 	 * @param connections Map of connections tied to a specific chip instance
 	 * @param chip_configs Map of static configuration tied to a specific chip instance
 	 */
-	static DataMap run(
+	static IODataMap run(
 	    Graph const& graph,
-	    DataMap const& input_list,
+	    IODataMap const& input_list,
 	    Connections const& connections,
 	    ChipConfigs const& chip_configs) SYMBOL_VISIBLE;
 

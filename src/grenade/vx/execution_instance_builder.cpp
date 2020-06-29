@@ -10,8 +10,8 @@
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
 
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/padi.h"
@@ -34,8 +34,8 @@ std::string name()
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
-    DataMap const& input_list,
-    DataMap const& data_output,
+    IODataMap const& input_list,
+    IODataMap const& data_output,
     ChipConfig const& chip_config) :
     m_graph(graph),
     m_execution_instance(execution_instance),
@@ -393,7 +393,7 @@ void ExecutionInstanceBuilder::pre_process()
 	}
 }
 
-DataMap ExecutionInstanceBuilder::post_process()
+IODataMap ExecutionInstanceBuilder::post_process()
 {
 	for (auto& batch_entry : m_batch_entries) {
 		if (batch_entry.m_ticket) {

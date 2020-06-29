@@ -2,7 +2,7 @@
 
 #include "grenade/vx/compute_single_mac.h"
 
-#include "grenade/vx/data_map.h"
+#include "grenade/vx/io_data_map.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
 #include "haldls/vx/v2/event.h"

@@ -1,11 +1,11 @@
 #include "grenade/vx/compute_single_mac.h"
 
 #include "grenade/vx/config.h"
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "hate/math.h"
@@ -262,7 +262,7 @@ std::optional<haldls::vx::v2::SpikeLabel> ComputeSingleMAC::get_spike_label(
 	return haldls::vx::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
-DataMap ComputeSingleMAC::generate_input_events(
+IODataMap ComputeSingleMAC::generate_input_events(
     Activations const& inputs,
     std::vector<SynramHandle> const& synram_handles,
     size_t const num_sends,
@@ -271,7 +271,7 @@ DataMap ComputeSingleMAC::generate_input_events(
 	using namespace haldls::vx::v2;
 	using namespace halco::hicann_dls::vx;
 
-	DataMap data_map;
+	IODataMap data_map;
 
 	size_t const batch_size = inputs.size();
 	// get synram_handle indices of the same input_vertex

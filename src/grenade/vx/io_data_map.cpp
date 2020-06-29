@@ -1,12 +1,12 @@
-#include "grenade/vx/data_map.h"
+#include "grenade/vx/io_data_map.h"
 
 namespace grenade::vx {
 
-DataMap::DataMap() :
+IODataMap::IODataMap() :
     int8(), spike_events(), spike_event_output(), mutex(std::make_unique<std::mutex>())
 {}
 
-DataMap::DataMap(DataMap&& other) :
+IODataMap::IODataMap(IODataMap&& other) :
     int8(std::move(other.int8)),
     spike_events(std::move(other.spike_events)),
     spike_event_output(std::move(other.spike_event_output)),
@@ -15,7 +15,7 @@ DataMap::DataMap(DataMap&& other) :
 	other.mutex = std::make_unique<std::mutex>();
 }
 
-DataMap& DataMap::operator=(DataMap&& other)
+IODataMap& IODataMap::operator=(IODataMap&& other)
 {
 	int8 = std::move(other.int8);
 	spike_events = std::move(other.spike_events);
@@ -25,7 +25,7 @@ DataMap& DataMap::operator=(DataMap&& other)
 	return *this;
 }
 
-void DataMap::merge(DataMap&& other)
+void IODataMap::merge(IODataMap&& other)
 {
 	std::unique_lock<std::mutex> lock(*mutex);
 	int8.merge(other.int8);
@@ -33,12 +33,12 @@ void DataMap::merge(DataMap&& other)
 	spike_event_output.merge(other.spike_event_output);
 }
 
-void DataMap::merge(DataMap& other)
+void IODataMap::merge(IODataMap& other)
 {
-	merge(std::forward<DataMap>(other));
+	merge(std::forward<IODataMap>(other));
 }
 
-void DataMap::clear()
+void IODataMap::clear()
 {
 	std::unique_lock<std::mutex> lock(*mutex);
 	int8.clear();
@@ -46,7 +46,7 @@ void DataMap::clear()
 	spike_event_output.clear();
 }
 
-bool DataMap::empty() const
+bool IODataMap::empty() const
 {
 	return int8.empty() && spike_events.empty() && spike_event_output.empty();
 }
@@ -56,7 +56,7 @@ namespace {
 /**
  * Get batch size via the first entry (any) internal data type.
  */
-size_t unsafe_batch_size(DataMap const& map)
+size_t unsafe_batch_size(IODataMap const& map)
 {
 	size_t size = 0;
 	if (map.int8.size()) {
@@ -71,7 +71,7 @@ size_t unsafe_batch_size(DataMap const& map)
 
 } // namespace
 
-size_t DataMap::batch_size() const
+size_t IODataMap::batch_size() const
 {
 	if (!valid()) {
 		throw std::runtime_error("DataMap not valid.");
@@ -79,7 +79,7 @@ size_t DataMap::batch_size() const
 	return unsafe_batch_size(*this);
 }
 
-bool DataMap::valid() const
+bool IODataMap::valid() const
 {
 	size_t size = unsafe_batch_size(*this);
 	bool const int8_value = std::all_of(int8.cbegin(), int8.cend(), [size](auto const& list) {
@@ -95,10 +95,11 @@ bool DataMap::valid() const
 }
 
 
-ConstantReferenceDataMap::ConstantReferenceDataMap() : int8(), spike_events(), spike_event_output()
+ConstantReferenceIODataMap::ConstantReferenceIODataMap() :
+    int8(), spike_events(), spike_event_output()
 {}
 
-void ConstantReferenceDataMap::clear()
+void ConstantReferenceIODataMap::clear()
 {
 	int8.clear();
 	spike_events.clear();

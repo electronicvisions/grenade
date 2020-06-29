@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/config.h"
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
+#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex.h"
@@ -60,7 +60,7 @@ TEST(Addition, Single)
 	}
 
 	// fill graph inputs
-	grenade::vx::DataMap input_list;
+	grenade::vx::IODataMap input_list;
 	std::vector<grenade::vx::Int8> inputs(size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		inputs.at(i + 128) = grenade::vx::Int8(i);

@@ -1,9 +1,9 @@
 #pragma once
 #include <tbb/flow_graph.h>
 
-#include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/io_data_map.h"
 #include "hate/visibility.h"
 #include "hxcomm/vx/connection_variant.h"
 
@@ -22,8 +22,8 @@ namespace grenade::vx {
 struct ExecutionInstanceNode
 {
 	ExecutionInstanceNode(
-	    DataMap& data_map,
-	    DataMap const& input_data_map,
+	    IODataMap& data_map,
+	    IODataMap const& input_data_map,
 	    Graph const& graph,
 	    coordinate::ExecutionInstance const& execution_instance,
 	    ChipConfig const& chip_config,
@@ -32,8 +32,8 @@ struct ExecutionInstanceNode
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
 private:
-	DataMap& data_map;
-	DataMap const& input_data_map;
+	IODataMap& data_map;
+	IODataMap const& input_data_map;
 	Graph const& graph;
 	coordinate::ExecutionInstance execution_instance;
 	ChipConfig const& chip_config;

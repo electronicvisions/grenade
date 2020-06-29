@@ -98,7 +98,7 @@ private:
 		halco::hicann_dls::vx::v2::HemisphereOnDLS hemisphere;
 	};
 
-	static DataMap generate_input_events(
+	static IODataMap generate_input_events(
 	    Activations const& inputs,
 	    std::vector<SynramHandle> const& synram_handles,
 	    size_t num_sends,

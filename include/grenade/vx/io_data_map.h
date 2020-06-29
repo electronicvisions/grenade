@@ -13,7 +13,7 @@ namespace grenade::vx {
  * Data map used for external data exchange in graph execution.
  * For each type of data a separate member allows access.
  */
-struct DataMap
+struct IODataMap
 {
 	/**
 	 * Data is connected to specified vertex descriptors.
@@ -30,25 +30,25 @@ struct DataMap
 	/** Spike output events. */
 	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
 
-	DataMap() SYMBOL_VISIBLE;
+	IODataMap() SYMBOL_VISIBLE;
 
-	DataMap(DataMap const&) = delete;
+	IODataMap(IODataMap const&) = delete;
 
-	DataMap(DataMap&& other) SYMBOL_VISIBLE;
+	IODataMap(IODataMap&& other) SYMBOL_VISIBLE;
 
-	DataMap& operator=(DataMap&& other) SYMBOL_VISIBLE;
-
-	/**
-	 * Merge other map content into this one's.
-	 * @param other Other map to merge into this instance
-	 */
-	void merge(DataMap&& other) SYMBOL_VISIBLE;
+	IODataMap& operator=(IODataMap&& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Merge other map content into this one's.
 	 * @param other Other map to merge into this instance
 	 */
-	void merge(DataMap& other) SYMBOL_VISIBLE;
+	void merge(IODataMap&& other) SYMBOL_VISIBLE;
+
+	/**
+	 * Merge other map content into this one's.
+	 * @param other Other map to merge into this instance
+	 */
+	void merge(IODataMap& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Clear content of map.
@@ -86,7 +86,7 @@ private:
  * Data map of constant references to data used for external data input in graph execution.
  * For each type of data a separate member allows access.
  */
-struct ConstantReferenceDataMap
+struct ConstantReferenceIODataMap
 {
 	/**
 	 * Data is connected to specified vertex descriptors.
@@ -103,7 +103,7 @@ struct ConstantReferenceDataMap
 	/** Spike output events. */
 	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
 
-	ConstantReferenceDataMap() SYMBOL_VISIBLE;
+	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 
 	/**
 	 * Clear content of map.
