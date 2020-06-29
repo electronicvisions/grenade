@@ -375,8 +375,8 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 	using namespace halco::hicann_dls::vx::v2;
 	auto logger = log4cxx::Logger::getLogger("grenade.ComputeSingleMAC");
 
-	// Construct map of one executor and connect to HW
-	JITGraphExecutor::ExecutorMap executors(
+	// Construct map of one connection to HW
+	JITGraphExecutor::Connections connections(
 	    {std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection)});
 
 	if (inputs.size() == 0) {
@@ -403,7 +403,7 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 
 	// run Graph with given inputs and return results
 	auto const output_activation_map =
-	    JITGraphExecutor::run(m_graph, input_list, executors, m_config_map);
+	    JITGraphExecutor::run(m_graph, input_list, connections, m_config_map);
 
 	hate::Timer output_timer;
 	std::vector<std::vector<Int8>> output(output_activation_map.batch_size());

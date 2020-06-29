@@ -31,14 +31,14 @@ namespace grenade::vx {
 DataMap JITGraphExecutor::run(
     Graph const& graph,
     DataMap const& input_list,
-    ExecutorMap const& executor_map,
+    Connections const& connections,
     ConfigMap const& config_map)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
 	hate::Timer const timer;
 
-	check(graph, executor_map);
+	check(graph, connections);
 
 	auto const& execution_instance_graph = graph.get_execution_instance_graph();
 	auto const& execution_instance_map = graph.get_execution_instance_map();
@@ -57,9 +57,9 @@ DataMap JITGraphExecutor::run(
 
 	std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::ConnectionTimeInfo>
 	    connection_time_info_begin;
-	for (auto const [dls, executor] : executor_map) {
+	for (auto const [dls, connection] : connections) {
 		connection_time_info_begin.emplace(
-		    dls, std::visit([](auto const& e) { return e.get_time_info(); }, executor));
+		    dls, std::visit([](auto const& c) { return c.get_time_info(); }, connection));
 	}
 
 	// build execution nodes
@@ -69,7 +69,7 @@ DataMap JITGraphExecutor::run(
 		auto const dls_global = execution_instance.toDLSGlobal();
 		ExecutionInstanceNode node_body(
 		    output_activation_map, input_list, graph, execution_instance, config_map.at(dls_global),
-		    executor_map.at(dls_global));
+		    connections.at(dls_global));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}
@@ -94,7 +94,7 @@ DataMap JITGraphExecutor::run(
 	std::chrono::nanoseconds total_time(timer.get_ns());
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	LOG4CXX_INFO(logger, "run(): Executed graph in " << hate::to_string(total_time) << ".");
-	for (auto const& [dls, e] : executor_map) {
+	for (auto const& [dls, e] : connections) {
 		auto const connection_time_info_difference =
 		    std::visit([](auto const& c) { return c.get_time_info(); }, e) -
 		    connection_time_info_begin.at(dls);
@@ -112,22 +112,22 @@ DataMap JITGraphExecutor::run(
 	return output_activation_map;
 }
 
-bool JITGraphExecutor::is_executable_on(Graph const& graph, ExecutorMap const& executor_map)
+bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& connections)
 {
-	auto const executor_dls_globals = boost::adaptors::keys(executor_map);
+	auto const connection_dls_globals = boost::adaptors::keys(connections);
 	auto const& execution_instance_map = graph.get_execution_instance_map();
 	auto const& vertex_descriptor_map = graph.get_vertex_descriptor_map();
 
 	auto const vertices = boost::make_iterator_range(boost::vertices(graph.get_graph()));
 	return std::none_of(vertices.begin(), vertices.end(), [&](auto const vertex) {
 		return std::find(
-		           executor_dls_globals.begin(), executor_dls_globals.end(),
+		           connection_dls_globals.begin(), connection_dls_globals.end(),
 		           execution_instance_map.left.at(vertex_descriptor_map.left.at(vertex))
-		               .toDLSGlobal()) == executor_dls_globals.end();
+		               .toDLSGlobal()) == connection_dls_globals.end();
 	});
 }
 
-void JITGraphExecutor::check(Graph const& graph, ExecutorMap const& executor_map)
+void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	hate::Timer const timer;
@@ -137,14 +137,14 @@ void JITGraphExecutor::check(Graph const& graph, ExecutorMap const& executor_map
 		throw std::runtime_error("Execution instance graph is not acyclic.");
 	}
 
-	// check all DLSGlobal physical chips used in the graph are present in the provided executor map
-	if (!is_executable_on(graph, executor_map)) {
-		throw std::runtime_error("Graph requests executors not provided.");
+	// check all DLSGlobal physical chips used in the graph are present in the provided connections
+	if (!is_executable_on(graph, connections)) {
+		throw std::runtime_error("Graph requests connection not provided.");
 	}
 
 	LOG4CXX_TRACE(
 	    logger,
-	    "check(): Checked fit of graph, input list and executors in " << timer.print() << ".");
+	    "check(): Checked fit of graph, input list and connection in " << timer.print() << ".");
 }
 
 } // namespace grenade::vx

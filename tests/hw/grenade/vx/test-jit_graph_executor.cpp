@@ -9,14 +9,14 @@ TEST(JITGraphExecutor, Empty)
 {
 	grenade::vx::Graph g;
 
-	grenade::vx::JITGraphExecutor::ExecutorMap executors;
+	grenade::vx::JITGraphExecutor::Connections connections;
 
 	grenade::vx::DataMap input_list;
 
 	grenade::vx::JITGraphExecutor::ConfigMap config_map;
 
 	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, executors, config_map);
+	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, config_map);
 
 	EXPECT_TRUE(result_map.empty());
 }

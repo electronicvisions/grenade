@@ -22,7 +22,7 @@ using namespace lola::vx::v2;
 
 std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
-    grenade::vx::JITGraphExecutor::ExecutorMap const& executors,
+    grenade::vx::JITGraphExecutor::Connections const& connections,
     std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
 {
 	logger_default_config(log4cxx::Level::getTrace());
@@ -58,7 +58,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	// run Graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, executors, config_map);
+	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, config_map);
 
 	EXPECT_EQ(result_map.spike_event_output.size(), 1);
 
@@ -69,17 +69,18 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 TEST(JITGraphExecutor, EventLoopback)
 {
-	// Construct map of one executor and connect to HW
-	grenade::vx::JITGraphExecutor::ExecutorMap executors;
+	// Construct map of one connection and connect to HW
+	grenade::vx::JITGraphExecutor::Connections connections;
 	auto connection = hxcomm::vx::get_connection_from_env();
-	executors.insert(std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	connections.insert(
+	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
 
 	// Initialize chip
 	{
 		DigitalInit const init;
 		auto [builder, _] = generate(init);
 		auto program = builder.done();
-		stadls::vx::v2::run(executors.at(DLSGlobal()), program);
+		stadls::vx::v2::run(connections.at(DLSGlobal()), program);
 	}
 
 	constexpr size_t max_batch_size = 5;
@@ -100,7 +101,7 @@ TEST(JITGraphExecutor, EventLoopback)
 				}
 
 				auto const spike_batches =
-				    test_event_loopback_single_crossbar_node(output, executors, inputs);
+				    test_event_loopback_single_crossbar_node(output, connections, inputs);
 				if (output.toEnum() == address.toEnum()) {
 					// node matches input channel, events should be propagated
 					for (auto const spikes : spike_batches) {

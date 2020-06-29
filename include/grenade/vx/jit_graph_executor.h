@@ -20,41 +20,41 @@ class ChipConfig;
 class JITGraphExecutor
 {
 public:
-	/** List of executors. */
+	/** Map of connections. */
 	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::vx::ConnectionVariant&>
-	    ExecutorMap;
+	    Connections;
 
 	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, ChipConfig> ConfigMap;
 
 	/**
-	 * Run the specified graph with specified inputs using the specified executor collection.
+	 * Run the specified graph with specified inputs using the specified connection collection.
 	 * @param graph Graph to execute
 	 * @param input_list List of input values to use
-	 * @param executor_map Map of executors tied to a specific chip instance
+	 * @param connections Map of connections tied to a specific chip instance
 	 * @param config_map Map of static configuration tied to a specific chip instance
 	 */
 	static DataMap run(
 	    Graph const& graph,
 	    DataMap const& input_list,
-	    ExecutorMap const& executor_map,
+	    Connections const& connections,
 	    ConfigMap const& config_map) SYMBOL_VISIBLE;
 
 private:
 	/**
-	 * Check whether the given graph can be executed on the given map of executors.
+	 * Check whether the given graph can be executed on the given map of connections.
 	 * @param graph Graph instance
-	 * @param executor_map Map of executors over DLSGlobal identifier
+	 * @param connections Map of connections
 	 */
-	static bool is_executable_on(Graph const& graph, ExecutorMap const& executor_map);
+	static bool is_executable_on(Graph const& graph, Connections const& connections);
 
 	/**
-	 * Check that graph can be executed given the input list and the map of executors.
+	 * Check that graph can be executed given the input list and the map of connections.
 	 * This function combines `is_executable_on` and
 	 * `has_dangling_inputs`.
 	 * @param graph Graph to check
-	 * @param executor_map Executor map to check
+	 * @param connections Connections to check
 	 */
-	static void check(Graph const& graph, ExecutorMap const& executor_map);
+	static void check(Graph const& graph, Connections const& connections);
 };
 
 } // namespace grenade::vx

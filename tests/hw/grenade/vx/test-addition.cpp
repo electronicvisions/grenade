@@ -45,17 +45,18 @@ TEST(Addition, Single)
 	auto const v3 = g.add(addition, instance, {v2, v2});
 	auto const v4 = g.add(data_output, instance, {v3});
 
-	// Construct map of one executor and connect to HW
-	grenade::vx::JITGraphExecutor::ExecutorMap executors;
+	// Construct map of one connection and connect to HW
+	grenade::vx::JITGraphExecutor::Connections connections;
 	auto connection = hxcomm::vx::get_connection_from_env();
-	executors.insert(std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	connections.insert(
+	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
 
 	// Initialize chip
 	{
 		DigitalInit const init;
 		auto [builder, _] = generate(init);
 		auto program = builder.done();
-		stadls::vx::v2::run(executors.at(DLSGlobal()), program);
+		stadls::vx::v2::run(connections.at(DLSGlobal()), program);
 	}
 
 	// fill graph inputs
@@ -72,7 +73,7 @@ TEST(Addition, Single)
 
 	// run Graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, executors, config_map);
+	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, config_map);
 
 	EXPECT_EQ(result_map.int8.size(), 1);
 
