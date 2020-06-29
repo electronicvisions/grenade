@@ -24,20 +24,20 @@ public:
 	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::vx::ConnectionVariant&>
 	    Connections;
 
-	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, ChipConfig> ConfigMap;
+	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, ChipConfig> ChipConfigs;
 
 	/**
 	 * Run the specified graph with specified inputs using the specified connection collection.
 	 * @param graph Graph to execute
 	 * @param input_list List of input values to use
 	 * @param connections Map of connections tied to a specific chip instance
-	 * @param config_map Map of static configuration tied to a specific chip instance
+	 * @param chip_configs Map of static configuration tied to a specific chip instance
 	 */
 	static DataMap run(
 	    Graph const& graph,
 	    DataMap const& input_list,
 	    Connections const& connections,
-	    ConfigMap const& config_map) SYMBOL_VISIBLE;
+	    ChipConfigs const& chip_configs) SYMBOL_VISIBLE;
 
 private:
 	/**

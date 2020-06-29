@@ -68,12 +68,12 @@ TEST(Addition, Single)
 	input_list.int8[v1] = {inputs};
 
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
-	grenade::vx::JITGraphExecutor::ConfigMap config_map;
-	config_map[DLSGlobal()] = *chip;
+	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	chip_configs[DLSGlobal()] = *chip;
 
 	// run Graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, config_map);
+	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
 
 	EXPECT_EQ(result_map.int8.size(), 1);
 

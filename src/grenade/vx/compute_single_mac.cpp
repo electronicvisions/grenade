@@ -403,7 +403,7 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 
 	// run Graph with given inputs and return results
 	auto const output_activation_map =
-	    JITGraphExecutor::run(m_graph, input_list, connections, m_config_map);
+	    JITGraphExecutor::run(m_graph, input_list, connections, m_chip_configs);
 
 	hate::Timer output_timer;
 	std::vector<std::vector<Int8>> output(output_activation_map.batch_size());

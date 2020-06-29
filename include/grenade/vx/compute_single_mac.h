@@ -111,7 +111,7 @@ private:
 	std::vector<Graph::vertex_descriptor> m_output_vertices;
 	Weights m_weights;
 	RowModes m_row_modes;
-	JITGraphExecutor::ConfigMap m_config_map;
+	JITGraphExecutor::ChipConfigs m_chip_configs;
 
 	void build_graph() SYMBOL_VISIBLE;
 

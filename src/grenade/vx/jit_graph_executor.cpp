@@ -32,7 +32,7 @@ DataMap JITGraphExecutor::run(
     Graph const& graph,
     DataMap const& input_list,
     Connections const& connections,
-    ConfigMap const& config_map)
+    ChipConfigs const& chip_configs)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
@@ -68,8 +68,8 @@ DataMap JITGraphExecutor::run(
 		auto const execution_instance = execution_instance_map.left.at(vertex);
 		auto const dls_global = execution_instance.toDLSGlobal();
 		ExecutionInstanceNode node_body(
-		    output_activation_map, input_list, graph, execution_instance, config_map.at(dls_global),
-		    connections.at(dls_global));
+		    output_activation_map, input_list, graph, execution_instance,
+		    chip_configs.at(dls_global), connections.at(dls_global));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}

@@ -53,12 +53,12 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	grenade::vx::DataMap input_list;
 	input_list.spike_events[v1] = inputs;
 
-	grenade::vx::JITGraphExecutor::ConfigMap config_map;
-	config_map.insert({DLSGlobal(), grenade::vx::ChipConfig()});
+	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	chip_configs.insert({DLSGlobal(), grenade::vx::ChipConfig()});
 
 	// run Graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, config_map);
+	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
 
 	EXPECT_EQ(result_map.spike_event_output.size(), 1);
 

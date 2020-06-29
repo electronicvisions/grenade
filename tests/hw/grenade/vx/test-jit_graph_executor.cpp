@@ -13,10 +13,10 @@ TEST(JITGraphExecutor, Empty)
 
 	grenade::vx::DataMap input_list;
 
-	grenade::vx::JITGraphExecutor::ConfigMap config_map;
+	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 
 	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, config_map);
+	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
 
 	EXPECT_TRUE(result_map.empty());
 }
