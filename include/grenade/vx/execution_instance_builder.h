@@ -125,10 +125,8 @@ private:
 		value_type m_cadc_values;
 		value_type m_cadc_baseline_values;
 
-
-		// TODO: replace by read of "tick" once available
 		typedef std::optional<
-		    stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::EventRecordingConfig>>
+		    stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::NullPayloadReadable>>
 		    event_guard_ticket_type;
 		event_guard_ticket_type m_ticket_events_begin;
 		event_guard_ticket_type m_ticket_events_end;

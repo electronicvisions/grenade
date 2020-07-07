@@ -514,7 +514,7 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 
 		// send input
 		if (m_event_output_vertex) {
-			batch_entry.m_ticket_events_begin = builder.read(EventRecordingConfigOnFPGA());
+			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
 		}
 		builder.write(TimerOnDLS(), Timer());
 		TimedSpike::Time current_time(0);
@@ -533,7 +533,7 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 			    event.payload);
 		}
 		if (m_event_output_vertex) {
-			batch_entry.m_ticket_events_end = builder.read(EventRecordingConfigOnFPGA());
+			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
 		}
 
 		// wait for membrane to settle
