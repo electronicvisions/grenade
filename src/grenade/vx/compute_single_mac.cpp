@@ -7,6 +7,7 @@
 #include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/range_split.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -134,8 +135,11 @@ void ComputeSingleMAC::build_graph()
 		throw std::runtime_error("Synapse weight matrix row size and row modes size don't match.");
 	}
 
-	size_t o_offset = 0;
-	size_t i_offset = 0;
+	RangeSplit x_split(NeuronColumnOnDLS::size);
+	RangeSplit y_split(SynapseRowOnSynram::size);
+	auto const x_split_ranges = x_split(output_size());
+	auto const y_split_ranges = y_split(input_size());
+
 	SingleChipExecutionInstanceManager execution_instance_manager;
 	auto instance = coordinate::ExecutionInstance();
 
@@ -166,41 +170,36 @@ void ComputeSingleMAC::build_graph()
 	};
 	set_enable_loopback();
 
-	while (o_offset < output_size()) {
-		size_t const local_o_size = std::min(NeuronColumnOnDLS::size, output_size() - o_offset);
-
-		i_offset = 0;
+	for (auto const& x_range : x_split_ranges) {
 		std::vector<Input> local_output_vertices;
-		while (i_offset < input_size()) {
+		for (auto const& y_range : y_split_ranges) {
 			if (instance != last_instance) {
 				input_vertex = m_graph.add(external_input, instance, {});
 				crossbar_input_vertex = m_graph.add(data_input, instance, {input_vertex});
 				set_enable_loopback();
 			}
 
-			size_t const local_i_size = std::min(input_size() - i_offset, SynapseRowOnSynram::size);
-
-			Weights local_weights(local_i_size);
+			Weights local_weights(y_range.size);
 			for (size_t i = 0; i < local_weights.size(); ++i) {
 				local_weights.at(i).insert(
-				    local_weights.at(i).end(), m_weights.at(i + i_offset).begin() + o_offset,
-				    m_weights.at(i + i_offset).begin() + o_offset + local_o_size);
+				    local_weights.at(i).end(),
+				    m_weights.at(i + y_range.offset).begin() + x_range.offset,
+				    m_weights.at(i + y_range.offset).begin() + x_range.offset + x_range.size);
 			}
 
-			assert(m_row_modes.size() >= i_offset + local_i_size);
+			assert(m_row_modes.size() >= y_range.offset + y_range.size);
 			RowModes local_row_modes(
-			    m_row_modes.begin() + i_offset, m_row_modes.begin() + i_offset + local_i_size);
+			    m_row_modes.begin() + y_range.offset,
+			    m_row_modes.begin() + y_range.offset + y_range.size);
 
 			local_output_vertices.push_back(insert_synram(
 			    m_graph, std::move(local_weights), std::move(local_row_modes), instance,
 			    execution_instance_manager.get_current_hemisphere(), crossbar_input_vertex));
-			m_synram_handles.push_back({input_vertex, local_i_size, i_offset,
+			m_synram_handles.push_back({input_vertex, y_range.size, y_range.offset,
 			                            execution_instance_manager.get_current_hemisphere()});
 
 			last_instance = instance;
 			instance = execution_instance_manager.next();
-
-			i_offset += local_i_size;
 		}
 
 		if (local_output_vertices.size() > 1) {
@@ -208,16 +207,16 @@ void ComputeSingleMAC::build_graph()
 			    execution_instance_manager.next_index(); // FIXME we only want to get next index
 			// add additions
 			// load all data
-			vertex::DataInput data_input(ConnectionType::Int8, local_o_size);
+			vertex::DataInput data_input(ConnectionType::Int8, x_range.size);
 			std::vector<Input> local_inputs;
 			local_inputs.reserve(local_output_vertices.size());
 			for (auto const vertex : local_output_vertices) {
 				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
 			}
 			// add all data
-			vertex::Addition addition(local_o_size);
+			vertex::Addition addition(x_range.size);
 			auto const v_add = m_graph.add(addition, instance, local_inputs);
-			vertex::DataOutput data_output(ConnectionType::Int8, local_o_size);
+			vertex::DataOutput data_output(ConnectionType::Int8, x_range.size);
 			auto const v_out = m_graph.add(data_output, instance, {v_add});
 			m_output_vertices.push_back(v_out);
 		} else {
@@ -225,8 +224,6 @@ void ComputeSingleMAC::build_graph()
 			    local_output_vertices.begin(), local_output_vertices.end(),
 			    std::back_inserter(m_output_vertices), [](auto const& i) { return i.descriptor; });
 		}
-
-		o_offset += local_o_size;
 	}
 }
 
