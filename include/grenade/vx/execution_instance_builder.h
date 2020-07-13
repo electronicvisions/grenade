@@ -11,6 +11,7 @@
 #include "grenade/vx/neuron_reset_mask_generator.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
+#include "haldls/vx/v2/ppu.h"
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/cadc.h"
@@ -84,6 +85,11 @@ public:
 	 */
 	bool enable_cadc_baseline = true;
 
+	/**
+	 * Enable using the PPUs for neuron reset, readout and computation.
+	 */
+	bool enable_ppu = true;
+
 private:
 	Graph const& m_graph;
 	coordinate::ExecutionInstance m_execution_instance;
@@ -120,6 +126,24 @@ private:
 
 		ticket_type m_ticket;
 		ticket_type m_ticket_baseline;
+
+		typedef halco::common::typed_array<
+		    std::optional<
+		        stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::PPUMemoryBlock>>,
+		    halco::hicann_dls::vx::PPUOnDLS>
+		    ticket_ppu_type;
+
+		ticket_ppu_type m_ppu_result;
+
+		typedef halco::common::typed_array<
+		    std::optional<
+		        stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::PPUMemoryWord>>,
+		    halco::hicann_dls::vx::PPUOnDLS>
+		    ticket_ppu_word_type;
+
+		ticket_ppu_word_type m_ppu_check_baseline_read;
+		ticket_ppu_word_type m_ppu_check_read;
+		ticket_ppu_word_type m_ppu_check_neuron_reset;
 
 		typedef std::optional<lola::vx::v2::CADCSamples> value_type;
 		value_type m_cadc_values;

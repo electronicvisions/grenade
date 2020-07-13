@@ -3,6 +3,7 @@
 Map<String, Object> pipelineOptions = [
 		projects: ["grenade"],
 		container: [app: "dls-core"],
+		moduleOptions: [modules: ["ppu-toolchain"]],
 		notificationChannel: "#dls-software"
 ]
 

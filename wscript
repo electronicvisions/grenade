@@ -11,6 +11,7 @@ def depends(ctx):
     ctx('halco')
     ctx('haldls')
     ctx('hate')
+    ctx('libnux')
 
     ctx('grenade', 'pygrenade')
 
@@ -55,7 +56,16 @@ def build(bld):
         source = bld.path.ant_glob('src/grenade/vx/*.cpp'),
         install_path = '${PREFIX}/lib',
         use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
+        depends_on = ['grenade_ppu_base_vx'],
         uselib = 'GRENADE_LIBRARIES',
+    )
+
+    bld.program(
+        target = 'grenade_ppu_base_vx',
+        features = 'cxx',
+        source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp'),
+        use = ['grenade_inc', 'nux_vx', 'nux_runtime_vx'],
+        env = bld.all_envs['nux_vx'],
     )
 
     bld(
@@ -88,3 +98,13 @@ def build(bld):
             "INCLUDE_PATH": join(get_toplevel_path(), "grenade", "include")
         },
     )
+
+# for grenade_vx's runtime dependency on grenade_ppu_base_vx
+from waflib.TaskGen import feature, after_method
+@feature('*')
+@after_method('process_use')
+def post_the_other_dependencies(self):
+    deps = getattr(self, 'depends_on', [])
+    for name in set(self.to_list(deps)):
+        other = self.bld.get_tgen_by_name(name)
+        other.post()

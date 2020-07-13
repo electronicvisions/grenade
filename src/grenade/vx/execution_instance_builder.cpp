@@ -12,11 +12,14 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/io_data_map.h"
+#include "grenade/vx/ppu.h"
+#include "grenade/vx/ppu/status.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
+#include "lola/vx/ppu.h"
 #include "stadls/vx/constants.h"
 
 namespace grenade::vx {
@@ -245,41 +248,59 @@ void ExecutionInstanceBuilder::process(
 		// extract Int8 values
 		auto& sample_batches = m_local_data.int8[vertex];
 		sample_batches.resize(m_batch_entries.size());
-		if (enable_cadc_baseline) {
+		if (enable_ppu) {
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-				assert(m_batch_entries.at(batch_index).m_cadc_values);
-				auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
-				auto const& synram_values = values.causal[synram];
-				assert(m_batch_entries.at(batch_index).m_cadc_baseline_values);
-				auto const& values_baseline =
-				    *(m_batch_entries.at(batch_index).m_cadc_baseline_values);
-				auto const& synram_values_baseline = values_baseline.causal[synram];
+				assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
+				auto const block =
+				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
+				auto const values = from_vector_unit_row(block);
 				auto& samples = sample_batches.at(batch_index);
 				samples.resize(data.output().size);
 
 				// get samples via neuron mapping from incoming NeuronView
 				size_t i = 0;
 				for (auto const& column : columns) {
-					auto const tmp = static_cast<intmax_t>(synram_values[column].value()) -
-					                 static_cast<intmax_t>(synram_values_baseline[column].value());
-					samples.at(i) = Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+					samples.at(i) = Int8(values[column]);
 					i++;
 				}
 			}
 		} else {
-			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-				assert(m_batch_entries.at(batch_index).m_cadc_values);
-				auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
-				auto const& synram_values = values.causal[synram];
-				auto& samples = sample_batches.at(batch_index);
-				samples.resize(data.output().size);
+			if (enable_cadc_baseline) {
+				for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+					assert(m_batch_entries.at(batch_index).m_cadc_values);
+					auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
+					auto const& synram_values = values.causal[synram];
+					assert(m_batch_entries.at(batch_index).m_cadc_baseline_values);
+					auto const& values_baseline =
+					    *(m_batch_entries.at(batch_index).m_cadc_baseline_values);
+					auto const& synram_values_baseline = values_baseline.causal[synram];
+					auto& samples = sample_batches.at(batch_index);
+					samples.resize(data.output().size);
 
-				// get samples via neuron mapping from incoming NeuronView
-				size_t i = 0;
-				for (auto const& column : columns) {
-					samples.at(i) =
-					    Int8(static_cast<intmax_t>(synram_values[column].value()) - 128);
-					i++;
+					// get samples via neuron mapping from incoming NeuronView
+					size_t i = 0;
+					for (auto const& column : columns) {
+						samples.at(i) = Int8(
+						    static_cast<intmax_t>(synram_values[column].value()) -
+						    static_cast<intmax_t>(synram_values_baseline[column].value()));
+						i++;
+					}
+				}
+			} else {
+				for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+					assert(m_batch_entries.at(batch_index).m_cadc_values);
+					auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
+					auto const& synram_values = values.causal[synram];
+					auto& samples = sample_batches.at(batch_index);
+					samples.resize(data.output().size);
+
+					// get samples via neuron mapping from incoming NeuronView
+					size_t i = 0;
+					for (auto const& column : columns) {
+						samples.at(i) =
+						    Int8(static_cast<intmax_t>(synram_values[column].value()) - 128);
+						i++;
+					}
 				}
 			}
 		}
@@ -412,12 +433,39 @@ void ExecutionInstanceBuilder::pre_process()
 
 IODataMap ExecutionInstanceBuilder::post_process()
 {
+	using namespace halco::common;
+	using namespace halco::hicann_dls::vx;
+
 	for (auto& batch_entry : m_batch_entries) {
 		if (batch_entry.m_ticket) {
 			batch_entry.m_cadc_values = batch_entry.m_ticket->get();
 		}
 		if (batch_entry.m_ticket_baseline) {
 			batch_entry.m_cadc_baseline_values = batch_entry.m_ticket_baseline->get();
+		}
+	}
+
+	if (enable_ppu) {
+		for (auto& batch_entry : m_batch_entries) {
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				if (enable_cadc_baseline) {
+					if (batch_entry.m_ppu_check_baseline_read[ppu] &&
+					    batch_entry.m_ppu_check_baseline_read[ppu]->get().get_value() !=
+					        static_cast<uint32_t>(ppu::Status::idle)) {
+						throw std::runtime_error("PPU not idle after baseline read.");
+					}
+				}
+				if (batch_entry.m_ppu_check_neuron_reset[ppu] &&
+				    batch_entry.m_ppu_check_neuron_reset[ppu]->get().get_value() !=
+				        static_cast<uint32_t>(ppu::Status::idle)) {
+					throw std::runtime_error("PPU not idle after neuron reset.");
+				}
+				if (batch_entry.m_ppu_check_read[ppu] &&
+				    batch_entry.m_ppu_check_read[ppu]->get().get_value() !=
+				        static_cast<uint32_t>(ppu::Status::idle)) {
+					throw std::runtime_error("PPU not idle after read.");
+				}
+			}
 		}
 	}
 
@@ -465,6 +513,19 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
+	PPUMemoryBlock ppu_program;
+	PPUMemoryWordOnPPU ppu_status_coord;
+	PPUMemoryBlockOnPPU ppu_result_coord;
+	PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
+	if (enable_ppu) {
+		PPUElfFile ppu_elf_file(get_program_path(ppu_program_name));
+		ppu_program = ppu_elf_file.read_program();
+		auto const ppu_symbols = ppu_elf_file.read_symbols();
+		ppu_status_coord = ppu_symbols.at("status").coordinate.toMin();
+		ppu_result_coord = ppu_symbols.at("cadc_result").coordinate;
+		ppu_neuron_reset_mask_coord = ppu_symbols.at("neuron_reset_mask").coordinate;
+	}
+
 	std::vector<PlaybackProgramBuilder> builders;
 	builders.push_back(std::move(m_builder_prologue));
 
@@ -496,6 +557,26 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		builder.write(coord, m_config.crossbar_nodes[coord]);
 	}
 
+	if (enable_ppu) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			// bring PPU in reset state
+			PPUControlRegister ctrl;
+			ctrl.set_inhibit_reset(false);
+			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
+
+			// write PPU program
+			PPUMemoryBlockOnDLS coord(
+			    PPUMemoryBlockOnPPU(
+			        PPUMemoryWordOnPPU(), PPUMemoryWordOnPPU(ppu_program.get_words().size() - 1)),
+			    ppu);
+			builder.write(coord, ppu_program);
+
+			// bring PPU in running state
+			ctrl.set_inhibit_reset(true);
+			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
+		}
+	}
+
 	// timing-uncritical initial setup
 	builders.push_back(std::move(builder));
 	builder = PlaybackProgramBuilder();
@@ -503,41 +584,80 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	// build neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 
+	if (enable_ppu) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			// write neuron reset mask
+			std::vector<int8_t> values(NeuronColumnOnDLS::size);
+			for (auto const col : iter_all<NeuronColumnOnDLS>()) {
+				values[col] =
+				    m_neuron_resets.enable_resets[AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS())
+				                                      .toNeuronResetOnDLS()];
+			}
+			auto const neuron_reset_mask = to_vector_unit_row(values);
+			builder.write(PPUMemoryBlockOnDLS(ppu_neuron_reset_mask_coord, ppu), neuron_reset_mask);
+		}
+	}
+
 	bool const has_cadc_readout = std::any_of(
 	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
 
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		auto& batch_entry = m_batch_entries.at(b);
-
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
-			// reset neurons (baseline read)
-			builder.copy_back(builder_neuron_reset);
-			// wait sufficient amount of time (30us) before baseline reads for membrane
-			// to settle
-			if (!builder.empty()) {
-				builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-				builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+			if (enable_ppu) {
+				// initiate baseline read
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					PPUMemoryWord config(
+					    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::baseline_read)));
+					builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+				}
+				// magic wait for PPU to complete baseline read (Issue #3704)
+				builder.write(TimerOnDLS(), Timer());
 				builder.block_until(
-				    halco::hicann_dls::vx::TimerOnDLS(),
-				    haldls::vx::Timer::Value(
-				        20 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+				    TimerOnDLS(), Timer::Value(100 * Timer::Value::fpga_clock_cycles_per_us));
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_ppu_check_baseline_read[ppu] =
+					    builder.read(PPUMemoryWordOnDLS(ppu_status_coord, ppu));
+				}
+			} else {
+				// reset neurons (baseline read)
+				builder.copy_back(builder_neuron_reset);
+				// wait sufficient amount of time (30us) before baseline reads for membrane
+				// to settle
+				if (!builder.empty()) {
+					builder.write(TimerOnDLS(), Timer());
+					builder.block_until(
+					    TimerOnDLS(), Timer::Value(30 * Timer::Value::fpga_clock_cycles_per_us));
+				}
+				// readout baselines of neurons
+				batch_entry.m_ticket_baseline = builder.read(CADCSamplesOnDLS());
 			}
-			// readout baselines of neurons
-			batch_entry.m_ticket_baseline = builder.read(CADCSamplesOnDLS());
 		}
-
 		// reset neurons
-		builder.copy_back(builder_neuron_reset);
-		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-
+		if (enable_ppu) {
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				PPUMemoryWord config(
+				    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::reset_neurons)));
+				builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+			}
+		} else {
+			builder.copy_back(builder_neuron_reset);
+		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			builder.write(TimerOnDLS(), Timer());
 			builder.block_until(
-			    TimerOnDLS(), Timer::Value(10 * Timer::Value::fpga_clock_cycles_per_us));
+			    TimerOnDLS(),
+			    Timer::Value((enable_ppu ? 4 : 1) * Timer::Value::fpga_clock_cycles_per_us));
 		}
-
+		if (enable_ppu) {
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				batch_entry.m_ppu_check_neuron_reset[ppu] =
+				    builder.read(PPUMemoryWordOnDLS(ppu_status_coord, ppu));
+			}
+		}
 		// send input
 		if (m_event_output_vertex) {
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
@@ -561,18 +681,44 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		if (m_event_output_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
 		}
-
 		// wait for membrane to settle
 		if (!builder.empty()) {
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
 			    haldls::vx::v2::Timer::Value(
-			        1 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			        1.0 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {
-			batch_entry.m_ticket = builder.read(CADCSamplesOnDLS());
+			if (enable_ppu) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					PPUMemoryWord config(
+					    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::read)));
+					builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+				}
+				// magic wait for PPU to readout membrane and process read (Issue #3704)
+				if (!builder.empty()) {
+					builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+					builder.block_until(
+					    halco::hicann_dls::vx::TimerOnDLS(),
+					    haldls::vx::Timer::Value(
+					        100 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+				}
+				if (enable_ppu) {
+					for (auto const ppu : iter_all<PPUOnDLS>()) {
+						batch_entry.m_ppu_check_read[ppu] =
+						    builder.read(PPUMemoryWordOnDLS(ppu_status_coord, ppu));
+					}
+				}
+				// readout result
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_ppu_result[ppu] =
+					    builder.read(PPUMemoryBlockOnDLS(ppu_result_coord, ppu));
+				}
+			} else {
+				batch_entry.m_ticket = builder.read(CADCSamplesOnDLS());
+			}
 		}
 		// wait for response data
 		if (!builder.empty()) {
