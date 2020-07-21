@@ -572,7 +572,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 			for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
 				if (event.time > current_time) {
 					current_time = event.time;
-					builder_input.at(b).wait_until(TimerOnDLS(), current_time);
+					builder_input.at(b).block_until(TimerOnDLS(), current_time);
 				}
 				std::visit(
 				    [&](auto const& p) {
@@ -685,8 +685,9 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 		builder.copy_back(builder_neuron_reset);
 		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
 		if (!builder.empty()) {
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
-			builder.wait_until(
+			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
 			    haldls::vx::Timer::Value(30 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 		}
@@ -694,12 +695,13 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout_baseline);
 		// reset neurons
 		builder.copy_back(builder_neuron_reset);
+		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		// send input
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle
 		if (!builder.empty()) {
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
-			builder.wait_until(
+			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
 			    haldls::vx::Timer::Value(2 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 		}
@@ -709,7 +711,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 	// wait for response data
 	if (!builder.empty()) {
 		builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
-		builder.wait_until(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer::Value(100000));
+		builder.block_until(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer::Value(100000));
 	}
 
 	builder.merge_back(m_builder_epilogue);
