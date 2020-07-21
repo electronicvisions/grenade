@@ -371,10 +371,11 @@ void ExecutionInstanceBuilder::process(
 			// get samples via neuron mapping from incoming NeuronView
 			size_t i = 0;
 			for (auto const& column : data.get_columns()) {
-				samples.at(i) = Int8(
+				auto const tmp =
 				    static_cast<intmax_t>(values.causal[data.get_synram()][column].value()) -
 				    static_cast<intmax_t>(
-				        values_baseline.causal[data.get_synram()][column].value()));
+				        values_baseline.causal[data.get_synram()][column].value());
+				samples.at(i) = Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
 				i++;
 			}
 			sample_batches.push_back(samples);
