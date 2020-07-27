@@ -1011,23 +1011,11 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
 		}
-		builder.write(TimerOnDLS(), Timer());
-		TimedSpike::Time current_time(0);
 		if (m_event_input_vertex) {
-			for (auto const& event : m_local_data.spike_events.at(*m_event_input_vertex).at(b)) {
-				if (event.time == current_time + 1) {
-					current_time = event.time;
-				} else if (event.time > current_time) {
-					current_time = event.time;
-					builder.block_until(TimerOnDLS(), current_time);
-				}
-				std::visit(
-				    [&](auto const& p) {
-					    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
-					    builder.write(typename container_type::coordinate_type(), p);
-				    },
-				    event.payload);
-			}
+			TimedSpikeSequenceGenerator event_generator(
+			    m_local_data.spike_events.at(*m_event_input_vertex).at(b));
+			auto [builder_events, _] = stadls::vx::generate(event_generator);
+			builder.merge_back(builder_events);
 		}
 		// wait until runtime reached
 		if (!m_local_external_data.runtime.empty()) {
