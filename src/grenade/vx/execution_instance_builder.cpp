@@ -505,7 +505,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 				builder.block_until(
 				    halco::hicann_dls::vx::TimerOnDLS(),
 				    haldls::vx::Timer::Value(
-				        30 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+				        20 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 			}
 			// readout baselines of neurons
 			batch_entry.m_ticket_baseline = builder.read(CADCSamplesOnDLS());
@@ -517,10 +517,9 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+			builder.write(TimerOnDLS(), Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::Timer::Value::fpga_clock_cycles_per_us);
+			    TimerOnDLS(), Timer::Value(10 * Timer::Value::fpga_clock_cycles_per_us));
 		}
 
 		// send input
@@ -546,13 +545,14 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		if (m_event_output_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
 		}
+
 		// wait for membrane to settle
 		if (!builder.empty()) {
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
 			    haldls::vx::v2::Timer::Value(
-			        2 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			        1 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {
