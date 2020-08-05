@@ -14,13 +14,15 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
     ChipConfig const& chip_config,
-    hxcomm::vx::ConnectionVariant& connection) :
+    hxcomm::vx::ConnectionVariant& connection,
+    std::mutex& continuous_chunked_program_execution_mutex) :
     data_map(data_map),
     input_data_map(input_data_map),
     graph(graph),
     execution_instance(execution_instance),
     chip_config(chip_config),
     connection(connection),
+    continuous_chunked_program_execution_mutex(continuous_chunked_program_execution_mutex),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
 
@@ -41,15 +43,18 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// build PlaybackProgram
 	hate::Timer const build_timer;
 	auto program = builder.generate();
-	LOG4CXX_TRACE(logger, "operator(): Built PlaybackProgram in " << build_timer.print() << ".");
+	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 
 	// execute
 	hate::Timer const exec_timer;
 	if (!program.empty()) {
-		stadls::vx::v2::run(connection, program);
+		std::lock_guard lock(continuous_chunked_program_execution_mutex);
+		for (auto& p : program) {
+			stadls::vx::v2::run(connection, p);
+		}
 	}
 	LOG4CXX_TRACE(
-	    logger, "operator(): Executed built PlaybackProgram in " << exec_timer.print() << ".");
+	    logger, "operator(): Executed built PlaybackPrograms in " << exec_timer.print() << ".");
 
 	// extract output data map
 	hate::Timer const post_timer;

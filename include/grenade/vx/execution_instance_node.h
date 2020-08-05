@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/execution_instance_builder.h"
@@ -27,7 +28,8 @@ struct ExecutionInstanceNode
 	    Graph const& graph,
 	    coordinate::ExecutionInstance const& execution_instance,
 	    ChipConfig const& chip_config,
-	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
+	    hxcomm::vx::ConnectionVariant& connection,
+	    std::mutex& continuous_chunked_program_execution_mutex) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
@@ -38,6 +40,7 @@ private:
 	coordinate::ExecutionInstance execution_instance;
 	ChipConfig const& chip_config;
 	hxcomm::vx::ConnectionVariant& connection;
+	std::mutex& continuous_chunked_program_execution_mutex;
 	log4cxx::Logger* logger;
 };
 

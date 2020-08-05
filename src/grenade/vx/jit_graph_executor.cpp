@@ -4,6 +4,7 @@
 #include <chrono>
 #include <future>
 #include <map>
+#include <mutex>
 #include <set>
 #include <vector>
 #include <boost/range/adaptor/map.hpp>
@@ -62,6 +63,14 @@ IODataMap JITGraphExecutor::run(
 		    dls, std::visit([](auto const& c) { return c.get_time_info(); }, connection));
 	}
 
+	// connection mutex map
+	std::map<halco::hicann_dls::vx::DLSGlobal, std::mutex>
+	    continuous_chunked_program_execution_mutexes;
+	for (auto const [dls, connection] : connections) {
+		continuous_chunked_program_execution_mutexes.emplace(
+		    std::piecewise_construct, std::make_tuple(dls), std::make_tuple());
+	}
+
 	// build execution nodes
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
@@ -69,7 +78,8 @@ IODataMap JITGraphExecutor::run(
 		auto const dls_global = execution_instance.toDLSGlobal();
 		ExecutionInstanceNode node_body(
 		    output_activation_map, input_list, graph, execution_instance,
-		    chip_configs.at(dls_global), connections.at(dls_global));
+		    chip_configs.at(dls_global), connections.at(dls_global),
+		    continuous_chunked_program_execution_mutexes.at(dls_global));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}

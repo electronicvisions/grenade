@@ -17,6 +17,7 @@
 #include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
+#include "stadls/vx/constants.h"
 
 namespace grenade::vx {
 
@@ -412,7 +413,11 @@ IODataMap ExecutionInstanceBuilder::post_process()
 	}
 	m_postprocessing = false;
 	if (m_event_output_vertex) {
-		auto spikes = m_program.get_spikes();
+		stadls::vx::PlaybackProgram::spikes_type spikes;
+		for (auto const& program : m_chunked_program) {
+			auto const local_spikes = program.get_spikes();
+			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
+		}
 		std::sort(spikes.begin(), spikes.end(), [](auto const& a, auto const& b) {
 			return a.get_fpga_time() < b.get_fpga_time();
 		});
@@ -436,7 +441,7 @@ IODataMap ExecutionInstanceBuilder::post_process()
 	return std::move(m_local_data_output);
 }
 
-stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
+std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
@@ -444,8 +449,10 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
-	PlaybackProgramBuilder builder = std::move(m_builder_prologue);
+	std::vector<PlaybackProgramBuilder> builders;
+	builders.push_back(std::move(m_builder_prologue));
 
+	PlaybackProgramBuilder builder;
 	// generate input event sequence
 	if (m_local_data.spike_events.size() > 1) {
 		throw std::logic_error("Expected only one spike input vertex.");
@@ -453,8 +460,8 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	bool const has_computation = m_local_data.spike_events.size() == 1;
 	if (!has_computation) {
 		builder.merge_back(m_builder_epilogue);
-		m_program = builder.done();
-		return m_program;
+		m_chunked_program = {builder.done()};
+		return m_chunked_program;
 	}
 
 	// write static configuration
@@ -472,6 +479,10 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
 		builder.write(coord, m_config.crossbar_nodes[coord]);
 	}
+
+	// timing-uncritical initial setup
+	builders.push_back(std::move(builder));
+	builder = PlaybackProgramBuilder();
 
 	// build neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
@@ -535,30 +546,42 @@ stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 		if (m_event_output_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
 		}
-
 		// wait for membrane to settle
 		if (!builder.empty()) {
 			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
 			    haldls::vx::v2::Timer::Value(
-			        2 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+			        2 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
 		}
-
 		// read out neuron membranes
 		if (has_cadc_readout) {
 			batch_entry.m_ticket = builder.read(CADCSamplesOnDLS());
 		}
+		// wait for response data
+		if (!builder.empty()) {
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		}
+		builders.push_back(std::move(builder));
+		builder = PlaybackProgramBuilder();
 	}
 
-	// wait for response data
+	builders.push_back(std::move(m_builder_epilogue));
+
+	// Merge builders sequentially into chunks smaller than the FPGA playback memory size.
+	// If a single builder is larger than the memory, it is placed isolated in a program.
+	assert(builder.empty());
+	for (auto& b : builders) {
+		if ((builder.size_to_fpga() + b.size_to_fpga()) >
+		    stadls::vx::playback_memory_size_to_fpga) {
+			m_chunked_program.push_back(builder.done());
+		}
+		builder.merge_back(b);
+	}
 	if (!builder.empty()) {
-		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		m_chunked_program.push_back(builder.done());
 	}
-
-	builder.merge_back(m_builder_epilogue);
-	m_program = builder.done();
-	return m_program;
+	return m_chunked_program;
 }
 
 } // namespace grenade::vx

@@ -66,9 +66,9 @@ public:
 
 	/**
 	 * Generate playback sequence.
-	 * @return PlaybackProgram generated via local graph traversal
+	 * @return PlaybackPrograms generated via local graph traversal
 	 */
-	stadls::vx::v2::PlaybackProgram generate() SYMBOL_VISIBLE;
+	std::vector<stadls::vx::v2::PlaybackProgram> generate() SYMBOL_VISIBLE;
 
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
@@ -99,7 +99,7 @@ private:
 
 	std::vector<Graph::vertex_descriptor> m_post_vertices;
 
-	stadls::vx::v2::PlaybackProgram m_program;
+	std::vector<stadls::vx::v2::PlaybackProgram> m_chunked_program;
 
 	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
 
