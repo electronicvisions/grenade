@@ -711,8 +711,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 	}
 	// wait for response data
 	if (!builder.empty()) {
-		builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
-		builder.block_until(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer::Value(100000));
+		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 	}
 
 	builder.merge_back(m_builder_epilogue);
