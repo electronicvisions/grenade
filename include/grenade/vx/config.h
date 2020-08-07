@@ -10,6 +10,7 @@
 #include "haldls/vx/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/synapse.h"
+#include "stadls/vx/dumper.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -66,6 +67,14 @@ public:
 	bool operator==(ChipConfig const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ChipConfig const& other) const SYMBOL_VISIBLE;
 };
+
+/**
+ * Convert the PlaybackProgramBuilderDumper result to a ChipConfig.
+ * This conversion is not bijective.
+ * @param cocos Coordinate container pair sequence
+ */
+ChipConfig GENPYBIND(visible)
+    convert_to_chip(stadls::vx::Dumper::done_type const& cocos) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx
 
