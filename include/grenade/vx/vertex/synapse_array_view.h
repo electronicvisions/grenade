@@ -7,7 +7,7 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
-#include "lola/vx/synapse.h"
+#include "lola/vx/v1/synapse.h"
 
 namespace grenade::vx::vertex {
 
@@ -21,8 +21,8 @@ struct SynapseArrayView
 	typedef std::vector<halco::hicann_dls::vx::SynapseRowOnSynram> Rows;
 	typedef halco::hicann_dls::vx::SynramOnDLS Synram;
 	typedef std::vector<halco::hicann_dls::vx::SynapseOnSynapseRow> Columns;
-	typedef std::vector<std::vector<lola::vx::SynapseMatrix::Label>> Labels;
-	typedef std::vector<std::vector<lola::vx::SynapseMatrix::Weight>> Weights;
+	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Label>> Labels;
+	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Weight>> Weights;
 
 	/**
 	 * Construct synapse array view.

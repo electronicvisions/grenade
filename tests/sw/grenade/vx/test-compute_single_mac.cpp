@@ -5,7 +5,7 @@
 #include "grenade/vx/data_map.h"
 #include "halco/hicann-dls/vx/chip.h"
 #include "halco/hicann-dls/vx/synapse.h"
-#include "haldls/vx/event.h"
+#include "haldls/vx/v1/event.h"
 
 using namespace halco::hicann_dls::vx;
 
@@ -92,7 +92,7 @@ TEST(ComputeSingleMAC, generate_input_events)
 	}
 
 	size_t num_sends = 2;
-	haldls::vx::Timer::Value wait_between_events(3);
+	haldls::vx::v1::Timer::Value wait_between_events(3);
 
 	auto const events = grenade::vx::ComputeSingleMAC::generate_input_events(
 	    activations, synram_handles, num_sends, wait_between_events);

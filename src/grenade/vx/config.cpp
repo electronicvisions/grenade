@@ -29,20 +29,20 @@ bool ChipConfig::operator!=(ChipConfig const& other) const
 	return unequal(*this, other);
 }
 
-ChipConfig convert_to_chip(stadls::vx::Dumper::done_type const& cocos)
+ChipConfig convert_to_chip(stadls::vx::v1::Dumper::done_type const& cocos)
 {
 	ChipConfig chip;
 	auto const apply_coco = [&chip](auto const& coco) {
 		auto const& [coord, config] = coco;
 		typedef std::decay_t<decltype(config)> config_t;
-		if constexpr (std::is_same_v<config_t, haldls::vx::CrossbarNode>) {
+		if constexpr (std::is_same_v<config_t, haldls::vx::v1::CrossbarNode>) {
 			chip.crossbar_nodes[coord] = config;
-		} else if constexpr (std::is_same_v<config_t, haldls::vx::CommonPADIBusConfig>) {
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v1::CommonPADIBusConfig>) {
 			chip.hemispheres[coord.toHemisphereOnDLS()].common_padi_bus_config = config;
-		} else if constexpr (std::is_same_v<config_t, haldls::vx::SynapseDriverConfig>) {
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v1::SynapseDriverConfig>) {
 			chip.hemispheres[coord.toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 			    .synapse_driver_block[coord.toSynapseDriverOnSynapseDriverBlock()] = config;
-		} else if constexpr (std::is_same_v<config_t, lola::vx::SynapseMatrix>) {
+		} else if constexpr (std::is_same_v<config_t, lola::vx::v1::SynapseMatrix>) {
 			chip.hemispheres[coord.toHemisphereOnDLS()].synapse_matrix = config;
 		}
 	};

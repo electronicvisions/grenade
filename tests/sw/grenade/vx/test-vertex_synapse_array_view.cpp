@@ -2,8 +2,7 @@
 
 #include "grenade/vx/vertex/synapse_array_view.h"
 
-using namespace lola::vx;
-using namespace haldls::vx;
+using namespace lola::vx::v1;
 using namespace halco::common;
 using namespace halco::hicann_dls::vx;
 using namespace grenade::vx;

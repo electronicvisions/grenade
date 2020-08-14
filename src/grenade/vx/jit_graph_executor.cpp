@@ -18,13 +18,13 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/chip.h"
-#include "haldls/vx/padi.h"
-#include "haldls/vx/synapse_driver.h"
+#include "haldls/vx/v1/padi.h"
+#include "haldls/vx/v1/synapse_driver.h"
 #include "hate/history_wrapper.h"
 #include "hate/timer.h"
-#include "stadls/vx/playback_generator.h"
-#include "stadls/vx/playback_program_builder.h"
-#include "stadls/vx/run.h"
+#include "stadls/vx/v1/playback_generator.h"
+#include "stadls/vx/v1/playback_program_builder.h"
+#include "stadls/vx/v1/run.h"
 
 namespace grenade::vx {
 

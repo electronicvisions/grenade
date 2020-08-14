@@ -3,8 +3,8 @@
 #include <log4cxx/logger.h>
 #include "halco/hicann-dls/vx/coordinates.h"
 #include "hate/timer.h"
-#include "stadls/vx/playback_program_builder.h"
-#include "stadls/vx/run.h"
+#include "stadls/vx/v1/playback_program_builder.h"
+#include "stadls/vx/v1/run.h"
 
 namespace grenade::vx {
 
@@ -20,7 +20,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
 
 void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 {
-	using namespace stadls::vx;
+	using namespace stadls::vx::v1;
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
 
@@ -37,7 +37,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// execute
 	hate::Timer const exec_timer;
 	if (!program.empty()) {
-		stadls::vx::run(connection, program);
+		stadls::vx::v1::run(connection, program);
 	}
 	LOG4CXX_TRACE(
 	    logger, "operator(): Executed built PlaybackProgram in " << exec_timer.print() << ".");

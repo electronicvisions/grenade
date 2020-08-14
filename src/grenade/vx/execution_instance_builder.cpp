@@ -13,7 +13,8 @@
 #include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/padi.h"
+#include "haldls/vx/v1/barrier.h"
+#include "haldls/vx/v1/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
 
@@ -58,7 +59,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config->crossbar_nodes) {
-		node = haldls::vx::CrossbarNode::drop_all;
+		node = haldls::vx::v1::CrossbarNode::drop_all;
 	}
 
 	m_postprocessing = false;
@@ -195,8 +196,8 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
 {
-	using namespace lola::vx;
-	using namespace haldls::vx;
+	using namespace lola::vx::v1;
+	using namespace haldls::vx::v1;
 	using namespace halco::hicann_dls::vx;
 	using namespace halco::common;
 	auto const& vertex_map = m_graph.get_vertex_property_map();
@@ -226,7 +227,7 @@ void ExecutionInstanceBuilder::process(
 			auto const process_label = [&](vertex::CrossbarNode const& crossbar_node,
 			                               vertex::SynapseDriver const& synapse_driver,
 			                               vertex::SynapseArrayView const& synapse_array,
-			                               haldls::vx::SpikeLabel const& label,
+			                               haldls::vx::v1::SpikeLabel const& label,
 			                               size_t const batch_index) {
 				auto const spl1_address =
 				    crossbar_node.get_coordinate().toCrossbarInputOnDLS().toSPL1Address();
@@ -352,8 +353,8 @@ void ExecutionInstanceBuilder::process(
 
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
-	using namespace lola::vx;
-	using namespace haldls::vx;
+	using namespace lola::vx::v1;
+	using namespace haldls::vx::v1;
 	if (!m_postprocessing) { // pre-hw-run processing
 		m_ticket_requests[hemisphere] = true;
 		// results need hardware execution
@@ -389,7 +390,7 @@ void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx;
-	using namespace haldls::vx;
+	using namespace haldls::vx::v1;
 	// TODO: This reset does not really belong here / how do we say when and whether it should
 	// be triggered?
 	// result: -> make property of each neuron view entry
@@ -474,12 +475,12 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
-void ExecutionInstanceBuilder::register_epilogue(stadls::vx::PlaybackProgramBuilder&& builder)
+void ExecutionInstanceBuilder::register_epilogue(stadls::vx::v1::PlaybackProgramBuilder&& builder)
 {
 	m_builder_epilogue = std::move(builder);
 }
 
-void ExecutionInstanceBuilder::register_prologue(stadls::vx::PlaybackProgramBuilder&& builder)
+void ExecutionInstanceBuilder::register_prologue(stadls::vx::v1::PlaybackProgramBuilder&& builder)
 {
 	m_builder_prologue = std::move(builder);
 }
@@ -554,13 +555,13 @@ DataMap ExecutionInstanceBuilder::post_process()
 	return std::move(m_local_data_output);
 }
 
-stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
+stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
-	using namespace haldls::vx;
-	using namespace stadls::vx;
-	using namespace lola::vx;
+	using namespace haldls::vx::v1;
+	using namespace stadls::vx::v1;
+	using namespace lola::vx::v1;
 
 	// generate input event sequence
 	std::vector<PlaybackProgramBuilder> builder_input(m_batch_entries.size());
@@ -654,7 +655,7 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 	m_config.save();
 	// reset
 	{
-		auto const new_matrix = std::make_unique<lola::vx::SynapseMatrix>();
+		auto const new_matrix = std::make_unique<lola::vx::v1::SynapseMatrix>();
 		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 			m_config->hemispheres[hemisphere].synapse_matrix = *new_matrix;
 		}
@@ -665,14 +666,14 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
 			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
-			    haldls::vx::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v1::SynapseDriverConfig::RowMode::disabled);
 			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
-			    haldls::vx::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v1::SynapseDriverConfig::RowMode::disabled);
 		}
 	}
 	m_used_padi_busses.fill(false);
 	// build neuron resets
-	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
+	auto [builder_neuron_reset, _] = stadls::vx::v1::generate(m_neuron_resets);
 	// insert batches
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		if (enable_hagen_workarounds) {
@@ -687,10 +688,11 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
 		if (!builder.empty()) {
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v1::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::Timer::Value(30 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+			    haldls::vx::v1::Timer::Value(
+			        30 * haldls::vx::v1::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// readout baselines of neurons
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout_baseline);
@@ -701,10 +703,11 @@ stadls::vx::PlaybackProgram ExecutionInstanceBuilder::generate()
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v1::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::Timer::Value(2 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+			    haldls::vx::v1::Timer::Value(
+			        2 * haldls::vx::v1::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// read out neuron membranes
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout);

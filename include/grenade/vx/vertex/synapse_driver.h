@@ -5,7 +5,7 @@
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/synapse.h"
 #include "halco/hicann-dls/vx/synapse_driver.h"
-#include "haldls/vx/synapse_driver.h"
+#include "haldls/vx/v1/synapse_driver.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -23,10 +23,10 @@ struct SynapseDriver
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef haldls::vx::SynapseDriverConfig::RowAddressCompareMask Config;
+	typedef haldls::vx::v1::SynapseDriverConfig::RowAddressCompareMask Config;
 	typedef halco::hicann_dls::vx::SynapseDriverOnDLS Coordinate;
 	typedef halco::common::typed_array<
-	    haldls::vx::SynapseDriverConfig::RowMode,
+	    haldls::vx::v1::SynapseDriverConfig::RowMode,
 	    halco::hicann_dls::vx::SynapseRowOnSynapseDriver>
 	    RowModes;
 

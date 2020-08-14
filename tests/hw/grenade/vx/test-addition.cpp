@@ -9,17 +9,17 @@
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex.h"
 #include "halco/hicann-dls/vx/chip.h"
-#include "haldls/vx/systime.h"
+#include "haldls/vx/v1/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
-#include "stadls/vx/init_generator.h"
-#include "stadls/vx/playback_generator.h"
-#include "stadls/vx/run.h"
+#include "stadls/vx/v1/init_generator.h"
+#include "stadls/vx/v1/playback_generator.h"
+#include "stadls/vx/v1/run.h"
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx;
-using namespace stadls::vx;
-using namespace lola::vx;
+using namespace stadls::vx::v1;
+using namespace lola::vx::v1;
 
 TEST(Addition, Single)
 {
@@ -55,7 +55,7 @@ TEST(Addition, Single)
 		DigitalInit const init;
 		auto [builder, _] = generate(init);
 		auto program = builder.done();
-		stadls::vx::run(executors.at(DLSGlobal()), program);
+		stadls::vx::v1::run(executors.at(DLSGlobal()), program);
 	}
 
 	// fill graph inputs

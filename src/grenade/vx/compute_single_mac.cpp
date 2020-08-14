@@ -22,7 +22,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
     halco::hicann_dls::vx::HemisphereOnDLS const& hemisphere,
     Graph::vertex_descriptor const crossbar_input_vertex)
 {
-	using namespace haldls::vx;
+	using namespace haldls::vx::v1;
 	using namespace halco::hicann_dls::vx;
 
 	auto const x_size = weights.at(0).size();
@@ -59,7 +59,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	for (auto& l : labels) {
 		SynapseRowOnSynram const sr(i);
 		rows.push_back(sr);
-		l.insert(l.begin(), x_size, lola::vx::SynapseMatrix::Label((i % 2) << 5));
+		l.insert(l.begin(), x_size, lola::vx::v1::SynapseMatrix::Label((i % 2) << 5));
 		i++;
 	}
 
@@ -110,7 +110,7 @@ ComputeSingleMAC::ComputeSingleMAC(
     RowModes const& row_modes,
     ChipConfig const& config,
     size_t num_sends,
-    haldls::vx::Timer::Value wait_between_events) :
+    haldls::vx::v1::Timer::Value wait_between_events) :
     m_graph(),
     m_synram_handles(),
     m_output_vertices(),
@@ -226,23 +226,23 @@ size_t ComputeSingleMAC::output_size() const
 	return 0;
 }
 
-std::optional<haldls::vx::SpikeLabel> ComputeSingleMAC::get_spike_label(
+std::optional<haldls::vx::v1::SpikeLabel> ComputeSingleMAC::get_spike_label(
     halco::hicann_dls::vx::SynapseRowOnDLS const& row, UInt5 const value)
 {
 	if (value == 0) {
 		return std::nullopt;
 	}
-	haldls::vx::SpikeLabel label;
+	haldls::vx::v1::SpikeLabel label;
 	label.set_spl1_address(
 	    halco::hicann_dls::vx::SPL1Address(row.toSynapseRowOnSynram()
 	                                           .toSynapseDriverOnSynapseDriverBlock()
 	                                           .toPADIBusOnPADIBusBlock()));
-	label.set_synapse_label(lola::vx::SynapseMatrix::Label(
+	label.set_synapse_label(lola::vx::v1::SynapseMatrix::Label(
 	    ((row.toSynapseRowOnSynram() % 2) << 5) | UInt5((UInt5::max - value) + 1)));
 	label.set_row_select_address(
-	    haldls::vx::PADIEvent::RowSelectAddress(row.toSynapseRowOnSynram()
-	                                                .toSynapseDriverOnSynapseDriverBlock()
-	                                                .toSynapseDriverOnPADIBus()));
+	    haldls::vx::v1::PADIEvent::RowSelectAddress(row.toSynapseRowOnSynram()
+	                                                    .toSynapseDriverOnSynapseDriverBlock()
+	                                                    .toSynapseDriverOnPADIBus()));
 	label.set_neuron_label(halco::hicann_dls::vx::NeuronLabel(
 	    label.get_neuron_label() |
 	    (static_cast<uint16_t>(row.toSynramOnDLS().toHemisphereOnDLS()) << 13)));
@@ -253,7 +253,7 @@ DataMap ComputeSingleMAC::generate_input_events(
     Activations const& inputs,
     std::vector<SynramHandle> const& synram_handles,
     size_t const num_sends,
-    haldls::vx::Timer::Value const wait_between_events)
+    haldls::vx::v1::Timer::Value const wait_between_events)
 {
 	DataMap data_map;
 
@@ -278,8 +278,8 @@ DataMap ComputeSingleMAC::generate_input_events(
 					        hemisphere.toSynramOnDLS()),
 					    inputs.at(batch).at(input_offset + j));
 					if (label) {
-						haldls::vx::SpikePack1ToChip const payload(
-						    haldls::vx::SpikePack1ToChip::labels_type{*label});
+						haldls::vx::v1::SpikePack1ToChip const payload(
+						    haldls::vx::v1::SpikePack1ToChip::labels_type{*label});
 						events.push_back(TimedSpike{time, payload});
 						time = TimedSpike::Time(time + wait_between_events);
 					}

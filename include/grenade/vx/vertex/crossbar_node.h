@@ -4,7 +4,7 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "halco/hicann-dls/vx/routing_crossbar.h"
-#include "haldls/vx/routing_crossbar.h"
+#include "haldls/vx/v1/routing_crossbar.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx::vertex {
@@ -16,8 +16,8 @@ struct CrossbarNode
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef haldls::vx::CrossbarNode Config;
-	typedef haldls::vx::CrossbarNode::coordinate_type Coordinate;
+	typedef haldls::vx::v1::CrossbarNode Config;
+	typedef haldls::vx::v1::CrossbarNode::coordinate_type Coordinate;
 
 	/**
 	 * Construct node at specified location with specified configuration.

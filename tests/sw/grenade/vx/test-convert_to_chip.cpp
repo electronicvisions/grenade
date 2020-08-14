@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/config.h"
-#include "stadls/vx/playback_program_builder.h"
+#include "stadls/vx/v1/playback_program_builder.h"
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx;
-using namespace haldls::vx;
-using namespace stadls::vx;
-using namespace lola::vx;
+using namespace haldls::vx::v1;
+using namespace stadls::vx::v1;
+using namespace lola::vx::v1;
 using namespace grenade::vx;
 
 TEST(convert_to_chip, General)

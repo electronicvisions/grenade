@@ -47,7 +47,7 @@ def build(bld):
         source='../include/grenade/vx/grenade.h',
         genpybind_tags='grenade_vx',
         features='genpybind cxx cxxshlib pyext pyembed',
-        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx', 'pylola_vx', 'pyhalco_hicann_dls_vx'],
+        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx_v1', 'pylola_vx_v1', 'pyhalco_hicann_dls_vx'],
         install_path='${PREFIX}/lib',
         linkflags='-Wl,-z,defs',
     )
@@ -56,7 +56,7 @@ def build(bld):
         name='pygrenade_swtest_vx',
         tests='test/pygrenade_swtest_vx.py',
         features='use pytest pylint pycodestyle',
-        use=['pygrenade_vx', 'dlens_vx'],
+        use=['pygrenade_vx', 'dlens_vx_v1'],
         install_path='${PREFIX}/bin',
         pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")

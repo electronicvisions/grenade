@@ -5,12 +5,12 @@
 #include "halco/hicann-dls/vx/chip.h"
 #include "halco/hicann-dls/vx/routing_crossbar.h"
 #include "halco/hicann-dls/vx/synapse_driver.h"
-#include "haldls/vx/padi.h"
-#include "haldls/vx/routing_crossbar.h"
-#include "haldls/vx/synapse_driver.h"
+#include "haldls/vx/v1/padi.h"
+#include "haldls/vx/v1/routing_crossbar.h"
+#include "haldls/vx/v1/synapse_driver.h"
 #include "hate/visibility.h"
-#include "lola/vx/synapse.h"
-#include "stadls/vx/dumper.h"
+#include "lola/vx/v1/synapse.h"
+#include "stadls/vx/v1/dumper.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -24,16 +24,16 @@ public:
 	HemisphereConfig() SYMBOL_VISIBLE;
 
 	/** Synapse matrix. */
-	lola::vx::SynapseMatrix synapse_matrix;
+	lola::vx::v1::SynapseMatrix synapse_matrix;
 
 	typedef halco::common::typed_array<
-	    haldls::vx::SynapseDriverConfig,
+	    haldls::vx::v1::SynapseDriverConfig,
 	    halco::hicann_dls::vx::SynapseDriverOnSynapseDriverBlock>
 	    _synapse_driver_block_type GENPYBIND(opaque);
 	/** Synapse driver block. TODO: should be lola container. */
 	_synapse_driver_block_type synapse_driver_block;
 
-	haldls::vx::CommonPADIBusConfig common_padi_bus_config;
+	haldls::vx::v1::CommonPADIBusConfig common_padi_bus_config;
 
 	bool operator==(HemisphereConfig const& other) const SYMBOL_VISIBLE;
 	bool operator!=(HemisphereConfig const& other) const SYMBOL_VISIBLE;
@@ -58,7 +58,7 @@ public:
 	_hemispheres_type hemispheres;
 
 	typedef halco::common::
-	    typed_array<haldls::vx::CrossbarNode, haldls::vx::CrossbarNode::coordinate_type>
+	    typed_array<haldls::vx::v1::CrossbarNode, haldls::vx::v1::CrossbarNode::coordinate_type>
 	        _crossbar_nodes_type GENPYBIND(opaque);
 
 	/** Crossbar node configuration. */
@@ -74,7 +74,7 @@ public:
  * @param cocos Coordinate container pair sequence
  */
 ChipConfig GENPYBIND(visible)
-    convert_to_chip(stadls::vx::Dumper::done_type const& cocos) SYMBOL_VISIBLE;
+    convert_to_chip(stadls::vx::v1::Dumper::done_type const& cocos) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx
 

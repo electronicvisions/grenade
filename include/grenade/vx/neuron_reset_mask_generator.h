@@ -3,8 +3,8 @@
 #include "halco/hicann-dls/vx/neuron.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
-#include "stadls/vx/playback_generator.h"
-#include "stadls/vx/playback_program_builder.h"
+#include "stadls/vx/v1/playback_generator.h"
+#include "stadls/vx/v1/playback_program_builder.h"
 
 namespace grenade::vx {
 
@@ -23,6 +23,7 @@ public:
 	/** Enable reset value per neuron. */
 	halco::common::typed_array<bool, halco::hicann_dls::vx::NeuronResetOnDLS> enable_resets;
 
+	typedef stadls::vx::v1::PlaybackProgramBuilder Builder;
 	typedef hate::Nil Result;
 
 protected:
@@ -30,7 +31,7 @@ protected:
 	 * Generate PlaybackProgramBuilder.
 	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
 	 */
-	stadls::vx::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v1::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 private:
 	friend auto stadls::vx::generate<NeuronResetMaskGenerator>(NeuronResetMaskGenerator const&);

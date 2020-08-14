@@ -161,7 +161,7 @@ TEST(Graph, check_supports_input_from)
 	    CrossbarNodeOnDLS(
 	        SPL1Address().toCrossbarInputOnDLS(),
 	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::CrossbarNode());
+	    haldls::vx::v1::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v2
 	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
@@ -176,7 +176,7 @@ TEST(Graph, check_supports_input_from)
 	// crossbar node not connecting loopback
 	CrossbarNode vertex6(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::CrossbarNode());
+	    haldls::vx::v1::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v4
 	auto const v4 = graph.add(vertex6, ExecutionInstance(), {v1});

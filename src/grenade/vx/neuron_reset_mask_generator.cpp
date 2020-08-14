@@ -6,14 +6,14 @@ namespace grenade::vx {
 
 NeuronResetMaskGenerator::NeuronResetMaskGenerator() : enable_resets() {}
 
-stadls::vx::PlaybackGeneratorReturn<NeuronResetMaskGenerator::Result>
+stadls::vx::v1::PlaybackGeneratorReturn<NeuronResetMaskGenerator::Result>
 NeuronResetMaskGenerator::generate() const
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
-	using namespace haldls::vx;
-	using namespace stadls::vx;
-	using namespace lola::vx;
+	using namespace haldls::vx::v1;
+	using namespace stadls::vx::v1;
+	using namespace lola::vx::v1;
 
 	PlaybackProgramBuilder builder;
 	for (auto const quad : iter_all<NeuronResetQuadOnDLS>()) {

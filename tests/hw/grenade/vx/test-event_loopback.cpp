@@ -8,17 +8,17 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/chip.h"
-#include "haldls/vx/systime.h"
+#include "haldls/vx/v1/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
-#include "stadls/vx/init_generator.h"
-#include "stadls/vx/playback_generator.h"
-#include "stadls/vx/run.h"
+#include "stadls/vx/v1/init_generator.h"
+#include "stadls/vx/v1/playback_generator.h"
+#include "stadls/vx/v1/run.h"
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx;
-using namespace stadls::vx;
-using namespace lola::vx;
+using namespace stadls::vx::v1;
+using namespace lola::vx::v1;
 
 std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
@@ -34,7 +34,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	grenade::vx::vertex::CrossbarNode crossbar_node(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8 + node.toEnum()), node.toCrossbarOutputOnDLS()),
-	    haldls::vx::CrossbarNode());
+	    haldls::vx::v1::CrossbarNode());
 
 	grenade::vx::vertex::CrossbarL2Output crossbar_output;
 	grenade::vx::vertex::DataOutput data_output(grenade::vx::ConnectionType::DataOutputUInt16, 1);
@@ -79,7 +79,7 @@ TEST(JITGraphExecutor, EventLoopback)
 		DigitalInit const init;
 		auto [builder, _] = generate(init);
 		auto program = builder.done();
-		stadls::vx::run(executors.at(DLSGlobal()), program);
+		stadls::vx::v1::run(executors.at(DLSGlobal()), program);
 	}
 
 	constexpr size_t max_batch_size = 5;
@@ -87,15 +87,15 @@ TEST(JITGraphExecutor, EventLoopback)
 	for (size_t b = 1; b < max_batch_size; ++b) {
 		for (auto const output : iter_all<CrossbarL2OutputOnDLS>()) {
 			for (auto const address : iter_all<SPL1Address>()) {
-				haldls::vx::SpikeLabel label;
+				haldls::vx::v1::SpikeLabel label;
 				label.set_spl1_address(address);
 				std::vector<grenade::vx::TimedSpikeSequence> inputs(b);
 				for (auto& in : inputs) {
 					for (intmax_t i = 0; i < 1000; ++i) {
-						in.push_back(
-						    grenade::vx::TimedSpike{grenade::vx::TimedSpike::Time(i * 10),
-						                            grenade::vx::TimedSpike::Payload(
-						                                haldls::vx::SpikePack1ToChip({label}))});
+						in.push_back(grenade::vx::TimedSpike{
+						    grenade::vx::TimedSpike::Time(i * 10),
+						    grenade::vx::TimedSpike::Payload(
+						        haldls::vx::v1::SpikePack1ToChip({label}))});
 					}
 				}
 
