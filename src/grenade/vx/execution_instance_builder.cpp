@@ -48,6 +48,8 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_local_data(),
     m_local_data_output()
 {
+	using namespace halco::common;
+	using namespace halco::hicann_dls::vx;
 	// check that input list provides all requested input for local graph
 	if (!has_complete_input_list()) {
 		throw std::runtime_error("Graph requests unprovided input.");
@@ -58,6 +60,20 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar_nodes) {
 		node = haldls::vx::v2::CrossbarNode::drop_all;
+	}
+	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
+			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
+			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
+			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+		}
+	}
+	{
+		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
+		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+			m_config.hemispheres[hemisphere].synapse_matrix = *new_matrix;
+		}
 	}
 
 	m_postprocessing = false;
