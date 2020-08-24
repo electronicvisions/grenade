@@ -1,5 +1,6 @@
 #include "grenade/vx/vertex/crossbar_l2_output.h"
 
+#include "grenade/cerealization.h"
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex/crossbar_node.h"
 
@@ -34,4 +35,11 @@ bool CrossbarL2Output::operator!=(CrossbarL2Output const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void CrossbarL2Output::serialize(Archive&, std::uint32_t const)
+{}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::CrossbarL2Output)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::CrossbarL2Output, 0)

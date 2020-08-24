@@ -7,6 +7,10 @@
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx {
 
 struct PortRestriction;
@@ -48,6 +52,11 @@ struct CrossbarL2Output
 
 	bool operator==(CrossbarL2Output const& other) const SYMBOL_VISIBLE;
 	bool operator!=(CrossbarL2Output const& other) const SYMBOL_VISIBLE;
+
+private:
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // vertex

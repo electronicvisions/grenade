@@ -1,7 +1,8 @@
 #include "grenade/vx/port_restriction.h"
 
-#include <stdexcept>
+#include "grenade/cerealization.h"
 #include "grenade/vx/port.h"
+#include <stdexcept>
 
 namespace grenade::vx {
 
@@ -50,4 +51,14 @@ size_t PortRestriction::max() const
 	return m_max;
 }
 
+template <typename Archive>
+void PortRestriction::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_min);
+	ar(m_max);
+}
+
 } // namespace grenade::vx
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::PortRestriction)
+CEREAL_CLASS_VERSION(grenade::vx::PortRestriction, 0)

@@ -1,5 +1,6 @@
 #include "grenade/vx/vertex/data_input.h"
 
+#include "grenade/cerealization.h"
 #include <stdexcept>
 
 namespace grenade::vx::vertex {
@@ -71,4 +72,14 @@ bool DataInput::operator!=(DataInput const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void DataInput::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_size);
+	ar(m_output_type);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::DataInput)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::DataInput, 0)

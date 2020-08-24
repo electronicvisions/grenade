@@ -1,5 +1,6 @@
 #include "grenade/vx/vertex/external_input.h"
 
+#include "grenade/cerealization.h"
 #include <stdexcept>
 
 namespace grenade::vx::vertex {
@@ -30,4 +31,14 @@ bool ExternalInput::operator!=(ExternalInput const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void ExternalInput::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_size);
+	ar(m_output_type);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::ExternalInput)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::ExternalInput, 0)

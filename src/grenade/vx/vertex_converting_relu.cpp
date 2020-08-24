@@ -1,5 +1,7 @@
 #include "grenade/vx/vertex/converting_relu.h"
 
+#include "grenade/cerealization.h"
+
 namespace grenade::vx::vertex {
 
 ConvertingReLU::ConvertingReLU(size_t const size, uint32_t shift) : m_size(size), m_shift(shift) {}
@@ -35,4 +37,14 @@ bool ConvertingReLU::operator!=(ConvertingReLU const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void ConvertingReLU::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_size);
+	ar(m_shift);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::ConvertingReLU)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::ConvertingReLU, 0)

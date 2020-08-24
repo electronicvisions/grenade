@@ -1,7 +1,10 @@
 #include "grenade/vx/vertex/synapse_driver.h"
 
+#include "grenade/cerealization.h"
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex/padi_bus.h"
+#include "halco/common/cerealization_geometry.h"
+#include "halco/common/cerealization_typed_array.h"
 
 namespace grenade::vx::vertex {
 
@@ -55,4 +58,15 @@ bool SynapseDriver::operator!=(SynapseDriver const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void SynapseDriver::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_coordinate);
+	ar(m_config);
+	ar(m_row_modes);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::SynapseDriver)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::SynapseDriver, 0)

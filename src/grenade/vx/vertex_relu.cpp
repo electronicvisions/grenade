@@ -1,5 +1,7 @@
 #include "grenade/vx/vertex/relu.h"
 
+#include "grenade/cerealization.h"
+
 namespace grenade::vx::vertex {
 
 ReLU::ReLU(size_t const size) : m_size(size) {}
@@ -30,4 +32,13 @@ bool ReLU::operator!=(ReLU const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void ReLU::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_size);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::ReLU)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::ReLU, 0)

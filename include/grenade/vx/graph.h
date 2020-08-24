@@ -19,6 +19,10 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace hate {
 class Timer;
 } // namespace hate
@@ -63,7 +67,7 @@ public:
 	    boost::bimaps::set_of<vertex_descriptor>,
 	    boost::bimaps::multiset_of<vertex_descriptor>>
 	    vertex_descriptor_map_type;
-	typedef std::vector<boost::local_shared_ptr<Vertex>> vertex_property_map_type;
+	typedef std::vector<std::shared_ptr<Vertex>> vertex_property_map_type;
 
 	/**
 	 * Construct graph.
@@ -216,6 +220,12 @@ private:
 	    Vertex const& vertex,
 	    coordinate::ExecutionInstance const& execution_instance,
 	    std::vector<Input> const& inputs) SYMBOL_VISIBLE;
+
+	friend class cereal::access;
+	template <typename Archive>
+	void load(Archive& ar, std::uint32_t);
+	template <typename Archive>
+	void save(Archive& ar, std::uint32_t) const;
 };
 
 } // namespace grenade::vx

@@ -4,6 +4,10 @@
 #include <ostream>
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx {
 
 struct Port;
@@ -14,6 +18,7 @@ struct Port;
  */
 struct PortRestriction
 {
+	PortRestriction() = default;
 	PortRestriction(size_t min, size_t max) SYMBOL_VISIBLE;
 
 	bool operator==(PortRestriction const& other) const SYMBOL_VISIBLE;
@@ -48,8 +53,12 @@ struct PortRestriction
 	size_t max() const SYMBOL_VISIBLE;
 
 private:
-	size_t m_min;
-	size_t m_max;
+	size_t m_min{0};
+	size_t m_max{0};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // namespace grenade::vx

@@ -9,6 +9,10 @@
 #include "halco/hicann-dls/vx/v2/cadc.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx {
 
 struct PortRestriction;
@@ -26,6 +30,8 @@ struct CADCMembraneReadoutView
 
 	typedef std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow> Columns;
 	typedef halco::hicann_dls::vx::v2::SynramOnDLS Synram;
+
+	CADCMembraneReadoutView() = default;
 
 	/**
 	 * Construct CADCMembraneReadoutView with specified size.
@@ -53,10 +59,14 @@ struct CADCMembraneReadoutView
 	bool operator!=(CADCMembraneReadoutView const& other) const SYMBOL_VISIBLE;
 
 private:
-	Columns m_columns;
-	Synram m_synram;
+	Columns m_columns{};
+	Synram m_synram{};
 
 	void check(Columns const& columns) SYMBOL_VISIBLE;
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // vertex

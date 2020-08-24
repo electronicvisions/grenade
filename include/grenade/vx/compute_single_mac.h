@@ -12,6 +12,10 @@
 #include "hxcomm/vx/connection_variant.h"
 #include "lola/vx/v2/synapse.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 class ComputeSingleMAC_get_spike_label_Test;
 class ComputeSingleMAC_generate_input_events_Test;
 
@@ -32,11 +36,12 @@ public:
 	/** Activations with batch as outer dimension and weight row size as inner dimension. */
 	typedef std::vector<std::vector<UInt5>> Activations;
 
+	ComputeSingleMAC() = default;
+
 	/**
 	 * Create single MAC compute graph wrapper.
 	 * @param weights Weight matrix.
 	 * @param row_modes Modes of rows in weight matrix (typically exc./inh. for pos./neg.)
-	 * @param config Static chip configuration to be used
 	 * @param num_sends Number of times a input activation is sent to the specific row
 	 * @param wait_between_events Wait time between input events in FPGA cycles
 	 * @param enable_loopback Enable loopback of events with statistic analysis
@@ -45,7 +50,6 @@ public:
 	ComputeSingleMAC(
 	    WeightsT&& weights,
 	    RowModesT&& row_modes,
-	    ChipConfig const& config,
 	    size_t num_sends = 1,
 	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
 	    bool enable_loopback = true);
@@ -53,11 +57,14 @@ public:
 	/**
 	 * Run given set of activations weights given on construction.
 	 * @param inputs Input activations to use
+	 * @param config Static chip configuration to be used
 	 * @param connection Connection backend to use
 	 * @return Resulting accumulated membrane potentials
 	 */
 	std::vector<std::vector<Int8>> run(
-	    Activations const& inputs, hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
+	    Activations const& inputs,
+	    ChipConfig const& config,
+	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
 
 private:
 	FRIEND_TEST(::ComputeSingleMAC, get_spike_label);
@@ -104,22 +111,25 @@ private:
 	    size_t num_sends,
 	    haldls::vx::v2::Timer::Value wait_between_events) SYMBOL_VISIBLE;
 
-	bool m_enable_loopback;
-	Graph m_graph;
+	bool m_enable_loopback{false};
+	Graph m_graph{};
 
-	std::vector<SynramHandle> m_synram_handles;
-	std::vector<Graph::vertex_descriptor> m_output_vertices;
-	Weights m_weights;
-	RowModes m_row_modes;
-	JITGraphExecutor::ChipConfigs m_chip_configs;
+	std::vector<SynramHandle> m_synram_handles{};
+	std::vector<Graph::vertex_descriptor> m_output_vertices{};
+	Weights m_weights{};
+	RowModes m_row_modes{};
 
 	void build_graph() SYMBOL_VISIBLE;
 
 	size_t input_size() const;
 	size_t output_size() const;
 
-	size_t m_num_sends;
-	haldls::vx::v2::Timer::Value m_wait_between_events;
+	size_t m_num_sends{};
+	haldls::vx::v2::Timer::Value m_wait_between_events{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // namespace grenade::vx

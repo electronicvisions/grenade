@@ -1,5 +1,6 @@
 #include "grenade/vx/compute_single_mac.h"
 
+#include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
@@ -9,11 +10,13 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/range_split.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
+#include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
+#include <cereal/types/vector.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
 
@@ -367,7 +370,7 @@ IODataMap ComputeSingleMAC::generate_input_events(
 }
 
 std::vector<std::vector<Int8>> ComputeSingleMAC::run(
-    Activations const& inputs, hxcomm::vx::ConnectionVariant& connection)
+    Activations const& inputs, ChipConfig const& config, hxcomm::vx::ConnectionVariant& connection)
 {
 	using namespace halco::hicann_dls::vx::v2;
 	auto logger = log4cxx::Logger::getLogger("grenade.ComputeSingleMAC");
@@ -398,9 +401,12 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 	    generate_input_events(inputs, m_synram_handles, m_num_sends, m_wait_between_events);
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
+	JITGraphExecutor::ChipConfigs chip_configs(
+	    {std::make_pair(halco::hicann_dls::vx::DLSGlobal(), config)});
+
 	// run Graph with given inputs and return results
 	auto const output_activation_map =
-	    JITGraphExecutor::run(m_graph, input_list, connections, m_chip_configs);
+	    JITGraphExecutor::run(m_graph, input_list, connections, chip_configs);
 
 	hate::Timer output_timer;
 	std::vector<std::vector<Int8>> output(output_activation_map.batch_size());
@@ -446,4 +452,29 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 	return output;
 }
 
+template <typename Archive>
+void serialize(Archive& ar, ComputeSingleMAC::SynramHandle& handle)
+{
+	ar(handle.input_vertex);
+	ar(handle.input_size);
+	ar(handle.input_offset);
+	ar(handle.hemisphere);
+}
+
+template <typename Archive>
+void ComputeSingleMAC::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_enable_loopback);
+	ar(m_graph);
+	ar(m_synram_handles);
+	ar(m_output_vertices);
+	ar(m_weights);
+	ar(m_row_modes);
+	ar(m_num_sends);
+	ar(m_wait_between_events);
+}
+
 } // namespace grenade::vx
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSingleMAC)
+CEREAL_CLASS_VERSION(grenade::vx::ComputeSingleMAC, 0)

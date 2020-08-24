@@ -6,6 +6,10 @@
 #include <cstddef>
 #include <ostream>
 
+namespace cereal {
+class access;
+} // namespace
+
 namespace grenade::vx::vertex {
 
 /**
@@ -14,6 +18,8 @@ namespace grenade::vx::vertex {
 struct ReLU
 {
 	constexpr static bool can_connect_different_execution_instances = false;
+
+	ReLU() = default;
 
 	/**
 	 * Construct operation with specified size.
@@ -32,7 +38,11 @@ struct ReLU
 	bool operator!=(ReLU const& other) const SYMBOL_VISIBLE;
 
 private:
-	size_t m_size;
+	size_t m_size{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // grenade::vx::vertex

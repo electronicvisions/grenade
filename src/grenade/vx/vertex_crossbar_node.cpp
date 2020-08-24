@@ -1,5 +1,8 @@
 #include "grenade/vx/vertex/crossbar_node.h"
 
+#include "grenade/cerealization.h"
+#include "halco/common/cerealization_geometry.h"
+
 namespace grenade::vx::vertex {
 
 CrossbarNode::CrossbarNode(Coordinate const& coordinate, Config const& config) :
@@ -34,4 +37,14 @@ bool CrossbarNode::operator!=(CrossbarNode const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void CrossbarNode::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_coordinate);
+	ar(m_config);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::CrossbarNode)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::CrossbarNode, 0)

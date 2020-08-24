@@ -5,6 +5,10 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx::coordinate {
 
 /**
@@ -45,6 +49,10 @@ struct ExecutionInstance
 private:
 	ExecutionIndex m_execution_index;
 	halco::hicann_dls::vx::v2::DLSGlobal m_dls_global;
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // namespace grenade::vx::coordinate

@@ -7,6 +7,10 @@
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx {
 
 struct PortRestriction;
@@ -23,6 +27,8 @@ struct PADIBus
 	constexpr static bool can_connect_different_execution_instances = false;
 
 	typedef halco::hicann_dls::vx::v2::PADIBusOnDLS Coordinate;
+
+	PADIBus() = default;
 
 	/**
 	 * Construct PADI bus at specified location.
@@ -53,7 +59,11 @@ struct PADIBus
 	bool operator!=(PADIBus const& other) const SYMBOL_VISIBLE;
 
 private:
-	Coordinate m_coordinate;
+	Coordinate m_coordinate{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // vertex

@@ -1,8 +1,11 @@
 #include "grenade/vx/vertex/synapse_array_view.h"
 
-#include <stdexcept>
+#include "grenade/cerealization.h"
+#include "halco/common/cerealization_geometry.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include <stdexcept>
+#include <cereal/types/vector.hpp>
 
 namespace grenade::vx::vertex {
 
@@ -104,4 +107,17 @@ bool SynapseArrayView::operator!=(SynapseArrayView const& other) const
 	return !(*this == other);
 }
 
+template <typename Archive>
+void SynapseArrayView::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_weights);
+	ar(m_labels);
+	ar(m_columns);
+	ar(m_rows);
+	ar(m_synram);
+}
+
 } // namespace grenade::vx::vertex
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::SynapseArrayView)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::SynapseArrayView, 0)

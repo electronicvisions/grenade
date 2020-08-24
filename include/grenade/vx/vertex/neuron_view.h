@@ -9,6 +9,10 @@
 #include "halco/hicann-dls/vx/v2/neuron.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx {
 
 struct PortRestriction;
@@ -28,6 +32,8 @@ struct NeuronView
 	typedef std::vector<halco::hicann_dls::vx::v2::NeuronColumnOnDLS> Columns;
 	typedef std::vector<bool> EnableResets;
 	typedef halco::hicann_dls::vx::v2::NeuronRowOnDLS Row;
+
+	NeuronView() = default;
 
 	/**
 	 * Construct NeuronView with specified neurons.
@@ -59,9 +65,13 @@ struct NeuronView
 private:
 	void check(Columns const& columns, EnableResets const& enable_resets) SYMBOL_VISIBLE;
 
-	Columns m_columns;
-	EnableResets m_enable_resets;
-	Row m_row;
+	Columns m_columns{};
+	EnableResets m_enable_resets{};
+	Row m_row{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // vertex

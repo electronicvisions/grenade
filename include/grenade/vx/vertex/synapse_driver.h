@@ -8,6 +8,10 @@
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx {
 
 struct PortRestriction;
@@ -29,6 +33,8 @@ struct SynapseDriver
 	    haldls::vx::v2::SynapseDriverConfig::RowMode,
 	    halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver>
 	    RowModes;
+
+	SynapseDriver() = default;
 
 	/**
 	 * Construct synapse driver at specified location with specified configuration.
@@ -63,9 +69,13 @@ struct SynapseDriver
 	bool operator!=(SynapseDriver const& other) const SYMBOL_VISIBLE;
 
 private:
-	Coordinate m_coordinate;
-	Config m_config;
-	RowModes m_row_modes;
+	Coordinate m_coordinate{};
+	Config m_config{};
+	RowModes m_row_modes{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // vertex

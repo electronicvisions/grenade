@@ -1,5 +1,6 @@
 #include "grenade/vx/compute_single_relu.h"
 
+#include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -24,7 +25,9 @@ ComputeSingleReLU::ComputeSingleReLU(size_t size) : m_graph(), m_input_vertex(),
 }
 
 std::vector<std::vector<Int8>> ComputeSingleReLU::run(
-    std::vector<std::vector<Int8>> const& inputs, hxcomm::vx::ConnectionVariant& connection)
+    std::vector<std::vector<Int8>> const& inputs,
+    ChipConfig const& config,
+    hxcomm::vx::ConnectionVariant& connection)
 {
 	using namespace halco::hicann_dls::vx;
 
@@ -33,7 +36,7 @@ std::vector<std::vector<Int8>> ComputeSingleReLU::run(
 	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<DLSGlobal, ChipConfig>(DLSGlobal(), ChipConfig()));
+	configs.insert(std::pair<DLSGlobal, ChipConfig>(DLSGlobal(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -61,4 +64,15 @@ std::vector<std::vector<Int8>> ComputeSingleReLU::run(
 	return output_map.int8.at(m_output_vertex);
 }
 
+template <typename Archive>
+void ComputeSingleReLU::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(m_graph);
+	ar(m_input_vertex);
+	ar(m_output_vertex);
+}
+
 } // namespace grenade::vx
+
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSingleReLU)
+CEREAL_CLASS_VERSION(grenade::vx::ComputeSingleReLU, 0)

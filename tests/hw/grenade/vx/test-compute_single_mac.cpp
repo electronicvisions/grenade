@@ -56,9 +56,9 @@ TEST(ComputeSingleMAC, Single)
 
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 
-	grenade::vx::ComputeSingleMAC mac(weights, row_modes, *chip);
+	grenade::vx::ComputeSingleMAC mac(weights, row_modes);
 
-	auto const res = mac.run({inputs}, connection);
+	auto const res = mac.run({inputs}, *chip, connection);
 	EXPECT_EQ(res.size(), 1);
 	EXPECT_EQ(res.at(0).size(), 1);
 }

@@ -9,6 +9,10 @@
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx::vertex {
 
 /**
@@ -23,6 +27,8 @@ struct SynapseArrayView
 	typedef std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow> Columns;
 	typedef std::vector<std::vector<lola::vx::v2::SynapseMatrix::Label>> Labels;
 	typedef std::vector<std::vector<lola::vx::v2::SynapseMatrix::Weight>> Weights;
+
+	SynapseArrayView() = default;
 
 	/**
 	 * Construct synapse array view.
@@ -79,15 +85,19 @@ struct SynapseArrayView
 	bool operator!=(SynapseArrayView const& other) const SYMBOL_VISIBLE;
 
 private:
-	Synram m_synram;
-	Rows m_rows;
-	Columns m_columns;
-	Weights m_weights;
-	Labels m_labels;
+	Synram m_synram{};
+	Rows m_rows{};
+	Columns m_columns{};
+	Weights m_weights{};
+	Labels m_labels{};
 
 	void check(
 	    Rows const& rows, Columns const& columns, Weights const& weights, Labels const& labels)
 	    SYMBOL_VISIBLE;
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // grenade::vx::vertex

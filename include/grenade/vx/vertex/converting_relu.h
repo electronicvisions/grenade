@@ -7,6 +7,10 @@
 #include <cstdint>
 #include <ostream>
 
+namespace cereal {
+class access;
+} // namespace
+
 namespace grenade::vx::vertex {
 
 /**
@@ -15,6 +19,8 @@ namespace grenade::vx::vertex {
 struct ConvertingReLU
 {
 	constexpr static bool can_connect_different_execution_instances = false;
+
+	ConvertingReLU() = default;
 
 	/**
 	 * Construct operation with specified size and configuration.
@@ -36,8 +42,13 @@ struct ConvertingReLU
 	bool operator!=(ConvertingReLU const& other) const SYMBOL_VISIBLE;
 
 private:
-	size_t m_size;
-	uint32_t m_shift;
+	size_t m_size{};
+	uint32_t m_shift{};
+
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // grenade::vx::vertex

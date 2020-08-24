@@ -6,6 +6,10 @@
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx::vertex {
 
 /**
@@ -14,6 +18,8 @@ namespace grenade::vx::vertex {
 struct DataInput
 {
 	constexpr static bool can_connect_different_execution_instances = true;
+
+	DataInput() = default;
 
 	/**
 	 * Construct DataInput with specified size and data output type.
@@ -34,8 +40,12 @@ struct DataInput
 	bool operator!=(DataInput const& other) const SYMBOL_VISIBLE;
 
 private:
-	size_t m_size;
-	ConnectionType m_output_type;
+	size_t m_size{};
+	ConnectionType m_output_type{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // grenade::vx::vertex

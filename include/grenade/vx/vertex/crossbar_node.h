@@ -7,6 +7,10 @@
 #include "haldls/vx/v2/routing_crossbar.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx::vertex {
 
 /**
@@ -18,6 +22,8 @@ struct CrossbarNode
 
 	typedef haldls::vx::v2::CrossbarNode Config;
 	typedef haldls::vx::v2::CrossbarNode::coordinate_type Coordinate;
+
+	CrossbarNode() = default;
 
 	/**
 	 * Construct node at specified location with specified configuration.
@@ -46,8 +52,12 @@ struct CrossbarNode
 	bool operator!=(CrossbarNode const& other) const SYMBOL_VISIBLE;
 
 private:
-	Coordinate m_coordinate;
-	Config m_config;
+	Coordinate m_coordinate{};
+	Config m_config{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // grenade::vx::vertex

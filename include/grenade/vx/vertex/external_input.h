@@ -8,6 +8,10 @@
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx::vertex {
 
 /**
@@ -16,6 +20,8 @@ namespace grenade::vx::vertex {
 struct ExternalInput
 {
 	constexpr static bool can_connect_different_execution_instances = false;
+
+	ExternalInput() = default;
 
 	/**
 	 * Construct external input data source with specified coordinate list.
@@ -38,8 +44,12 @@ struct ExternalInput
 	bool operator!=(ExternalInput const& other) const SYMBOL_VISIBLE;
 
 private:
-	size_t m_size;
-	ConnectionType m_output_type;
+	size_t m_size{};
+	ConnectionType m_output_type{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // namespace grenade::vx::vertex

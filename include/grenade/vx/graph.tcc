@@ -2,7 +2,7 @@
 #include "grenade/vx/input.h"
 #include "hate/timer.h"
 
-#include <boost/smart_ptr/make_local_shared.hpp>
+#include <memory>
 
 namespace grenade::vx {
 
@@ -27,8 +27,7 @@ Graph::vertex_descriptor Graph::add(
 	if constexpr (std::is_same_v<std::decay_t<VertexT>, vertex_descriptor>) {
 		m_vertex_property_map.emplace_back(m_vertex_property_map.at(vertex));
 	} else {
-		m_vertex_property_map.emplace_back(
-		    boost::make_local_shared<Vertex>(std::forward<VertexT>(vertex)));
+		m_vertex_property_map.emplace_back(std::make_shared<Vertex>(std::forward<VertexT>(vertex)));
 	}
 
 	// add edges

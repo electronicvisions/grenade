@@ -6,6 +6,10 @@
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
 
+namespace cereal {
+class access;
+} // namespace cereal
+
 namespace grenade::vx::vertex {
 
 /**
@@ -14,6 +18,8 @@ namespace grenade::vx::vertex {
 struct Addition
 {
 	constexpr static bool can_connect_different_execution_instances = false;
+
+	Addition() = default;
 
 	/**
 	 * Construct addition with specified size.
@@ -32,7 +38,11 @@ struct Addition
 	bool operator!=(Addition const& other) const SYMBOL_VISIBLE;
 
 private:
-	size_t m_size;
+	size_t m_size{};
+
+	friend class cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // grenade::vx::vertex
