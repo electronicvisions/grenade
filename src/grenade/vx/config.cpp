@@ -47,7 +47,7 @@ ChipConfig convert_to_chip(stadls::vx::Dumper::done_type const& cocos)
 		}
 	};
 
-	for (auto const& coco : cocos) {
+	for (auto const& coco : cocos.values) {
 		std::visit(apply_coco, coco);
 	}
 	return chip;
