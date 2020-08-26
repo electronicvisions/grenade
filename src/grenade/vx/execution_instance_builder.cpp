@@ -343,6 +343,27 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::ConvertingReLU const& data)
+{
+	auto const shift = data.get_shift();
+	std::vector<std::vector<UInt5>> values;
+	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
+	for (size_t j = 0; j < values.size(); ++j) {
+		for (size_t i = 0; i < data.output().size; ++i) {
+			values.at(j).at(i) = UInt5(std::min(
+			    static_cast<UInt5::value_type>(
+			        std::max(m_local_data.int8.at(source).at(j).at(i), Int8(0)) >> shift),
+			    UInt5::max));
+		}
+	}
+	m_local_data.uint5[vertex] = values;
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataOutput const& data)
 {
 	if (data.inputs().front().type == ConnectionType::UInt5) {

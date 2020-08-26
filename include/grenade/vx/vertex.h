@@ -3,6 +3,7 @@
 
 #include "grenade/vx/vertex/addition.h"
 #include "grenade/vx/vertex/cadc_readout.h"
+#include "grenade/vx/vertex/converting_relu.h"
 #include "grenade/vx/vertex/crossbar_l2_output.h"
 #include "grenade/vx/vertex/crossbar_node.h"
 #include "grenade/vx/vertex/data_input.h"
@@ -25,6 +26,7 @@ typedef std::variant<
     vertex::PADIBus,
     vertex::SynapseDriver,
     vertex::SynapseArrayView,
+    vertex::ConvertingReLU,
     vertex::ReLU,
     vertex::Addition,
     vertex::ExternalInput,
