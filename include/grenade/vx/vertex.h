@@ -11,6 +11,7 @@
 #include "grenade/vx/vertex/neuron_event_output.h"
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/padi_bus.h"
+#include "grenade/vx/vertex/relu.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
 #include "grenade/vx/vertex/synapse_driver.h"
 #include "grenade/vx/vertex_concept.h"
@@ -24,6 +25,7 @@ typedef std::variant<
     vertex::PADIBus,
     vertex::SynapseDriver,
     vertex::SynapseArrayView,
+    vertex::ReLU,
     vertex::Addition,
     vertex::ExternalInput,
     vertex::DataInput,

@@ -165,6 +165,19 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
+namespace {
+
+template <typename T>
+void resize_rectangular(std::vector<std::vector<T>>& data, size_t size_outer, size_t size_inner)
+{
+	data.resize(size_outer);
+	for (auto& inner : data) {
+		inner.resize(size_inner);
+	}
+}
+
+} // namespace
+
 template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::CADCMembraneReadoutView const& data)
@@ -188,7 +201,7 @@ void ExecutionInstanceBuilder::process(
 	} else { // post-hw-run processing
 		// extract Int8 values
 		auto& sample_batches = m_local_data.int8[vertex];
-		sample_batches.resize(m_batch_entries.size());
+		resize_rectangular(sample_batches, m_batch_entries.size(), data.output().size);
 		if (enable_ppu) {
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 				assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
@@ -196,7 +209,6 @@ void ExecutionInstanceBuilder::process(
 				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
 				auto const values = from_vector_unit_row(block);
 				auto& samples = sample_batches.at(batch_index);
-				samples.resize(data.output().size);
 
 				// get samples via neuron mapping from incoming NeuronView
 				size_t i = 0;
@@ -216,7 +228,6 @@ void ExecutionInstanceBuilder::process(
 					    *(m_batch_entries.at(batch_index).m_cadc_baseline_values);
 					auto const& synram_values_baseline = values_baseline.causal[synram];
 					auto& samples = sample_batches.at(batch_index);
-					samples.resize(data.output().size);
 
 					// get samples via neuron mapping from incoming NeuronView
 					size_t i = 0;
@@ -233,7 +244,6 @@ void ExecutionInstanceBuilder::process(
 					auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
 					auto const& synram_values = values.causal[synram];
 					auto& samples = sample_batches.at(batch_index);
-					samples.resize(data.output().size);
 
 					// get samples via neuron mapping from incoming NeuronView
 					size_t i = 0;
@@ -265,11 +275,8 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::Addition const& data)
 {
-	auto const batch_size = m_input_list.batch_size();
-	std::vector<std::vector<Int8>> values(batch_size);
-	for (auto& entry : values) {
-		entry.resize(data.output().size);
-	}
+	std::vector<std::vector<Int8>> values;
+	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
 
 	std::vector<intmax_t> tmps(data.output().size, 0);
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
@@ -287,6 +294,23 @@ void ExecutionInstanceBuilder::process(
 			return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
 		});
 		std::fill(tmps.begin(), tmps.end(), 0);
+	}
+	m_local_data.int8[vertex] = values;
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::ReLU const& data)
+{
+	std::vector<std::vector<Int8>> values;
+	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
+	for (size_t j = 0; j < values.size(); ++j) {
+		for (size_t i = 0; i < data.output().size; ++i) {
+			values.at(j).at(i) = std::max(m_local_data.int8.at(source).at(j).at(i), Int8(0));
+		}
 	}
 	m_local_data.int8[vertex] = values;
 }
