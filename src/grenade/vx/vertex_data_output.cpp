@@ -8,6 +8,10 @@ DataOutput::DataOutput(ConnectionType const input_type, size_t const size) :
     m_size(size), m_input_type()
 {
 	switch (input_type) {
+		case ConnectionType::UInt5: {
+			m_input_type = input_type;
+			break;
+		}
 		case ConnectionType::Int8: {
 			m_input_type = input_type;
 			break;
@@ -34,6 +38,9 @@ Port DataOutput::output() const
 {
 	auto const type = [&]() {
 		switch (m_input_type) {
+			case ConnectionType::UInt5: {
+				return ConnectionType::DataOutputUInt5;
+			}
 			case ConnectionType::Int8: {
 				return ConnectionType::DataOutputInt8;
 			}

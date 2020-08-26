@@ -81,7 +81,17 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 		if (std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(vertex))) {
 			auto const& input_vertex =
 			    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
-			if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
+			if (input_vertex.output().type == ConnectionType::DataOutputUInt5) {
+				if (m_input_list.uint5.find(vertex) == m_input_list.uint5.end()) {
+					// incomplete because value not found
+					return true;
+				} else if (
+				    (batch_size != 0) &&
+				    m_input_list.uint5.at(vertex).front().size() != input_vertex.output().size) {
+					// incomplete because value size doesn't match expectation
+					return true;
+				}
+			} else if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
 				if (m_input_list.int8.find(vertex) == m_input_list.int8.end()) {
 					return true;
 				} else if (
@@ -141,7 +151,21 @@ void ExecutionInstanceBuilder::process(
 	using namespace haldls::vx::v2;
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace halco::common;
-	if (data.output().type == ConnectionType::Int8) {
+	// TODO: reduce double code by providing get<Type>(data_map) (Issue #3717)
+	if (data.output().type == ConnectionType::UInt5) {
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		if (m_graph.get_edge_property_map().at(edge)) {
+			throw std::logic_error("Edge with port restriction unsupported.");
+		}
+		auto const in_vertex = boost::source(edge, m_graph.get_graph());
+		auto const& input_values =
+		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
+		         ? m_local_external_data.uint5.at(in_vertex)
+		         : m_data_output.uint5.at(in_vertex));
+
+		m_local_data.uint5[vertex] = input_values;
+	} else if (data.output().type == ConnectionType::Int8) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 		if (m_graph.get_edge_property_map().at(edge)) {
@@ -262,7 +286,9 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
 {
-	if (data.output().type == ConnectionType::DataOutputInt8) {
+	if (data.output().type == ConnectionType::DataOutputUInt5) {
+		m_local_external_data.uint5.insert({vertex, m_input_list.uint5.at(vertex)});
+	} else if (data.output().type == ConnectionType::DataOutputInt8) {
 		m_local_external_data.int8.insert({vertex, m_input_list.int8.at(vertex)});
 	} else if (data.output().type == ConnectionType::DataInputUInt16) {
 		m_local_external_data.spike_events.insert({vertex, m_input_list.spike_events.at(vertex)});
@@ -319,7 +345,17 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataOutput const& data)
 {
-	if (data.inputs().front().type == ConnectionType::Int8) {
+	if (data.inputs().front().type == ConnectionType::UInt5) {
+		// get in edge
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		auto const& local_data = m_local_data.uint5.at(boost::source(in_edge, m_graph.get_graph()));
+		// check size match only for first because we know that the data map is valid
+		if (local_data.size()) {
+			assert(data.output().size == local_data.front().size());
+		}
+		m_local_data_output.uint5[vertex] = local_data;
+	} else if (data.inputs().front().type == ConnectionType::Int8) {
 		// get in edge
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);

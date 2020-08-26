@@ -3,10 +3,11 @@
 namespace grenade::vx {
 
 IODataMap::IODataMap() :
-    int8(), spike_events(), spike_event_output(), mutex(std::make_unique<std::mutex>())
+    uint5(), int8(), spike_events(), spike_event_output(), mutex(std::make_unique<std::mutex>())
 {}
 
 IODataMap::IODataMap(IODataMap&& other) :
+    uint5(std::move(other.uint5)),
     int8(std::move(other.int8)),
     spike_events(std::move(other.spike_events)),
     spike_event_output(std::move(other.spike_event_output)),
@@ -17,6 +18,7 @@ IODataMap::IODataMap(IODataMap&& other) :
 
 IODataMap& IODataMap::operator=(IODataMap&& other)
 {
+	uint5 = std::move(other.uint5);
 	int8 = std::move(other.int8);
 	spike_events = std::move(other.spike_events);
 	spike_event_output = std::move(other.spike_event_output);
@@ -28,6 +30,7 @@ IODataMap& IODataMap::operator=(IODataMap&& other)
 void IODataMap::merge(IODataMap&& other)
 {
 	std::unique_lock<std::mutex> lock(*mutex);
+	uint5.merge(other.uint5);
 	int8.merge(other.int8);
 	spike_events.merge(other.spike_events);
 	spike_event_output.merge(other.spike_event_output);
@@ -41,6 +44,7 @@ void IODataMap::merge(IODataMap& other)
 void IODataMap::clear()
 {
 	std::unique_lock<std::mutex> lock(*mutex);
+	uint5.clear();
 	int8.clear();
 	spike_events.clear();
 	spike_event_output.clear();
@@ -48,7 +52,7 @@ void IODataMap::clear()
 
 bool IODataMap::empty() const
 {
-	return int8.empty() && spike_events.empty() && spike_event_output.empty();
+	return uint5.empty() && int8.empty() && spike_events.empty() && spike_event_output.empty();
 }
 
 namespace {
@@ -59,7 +63,9 @@ namespace {
 size_t unsafe_batch_size(IODataMap const& map)
 {
 	size_t size = 0;
-	if (map.int8.size()) {
+	if (map.uint5.size()) {
+		size = map.uint5.begin()->second.size();
+	} else if (map.int8.size()) {
 		size = map.int8.begin()->second.size();
 	} else if (map.spike_events.size()) {
 		size = map.spike_events.begin()->second.size();
@@ -82,6 +88,9 @@ size_t IODataMap::batch_size() const
 bool IODataMap::valid() const
 {
 	size_t size = unsafe_batch_size(*this);
+	bool const uint5_value = std::all_of(uint5.cbegin(), uint5.cend(), [size](auto const& list) {
+		return list.second.size() == size;
+	});
 	bool const int8_value = std::all_of(int8.cbegin(), int8.cend(), [size](auto const& list) {
 		return list.second.size() == size;
 	});
@@ -91,16 +100,17 @@ bool IODataMap::valid() const
 	bool const spike_event_output_value = std::all_of(
 	    spike_event_output.cbegin(), spike_event_output.cend(),
 	    [size](auto const& list) { return list.second.size() == size; });
-	return int8_value && spike_events_value && spike_event_output_value;
+	return uint5_value && int8_value && spike_events_value && spike_event_output_value;
 }
 
 
 ConstantReferenceIODataMap::ConstantReferenceIODataMap() :
-    int8(), spike_events(), spike_event_output()
+    uint5(), int8(), spike_events(), spike_event_output()
 {}
 
 void ConstantReferenceIODataMap::clear()
 {
+	uint5.clear();
 	int8.clear();
 	spike_events.clear();
 	spike_event_output.clear();

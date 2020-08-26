@@ -7,12 +7,16 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 	switch (type) {
 		case ConnectionType::SynapseInputLabel:
 			return (os << "SynapseInputLabel");
+		case ConnectionType::UInt5:
+			return (os << "UInt5");
 		case ConnectionType::Int8:
 			return (os << "Int8");
 		case ConnectionType::SynapticInput:
 			return (os << "SynapticInput");
 		case ConnectionType::MembraneVoltage:
 			return (os << "MembraneVoltage");
+		case ConnectionType::DataOutputUInt5:
+			return (os << "DataOutputUInt5");
 		case ConnectionType::DataOutputInt8:
 			return (os << "DataOutputInt8");
 		case ConnectionType::DataOutputUInt16:
