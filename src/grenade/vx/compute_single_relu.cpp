@@ -27,7 +27,7 @@ ComputeSingleReLU::ComputeSingleReLU(size_t size) : m_graph(), m_input_vertex(),
 std::vector<std::vector<Int8>> ComputeSingleReLU::run(
     std::vector<std::vector<Int8>> const& inputs,
     ChipConfig const& config,
-    hxcomm::vx::ConnectionVariant& connection)
+    hxcomm::vx::ConnectionVariant& connection) const
 {
 	using namespace halco::hicann_dls::vx;
 

@@ -19,6 +19,8 @@ struct ChipConfig;
 class ComputeSingleConvertingReLU
 {
 public:
+	ComputeSingleConvertingReLU() = default;
+
 	/**
 	 * Create single ConvertingReLU compute graph wrapper.
 	 * @param size Size of operation
@@ -37,12 +39,12 @@ public:
 	std::vector<std::vector<UInt5>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    ChipConfig const& config,
-	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
+	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
 
 private:
-	Graph m_graph;
-	Graph::vertex_descriptor m_input_vertex;
-	Graph::vertex_descriptor m_output_vertex;
+	Graph m_graph{};
+	Graph::vertex_descriptor m_input_vertex{};
+	Graph::vertex_descriptor m_output_vertex{};
 
 	friend class cereal::access;
 	template <typename Archive>

@@ -28,7 +28,7 @@ ComputeSingleConvertingReLU::ComputeSingleConvertingReLU(size_t size, uint32_t s
 std::vector<std::vector<UInt5>> ComputeSingleConvertingReLU::run(
     std::vector<std::vector<Int8>> const& inputs,
     ChipConfig const& config,
-    hxcomm::vx::ConnectionVariant& connection)
+    hxcomm::vx::ConnectionVariant& connection) const
 {
 	using namespace halco::hicann_dls::vx;
 
@@ -64,6 +64,7 @@ std::vector<std::vector<UInt5>> ComputeSingleConvertingReLU::run(
 
 	return output_map.uint5.at(m_output_vertex);
 }
+
 template <typename Archive>
 void ComputeSingleConvertingReLU::serialize(Archive& ar, std::uint32_t const)
 {
