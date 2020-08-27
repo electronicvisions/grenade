@@ -16,6 +16,7 @@
 #include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/execution_instance_node.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
@@ -119,6 +120,19 @@ IODataMap JITGraphExecutor::run(
 	}
 
 	return output_activation_map;
+}
+
+IODataList JITGraphExecutor::run(
+    Graph const& graph,
+    IODataList const& input_list,
+    Connections const& connections,
+    ChipConfigs const& chip_configs,
+    bool only_unconnected_output)
+{
+	auto const output_map = run(graph, input_list.to_input_map(graph), connections, chip_configs);
+	IODataList output;
+	output.from_output_map(output_map, graph, only_unconnected_output);
+	return output;
 }
 
 bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& connections)
