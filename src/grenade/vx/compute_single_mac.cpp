@@ -24,10 +24,19 @@
 
 namespace grenade::vx {
 
+ComputeSingleMAC::Weight::UnsignedWeight ComputeSingleMAC::Weight::toExcitatory() const
+{
+	return UnsignedWeight(std::max(value(), static_cast<value_type>(0)));
+}
+
+ComputeSingleMAC::Weight::UnsignedWeight ComputeSingleMAC::Weight::toInhibitory() const
+{
+	return UnsignedWeight(-std::min(value(), static_cast<value_type>(0)));
+}
+
 Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
     Graph& graph,
     Weights&& weights,
-    RowModes&& row_modes,
     coordinate::ExecutionInstance const& instance,
     halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
     Graph::vertex_descriptor const crossbar_input_vertex)
@@ -36,7 +45,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	using namespace halco::hicann_dls::vx::v2;
 
 	auto const x_size = weights.at(0).size();
-	auto const y_size = weights.size();
+	auto const y_size = weights.size() * 2 /* signed */;
 
 	vertex::SynapseArrayView::Columns columns;
 	columns.reserve(x_size);
@@ -72,13 +81,13 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	for (auto& l : labels) {
 		SynapseRowOnSynram const sr(i);
 		rows.push_back(sr);
-		l.insert(l.end(), x_size, lola::vx::v2::SynapseMatrix::Label((i % 2) << 5));
+		l.insert(l.end(), x_size, lola::vx::v2::SynapseMatrix::Label(0));
 		i++;
 	}
 
 	// add synapse driver
+	assert(y_size % 2 == 0) /* always without remainder because of signed weights */;
 	auto const num_syndrv = y_size / 2;
-	auto const rest_syndrv = y_size % 2;
 	std::vector<Input> synapse_driver_vertices;
 	synapse_driver_vertices.reserve(num_syndrv);
 	for (size_t i = 0; i < num_syndrv; ++i) {
@@ -86,22 +95,24 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 		vertex::SynapseDriver synapse_driver(
 		    SynapseDriverOnDLS(
 		        SynapseDriverOnSynapseDriverBlock(i), hemisphere.toSynapseDriverBlockOnDLS()),
-		    vertex::SynapseDriver::Config(0b11111), {row_modes.at(i * 2 + 1), row_modes.at(i * 2)});
-		synapse_driver_vertices.push_back(graph.add(synapse_driver, instance, {padi_bus_vertex}));
-	}
-	if (rest_syndrv) {
-		auto const padi_bus_vertex = padi_bus_vertices.at(num_syndrv % PADIBusOnPADIBusBlock::size);
-		vertex::SynapseDriver synapse_driver(
-		    SynapseDriverOnDLS(
-		        SynapseDriverOnSynapseDriverBlock(num_syndrv),
-		        hemisphere.toSynapseDriverBlockOnDLS()),
 		    vertex::SynapseDriver::Config(0b11111),
-		    {SynapseDriverConfig::RowMode::disabled, row_modes.at(num_syndrv * 2)});
+		    {vertex::SynapseDriver::RowModes::value_type::excitatory,
+		     vertex::SynapseDriver::RowModes::value_type::inhibitory});
 		synapse_driver_vertices.push_back(graph.add(synapse_driver, instance, {padi_bus_vertex}));
 	}
 	// add synapse array
+	vertex::SynapseArrayView::Weights unsigned_weights(y_size);
+	for (size_t i = 0; i < weights.size(); ++i) {
+		unsigned_weights.at(2 * i).reserve(x_size);
+		unsigned_weights.at(2 * i + 1).reserve(x_size);
+		for (size_t j = 0; j < x_size; ++j) {
+			unsigned_weights.at(2 * i).push_back(weights.at(i).at(j).toInhibitory());
+			unsigned_weights.at(2 * i + 1).push_back(weights.at(i).at(j).toExcitatory());
+		}
+	}
+
 	vertex::SynapseArrayView synapse_array(
-	    hemisphere.toSynramOnDLS(), std::move(rows), columns, std::move(weights),
+	    hemisphere.toSynramOnDLS(), std::move(rows), columns, std::move(unsigned_weights),
 	    std::move(labels));
 	auto const synapse_array_vertex =
 	    graph.add(std::move(synapse_array), instance, synapse_driver_vertices);
@@ -134,12 +145,8 @@ void ComputeSingleMAC::build_graph()
 		throw std::runtime_error("Synapse weight matrix is not rectangular.");
 	}
 
-	if (m_weights.size() != m_row_modes.size()) {
-		throw std::runtime_error("Synapse weight matrix row size and row modes size don't match.");
-	}
-
 	RangeSplit x_split(NeuronColumnOnDLS::size);
-	RangeSplit y_split(SynapseRowOnSynram::size);
+	RangeSplit y_split(SynapseDriverOnSynapseDriverBlock::size);
 	auto const x_split_ranges = x_split(output_size());
 	auto const y_split_ranges = y_split(input_size());
 
@@ -190,13 +197,8 @@ void ComputeSingleMAC::build_graph()
 				    m_weights.at(i + y_range.offset).begin() + x_range.offset + x_range.size);
 			}
 
-			assert(m_row_modes.size() >= y_range.offset + y_range.size);
-			RowModes local_row_modes(
-			    m_row_modes.begin() + y_range.offset,
-			    m_row_modes.begin() + y_range.offset + y_range.size);
-
 			local_output_vertices.push_back(insert_synram(
-			    m_graph, std::move(local_weights), std::move(local_row_modes), instance,
+			    m_graph, std::move(local_weights), instance,
 			    execution_instance_manager.get_current_hemisphere(), crossbar_input_vertex));
 			m_synram_handles.push_back({input_vertex, y_range.size, y_range.offset,
 			                            execution_instance_manager.get_current_hemisphere()});
@@ -232,34 +234,30 @@ void ComputeSingleMAC::build_graph()
 
 size_t ComputeSingleMAC::input_size() const
 {
-	return m_row_modes.size();
+	return m_weights.size();
 }
 
 size_t ComputeSingleMAC::output_size() const
 {
-	if (m_row_modes.size()) {
+	if (m_weights.size()) {
 		return m_weights.at(0).size();
 	}
 	return 0;
 }
 
 std::optional<haldls::vx::v2::SpikeLabel> ComputeSingleMAC::get_spike_label(
-    halco::hicann_dls::vx::v2::SynapseRowOnDLS const& row, UInt5 const value)
+    halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver, UInt5 const value)
 {
 	if (value == 0) {
 		return std::nullopt;
 	}
 	using namespace halco::hicann_dls::vx::v2;
-	// conversion impl. from halco inlined because it is faster (Issue #3702)
-	auto const local_row = row.toSynapseRowOnSynram();
-	auto const synapse_driver = (static_cast<size_t>(local_row) / SynapseRowOnSynapseDriver::size);
+	auto const synapse_driver = driver.toSynapseDriverOnSynapseDriverBlock();
 	auto const spl1_address = synapse_driver % PADIBusOnPADIBusBlock::size;
-	auto const synapse_label =
-	    ((static_cast<size_t>(local_row) % SynapseRowOnSynapseDriver::size) << 5) |
-	    ((UInt5::max - value.value()) + 1);
+	auto const synapse_label = ((UInt5::max - value.value()) + 1);
 	auto const row_select = synapse_driver / PADIBusOnPADIBusBlock::size;
-	auto const h = (static_cast<size_t>(row.toSynramOnDLS()) << 13);
-	return haldls::vx::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
+	auto const h = (static_cast<size_t>(driver.toSynapseDriverBlockOnDLS()) << 13);
+	return haldls::vx::v2::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
 IODataMap ComputeSingleMAC::generate_input_events(
@@ -269,12 +267,12 @@ IODataMap ComputeSingleMAC::generate_input_events(
     haldls::vx::v2::Timer::Value const wait_between_events)
 {
 	using namespace haldls::vx::v2;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v2;
 
 	IODataMap data_map;
 
 	size_t const batch_size = inputs.size();
-	// get synram_handle indices of the same input_vertex
+	// get indices of the same input_vertex
 	std::map<Graph::vertex_descriptor, std::vector<size_t>> indices;
 	for (size_t i = 0; i < synram_handles.size(); ++i) {
 		auto const input_vertex = synram_handles.at(i).input_vertex;
@@ -295,7 +293,7 @@ IODataMap ComputeSingleMAC::generate_input_events(
 			for (auto const& [input_vertex, index] : indices) {
 				// reserve thread-local labels
 				for (auto& l : labels) {
-					l.reserve(SynapseRowOnSynram::size);
+					l.reserve(SynapseDriverOnSynapseDriverBlock::size);
 				}
 
 				// generate spike labels
@@ -312,7 +310,9 @@ IODataMap ComputeSingleMAC::generate_input_events(
 					for (size_t j = 0; j < input_size; ++j) {
 						auto const input = local_inputs[input_offset + j];
 						auto const label = get_spike_label(
-						    SynapseRowOnDLS(SynapseRowOnSynram(j), hemisphere.toSynramOnDLS()),
+						    SynapseDriverOnDLS(
+						        SynapseDriverOnSynapseDriverBlock(j),
+						        hemisphere.toSynapseDriverBlockOnDLS()),
 						    input);
 						if (label) {
 							local_labels.push_back(*label);
@@ -471,7 +471,6 @@ void ComputeSingleMAC::serialize(Archive& ar, std::uint32_t const)
 	ar(m_synram_handles);
 	ar(m_output_vertices);
 	ar(m_weights);
-	ar(m_row_modes);
 	ar(m_num_sends);
 	ar(m_wait_between_events);
 }

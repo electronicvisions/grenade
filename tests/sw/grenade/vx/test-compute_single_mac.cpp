@@ -18,62 +18,44 @@ TEST(ComputeSingleMAC, get_spike_label)
 	 * spl1 address      14-15
 	 * hemisphere           13
 	 * synapse driver     6-10
-	 * syn row on driver     5
 	 * activation         0- 4
 	 *
 	 * The order presented below is:
-	 * (hemisphere | activation | syn row on driver | spl1 address | synapse driver)
+	 * (hemisphere | activation | spl1 address | synapse driver)
 	 */
-	{ // odd local row
-		SynapseRowOnSynram local_row(17);
-		SynapseRowOnDLS row(local_row, SynramOnDLS::top);
+	{
+		SynapseDriverOnSynapseDriverBlock local_drv(8);
+		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(row, value);
+		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
-		EXPECT_EQ(
-		    label->value(),
-		    ((0 << 13) | 1 | ((17 % 2) << 5) | (((17 / 2) % 4) << 14) | (((17 / 2) / 4) << 6)));
+		EXPECT_EQ(label->value(), ((0 << 13) | 1 | ((8 % 4) << 14) | ((8 / 4) << 6)));
 	}
 	{ // bottom hemisphere
-		SynapseRowOnSynram local_row(17);
-		SynapseRowOnDLS row(local_row, SynramOnDLS::bottom);
+		SynapseDriverOnSynapseDriverBlock local_drv(8);
+		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::bottom);
 		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(row, value);
+		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
-		EXPECT_EQ(
-		    label->value(),
-		    ((1 << 13) | 1 | ((17 % 2) << 5) | (((17 / 2) % 4) << 14) | (((17 / 2) / 4) << 6)));
-	}
-	{ // even local row
-		SynapseRowOnSynram local_row(48);
-		SynapseRowOnDLS row(local_row, SynramOnDLS::top);
-		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
-
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(row, value);
-		EXPECT_TRUE(static_cast<bool>(label));
-		EXPECT_EQ(
-		    label->value(),
-		    ((0 << 13) | 1 | ((48 % 2) << 5) | (((48 / 2) % 4) << 14) | (((48 / 2) / 4) << 6)));
+		EXPECT_EQ(label->value(), ((1 << 13) | 1 | ((8 % 4) << 14) | ((8 / 4) << 6)));
 	}
 	{ // value == 13
-		SynapseRowOnSynram local_row(48);
-		SynapseRowOnDLS row(local_row, SynramOnDLS::top);
+		SynapseDriverOnSynapseDriverBlock local_drv(24);
+		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::UInt5 value(13);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(row, value);
+		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
-		EXPECT_EQ(
-		    label->value(), ((0 << 13) | (32 - 13) | ((48 % 2) << 5) | (((48 / 2) % 4) << 14) |
-		                     (((48 / 2) / 4) << 6)));
+		EXPECT_EQ(label->value(), ((0 << 13) | (32 - 13) | ((24 % 4) << 14) | ((24 / 4) << 6)));
 	}
 	{ // value == 0
-		SynapseRowOnSynram local_row(48);
-		SynapseRowOnDLS row(local_row, SynramOnDLS::top);
+		SynapseDriverOnSynapseDriverBlock local_drv(24);
+		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::UInt5 value(0);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(row, value);
+		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
 		EXPECT_FALSE(static_cast<bool>(label));
 	}
 }

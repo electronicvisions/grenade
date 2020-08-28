@@ -6,6 +6,7 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
+#include "halco/common/geometry.h"
 #include "haldls/vx/v2/event.h"
 #include "haldls/vx/v2/synapse_driver.h"
 #include "haldls/vx/v2/timer.h"
@@ -24,15 +25,30 @@ namespace grenade::vx {
 class ChipConfig;
 
 /**
- * Compute a multiply-accumulate operation.
+ * Compute a multiply-accumulate operation with signed weights.
  * Neurons and synapse rows are filled monotonously.
  * If more synapses are needed than fit on a single chip sequential unrolling is used.
  */
 class ComputeSingleMAC
 {
 public:
-	typedef std::vector<std::vector<lola::vx::v2::SynapseMatrix::Weight>> Weights;
-	typedef std::vector<haldls::vx::v2::SynapseDriverConfig::RowMode> RowModes;
+	/**
+	 *  weight.
+	 */
+	struct GENPYBIND(inline_base("*")) Weight
+	    : public halco::common::detail::RantWrapper<Weight, int_fast8_t, 63, -63>
+	{
+		constexpr explicit Weight(intmax_t const val = 0) GENPYBIND(implicit_conversion) :
+		    rant_t(val)
+		{}
+
+		typedef lola::vx::v2::SynapseMatrix::Weight UnsignedWeight;
+
+		UnsignedWeight toExcitatory() const SYMBOL_VISIBLE;
+		UnsignedWeight toInhibitory() const SYMBOL_VISIBLE;
+	};
+
+	typedef std::vector<std::vector<Weight>> Weights;
 	/** Activations with batch as outer dimension and weight row size as inner dimension. */
 	typedef std::vector<std::vector<UInt5>> Activations;
 
@@ -41,15 +57,13 @@ public:
 	/**
 	 * Create single MAC compute graph wrapper.
 	 * @param weights Weight matrix.
-	 * @param row_modes Modes of rows in weight matrix (typically exc./inh. for pos./neg.)
 	 * @param num_sends Number of times a input activation is sent to the specific row
 	 * @param wait_between_events Wait time between input events in FPGA cycles
 	 * @param enable_loopback Enable loopback of events with statistic analysis
 	 */
-	template <typename WeightsT, typename RowModesT>
+	template <typename WeightsT>
 	ComputeSingleMAC(
 	    WeightsT&& weights,
-	    RowModesT&& row_modes,
 	    size_t num_sends = 1,
 	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
 	    bool enable_loopback = true);
@@ -72,18 +86,18 @@ private:
 
 	/**
 	 * Get spike label value from location and activation value.
-	 * @param row Synapse row to send to
+	 * @param row Synapse driver to send to
 	 * @param value Activation value to send
 	 * @return SpikeLabel value if activation value is larger than zero
 	 */
 	static std::optional<haldls::vx::v2::SpikeLabel> get_spike_label(
-	    halco::hicann_dls::vx::v2::SynapseRowOnDLS const& row, UInt5 const value) SYMBOL_VISIBLE;
+	    halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver,
+	    UInt5 const value) SYMBOL_VISIBLE;
 
 	/**
 	 * Insert a matrix multiplication operation on a synram.
 	 * @param graph Graph to insert into
 	 * @param weights Weights to use
-	 * @param row_modes Row modes (exc./inh.) to use
 	 * @param instance Execution instance to place onto
 	 * @param hemisphere Hemisphere to place onto
 	 * @param crossbar_input_vertex Incoming crossbar input vertex to use
@@ -92,7 +106,6 @@ private:
 	static Graph::vertex_descriptor insert_synram(
 	    Graph& graph,
 	    Weights&& weights,
-	    RowModes&& row_modes,
 	    coordinate::ExecutionInstance const& instance,
 	    halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
 	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
@@ -117,7 +130,6 @@ private:
 	std::vector<SynramHandle> m_synram_handles{};
 	std::vector<Graph::vertex_descriptor> m_output_vertices{};
 	Weights m_weights{};
-	RowModes m_row_modes{};
 
 	void build_graph() SYMBOL_VISIBLE;
 

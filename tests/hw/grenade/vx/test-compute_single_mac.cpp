@@ -41,22 +41,14 @@ TEST(ComputeSingleMAC, Single)
 	}
 
 	grenade::vx::ComputeSingleMAC::Weights weights{
-	    {lola::vx::v2::SynapseMatrix::Weight(0)}, {lola::vx::v2::SynapseMatrix::Weight(0)},
-	    {lola::vx::v2::SynapseMatrix::Weight(0)}, {lola::vx::v2::SynapseMatrix::Weight(0)},
-	    {lola::vx::v2::SynapseMatrix::Weight(0)},
-	};
-
-	grenade::vx::ComputeSingleMAC::RowModes row_modes{
-	    haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
-	    haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
-	    haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
-	    haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
-	    haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
+	    {grenade::vx::ComputeSingleMAC::Weight(0)}, {grenade::vx::ComputeSingleMAC::Weight(0)},
+	    {grenade::vx::ComputeSingleMAC::Weight(0)}, {grenade::vx::ComputeSingleMAC::Weight(0)},
+	    {grenade::vx::ComputeSingleMAC::Weight(0)},
 	};
 
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 
-	grenade::vx::ComputeSingleMAC mac(weights, row_modes);
+	grenade::vx::ComputeSingleMAC mac(weights);
 
 	auto const res = mac.run({inputs}, *chip, connection);
 	EXPECT_EQ(res.size(), 1);
