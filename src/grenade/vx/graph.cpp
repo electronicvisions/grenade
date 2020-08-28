@@ -26,6 +26,87 @@ Graph::Graph(bool enable_acyclicity_check) :
     m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
 {}
 
+namespace {
+
+/**
+ * Copy edge property map with given reference and graphs.
+ * @param other Other property map to copy
+ * @param tg Graph for which to produce copy of property map
+ * @param og Other graph related to property map to copy
+ */
+Graph::edge_property_map_type copy_edge_property_map(
+    Graph::edge_property_map_type const& other,
+    Graph::graph_type const& tg,
+    Graph::graph_type const& og)
+{
+	Graph::edge_property_map_type ret;
+	// edge_descriptor is not invariant under copy, but its position in boost::edges(graph) is.
+	std::vector<std::pair<size_t, std::optional<PortRestriction>>> edge_property_list;
+	std::vector<Graph::edge_descriptor> other_edges(
+	    boost::edges(og).first, boost::edges(og).second);
+	std::vector<Graph::edge_descriptor> edges(boost::edges(tg).first, boost::edges(tg).second);
+	for (auto const& p : other) {
+		auto const other_epos = std::find(other_edges.begin(), other_edges.end(), p.first);
+		assert(other_epos != other_edges.end());
+		ret.insert({edges.at(std::distance(other_edges.begin(), other_epos)), p.second});
+	}
+	return ret;
+}
+
+} // namespace
+
+Graph::Graph(Graph const& other) :
+    m_enable_acyclicity_check(other.m_enable_acyclicity_check),
+    m_graph(other.m_graph),
+    m_execution_instance_graph(other.m_execution_instance_graph),
+    m_edge_property_map(copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph)),
+    m_vertex_property_map(other.m_vertex_property_map),
+    m_vertex_descriptor_map(other.m_vertex_descriptor_map),
+    m_execution_instance_map(other.m_execution_instance_map),
+    m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
+{}
+
+Graph::Graph(Graph&& other) :
+    m_enable_acyclicity_check(other.m_enable_acyclicity_check),
+    m_graph(other.m_graph),                                       // only copy constructable
+    m_execution_instance_graph(other.m_execution_instance_graph), // only copy constructable
+    m_edge_property_map(copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph)),
+    m_vertex_property_map(std::move(other.m_vertex_property_map)),
+    m_vertex_descriptor_map(std::move(other.m_vertex_descriptor_map)),
+    m_execution_instance_map(std::move(other.m_execution_instance_map)),
+    m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
+{}
+
+Graph& Graph::operator=(Graph const& other)
+{
+	if (this == &other) {
+		return *this;
+	}
+	m_enable_acyclicity_check = other.m_enable_acyclicity_check;
+	m_graph = other.m_graph;
+	m_execution_instance_graph = other.m_execution_instance_graph;
+	m_edge_property_map = copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph);
+	m_vertex_property_map = other.m_vertex_property_map;
+	m_vertex_descriptor_map = other.m_vertex_descriptor_map;
+	m_execution_instance_map = other.m_execution_instance_map;
+	return *this;
+}
+
+Graph& Graph::operator=(Graph&& other)
+{
+	if (this == &other) {
+		return *this;
+	}
+	m_enable_acyclicity_check = other.m_enable_acyclicity_check;
+	m_graph = other.m_graph;
+	m_execution_instance_graph = other.m_execution_instance_graph;
+	m_edge_property_map = copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph);
+	m_vertex_property_map = std::move(other.m_vertex_property_map);
+	m_vertex_descriptor_map = std::move(other.m_vertex_descriptor_map);
+	m_execution_instance_map = std::move(other.m_execution_instance_map);
+	return *this;
+}
+
 Graph::vertex_descriptor Graph::add(
     vertex_descriptor const vertex_reference,
     coordinate::ExecutionInstance const execution_instance,

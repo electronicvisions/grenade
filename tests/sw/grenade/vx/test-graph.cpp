@@ -254,4 +254,19 @@ TEST(Graph, recurrence)
 
 	DataOutput data_output(ConnectionType::DataOutputUInt16, 1);
 	graph.add(data_output, ExecutionInstance(), {v15});
+
+	// assignment, construction
+	Graph graph2(graph); // copy construct
+	EXPECT_EQ(graph2, graph);
+
+	Graph graph3;
+	graph3 = graph; // copy assign
+	EXPECT_EQ(graph2, graph);
+
+	Graph graph4(std::move(graph)); // move construct
+	EXPECT_EQ(graph4, graph3);
+
+	Graph graph5;
+	graph5 = std::move(graph4); // move assign
+	EXPECT_EQ(graph5, graph3);
 }

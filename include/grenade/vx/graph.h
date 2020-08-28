@@ -72,6 +72,11 @@ public:
 	 */
 	Graph(bool enable_acyclicity_check = true) SYMBOL_VISIBLE;
 
+	Graph(Graph const&) SYMBOL_VISIBLE;
+	Graph(Graph&&) SYMBOL_VISIBLE;
+	Graph& operator=(Graph const&) SYMBOL_VISIBLE;
+	Graph& operator=(Graph&&) SYMBOL_VISIBLE;
+
 	/**
 	 * Add vertex on specified execution instance with specified inputs.
 	 * No checks are performed against whether the section of specified chip instance is already
