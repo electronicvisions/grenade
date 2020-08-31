@@ -10,6 +10,14 @@ namespace grenade::vx {
 typedef haldls::vx::v2::PADIEvent::HagenActivation UInt5;
 
 /**
+ * 32 bit wide unsigned integer value of e.g. indices.
+ */
+struct UInt32 : public halco::common::detail::BaseType<UInt32, uint32_t>
+{
+	constexpr explicit UInt32(value_type const value = 0) : base_t(value) {}
+};
+
+/**
  * 8 bit wide signed integer value of e.g. CADC membrane readouts.
  *
  * In haldls we use unsigned values for the CADC readouts, this shall be a typesafe wrapper around

@@ -13,6 +13,10 @@ void IODataList::from_output_map(IODataMap const& map, Graph const& graph, bool 
 		    ptr && ((only_unconnected && (boost::out_degree(v, graph.get_graph()) == 0)) ||
 		            !only_unconnected)) {
 			switch (ptr->output().type) {
+				case ConnectionType::UInt32: {
+					data.push_back(map.uint32.at(v));
+					break;
+				}
 				case ConnectionType::UInt5: {
 					data.push_back(map.uint5.at(v));
 					break;
@@ -45,6 +49,10 @@ IODataMap IODataList::to_output_map(Graph const& graph, bool only_unconnected) c
 				throw std::runtime_error("Reached unexpected end of data list data.");
 			}
 			switch (ptr->output().type) {
+				case ConnectionType::UInt32: {
+					map.uint32[v] = std::get<decltype(map.uint32)::mapped_type>(*it);
+					break;
+				}
 				case ConnectionType::UInt5: {
 					map.uint5[v] = std::get<decltype(map.uint5)::mapped_type>(*it);
 					break;
@@ -78,6 +86,10 @@ void IODataList::from_input_map(IODataMap const& map, Graph const& graph)
 		if (auto const ptr = std::get_if<vertex::ExternalInput>(&graph.get_vertex_property(v));
 		    ptr) {
 			switch (ptr->output().type) {
+				case ConnectionType::UInt32: {
+					data.push_back(map.uint32.at(v));
+					break;
+				}
 				case ConnectionType::UInt5: {
 					data.push_back(map.uint5.at(v));
 					break;
@@ -109,6 +121,10 @@ IODataMap IODataList::to_input_map(Graph const& graph) const
 				throw std::runtime_error("Reached unexpected end of list of data entries.");
 			}
 			switch (ptr->output().type) {
+				case ConnectionType::UInt32: {
+					map.uint32[v] = std::get<decltype(map.uint32)::mapped_type>(*it);
+					break;
+				}
 				case ConnectionType::UInt5: {
 					map.uint5[v] = std::get<decltype(map.uint5)::mapped_type>(*it);
 					break;

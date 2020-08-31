@@ -9,6 +9,10 @@ DataInput::DataInput(ConnectionType const output_type, size_t const size) :
     m_size(size), m_output_type()
 {
 	switch (output_type) {
+		case ConnectionType::UInt32: {
+			m_output_type = output_type;
+			break;
+		}
 		case ConnectionType::UInt5: {
 			m_output_type = output_type;
 			break;
@@ -34,6 +38,9 @@ std::array<Port, 1> DataInput::inputs() const
 {
 	auto const type = [&]() {
 		switch (m_output_type) {
+			case ConnectionType::UInt32: {
+				return ConnectionType::DataOutputUInt32;
+			}
 			case ConnectionType::UInt5: {
 				return ConnectionType::DataOutputUInt5;
 			}

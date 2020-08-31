@@ -23,6 +23,8 @@ struct IODataMap
 	template <typename Data>
 	using DataTypeMap = std::map<Graph::vertex_descriptor, std::vector<Data>>;
 
+	/** UInt32 data. */
+	DataTypeMap<std::vector<UInt32>> uint32;
 	/** UInt5 data. */
 	DataTypeMap<std::vector<UInt5>> uint5;
 	/** Int8 data. */
@@ -98,6 +100,8 @@ struct ConstantReferenceIODataMap
 	template <typename Data>
 	using DataTypeMap = std::map<Graph::vertex_descriptor, std::vector<Data> const&>;
 
+	/** UInt32 data. */
+	DataTypeMap<std::vector<UInt32>> uint32;
 	/** UInt5 data. */
 	DataTypeMap<std::vector<UInt5>> uint5;
 	/** Int8 data. */

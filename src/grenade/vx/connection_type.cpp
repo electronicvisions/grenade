@@ -9,6 +9,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "SynapseInputLabel");
 		case ConnectionType::UInt5:
 			return (os << "UInt5");
+		case ConnectionType::UInt32:
+			return (os << "UInt32");
 		case ConnectionType::Int8:
 			return (os << "Int8");
 		case ConnectionType::SynapticInput:
@@ -17,6 +19,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "MembraneVoltage");
 		case ConnectionType::DataOutputUInt5:
 			return (os << "DataOutputUInt5");
+		case ConnectionType::DataOutputUInt32:
+			return (os << "DataOutputUInt32");
 		case ConnectionType::DataOutputInt8:
 			return (os << "DataOutputInt8");
 		case ConnectionType::DataOutputUInt16:
