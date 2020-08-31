@@ -349,6 +349,56 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::ArgMax const& data)
+{
+	// get in edge
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+
+	auto const compute = [&](auto const& local_data) {
+		// check size match only for first because we know that the data map is valid
+		assert(!local_data.size() || data.inputs().front().size == local_data.front().size());
+		std::vector<std::vector<UInt32>> tmps(local_data.size());
+		assert(data.output().size == 1);
+		for (auto& t : tmps) {
+			t.resize(1 /* data.output().size */);
+		}
+		// We compare with <= and not < and therefore chose the last highest value.
+		size_t i = 0;
+		for (auto const& entry : local_data) {
+			uint32_t index = 0;
+			auto max = entry.front();
+			uint32_t j = 0;
+			for (auto const e : entry) {
+				if (max <= e) {
+					max = e;
+					index = j;
+				}
+				j++;
+			}
+			tmps.at(i).at(0) = UInt32(index);
+			i++;
+		}
+		m_local_data.uint32[vertex] = tmps;
+	};
+
+	if (data.inputs().front().type == ConnectionType::UInt32) {
+		auto const& local_data =
+		    m_local_data.uint32.at(boost::source(in_edge, m_graph.get_graph()));
+		compute(local_data);
+	} else if (data.inputs().front().type == ConnectionType::UInt5) {
+		auto const& local_data = m_local_data.uint5.at(boost::source(in_edge, m_graph.get_graph()));
+		compute(local_data);
+	} else if (data.inputs().front().type == ConnectionType::Int8) {
+		auto const& local_data = m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph()));
+		compute(local_data);
+	} else {
+		throw std::logic_error("ArgMax data type not implemented.");
+	}
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ReLU const& data)
 {
 	std::vector<std::vector<Int8>> values;
