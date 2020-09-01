@@ -108,6 +108,7 @@ private:
 
 	std::vector<stadls::vx::v2::PlaybackProgram> m_chunked_program;
 
+	std::optional<Graph::vertex_descriptor> m_event_input_vertex;
 	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
 
 	bool m_postprocessing;

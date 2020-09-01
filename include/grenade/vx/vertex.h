@@ -5,6 +5,7 @@
 #include "grenade/vx/vertex/argmax.h"
 #include "grenade/vx/vertex/cadc_membrane_readout_view.h"
 #include "grenade/vx/vertex/converting_relu.h"
+#include "grenade/vx/vertex/crossbar_l2_input.h"
 #include "grenade/vx/vertex/crossbar_l2_output.h"
 #include "grenade/vx/vertex/crossbar_node.h"
 #include "grenade/vx/vertex/data_input.h"
@@ -23,6 +24,7 @@ namespace grenade::vx {
 /** Vertex configuration as variant over possible types. */
 typedef std::variant<
     vertex::ArgMax,
+    vertex::CrossbarL2Input,
     vertex::CrossbarL2Output,
     vertex::CrossbarNode,
     vertex::PADIBus,

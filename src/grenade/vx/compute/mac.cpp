@@ -154,12 +154,14 @@ void MAC::build_graph()
 	auto instance = coordinate::ExecutionInstance();
 
 	vertex::ExternalInput external_input(ConnectionType::DataTimedSpikeSequence, 1);
-	vertex::DataInput data_input(ConnectionType::CrossbarInputLabel, 1);
+	vertex::DataInput data_input(ConnectionType::TimedSpikeSequence, 1);
+	vertex::CrossbarL2Input crossbar_l2_input;
 	auto last_instance = instance;
 
 	auto input_vertex = m_graph.add(external_input, instance, {});
+	auto const data_input_vertex = m_graph.add(data_input, instance, {input_vertex});
 	Graph::vertex_descriptor crossbar_input_vertex =
-	    m_graph.add(data_input, instance, {input_vertex});
+	    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
 
 	auto const set_enable_loopback = [&]() {
 		if (m_enable_loopback) {
@@ -186,7 +188,9 @@ void MAC::build_graph()
 		for (auto const& y_range : y_split_ranges) {
 			if (instance != last_instance) {
 				input_vertex = m_graph.add(external_input, instance, {});
-				crossbar_input_vertex = m_graph.add(data_input, instance, {input_vertex});
+				auto const data_input_vertex = m_graph.add(data_input, instance, {input_vertex});
+				crossbar_input_vertex =
+				    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
 				set_enable_loopback();
 			}
 

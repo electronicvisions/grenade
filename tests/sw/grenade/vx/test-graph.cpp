@@ -157,36 +157,40 @@ TEST(Graph, check_supports_input_from)
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::CrossbarInputLabel, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
 
+	// Graph: v0 -> v1 -> v2
+	CrossbarL2Input vertex3;
+	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+
 	// connect loopback via crossbar
-	CrossbarNode vertex3(
+	CrossbarNode vertex4(
 	    CrossbarNodeOnDLS(
 	        SPL1Address().toCrossbarInputOnDLS(),
 	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
 	    haldls::vx::v2::CrossbarNode());
 
-	// Graph: v0 -> v1 -> v2
-	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
-
 	// Graph: v0 -> v1 -> v2 -> v3
-	CrossbarL2Output vertex4;
 	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
 
-	DataOutput vertex5(ConnectionType::DataTimedSpikeFromChipSequence, 1);
-	EXPECT_NO_THROW(graph.add(vertex5, ExecutionInstance(), {v3}));
+	// Graph: v0 -> v1 -> v2 -> v3 -> v4
+	CrossbarL2Output vertex5;
+	auto const v4 = graph.add(vertex5, ExecutionInstance(), {v3});
+
+	DataOutput vertex6(ConnectionType::DataTimedSpikeFromChipSequence, 1);
+	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstance(), {v4}));
 
 	// crossbar node not connecting loopback
-	CrossbarNode vertex6(
+	CrossbarNode vertex7(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
 	    haldls::vx::v2::CrossbarNode());
 
-	// Graph: v0 -> v1 -> v4
-	auto const v4 = graph.add(vertex6, ExecutionInstance(), {v1});
+	// Graph: v0 -> v1 -> v5
+	auto const v5 = graph.add(vertex7, ExecutionInstance(), {v2});
 
 	// Input from crossbar node not connecting to output not supported
-	EXPECT_THROW(graph.add(vertex5, ExecutionInstance(), {v4}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex6, ExecutionInstance(), {v5}), std::runtime_error);
 }
 
 TEST(Graph, recurrence)
@@ -198,48 +202,50 @@ TEST(Graph, recurrence)
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::CrossbarInputLabel, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	// Graph: v1 -> v2
+	CrossbarL2Input vertex3;
+	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v2::CrossbarNode());
-	auto const v2 = graph.add(crossbar_in, ExecutionInstance(), {v1});
+	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
 
 	PADIBus::Coordinate c;
 	PADIBus padi_bus(c);
-	auto const v3 = graph.add(padi_bus, ExecutionInstance(), {v2});
+	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
 
 	SynapseDriver synapse_driver(
 	    SynapseDriver::Coordinate(), SynapseDriver::Config(),
 	    {haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
 	     haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory});
-	auto const v4 = graph.add(synapse_driver, ExecutionInstance(), {v3});
+	auto const v5 = graph.add(synapse_driver, ExecutionInstance(), {v4});
 
 	SynapseArrayView synapses(
 	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
 	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
 	    SynapseArrayView::Weights{{lola::vx::v2::SynapseMatrix::Weight()}},
 	    SynapseArrayView::Labels{{lola::vx::v2::SynapseMatrix::Label()}});
-	auto const v5 = graph.add(synapses, ExecutionInstance(), {v4});
+	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
 
 	NeuronView neurons(
 	    NeuronView::Columns{NeuronColumnOnDLS()}, NeuronView::EnableResets{true}, NeuronRowOnDLS());
-	auto const v6 = graph.add(neurons, ExecutionInstance(), {v5});
+	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
 	    NeuronEventOutputView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
-	auto const v7 = graph.add(neuron_outputs, ExecutionInstance(), {v6});
+	auto const v8 = graph.add(neuron_outputs, ExecutionInstance(), {v7});
 
 	// recurrence
 	CrossbarNode crossbar_recurrent(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v2::CrossbarNode());
-	auto const v8 = graph.add(crossbar_recurrent, ExecutionInstance(), {v7});
+	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstance(), {v8});
 
-	auto const v9 = graph.add(v3, ExecutionInstance(), {v2, v8});
-
-	auto const v10 = graph.add(v4, ExecutionInstance(), {v9});
+	auto const v10 = graph.add(v4, ExecutionInstance(), {v3, v9});
 
 	auto const v11 = graph.add(v5, ExecutionInstance(), {v10});
 
@@ -247,16 +253,18 @@ TEST(Graph, recurrence)
 
 	auto const v13 = graph.add(v7, ExecutionInstance(), {v12});
 
+	auto const v14 = graph.add(v8, ExecutionInstance(), {v13});
+
 	CrossbarNode crossbar_out(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
 	    haldls::vx::v2::CrossbarNode());
-	auto const v14 = graph.add(crossbar_out, ExecutionInstance(), {v13});
+	auto const v15 = graph.add(crossbar_out, ExecutionInstance(), {v14});
 
 	CrossbarL2Output crossbar_l2_output;
-	auto const v15 = graph.add(crossbar_l2_output, ExecutionInstance(), {v14});
+	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstance(), {v15});
 
 	DataOutput data_output(ConnectionType::DataTimedSpikeFromChipSequence, 1);
-	graph.add(data_output, ExecutionInstance(), {v15});
+	graph.add(data_output, ExecutionInstance(), {v16});
 
 	// assignment, construction
 	Graph graph2(graph); // copy construct
@@ -283,48 +291,50 @@ TEST(Graph, CerealizeCoverage)
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::CrossbarInputLabel, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	// Graph: v1 -> v2
+	CrossbarL2Input vertex3;
+	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v2::CrossbarNode());
-	auto const v2 = graph.add(crossbar_in, ExecutionInstance(), {v1});
+	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
 
 	PADIBus::Coordinate c;
 	PADIBus padi_bus(c);
-	auto const v3 = graph.add(padi_bus, ExecutionInstance(), {v2});
+	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
 
 	SynapseDriver synapse_driver(
 	    SynapseDriver::Coordinate(), SynapseDriver::Config(),
 	    {haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
 	     haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory});
-	auto const v4 = graph.add(synapse_driver, ExecutionInstance(), {v3});
+	auto const v5 = graph.add(synapse_driver, ExecutionInstance(), {v4});
 
 	SynapseArrayView synapses(
 	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
 	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
 	    SynapseArrayView::Weights{{lola::vx::v2::SynapseMatrix::Weight()}},
 	    SynapseArrayView::Labels{{lola::vx::v2::SynapseMatrix::Label()}});
-	auto const v5 = graph.add(synapses, ExecutionInstance(), {v4});
+	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
 
 	NeuronView neurons(
 	    NeuronView::Columns{NeuronColumnOnDLS()}, NeuronView::EnableResets{true}, NeuronRowOnDLS());
-	auto const v6 = graph.add(neurons, ExecutionInstance(), {v5});
+	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
 	    NeuronEventOutputView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
-	auto const v7 = graph.add(neuron_outputs, ExecutionInstance(), {v6});
+	auto const v8 = graph.add(neuron_outputs, ExecutionInstance(), {v7});
 
 	// recurrence
 	CrossbarNode crossbar_recurrent(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarOutputOnDLS(0)),
 	    haldls::vx::CrossbarNode());
-	auto const v8 = graph.add(crossbar_recurrent, ExecutionInstance(), {v7});
+	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstance(), {v8});
 
-	auto const v9 = graph.add(v3, ExecutionInstance(), {v2, v8});
-
-	auto const v10 = graph.add(v4, ExecutionInstance(), {v9});
+	auto const v10 = graph.add(v4, ExecutionInstance(), {v3, v9});
 
 	auto const v11 = graph.add(v5, ExecutionInstance(), {v10});
 
@@ -332,16 +342,18 @@ TEST(Graph, CerealizeCoverage)
 
 	auto const v13 = graph.add(v7, ExecutionInstance(), {v12});
 
+	auto const v14 = graph.add(v8, ExecutionInstance(), {v13});
+
 	CrossbarNode crossbar_out(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
 	    haldls::vx::CrossbarNode());
-	auto const v14 = graph.add(crossbar_out, ExecutionInstance(), {v13});
+	auto const v15 = graph.add(crossbar_out, ExecutionInstance(), {v14});
 
 	CrossbarL2Output crossbar_l2_output;
-	auto const v15 = graph.add(crossbar_l2_output, ExecutionInstance(), {v14});
+	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstance(), {v15});
 
 	DataOutput data_output(ConnectionType::DataTimedSpikeFromChipSequence, 1);
-	graph.add(data_output, ExecutionInstance(), {v15});
+	graph.add(data_output, ExecutionInstance(), {v16});
 
 	Graph graph2;
 

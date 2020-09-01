@@ -18,6 +18,7 @@ enum class ConnectionType
 	Int8,                           // CADC readout, PPU operation
 	SynapticInput,                  // Accumulated (analog) synaptic input for a neuron
 	MembraneVoltage,                // Neuron membrane voltage for input of CADC readout
+	TimedSpikeSequence,             // Spike sequence to chip
 	DataTimedSpikeSequence,         // Spike sequence to chip data
 	DataTimedSpikeFromChipSequence, // Spike sequence from chip data
 	DataInt8,                       // PPU computation or CADC readout value

@@ -153,6 +153,18 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::CrossbarL2Input const&)
+{
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+	auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
+
+	m_local_data.spike_events[vertex] = m_local_data.spike_events.at(in_vertex);
+	m_event_input_vertex = vertex;
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
 {
 	using namespace lola::vx::v2;
@@ -199,7 +211,7 @@ void ExecutionInstanceBuilder::process(
 		         : m_data_output.int8.at(in_vertex));
 
 		m_local_data.int8[vertex] = input_values;
-	} else if (data.output().type == ConnectionType::CrossbarInputLabel) {
+	} else if (data.output().type == ConnectionType::TimedSpikeSequence) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
@@ -615,11 +627,9 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	builders.push_back(std::move(m_builder_prologue));
 
 	PlaybackProgramBuilder builder;
-	// generate input event sequence
-	if (m_local_data.spike_events.size() > 1) {
-		throw std::logic_error("Expected only one spike input vertex.");
-	}
-	bool const has_computation = m_local_data.spike_events.size() == 1;
+
+	// if no on-chip computation is to be done, return without static configuration
+	auto const has_computation = m_event_input_vertex.has_value();
 	if (!has_computation) {
 		builder.merge_back(m_builder_epilogue);
 		m_chunked_program = {builder.done()};
@@ -715,7 +725,8 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		}
 		builder.write(TimerOnDLS(), Timer());
 		TimedSpike::Time current_time(0);
-		for (auto const& event : m_local_data.spike_events.begin()->second.at(b)) {
+		assert(m_event_input_vertex);
+		for (auto const& event : m_local_data.spike_events.at(*m_event_input_vertex).at(b)) {
 			if (event.time == current_time + 1) {
 				current_time = event.time;
 			} else if (event.time > current_time) {

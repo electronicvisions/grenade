@@ -22,9 +22,9 @@ DataInput::DataInput(ConnectionType const output_type, size_t const size) :
 			m_output_type = output_type;
 			break;
 		}
-		case ConnectionType::CrossbarInputLabel: {
-			if (size != 1) {
-				throw std::runtime_error("CrossbarInputLabel only supports size 1.");
+		case ConnectionType::TimedSpikeSequence: {
+			if (m_size > 1) {
+				throw std::runtime_error("DataInput only supports size(1) for TimedSpikeSequence.");
 			}
 			m_output_type = output_type;
 			break;
@@ -48,7 +48,7 @@ std::array<Port, 1> DataInput::inputs() const
 			case ConnectionType::Int8: {
 				return ConnectionType::DataInt8;
 			}
-			case ConnectionType::CrossbarInputLabel: {
+			case ConnectionType::TimedSpikeSequence: {
 				return ConnectionType::DataTimedSpikeSequence;
 			}
 			default: {
