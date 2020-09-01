@@ -30,6 +30,9 @@ struct DataInput
 
 	friend std::ostream& operator<<(std::ostream& os, DataInput const& config) SYMBOL_VISIBLE;
 
+	bool operator==(DataInput const& other) const SYMBOL_VISIBLE;
+	bool operator!=(DataInput const& other) const SYMBOL_VISIBLE;
+
 private:
 	size_t m_size;
 	ConnectionType m_output_type;

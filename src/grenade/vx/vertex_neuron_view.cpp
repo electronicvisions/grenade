@@ -80,4 +80,15 @@ bool NeuronView::supports_input_from(
 	}
 }
 
+bool NeuronView::operator==(NeuronView const& other) const
+{
+	return (m_columns == other.m_columns) && (m_enable_resets == other.m_enable_resets) &&
+	       (m_row == other.m_row);
+}
+
+bool NeuronView::operator!=(NeuronView const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

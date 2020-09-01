@@ -71,4 +71,14 @@ bool CADCMembraneReadoutView::supports_input_from(
 	}
 }
 
+bool CADCMembraneReadoutView::operator==(CADCMembraneReadoutView const& other) const
+{
+	return (m_columns == other.m_columns) && (m_synram == other.m_synram);
+}
+
+bool CADCMembraneReadoutView::operator!=(CADCMembraneReadoutView const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

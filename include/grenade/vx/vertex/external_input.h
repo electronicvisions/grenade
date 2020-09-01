@@ -34,6 +34,9 @@ struct ExternalInput
 
 	friend std::ostream& operator<<(std::ostream& os, ExternalInput const& config) SYMBOL_VISIBLE;
 
+	bool operator==(ExternalInput const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ExternalInput const& other) const SYMBOL_VISIBLE;
+
 private:
 	size_t m_size;
 	ConnectionType m_output_type;

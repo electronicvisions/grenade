@@ -59,6 +59,9 @@ struct SynapseDriver
 
 	friend std::ostream& operator<<(std::ostream& os, SynapseDriver const& config) SYMBOL_VISIBLE;
 
+	bool operator==(SynapseDriver const& other) const SYMBOL_VISIBLE;
+	bool operator!=(SynapseDriver const& other) const SYMBOL_VISIBLE;
+
 private:
 	Coordinate m_coordinate;
 	Config m_config;

@@ -42,6 +42,9 @@ struct CrossbarNode
 
 	friend std::ostream& operator<<(std::ostream& os, CrossbarNode const& config) SYMBOL_VISIBLE;
 
+	bool operator==(CrossbarNode const& other) const SYMBOL_VISIBLE;
+	bool operator!=(CrossbarNode const& other) const SYMBOL_VISIBLE;
+
 private:
 	Coordinate m_coordinate;
 	Config m_config;

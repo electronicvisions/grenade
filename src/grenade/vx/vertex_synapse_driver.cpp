@@ -44,4 +44,15 @@ std::ostream& operator<<(std::ostream& os, SynapseDriver const& config)
 	return os;
 }
 
+bool SynapseDriver::operator==(SynapseDriver const& other) const
+{
+	return (m_coordinate == other.m_coordinate) && (m_config == other.m_config) &&
+	       (m_row_modes == other.m_row_modes);
+}
+
+bool SynapseDriver::operator!=(SynapseDriver const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

@@ -75,6 +75,9 @@ struct SynapseArrayView
 	friend std::ostream& operator<<(std::ostream& os, SynapseArrayView const& config)
 	    SYMBOL_VISIBLE;
 
+	bool operator==(SynapseArrayView const& other) const SYMBOL_VISIBLE;
+	bool operator!=(SynapseArrayView const& other) const SYMBOL_VISIBLE;
+
 private:
 	Synram m_synram;
 	Rows m_rows;

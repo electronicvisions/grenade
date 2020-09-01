@@ -92,4 +92,16 @@ std::ostream& operator<<(std::ostream& os, SynapseArrayView const& config)
 	return os;
 }
 
+bool SynapseArrayView::operator==(SynapseArrayView const& other) const
+{
+	return (m_synram == other.m_synram) && (m_rows == other.m_rows) &&
+	       (m_columns == other.m_columns) && (m_weights == other.m_weights) &&
+	       (m_labels == other.m_labels);
+}
+
+bool SynapseArrayView::operator!=(SynapseArrayView const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

@@ -32,6 +32,9 @@ struct ConvertingReLU
 
 	friend std::ostream& operator<<(std::ostream& os, ConvertingReLU const& config) SYMBOL_VISIBLE;
 
+	bool operator==(ConvertingReLU const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ConvertingReLU const& other) const SYMBOL_VISIBLE;
+
 private:
 	size_t m_size;
 	uint32_t m_shift;

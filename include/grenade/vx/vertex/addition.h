@@ -28,6 +28,9 @@ struct Addition
 
 	friend std::ostream& operator<<(std::ostream& os, Addition const& config) SYMBOL_VISIBLE;
 
+	bool operator==(Addition const& other) const SYMBOL_VISIBLE;
+	bool operator!=(Addition const& other) const SYMBOL_VISIBLE;
+
 private:
 	size_t m_size;
 };

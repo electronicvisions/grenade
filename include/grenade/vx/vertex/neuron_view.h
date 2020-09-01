@@ -53,6 +53,9 @@ struct NeuronView
 	    SynapseArrayView const& input,
 	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
+	bool operator==(NeuronView const& other) const SYMBOL_VISIBLE;
+	bool operator!=(NeuronView const& other) const SYMBOL_VISIBLE;
+
 private:
 	void check(Columns const& columns, EnableResets const& enable_resets) SYMBOL_VISIBLE;
 

@@ -45,6 +45,9 @@ struct CrossbarL2Output
 	bool supports_input_from(
 	    CrossbarNode const& input,
 	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
+
+	bool operator==(CrossbarL2Output const& other) const SYMBOL_VISIBLE;
+	bool operator!=(CrossbarL2Output const& other) const SYMBOL_VISIBLE;
 };
 
 } // vertex

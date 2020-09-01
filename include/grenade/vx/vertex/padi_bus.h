@@ -49,6 +49,9 @@ struct PADIBus
 
 	friend std::ostream& operator<<(std::ostream& os, PADIBus const& config) SYMBOL_VISIBLE;
 
+	bool operator==(PADIBus const& other) const SYMBOL_VISIBLE;
+	bool operator!=(PADIBus const& other) const SYMBOL_VISIBLE;
+
 private:
 	Coordinate m_coordinate;
 };

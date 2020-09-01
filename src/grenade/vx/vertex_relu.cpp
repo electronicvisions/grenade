@@ -20,4 +20,14 @@ std::ostream& operator<<(std::ostream& os, ReLU const& config)
 	return os;
 }
 
+bool ReLU::operator==(ReLU const& other) const
+{
+	return m_size == other.m_size;
+}
+
+bool ReLU::operator!=(ReLU const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

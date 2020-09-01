@@ -24,4 +24,14 @@ std::ostream& operator<<(std::ostream& os, PADIBus const& config)
 	return os;
 }
 
+bool PADIBus::operator==(PADIBus const& other) const
+{
+	return m_coordinate == other.m_coordinate;
+}
+
+bool PADIBus::operator!=(PADIBus const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

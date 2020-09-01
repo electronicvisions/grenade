@@ -49,6 +49,9 @@ struct CADCMembraneReadoutView
 	    NeuronView const& input,
 	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
+	bool operator==(CADCMembraneReadoutView const& other) const SYMBOL_VISIBLE;
+	bool operator!=(CADCMembraneReadoutView const& other) const SYMBOL_VISIBLE;
+
 private:
 	Columns m_columns;
 	Synram m_synram;

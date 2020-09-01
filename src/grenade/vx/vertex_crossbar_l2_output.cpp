@@ -24,4 +24,14 @@ bool CrossbarL2Output::supports_input_from(
 	    input.get_coordinate().toCrossbarOutputOnDLS().toCrossbarL2OutputOnDLS());
 }
 
+bool CrossbarL2Output::operator==(CrossbarL2Output const&) const
+{
+	return true;
+}
+
+bool CrossbarL2Output::operator!=(CrossbarL2Output const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

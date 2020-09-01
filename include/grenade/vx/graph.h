@@ -63,6 +63,7 @@ public:
 	    boost::bimaps::set_of<vertex_descriptor>,
 	    boost::bimaps::multiset_of<vertex_descriptor>>
 	    vertex_descriptor_map_type;
+	typedef std::vector<boost::local_shared_ptr<Vertex>> vertex_property_map_type;
 
 	/**
 	 * Construct graph.
@@ -162,9 +163,10 @@ public:
 	 */
 	bool is_acyclic_execution_instance_graph() const;
 
-private:
-	typedef std::vector<boost::local_shared_ptr<Vertex>> vertex_property_map_type;
+	bool operator==(Graph const& other) const SYMBOL_VISIBLE;
+	bool operator!=(Graph const& other) const SYMBOL_VISIBLE;
 
+private:
 	bool m_enable_acyclicity_check;
 	graph_type m_graph;
 	graph_type m_execution_instance_graph;

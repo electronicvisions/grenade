@@ -76,4 +76,14 @@ bool NeuronEventOutputView::supports_input_from(
 	}
 }
 
+bool NeuronEventOutputView::operator==(NeuronEventOutputView const& other) const
+{
+	return (m_columns == other.m_columns) && (m_row == other.m_row);
+}
+
+bool NeuronEventOutputView::operator!=(NeuronEventOutputView const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::vertex

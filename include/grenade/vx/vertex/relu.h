@@ -28,6 +28,9 @@ struct ReLU
 
 	friend std::ostream& operator<<(std::ostream& os, ReLU const& config) SYMBOL_VISIBLE;
 
+	bool operator==(ReLU const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ReLU const& other) const SYMBOL_VISIBLE;
+
 private:
 	size_t m_size;
 };

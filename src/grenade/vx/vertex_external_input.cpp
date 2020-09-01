@@ -20,4 +20,14 @@ std::ostream& operator<<(std::ostream& os, ExternalInput const& config)
 	return os;
 }
 
-} // namespace grenade::vx
+bool ExternalInput::operator==(ExternalInput const& other) const
+{
+	return (m_size == other.m_size) && (m_output_type == other.m_output_type);
+}
+
+bool ExternalInput::operator!=(ExternalInput const& other) const
+{
+	return !(*this == other);
+}
+
+} // namespace grenade::vx::vertex

@@ -180,6 +180,78 @@ bool Graph::is_acyclic_execution_instance_graph() const
 	return true;
 }
 
+namespace {
+
+bool value_equal(Graph::graph_type const& a, Graph::graph_type const& b)
+{
+	return std::equal(
+	           boost::vertices(a).first, boost::vertices(a).second, boost::vertices(b).first,
+	           boost::vertices(b).second) &&
+	       std::equal(
+	           boost::edges(a).first, boost::edges(a).second, boost::edges(b).first,
+	           boost::edges(b).second, [&](auto const& aa, auto const& bb) {
+		           return (boost::source(aa, a) == boost::source(bb, b)) &&
+		                  (boost::target(aa, a) == boost::target(aa, b));
+	           });
+}
+
+bool value_equal(Graph::vertex_property_map_type const& a, Graph::vertex_property_map_type const& b)
+{
+	return std::equal(a.begin(), a.end(), b.begin(), b.end(), [](auto const& aa, auto const& bb) {
+		assert(aa && bb);
+		return *aa == *bb;
+	});
+}
+
+bool value_equal(
+    Graph::edge_property_map_type const& a,
+    Graph::edge_property_map_type const& b,
+    Graph::graph_type const& ga,
+    Graph::graph_type const& gb)
+{
+	// expect equal source, target, position in boost::edges(graph) and value
+	auto const get_position_map = [](Graph::edge_property_map_type const& m,
+	                                 Graph::graph_type const& g) {
+		std::map<size_t, std::optional<PortRestriction>> position_map;
+		for (auto const& p : m) {
+			auto const epos = std::find(boost::edges(g).first, boost::edges(g).second, p.first);
+			assert(epos != boost::edges(g).second);
+			position_map.insert({std::distance(boost::edges(g).first, epos), p.second});
+		}
+		return position_map;
+	};
+
+	std::vector<Graph::edge_descriptor> aedges(boost::edges(ga).first, boost::edges(ga).second);
+	std::vector<Graph::edge_descriptor> bedges(boost::edges(gb).first, boost::edges(gb).second);
+	auto const compare = [&](auto const& aa, auto const& bb) {
+		return (boost::source(aedges.at(aa.first), ga) == boost::source(bedges.at(bb.first), gb)) &&
+		       (boost::target(aedges.at(aa.first), ga) == boost::target(bedges.at(bb.first), gb)) &&
+		       (aa.first == bb.first) && (aa.second == bb.second);
+	};
+
+	auto const apos = get_position_map(a, ga);
+	auto const bpos = get_position_map(b, gb);
+	return std::equal(apos.begin(), apos.end(), bpos.begin(), bpos.end(), compare);
+}
+
+} // namespace
+
+bool Graph::operator==(Graph const& other) const
+{
+	return (m_enable_acyclicity_check == other.m_enable_acyclicity_check) &&
+	       value_equal(m_graph, other.m_graph) &&
+	       value_equal(m_execution_instance_graph, other.m_execution_instance_graph) &&
+	       value_equal(m_edge_property_map, other.m_edge_property_map, m_graph, other.m_graph) &&
+	       value_equal(m_vertex_property_map, other.m_vertex_property_map) &&
+	       (m_vertex_descriptor_map == other.m_vertex_descriptor_map) &&
+	       (m_execution_instance_map == other.m_execution_instance_map);
+}
+
+bool Graph::operator!=(Graph const& other) const
+{
+	return !(*this == other);
+}
+
 template <bool VariadicInput>
 void Graph::check_inputs_size(size_t const vertex_inputs_size, size_t const inputs_size)
 {
