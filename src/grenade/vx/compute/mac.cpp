@@ -153,7 +153,7 @@ void MAC::build_graph()
 	SingleChipExecutionInstanceManager execution_instance_manager;
 	auto instance = coordinate::ExecutionInstance();
 
-	vertex::ExternalInput external_input(ConnectionType::DataInputUInt16, 1);
+	vertex::ExternalInput external_input(ConnectionType::DataTimedSpikeSequence, 1);
 	vertex::DataInput data_input(ConnectionType::CrossbarInputLabel, 1);
 	auto last_instance = instance;
 
@@ -174,7 +174,8 @@ void MAC::build_graph()
 			}
 			vertex::CrossbarL2Output l2_output;
 			auto const vl2 = m_graph.add(l2_output, instance, loopback_vertices);
-			vertex::DataOutput data_output_loopback(ConnectionType::DataOutputUInt16, 1);
+			vertex::DataOutput data_output_loopback(
+			    ConnectionType::DataTimedSpikeFromChipSequence, 1);
 			m_graph.add(data_output_loopback, instance, {vl2});
 		}
 	};

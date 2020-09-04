@@ -25,10 +25,10 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "DataOutputUInt32");
 		case ConnectionType::DataOutputInt8:
 			return (os << "DataOutputInt8");
-		case ConnectionType::DataOutputUInt16:
-			return (os << "DataOutputUInt16");
-		case ConnectionType::DataInputUInt16:
-			return (os << "DataInputUInt16");
+		case ConnectionType::DataTimedSpikeFromChipSequence:
+			return (os << "DataTimedSpikeFromChipSequence");
+		case ConnectionType::DataTimedSpikeSequence:
+			return (os << "DataTimedSpikeSequence");
 		case ConnectionType::CrossbarInputLabel:
 			return (os << "CrossbarInputLabel");
 		case ConnectionType::CrossbarOutputLabel:

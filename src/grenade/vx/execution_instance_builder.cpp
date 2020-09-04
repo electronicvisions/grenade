@@ -107,7 +107,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 				    m_input_list.int8.at(vertex).front().size() != input_vertex.output().size) {
 					return true;
 				}
-			} else if (input_vertex.output().type == ConnectionType::DataInputUInt16) {
+			} else if (input_vertex.output().type == ConnectionType::DataTimedSpikeSequence) {
 				if (m_input_list.spike_events.find(vertex) == m_input_list.spike_events.end()) {
 					return true;
 				}
@@ -313,7 +313,7 @@ void ExecutionInstanceBuilder::process(
 		m_local_external_data.uint5.insert({vertex, m_input_list.uint5.at(vertex)});
 	} else if (data.output().type == ConnectionType::DataOutputInt8) {
 		m_local_external_data.int8.insert({vertex, m_input_list.int8.at(vertex)});
-	} else if (data.output().type == ConnectionType::DataInputUInt16) {
+	} else if (data.output().type == ConnectionType::DataTimedSpikeSequence) {
 		m_local_external_data.spike_events.insert({vertex, m_input_list.spike_events.at(vertex)});
 	} else {
 		throw std::runtime_error("ExternalInput output type processing not implemented.");
@@ -468,7 +468,7 @@ void ExecutionInstanceBuilder::process(
 		// check size match only for first because we know that the data map is valid
 		assert(!local_data.size() || (data.output().size == local_data.front().size()));
 		m_local_data_output.int8[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::DataOutputUInt16) {
+	} else if (data.inputs().front().type == ConnectionType::DataTimedSpikeFromChipSequence) {
 		if (m_event_output_vertex) {
 			throw std::logic_error("Only one event output vertex allowed.");
 		}

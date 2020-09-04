@@ -153,7 +153,7 @@ TEST(Graph, check_supports_input_from)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataInputUInt16, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
@@ -174,7 +174,7 @@ TEST(Graph, check_supports_input_from)
 	CrossbarL2Output vertex4;
 	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
 
-	DataOutput vertex5(ConnectionType::DataOutputUInt16, 1);
+	DataOutput vertex5(ConnectionType::DataTimedSpikeFromChipSequence, 1);
 	EXPECT_NO_THROW(graph.add(vertex5, ExecutionInstance(), {v3}));
 
 	// crossbar node not connecting loopback
@@ -194,7 +194,7 @@ TEST(Graph, recurrence)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataInputUInt16, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
@@ -255,7 +255,7 @@ TEST(Graph, recurrence)
 	CrossbarL2Output crossbar_l2_output;
 	auto const v15 = graph.add(crossbar_l2_output, ExecutionInstance(), {v14});
 
-	DataOutput data_output(ConnectionType::DataOutputUInt16, 1);
+	DataOutput data_output(ConnectionType::DataTimedSpikeFromChipSequence, 1);
 	graph.add(data_output, ExecutionInstance(), {v15});
 
 	// assignment, construction
@@ -279,7 +279,7 @@ TEST(Graph, CerealizeCoverage)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataInputUInt16, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
@@ -340,7 +340,7 @@ TEST(Graph, CerealizeCoverage)
 	CrossbarL2Output crossbar_l2_output;
 	auto const v15 = graph.add(crossbar_l2_output, ExecutionInstance(), {v14});
 
-	DataOutput data_output(ConnectionType::DataOutputUInt16, 1);
+	DataOutput data_output(ConnectionType::DataTimedSpikeFromChipSequence, 1);
 	graph.add(data_output, ExecutionInstance(), {v15});
 
 	Graph graph2;

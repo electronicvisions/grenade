@@ -28,7 +28,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	logger_default_config(log4cxx::Level::getTrace());
 
 	grenade::vx::vertex::ExternalInput external_input(
-	    grenade::vx::ConnectionType::DataInputUInt16, 1);
+	    grenade::vx::ConnectionType::DataTimedSpikeSequence, 1);
 
 	grenade::vx::vertex::DataInput data_input(grenade::vx::ConnectionType::CrossbarInputLabel, 1);
 
@@ -37,7 +37,8 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	    haldls::vx::v2::CrossbarNode());
 
 	grenade::vx::vertex::CrossbarL2Output crossbar_output;
-	grenade::vx::vertex::DataOutput data_output(grenade::vx::ConnectionType::DataOutputUInt16, 1);
+	grenade::vx::vertex::DataOutput data_output(
+	    grenade::vx::ConnectionType::DataTimedSpikeFromChipSequence, 1);
 
 	grenade::vx::Graph g;
 

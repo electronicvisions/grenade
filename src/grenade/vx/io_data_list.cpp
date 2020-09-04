@@ -25,7 +25,7 @@ void IODataList::from_output_map(IODataMap const& map, Graph const& graph, bool 
 					data.push_back(map.int8.at(v));
 					break;
 				}
-				case ConnectionType::DataOutputUInt16: {
+				case ConnectionType::DataTimedSpikeFromChipSequence: {
 					data.push_back(map.spike_event_output.at(v));
 					break;
 				}
@@ -61,7 +61,7 @@ IODataMap IODataList::to_output_map(Graph const& graph, bool only_unconnected) c
 					map.int8[v] = std::get<decltype(map.int8)::mapped_type>(*it);
 					break;
 				}
-				case ConnectionType::DataOutputUInt16: {
+				case ConnectionType::DataTimedSpikeFromChipSequence: {
 					map.spike_event_output[v] =
 					    std::get<decltype(map.spike_event_output)::mapped_type>(*it);
 					break;
@@ -98,7 +98,7 @@ void IODataList::from_input_map(IODataMap const& map, Graph const& graph)
 					data.push_back(map.int8.at(v));
 					break;
 				}
-				case ConnectionType::DataInputUInt16: {
+				case ConnectionType::DataTimedSpikeSequence: {
 					data.push_back(map.spike_events.at(v));
 					break;
 				}
@@ -133,7 +133,7 @@ IODataMap IODataList::to_input_map(Graph const& graph) const
 					map.int8[v] = std::get<decltype(map.int8)::mapped_type>(*it);
 					break;
 				}
-				case ConnectionType::DataInputUInt16: {
+				case ConnectionType::DataTimedSpikeSequence: {
 					map.spike_events[v] = std::get<decltype(map.spike_events)::mapped_type>(*it);
 					break;
 				}

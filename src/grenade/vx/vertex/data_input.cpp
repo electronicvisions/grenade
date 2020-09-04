@@ -49,7 +49,7 @@ std::array<Port, 1> DataInput::inputs() const
 				return ConnectionType::DataOutputInt8;
 			}
 			case ConnectionType::CrossbarInputLabel: {
-				return ConnectionType::DataInputUInt16;
+				return ConnectionType::DataTimedSpikeSequence;
 			}
 			default: {
 				throw std::logic_error("Field m_output_type value of DataInput not supported.");
