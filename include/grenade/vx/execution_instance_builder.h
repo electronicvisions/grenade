@@ -137,16 +137,6 @@ private:
 
 		ticket_ppu_type m_ppu_result;
 
-		typedef halco::common::typed_array<
-		    std::optional<
-		        stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::PPUMemoryWord>>,
-		    halco::hicann_dls::vx::PPUOnDLS>
-		    ticket_ppu_word_type;
-
-		ticket_ppu_word_type m_ppu_check_baseline_read;
-		ticket_ppu_word_type m_ppu_check_read;
-		ticket_ppu_word_type m_ppu_check_neuron_reset;
-
 		typedef std::optional<lola::vx::v2::CADCSamples> value_type;
 		value_type m_cadc_values;
 		value_type m_cadc_baseline_values;

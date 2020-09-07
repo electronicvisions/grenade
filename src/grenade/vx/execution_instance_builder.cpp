@@ -16,6 +16,7 @@
 #include "grenade/vx/ppu/status.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/barrier.h"
+#include "haldls/vx/v2/block.h"
 #include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
@@ -831,30 +832,6 @@ IODataMap ExecutionInstanceBuilder::post_process()
 		}
 	}
 
-	if (enable_ppu) {
-		for (auto& batch_entry : m_batch_entries) {
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				if (enable_cadc_baseline) {
-					if (batch_entry.m_ppu_check_baseline_read[ppu] &&
-					    batch_entry.m_ppu_check_baseline_read[ppu]->get().get_value() !=
-					        static_cast<uint32_t>(ppu::Status::idle)) {
-						throw std::runtime_error("PPU not idle after baseline read.");
-					}
-				}
-				if (batch_entry.m_ppu_check_neuron_reset[ppu] &&
-				    batch_entry.m_ppu_check_neuron_reset[ppu]->get().get_value() !=
-				        static_cast<uint32_t>(ppu::Status::idle)) {
-					throw std::runtime_error("PPU not idle after neuron reset.");
-				}
-				if (batch_entry.m_ppu_check_read[ppu] &&
-				    batch_entry.m_ppu_check_read[ppu]->get().get_value() !=
-				        static_cast<uint32_t>(ppu::Status::idle)) {
-					throw std::runtime_error("PPU not idle after read.");
-				}
-			}
-		}
-	}
-
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
 		std::visit(
@@ -878,12 +855,38 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_result_coord;
 	PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
+	typed_array<PollingOmnibusBlockConfig, PPUOnDLS> ppu_status_poll;
 	if (enable_ppu) {
 		assert(ppu_symbols);
 		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
 		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
 		ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			ppu_status_poll[ppu].set_address(
+			    PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+			        PPUMemoryWordOnDLS(ppu_status_coord, ppu))
+			        .at(0));
+			ppu_status_poll[ppu].set_target(
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+			ppu_status_poll[ppu].set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+		}
 	}
+
+	auto const insert_ppu_idle_poll = [&](auto& builder) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			builder.write(PollingOmnibusBlockConfigOnFPGA(), ppu_status_poll[ppu]);
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
+	};
+
+	auto const insert_blocking_ppu_command = [&](auto& builder, auto const command) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(command)));
+			builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+		}
+		insert_ppu_idle_poll(builder);
+	};
 
 	std::vector<PlaybackProgramBuilder> builders;
 	builders.push_back(std::move(m_builder_prologue));
@@ -972,20 +975,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
 			if (enable_ppu) {
-				// initiate baseline read
-				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					PPUMemoryWord config(
-					    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::baseline_read)));
-					builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-				}
-				// magic wait for PPU to complete baseline read (Issue #3704)
-				builder.write(TimerOnDLS(), Timer());
-				builder.block_until(
-				    TimerOnDLS(), Timer::Value(100 * Timer::Value::fpga_clock_cycles_per_us));
-				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					batch_entry.m_ppu_check_baseline_read[ppu] =
-					    builder.read(PPUMemoryWordOnDLS(ppu_status_coord, ppu));
-				}
+				insert_blocking_ppu_command(builder, ppu::Status::baseline_read);
 			} else {
 				// reset neurons (baseline read)
 				builder.copy_back(builder_neuron_reset);
@@ -1000,30 +990,21 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 				batch_entry.m_ticket_baseline = builder.read(CADCSamplesOnDLS());
 			}
 		}
+
 		// reset neurons
 		if (enable_ppu) {
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				PPUMemoryWord config(
-				    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::reset_neurons)));
-				builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-			}
+			insert_blocking_ppu_command(builder, ppu::Status::reset_neurons);
 		} else {
 			builder.copy_back(builder_neuron_reset);
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		}
+
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			builder.write(TimerOnDLS(), Timer());
-			builder.block_until(
-			    TimerOnDLS(),
-			    Timer::Value((enable_ppu ? 2 : 1) * Timer::Value::fpga_clock_cycles_per_us));
+			builder.block_until(TimerOnDLS(), Timer::Value::fpga_clock_cycles_per_us);
 		}
-		if (enable_ppu) {
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				batch_entry.m_ppu_check_neuron_reset[ppu] =
-				    builder.read(PPUMemoryWordOnDLS(ppu_status_coord, ppu));
-			}
-		}
+
 		// send input
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
@@ -1069,20 +1050,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 					    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::read)));
 					builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
 				}
-				// magic wait for PPU to readout membrane and process read (Issue #3704)
-				if (!builder.empty()) {
-					builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::Timer());
-					builder.block_until(
-					    halco::hicann_dls::vx::TimerOnDLS(),
-					    haldls::vx::Timer::Value(
-					        100 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
-				}
-				if (enable_ppu) {
-					for (auto const ppu : iter_all<PPUOnDLS>()) {
-						batch_entry.m_ppu_check_read[ppu] =
-						    builder.read(PPUMemoryWordOnDLS(ppu_status_coord, ppu));
-					}
-				}
+				insert_blocking_ppu_command(builder, ppu::Status::read);
 				// readout result
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
 					batch_entry.m_ppu_result[ppu] =
