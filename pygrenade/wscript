@@ -47,7 +47,7 @@ def build(bld):
         source='../include/grenade/vx/grenade.h',
         genpybind_tags='grenade_vx',
         features='genpybind cxx cxxshlib pyext pyembed',
-        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx_v1', 'pylola_vx_v1', 'pyhalco_hicann_dls_vx'],
+        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx_v1', 'pylola_vx_v1', 'pyhalco_hicann_dls_vx_v1'],
         install_path='${PREFIX}/lib',
         linkflags='-Wl,-z,defs',
     )
