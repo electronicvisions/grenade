@@ -3,11 +3,11 @@
 #include "grenade/vx/compute_single_mac.h"
 
 #include "grenade/vx/data_map.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
-#include "halco/hicann-dls/vx/v1/synapse.h"
-#include "haldls/vx/v1/event.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v2/synapse.h"
+#include "haldls/vx/v2/event.h"
 
-using namespace halco::hicann_dls::vx::v1;
+using namespace halco::hicann_dls::vx::v2;
 
 TEST(ComputeSingleMAC, get_spike_label)
 {
@@ -92,7 +92,7 @@ TEST(ComputeSingleMAC, generate_input_events)
 	}
 
 	size_t num_sends = 2;
-	haldls::vx::v1::Timer::Value wait_between_events(3);
+	haldls::vx::v2::Timer::Value wait_between_events(3);
 
 	auto const events = grenade::vx::ComputeSingleMAC::generate_input_events(
 	    activations, synram_handles, num_sends, wait_between_events);

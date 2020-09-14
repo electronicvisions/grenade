@@ -2,7 +2,6 @@
 
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex/crossbar_node.h"
-#include "halco/hicann-dls/vx/v1/padi.h"
 
 #include <stdexcept>
 

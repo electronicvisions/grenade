@@ -3,9 +3,9 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v1/synapse.h"
-#include "halco/hicann-dls/vx/v1/synapse_driver.h"
-#include "haldls/vx/v1/synapse_driver.h"
+#include "halco/hicann-dls/vx/v2/synapse.h"
+#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -23,11 +23,11 @@ struct SynapseDriver
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef haldls::vx::v1::SynapseDriverConfig::RowAddressCompareMask Config;
-	typedef halco::hicann_dls::vx::v1::SynapseDriverOnDLS Coordinate;
+	typedef haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask Config;
+	typedef halco::hicann_dls::vx::v2::SynapseDriverOnDLS Coordinate;
 	typedef halco::common::typed_array<
-	    haldls::vx::v1::SynapseDriverConfig::RowMode,
-	    halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver>
+	    haldls::vx::v2::SynapseDriverConfig::RowMode,
+	    halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver>
 	    RowModes;
 
 	/**

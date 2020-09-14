@@ -1,10 +1,10 @@
 #pragma once
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v1/neuron.h"
+#include "halco/hicann-dls/vx/v2/neuron.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
-#include "stadls/vx/v1/playback_generator.h"
-#include "stadls/vx/v1/playback_program_builder.h"
+#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v2/playback_program_builder.h"
 
 namespace grenade::vx {
 
@@ -15,15 +15,15 @@ namespace grenade::vx {
 class NeuronResetMaskGenerator
 {
 public:
-	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v1::NeuronResetOnDLS>
+	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS>
 	    enable_resets_type;
 
 	NeuronResetMaskGenerator() SYMBOL_VISIBLE;
 
 	/** Enable reset value per neuron. */
-	halco::common::typed_array<bool, halco::hicann_dls::vx::v1::NeuronResetOnDLS> enable_resets;
+	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS> enable_resets;
 
-	typedef stadls::vx::v1::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
 	typedef hate::Nil Result;
 
 protected:
@@ -31,7 +31,7 @@ protected:
 	 * Generate PlaybackProgramBuilder.
 	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
 	 */
-	stadls::vx::v1::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 private:
 	friend auto stadls::vx::generate<NeuronResetMaskGenerator>(NeuronResetMaskGenerator const&);

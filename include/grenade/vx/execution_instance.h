@@ -2,7 +2,7 @@
 #include <ostream>
 #include <stddef.h>
 #include "halco/common/geometry.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx::coordinate {
@@ -29,9 +29,9 @@ struct ExecutionInstance
 	ExecutionInstance() = default;
 
 	explicit ExecutionInstance(
-	    ExecutionIndex execution_index, halco::hicann_dls::vx::v1::DLSGlobal dls) SYMBOL_VISIBLE;
+	    ExecutionIndex execution_index, halco::hicann_dls::vx::v2::DLSGlobal dls) SYMBOL_VISIBLE;
 
-	halco::hicann_dls::vx::v1::DLSGlobal toDLSGlobal() const SYMBOL_VISIBLE;
+	halco::hicann_dls::vx::v2::DLSGlobal toDLSGlobal() const SYMBOL_VISIBLE;
 	ExecutionIndex toExecutionIndex() const SYMBOL_VISIBLE;
 
 	bool operator==(ExecutionInstance const& other) const SYMBOL_VISIBLE;
@@ -44,7 +44,7 @@ struct ExecutionInstance
 
 private:
 	ExecutionIndex m_execution_index;
-	halco::hicann_dls::vx::v1::DLSGlobal m_dls_global;
+	halco::hicann_dls::vx::v2::DLSGlobal m_dls_global;
 };
 
 } // namespace grenade::vx::coordinate

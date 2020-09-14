@@ -7,18 +7,18 @@
 #include "grenade/vx/input.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
-#include "haldls/vx/v1/systime.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
+#include "haldls/vx/v2/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
-#include "stadls/vx/v1/init_generator.h"
-#include "stadls/vx/v1/playback_generator.h"
-#include "stadls/vx/v1/run.h"
+#include "stadls/vx/v2/init_generator.h"
+#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v2/run.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v1;
-using namespace stadls::vx::v1;
-using namespace lola::vx::v1;
+using namespace halco::hicann_dls::vx::v2;
+using namespace stadls::vx::v2;
+using namespace lola::vx::v2;
 
 std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
@@ -34,7 +34,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	grenade::vx::vertex::CrossbarNode crossbar_node(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8 + node.toEnum()), node.toCrossbarOutputOnDLS()),
-	    haldls::vx::v1::CrossbarNode());
+	    haldls::vx::v2::CrossbarNode());
 
 	grenade::vx::vertex::CrossbarL2Output crossbar_output;
 	grenade::vx::vertex::DataOutput data_output(grenade::vx::ConnectionType::DataOutputUInt16, 1);
@@ -79,7 +79,7 @@ TEST(JITGraphExecutor, EventLoopback)
 		DigitalInit const init;
 		auto [builder, _] = generate(init);
 		auto program = builder.done();
-		stadls::vx::v1::run(executors.at(DLSGlobal()), program);
+		stadls::vx::v2::run(executors.at(DLSGlobal()), program);
 	}
 
 	constexpr size_t max_batch_size = 5;
@@ -87,7 +87,7 @@ TEST(JITGraphExecutor, EventLoopback)
 	for (size_t b = 1; b < max_batch_size; ++b) {
 		for (auto const output : iter_all<CrossbarL2OutputOnDLS>()) {
 			for (auto const address : iter_all<SPL1Address>()) {
-				haldls::vx::v1::SpikeLabel label;
+				haldls::vx::v2::SpikeLabel label;
 				label.set_spl1_address(address);
 				std::vector<grenade::vx::TimedSpikeSequence> inputs(b);
 				for (auto& in : inputs) {
@@ -95,7 +95,7 @@ TEST(JITGraphExecutor, EventLoopback)
 						in.push_back(grenade::vx::TimedSpike{
 						    grenade::vx::TimedSpike::Time(i * 10),
 						    grenade::vx::TimedSpike::Payload(
-						        haldls::vx::v1::SpikePack1ToChip({label}))});
+						        haldls::vx::v2::SpikePack1ToChip({label}))});
 					}
 				}
 

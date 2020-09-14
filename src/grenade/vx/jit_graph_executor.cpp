@@ -17,14 +17,14 @@
 #include "grenade/vx/execution_instance_node.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/types.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
-#include "haldls/vx/v1/padi.h"
-#include "haldls/vx/v1/synapse_driver.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
+#include "haldls/vx/v2/padi.h"
+#include "haldls/vx/v2/synapse_driver.h"
 #include "hate/history_wrapper.h"
 #include "hate/timer.h"
-#include "stadls/vx/v1/playback_generator.h"
-#include "stadls/vx/v1/playback_program_builder.h"
-#include "stadls/vx/v1/run.h"
+#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v2/playback_program_builder.h"
+#include "stadls/vx/v2/run.h"
 
 namespace grenade::vx {
 
@@ -35,7 +35,7 @@ DataMap JITGraphExecutor::run(
     ConfigMap const& config_map)
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v1;
+	using namespace halco::hicann_dls::vx::v2;
 	hate::Timer const timer;
 
 	check(graph, executor_map);
@@ -59,7 +59,7 @@ DataMap JITGraphExecutor::run(
 	// global data map
 	DataMap output_activation_map;
 
-	std::map<halco::hicann_dls::vx::v1::DLSGlobal, hxcomm::ConnectionTimeInfo>
+	std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::ConnectionTimeInfo>
 	    connection_time_info_begin;
 	for (auto const [dls, executor] : executor_map) {
 		connection_time_info_begin.emplace(

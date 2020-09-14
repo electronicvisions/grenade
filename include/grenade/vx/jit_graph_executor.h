@@ -1,7 +1,7 @@
 #pragma once
 #include <map>
 
-#include "halco/hicann-dls/vx/v1/chip.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 #include "hxcomm/vx/connection_variant.h"
 
@@ -21,10 +21,10 @@ class JITGraphExecutor
 {
 public:
 	/** List of executors. */
-	typedef std::map<halco::hicann_dls::vx::v1::DLSGlobal, hxcomm::vx::ConnectionVariant&>
+	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::vx::ConnectionVariant&>
 	    ExecutorMap;
 
-	typedef std::map<halco::hicann_dls::vx::v1::DLSGlobal, ChipConfig> ConfigMap;
+	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, ChipConfig> ConfigMap;
 
 	/**
 	 * Run the specified graph with specified inputs using the specified executor collection.

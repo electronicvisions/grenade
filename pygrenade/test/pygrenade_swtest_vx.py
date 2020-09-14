@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import unittest
-from dlens_vx_v1 import lola, hal, halco
+from dlens_vx_v2 import lola, hal, halco
 import pygrenade_vx as grenade
 
 

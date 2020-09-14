@@ -6,11 +6,11 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
-#include "haldls/vx/v1/event.h"
-#include "haldls/vx/v1/synapse_driver.h"
-#include "haldls/vx/v1/timer.h"
+#include "haldls/vx/v2/event.h"
+#include "haldls/vx/v2/synapse_driver.h"
+#include "haldls/vx/v2/timer.h"
 #include "hxcomm/vx/connection_variant.h"
-#include "lola/vx/v1/synapse.h"
+#include "lola/vx/v2/synapse.h"
 
 class ComputeSingleMAC_get_spike_label_Test;
 class ComputeSingleMAC_generate_input_events_Test;
@@ -27,8 +27,8 @@ class ChipConfig;
 class ComputeSingleMAC
 {
 public:
-	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Weight>> Weights;
-	typedef std::vector<haldls::vx::v1::SynapseDriverConfig::RowMode> RowModes;
+	typedef std::vector<std::vector<lola::vx::v2::SynapseMatrix::Weight>> Weights;
+	typedef std::vector<haldls::vx::v2::SynapseDriverConfig::RowMode> RowModes;
 	/** Activations with batch as outer dimension and weight row size as inner dimension. */
 	typedef std::vector<std::vector<UInt5>> Activations;
 
@@ -45,7 +45,7 @@ public:
 	    RowModes const& row_modes,
 	    ChipConfig const& config,
 	    size_t num_sends = 1,
-	    haldls::vx::v1::Timer::Value wait_between_events = haldls::vx::v1::Timer::Value(25))
+	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25))
 	    SYMBOL_VISIBLE;
 
 	/**
@@ -67,8 +67,8 @@ private:
 	 * @param value Activation value to send
 	 * @return SpikeLabel value if activation value is larger than zero
 	 */
-	static std::optional<haldls::vx::v1::SpikeLabel> get_spike_label(
-	    halco::hicann_dls::vx::v1::SynapseRowOnDLS const& row, UInt5 const value) SYMBOL_VISIBLE;
+	static std::optional<haldls::vx::v2::SpikeLabel> get_spike_label(
+	    halco::hicann_dls::vx::v2::SynapseRowOnDLS const& row, UInt5 const value) SYMBOL_VISIBLE;
 
 	/**
 	 * Insert a matrix multiplication operation on a synram.
@@ -85,7 +85,7 @@ private:
 	    Weights const& weights,
 	    RowModes const& row_modes,
 	    coordinate::ExecutionInstance const& instance,
-	    halco::hicann_dls::vx::v1::HemisphereOnDLS const& hemisphere,
+	    halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
 	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
 
 	struct SynramHandle
@@ -93,14 +93,14 @@ private:
 		Graph::vertex_descriptor input_vertex;
 		size_t input_size;
 		size_t input_offset;
-		halco::hicann_dls::vx::v1::HemisphereOnDLS hemisphere;
+		halco::hicann_dls::vx::v2::HemisphereOnDLS hemisphere;
 	};
 
 	static DataMap generate_input_events(
 	    Activations const& inputs,
 	    std::vector<SynramHandle> const& synram_handles,
 	    size_t num_sends,
-	    haldls::vx::v1::Timer::Value wait_between_events) SYMBOL_VISIBLE;
+	    haldls::vx::v2::Timer::Value wait_between_events) SYMBOL_VISIBLE;
 
 	Graph m_graph;
 
@@ -114,7 +114,7 @@ private:
 	size_t output_size() const;
 
 	size_t m_num_sends;
-	haldls::vx::v1::Timer::Value m_wait_between_events;
+	haldls::vx::v2::Timer::Value m_wait_between_events;
 };
 
 } // namespace grenade::vx

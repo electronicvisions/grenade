@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/execution_instance.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -22,7 +22,7 @@ public:
 	/**
 	 * Get current hemisphere.
 	 */
-	halco::hicann_dls::vx::v1::HemisphereOnDLS get_current_hemisphere() const SYMBOL_VISIBLE;
+	halco::hicann_dls::vx::v2::HemisphereOnDLS get_current_hemisphere() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get next execution instance forcing a change of the execution index.
@@ -30,7 +30,7 @@ public:
 	coordinate::ExecutionInstance next_index() SYMBOL_VISIBLE;
 
 private:
-	halco::hicann_dls::vx::v1::HemisphereOnDLS m_current_hemisphere;
+	halco::hicann_dls::vx::v2::HemisphereOnDLS m_current_hemisphere;
 	coordinate::ExecutionIndex m_current_index;
 };
 

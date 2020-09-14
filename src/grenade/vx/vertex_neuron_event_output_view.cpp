@@ -36,7 +36,7 @@ std::array<Port, 1> NeuronEventOutputView::inputs() const
 
 Port NeuronEventOutputView::output() const
 {
-	std::set<halco::hicann_dls::vx::v1::NeuronEventOutputOnDLS> outputs;
+	std::set<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS> outputs;
 	for (auto const& column : m_columns) {
 		outputs.insert(column.toNeuronEventOutputOnDLS());
 	}

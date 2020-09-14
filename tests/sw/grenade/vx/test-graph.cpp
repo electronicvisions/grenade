@@ -10,9 +10,9 @@
 #include "grenade/vx/vertex/external_input.h"
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
-#include "halco/hicann-dls/vx/v1/event.h"
+#include "halco/hicann-dls/vx/v2/event.h"
 
-using namespace halco::hicann_dls::vx::v1;
+using namespace halco::hicann_dls::vx::v2;
 using namespace grenade::vx;
 using namespace grenade::vx::coordinate;
 using namespace grenade::vx::vertex;
@@ -162,7 +162,7 @@ TEST(Graph, check_supports_input_from)
 	    CrossbarNodeOnDLS(
 	        SPL1Address().toCrossbarInputOnDLS(),
 	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v1::CrossbarNode());
+	    haldls::vx::v2::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v2
 	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
@@ -177,7 +177,7 @@ TEST(Graph, check_supports_input_from)
 	// crossbar node not connecting loopback
 	CrossbarNode vertex6(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v1::CrossbarNode());
+	    haldls::vx::v2::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v4
 	auto const v4 = graph.add(vertex6, ExecutionInstance(), {v1});

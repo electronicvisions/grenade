@@ -1,13 +1,13 @@
 #pragma once
 #include "halco/common/geometry.h"
-#include "haldls/vx/v1/padi.h"
+#include "haldls/vx/v2/padi.h"
 
 namespace grenade::vx {
 
 /**
  * 5 bit wide unsigned activation value type.
  */
-typedef haldls::vx::v1::PADIEvent::HagenActivation UInt5;
+typedef haldls::vx::v2::PADIEvent::HagenActivation UInt5;
 
 /**
  * 8 bit wide signed integer value of e.g. CADC membrane readouts.

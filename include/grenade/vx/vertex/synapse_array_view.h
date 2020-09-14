@@ -7,7 +7,7 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
-#include "lola/vx/v1/synapse.h"
+#include "lola/vx/v2/synapse.h"
 
 namespace grenade::vx::vertex {
 
@@ -18,11 +18,11 @@ struct SynapseArrayView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::v1::SynapseRowOnSynram> Rows;
-	typedef halco::hicann_dls::vx::v1::SynramOnDLS Synram;
-	typedef std::vector<halco::hicann_dls::vx::v1::SynapseOnSynapseRow> Columns;
-	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Label>> Labels;
-	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Weight>> Weights;
+	typedef std::vector<halco::hicann_dls::vx::v2::SynapseRowOnSynram> Rows;
+	typedef halco::hicann_dls::vx::v2::SynramOnDLS Synram;
+	typedef std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow> Columns;
+	typedef std::vector<std::vector<lola::vx::v2::SynapseMatrix::Label>> Labels;
+	typedef std::vector<std::vector<lola::vx::v2::SynapseMatrix::Weight>> Weights;
 
 	/**
 	 * Construct synapse array view.

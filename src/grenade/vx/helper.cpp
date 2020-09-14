@@ -1,16 +1,16 @@
 #include "grenade/vx/helper.h"
 
-#include "halco/hicann-dls/vx/v1/padi.h"
-#include "haldls/vx/v1/padi.h"
+#include "halco/hicann-dls/vx/v2/padi.h"
+#include "haldls/vx/v2/padi.h"
 
 namespace grenade::vx {
 
-haldls::vx::v1::PADIEvent get_padi_event(
-    halco::hicann_dls::vx::v1::SynapseDriverOnSynapseDriverBlock const syndrv,
-    haldls::vx::v1::SynapseQuad::Label const label)
+haldls::vx::v2::PADIEvent get_padi_event(
+    halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock const syndrv,
+    haldls::vx::v2::SynapseQuad::Label const label)
 {
-	using namespace haldls::vx::v1;
-	using namespace halco::hicann_dls::vx::v1;
+	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v2;
 
 	PADIEvent event;
 	event.set_event_address(label);
@@ -21,10 +21,10 @@ haldls::vx::v1::PADIEvent get_padi_event(
 	return event;
 }
 
-std::optional<haldls::vx::v1::SynapseQuad::Label> get_address(
-    halco::hicann_dls::vx::v1::SynapseRowOnSynram const synapse_row, UInt5 const activation)
+std::optional<haldls::vx::v2::SynapseQuad::Label> get_address(
+    halco::hicann_dls::vx::v2::SynapseRowOnSynram const synapse_row, UInt5 const activation)
 {
-	using namespace haldls::vx::v1;
+	using namespace haldls::vx::v2;
 
 	if (activation != 0) {
 		UInt5 const hw_activation = UInt5(UInt5::max - activation);

@@ -54,7 +54,7 @@ def build(bld):
         features = 'cxx cxxshlib pyembed',
         source = bld.path.ant_glob('src/grenade/vx/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'halco_hicann_dls_vx', 'lola_vx_v1', 'haldls_vx_v1', 'stadls_vx_v1', 'TBB'],
+        use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
         uselib = 'GRENADE_LIBRARIES',
     )
 
@@ -70,7 +70,7 @@ def build(bld):
         target = 'grenade_hwtest_vx',
         features = 'gtest cxx cxxprogram pyembed',
         source = bld.path.ant_glob('tests/hw/grenade/vx/test-*.cpp'),
-        use = ['grenade_vx', 'stadls_vx_v1', 'GTEST', 'haldls_vx_v1', 'lola_vx_v1'],
+        use = ['grenade_vx', 'stadls_vx_v2', 'GTEST', 'haldls_vx_v2', 'lola_vx_v2'],
         install_path = '${PREFIX}/bin',
         skip_run = not bld.env.DLSvx_HARDWARE_AVAILABLE
     )

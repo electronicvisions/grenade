@@ -6,7 +6,7 @@
 #include <vector>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v1/neuron.h"
+#include "halco/hicann-dls/vx/v2/neuron.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -25,8 +25,8 @@ struct NeuronView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::v1::NeuronColumnOnDLS> Columns;
-	typedef halco::hicann_dls::vx::v1::NeuronRowOnDLS Row;
+	typedef std::vector<halco::hicann_dls::vx::v2::NeuronColumnOnDLS> Columns;
+	typedef halco::hicann_dls::vx::v2::NeuronRowOnDLS Row;
 
 	/**
 	 * Construct NeuronView with specified neurons.

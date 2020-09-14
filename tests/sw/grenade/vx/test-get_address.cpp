@@ -4,7 +4,7 @@
 #include "halco/common/iter_all.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v1;
+using namespace halco::hicann_dls::vx::v2;
 using namespace grenade::vx;
 
 TEST(get_address, Zero)

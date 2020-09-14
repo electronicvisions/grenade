@@ -2,15 +2,15 @@
 #include <boost/hana/adapt_struct.hpp>
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
-#include "halco/hicann-dls/vx/v1/routing_crossbar.h"
-#include "halco/hicann-dls/vx/v1/synapse_driver.h"
-#include "haldls/vx/v1/padi.h"
-#include "haldls/vx/v1/routing_crossbar.h"
-#include "haldls/vx/v1/synapse_driver.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v2/routing_crossbar.h"
+#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "haldls/vx/v2/padi.h"
+#include "haldls/vx/v2/routing_crossbar.h"
+#include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
-#include "lola/vx/v1/synapse.h"
-#include "stadls/vx/v1/dumper.h"
+#include "lola/vx/v2/synapse.h"
+#include "stadls/vx/v2/dumper.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -24,16 +24,16 @@ public:
 	HemisphereConfig() SYMBOL_VISIBLE;
 
 	/** Synapse matrix. */
-	lola::vx::v1::SynapseMatrix synapse_matrix;
+	lola::vx::v2::SynapseMatrix synapse_matrix;
 
 	typedef halco::common::typed_array<
-	    haldls::vx::v1::SynapseDriverConfig,
-	    halco::hicann_dls::vx::v1::SynapseDriverOnSynapseDriverBlock>
+	    haldls::vx::v2::SynapseDriverConfig,
+	    halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock>
 	    _synapse_driver_block_type GENPYBIND(opaque);
 	/** Synapse driver block. TODO: should be lola container. */
 	_synapse_driver_block_type synapse_driver_block;
 
-	haldls::vx::v1::CommonPADIBusConfig common_padi_bus_config;
+	haldls::vx::v2::CommonPADIBusConfig common_padi_bus_config;
 
 	bool operator==(HemisphereConfig const& other) const SYMBOL_VISIBLE;
 	bool operator!=(HemisphereConfig const& other) const SYMBOL_VISIBLE;
@@ -51,14 +51,14 @@ public:
 	ChipConfig() SYMBOL_VISIBLE;
 
 	typedef halco::common::
-	    typed_array<grenade::vx::HemisphereConfig, halco::hicann_dls::vx::v1::HemisphereOnDLS>
+	    typed_array<grenade::vx::HemisphereConfig, halco::hicann_dls::vx::v2::HemisphereOnDLS>
 	        _hemispheres_type GENPYBIND(opaque);
 
 	/** HemisphereConfig configuration. */
 	_hemispheres_type hemispheres;
 
 	typedef halco::common::
-	    typed_array<haldls::vx::v1::CrossbarNode, haldls::vx::v1::CrossbarNode::coordinate_type>
+	    typed_array<haldls::vx::v2::CrossbarNode, haldls::vx::v2::CrossbarNode::coordinate_type>
 	        _crossbar_nodes_type GENPYBIND(opaque);
 
 	/** Crossbar node configuration. */
@@ -74,7 +74,7 @@ public:
  * @param cocos Coordinate container pair sequence
  */
 ChipConfig GENPYBIND(visible)
-    convert_to_chip(stadls::vx::v1::Dumper::done_type const& cocos) SYMBOL_VISIBLE;
+    convert_to_chip(stadls::vx::v2::Dumper::done_type const& cocos) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx
 

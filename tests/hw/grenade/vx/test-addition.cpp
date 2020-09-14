@@ -8,18 +8,18 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex.h"
-#include "halco/hicann-dls/vx/v1/chip.h"
-#include "haldls/vx/v1/systime.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
+#include "haldls/vx/v2/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
-#include "stadls/vx/v1/init_generator.h"
-#include "stadls/vx/v1/playback_generator.h"
-#include "stadls/vx/v1/run.h"
+#include "stadls/vx/v2/init_generator.h"
+#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v2/run.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v1;
-using namespace stadls::vx::v1;
-using namespace lola::vx::v1;
+using namespace halco::hicann_dls::vx::v2;
+using namespace stadls::vx::v2;
+using namespace lola::vx::v2;
 
 TEST(Addition, Single)
 {
@@ -55,7 +55,7 @@ TEST(Addition, Single)
 		DigitalInit const init;
 		auto [builder, _] = generate(init);
 		auto program = builder.done();
-		stadls::vx::v1::run(executors.at(DLSGlobal()), program);
+		stadls::vx::v2::run(executors.at(DLSGlobal()), program);
 	}
 
 	// fill graph inputs

@@ -13,8 +13,8 @@
 #include "grenade/vx/data_map.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/v1/barrier.h"
-#include "haldls/vx/v1/padi.h"
+#include "haldls/vx/v2/barrier.h"
+#include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
 
@@ -59,19 +59,12 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config->crossbar_nodes) {
-		node = haldls::vx::v1::CrossbarNode::drop_all;
+		node = haldls::vx::v2::CrossbarNode::drop_all;
 	}
 
 	m_postprocessing = false;
 	size_t const batch_size = m_input_list.batch_size();
 	m_batch_entries.resize(batch_size);
-
-	for (auto& e : m_batch_entries) {
-		for (auto const h : halco::common::iter_all<halco::hicann_dls::vx::v1::HemisphereOnDLS>()) {
-			// TODO: remove once HXv2 present
-			e.m_synapse_labels[h].values = m_config->hemispheres[h].synapse_matrix.labels;
-		}
-	}
 }
 
 bool ExecutionInstanceBuilder::has_complete_input_list() const
@@ -131,30 +124,16 @@ void ExecutionInstanceBuilder::process(
 	auto const& columns = data.get_columns();
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
-	// set synaptic weights and labels (in HAGEN-mode labels are set in DataInput vertex processing)
-	if (enable_hagen_workarounds) { // TODO: remove once HAGEN-mode bug is resolved
-		for (auto const& var : boost::combine(data.get_weights(), data.get_rows())) {
-			auto const& weights = boost::get<0>(var);
-			auto const& row = boost::get<1>(var);
-			auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
-			for (size_t index = 0; index < columns.size(); ++index) {
-				auto const syn_column = columns[index];
-				weight_row[syn_column] = weights.at(index);
-			}
-		}
-	} else {
-		for (auto const& var :
-		     boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
-			auto const& weights = boost::get<0>(var);
-			auto const& labels = boost::get<1>(var);
-			auto const& row = boost::get<2>(var);
-			auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
-			auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
-			for (size_t index = 0; index < columns.size(); ++index) {
-				auto const syn_column = columns[index];
-				weight_row[syn_column] = weights.at(index);
-				label_row[syn_column] = labels.at(index);
-			}
+	for (auto const& var : boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
+		auto const& weights = boost::get<0>(var);
+		auto const& labels = boost::get<1>(var);
+		auto const& row = boost::get<2>(var);
+		auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
+		auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
+		for (size_t index = 0; index < columns.size(); ++index) {
+			auto const syn_column = columns[index];
+			weight_row[syn_column] = weights.at(index);
+			label_row[syn_column] = labels.at(index);
 		}
 	}
 }
@@ -167,9 +146,9 @@ void ExecutionInstanceBuilder::process(
 	    m_config->hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
-	    data.get_row_modes()[halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver::top]);
+	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
-	    data.get_row_modes()[halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver::bottom]);
+	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
 	synapse_driver_config.set_row_address_compare_mask(data.get_config());
 }
 
@@ -196,9 +175,9 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
 {
-	using namespace lola::vx::v1;
-	using namespace haldls::vx::v1;
-	using namespace halco::hicann_dls::vx::v1;
+	using namespace lola::vx::v2;
+	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v2;
 	using namespace halco::common;
 	auto const& vertex_map = m_graph.get_vertex_property_map();
 	if (data.output().type == ConnectionType::Int8) {
@@ -220,122 +199,6 @@ void ExecutionInstanceBuilder::process(
 		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
 
 		m_local_data.spike_events[vertex] = m_local_external_data.spike_events.at(in_vertex);
-
-		if (enable_hagen_workarounds) { // TODO: remove once HAGEN-mode bug is resolved
-			auto const out_edges = boost::out_edges(vertex, m_graph.get_graph());
-
-			auto const process_label = [&](vertex::CrossbarNode const& crossbar_node,
-			                               vertex::SynapseDriver const& synapse_driver,
-			                               vertex::SynapseArrayView const& synapse_array,
-			                               haldls::vx::v1::SpikeLabel const& label,
-			                               size_t const batch_index) {
-				auto const spl1_address =
-				    crossbar_node.get_coordinate().toCrossbarInputOnDLS().toSPL1Address();
-				if (!spl1_address) { // no spl1 channel
-					return;
-				}
-				if (*spl1_address != label.get_spl1_address()) { // wrong spl1 channel
-					return;
-				}
-				auto const neuron_label = label.get_neuron_label();
-				auto const target = crossbar_node.get_config().get_target();
-				auto const mask = crossbar_node.get_config().get_mask();
-				if ((neuron_label & mask) != target) { // crossbar node drops event
-					return;
-				}
-				auto const syndrv_mask = synapse_driver.get_config().value();
-				if ((synapse_driver.get_coordinate()
-				         .toSynapseDriverOnSynapseDriverBlock()
-				         .toSynapseDriverOnPADIBus() &
-				     syndrv_mask) !=
-				    (label.get_row_select_address() & syndrv_mask)) { // synapse driver drops event
-					return;
-				}
-				auto const synapse_rows = synapse_driver.get_coordinate().toSynapseRowOnSynram();
-				auto const synapse_label = label.get_synapse_label();
-				auto const synram = synapse_array.get_synram();
-				auto const hemisphere = synram.toHemisphereOnDLS();
-				auto& labels_config =
-				    m_batch_entries.at(batch_index).m_synapse_labels[hemisphere].values;
-				for (auto const& row : synapse_rows) {
-					auto const it = std::find(
-					    synapse_array.get_rows().begin(), synapse_array.get_rows().end(), row);
-					if (it != synapse_array.get_rows().end()) {
-						size_t const i = std::distance(synapse_array.get_rows().begin(), it);
-						auto const& label_row = synapse_array.get_labels()[i];
-						if ((label_row.at(0) & (1 << 5)) ==
-						    (synapse_label & (1 << 5))) { // right hagen address
-							// apply derived label to configuration
-							auto const& columns = synapse_array.get_columns();
-							auto& labels_config_row = labels_config[row];
-							for (size_t index = 0; index < columns.size(); ++index) {
-								auto const syn_column = columns[index];
-								labels_config_row[syn_column] = synapse_label;
-							}
-						}
-					}
-				}
-			};
-
-			auto const process_events = [&](vertex::CrossbarNode const& crossbar_node,
-			                                vertex::SynapseDriver const& synapse_driver,
-			                                vertex::SynapseArrayView const& synapse_array) {
-				auto const& event_batches = m_local_data.spike_events.at(vertex);
-				size_t batch_index = 0;
-				for (auto const& event_batch : event_batches) {
-					for (auto const& event : event_batch) {
-						std::visit(
-						    [&](auto const& e) {
-							    for (auto const& label : e.get_labels()) {
-								    process_label(
-								        crossbar_node, synapse_driver, synapse_array, label,
-								        batch_index);
-							    }
-						    },
-						    event.payload);
-					}
-					batch_index++;
-				}
-			};
-
-			auto const process_crossbar_node = [&](auto const& out_edge) {
-				auto const crossbar_node_vertex = boost::target(out_edge, m_graph.get_graph());
-				auto const& crossbar_node =
-				    std::get<vertex::CrossbarNode>(vertex_map.at(crossbar_node_vertex));
-				auto const crossbar_node_out_edges =
-				    boost::out_edges(crossbar_node_vertex, m_graph.get_graph());
-				for (auto const crossbar_node_out_edge :
-				     boost::make_iterator_range(crossbar_node_out_edges)) {
-					auto const crossbar_node_target_vertex =
-					    boost::target(crossbar_node_out_edge, m_graph.get_graph());
-					if (std::holds_alternative<vertex::PADIBus>(
-					        vertex_map.at(crossbar_node_target_vertex))) {
-						auto const padi_bus_out_edges =
-						    boost::out_edges(crossbar_node_target_vertex, m_graph.get_graph());
-						for (auto const padi_bus_out_edge :
-						     boost::make_iterator_range(padi_bus_out_edges)) {
-							auto const synapse_driver_vertex =
-							    boost::target(padi_bus_out_edge, m_graph.get_graph());
-							auto const& synapse_driver = std::get<vertex::SynapseDriver>(
-							    vertex_map.at(synapse_driver_vertex));
-							auto const syndrv_out_edges =
-							    boost::out_edges(synapse_driver_vertex, m_graph.get_graph());
-							for (auto const syndrv_out_edge :
-							     boost::make_iterator_range(syndrv_out_edges)) {
-								auto const synapse_array_vertex =
-								    boost::target(syndrv_out_edge, m_graph.get_graph());
-								auto const& synapse_array = std::get<vertex::SynapseArrayView>(
-								    vertex_map.at(synapse_array_vertex));
-								process_events(crossbar_node, synapse_driver, synapse_array);
-							}
-						}
-					}
-				}
-			};
-			for (auto const out_edge : boost::make_iterator_range(out_edges)) {
-				process_crossbar_node(out_edge);
-			}
-		}
 	} else {
 		throw std::logic_error("DataInput output connection type processing not implemented.");
 	}
@@ -352,9 +215,9 @@ void ExecutionInstanceBuilder::process(
 	auto const hemisphere = data.get_synram().toHemisphereOnDLS();
 
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v1;
-	using namespace lola::vx::v1;
-	using namespace haldls::vx::v1;
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace lola::vx::v2;
+	using namespace haldls::vx::v2;
 	if (!m_postprocessing) { // pre-hw-run processing
 		m_ticket_requests[hemisphere] = true;
 		// results need hardware execution
@@ -389,8 +252,8 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
-	using namespace halco::hicann_dls::vx::v1;
-	using namespace haldls::vx::v1;
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v2;
 	// TODO: This reset does not really belong here / how do we say when and whether it should
 	// be triggered?
 	// result: -> make property of each neuron view entry
@@ -475,12 +338,12 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
-void ExecutionInstanceBuilder::register_epilogue(stadls::vx::v1::PlaybackProgramBuilder&& builder)
+void ExecutionInstanceBuilder::register_epilogue(stadls::vx::v2::PlaybackProgramBuilder&& builder)
 {
 	m_builder_epilogue = std::move(builder);
 }
 
-void ExecutionInstanceBuilder::register_prologue(stadls::vx::v1::PlaybackProgramBuilder&& builder)
+void ExecutionInstanceBuilder::register_prologue(stadls::vx::v2::PlaybackProgramBuilder&& builder)
 {
 	m_builder_prologue = std::move(builder);
 }
@@ -555,13 +418,13 @@ DataMap ExecutionInstanceBuilder::post_process()
 	return std::move(m_local_data_output);
 }
 
-stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
+stadls::vx::v2::PlaybackProgram ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v1;
-	using namespace haldls::vx::v1;
-	using namespace stadls::vx::v1;
-	using namespace lola::vx::v1;
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v2;
+	using namespace stadls::vx::v2;
+	using namespace lola::vx::v2;
 
 	// generate input event sequence
 	std::vector<PlaybackProgramBuilder> builder_input(m_batch_entries.size());
@@ -655,7 +518,7 @@ stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 	m_config.save();
 	// reset
 	{
-		auto const new_matrix = std::make_unique<lola::vx::v1::SynapseMatrix>();
+		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
 		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 			m_config->hemispheres[hemisphere].synapse_matrix = *new_matrix;
 		}
@@ -666,33 +529,26 @@ stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
 			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
-			    haldls::vx::v1::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
 			m_config->hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
-			    haldls::vx::v1::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
 		}
 	}
 	m_used_padi_busses.fill(false);
 	// build neuron resets
-	auto [builder_neuron_reset, _] = stadls::vx::v1::generate(m_neuron_resets);
+	auto [builder_neuron_reset, _] = stadls::vx::v2::generate(m_neuron_resets);
 	// insert batches
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
-		if (enable_hagen_workarounds) {
-			for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-				builder.write(
-				    SynapseLabelMatrixOnDLS(hemisphere.toEnum()),
-				    m_batch_entries.at(b).m_synapse_labels[hemisphere]);
-			}
-		}
 		// reset neurons (baseline read)
 		builder.copy_back(builder_neuron_reset);
 		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
 		if (!builder.empty()) {
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder.write(halco::hicann_dls::vx::v1::TimerOnDLS(), haldls::vx::v1::Timer());
+			builder.write(halco::hicann_dls::vx::v2::TimerOnDLS(), haldls::vx::v2::Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::v1::TimerOnDLS(),
-			    haldls::vx::v1::Timer::Value(
-			        30 * haldls::vx::v1::Timer::Value::fpga_clock_cycles_per_us));
+			    halco::hicann_dls::vx::v2::TimerOnDLS(),
+			    haldls::vx::v2::Timer::Value(
+			        30 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// readout baselines of neurons
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout_baseline);
@@ -703,11 +559,11 @@ stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(halco::hicann_dls::vx::v1::TimerOnDLS(), haldls::vx::v1::Timer());
+			builder.write(halco::hicann_dls::vx::v2::TimerOnDLS(), haldls::vx::v2::Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::v1::TimerOnDLS(),
-			    haldls::vx::v1::Timer::Value(
-			        2 * haldls::vx::v1::Timer::Value::fpga_clock_cycles_per_us));
+			    halco::hicann_dls::vx::v2::TimerOnDLS(),
+			    haldls::vx::v2::Timer::Value(
+			        2 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// read out neuron membranes
 		builder.merge_back(m_batch_entries.at(b).m_builder_cadc_readout);

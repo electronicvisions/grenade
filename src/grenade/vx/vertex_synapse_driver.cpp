@@ -28,7 +28,7 @@ SynapseDriver::RowModes SynapseDriver::get_row_modes() const
 bool SynapseDriver::supports_input_from(
     PADIBus const& input, std::optional<PortRestriction> const&) const
 {
-	return halco::hicann_dls::vx::v1::PADIBusOnDLS(
+	return halco::hicann_dls::vx::v2::PADIBusOnDLS(
 	           m_coordinate.toSynapseDriverOnSynapseDriverBlock().toPADIBusOnPADIBusBlock(),
 	           m_coordinate.toSynapseDriverBlockOnDLS().toPADIBusBlockOnDLS()) ==
 	       input.get_coordinate();
@@ -38,9 +38,9 @@ std::ostream& operator<<(std::ostream& os, SynapseDriver const& config)
 {
 	os << "SynapseDriver(coordinate: " << config.m_coordinate << ", row_mask: " << config.m_config
 	   << ", row_modes: {top("
-	   << config.m_row_modes[halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver::top]
+	   << config.m_row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]
 	   << "), bottom("
-	   << config.m_row_modes[halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver::bottom] << ")})";
+	   << config.m_row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom] << ")})";
 	return os;
 }
 
