@@ -1,6 +1,6 @@
 #pragma once
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/neuron.h"
+#include "halco/hicann-dls/vx/v1/neuron.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
 #include "stadls/vx/v1/playback_generator.h"
@@ -15,13 +15,13 @@ namespace grenade::vx {
 class NeuronResetMaskGenerator
 {
 public:
-	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::NeuronResetOnDLS>
+	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v1::NeuronResetOnDLS>
 	    enable_resets_type;
 
 	NeuronResetMaskGenerator() SYMBOL_VISIBLE;
 
 	/** Enable reset value per neuron. */
-	halco::common::typed_array<bool, halco::hicann_dls::vx::NeuronResetOnDLS> enable_resets;
+	halco::common::typed_array<bool, halco::hicann_dls::vx::v1::NeuronResetOnDLS> enable_resets;
 
 	typedef stadls::vx::v1::PlaybackProgramBuilder Builder;
 	typedef hate::Nil Result;

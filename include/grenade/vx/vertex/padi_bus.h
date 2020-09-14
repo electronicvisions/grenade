@@ -4,7 +4,7 @@
 #include <ostream>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/padi.h"
+#include "halco/hicann-dls/vx/v1/padi.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -22,7 +22,7 @@ struct PADIBus
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef halco::hicann_dls::vx::PADIBusOnDLS Coordinate;
+	typedef halco::hicann_dls::vx::v1::PADIBusOnDLS Coordinate;
 
 	/**
 	 * Construct PADI bus at specified location.

@@ -10,7 +10,7 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/neuron_reset_mask_generator.h"
 #include "grenade/vx/types.h"
-#include "halco/hicann-dls/vx/chip.h"
+#include "halco/hicann-dls/vx/v1/chip.h"
 #include "haldls/vx/v1/synapse_driver.h"
 #include "hate/history_wrapper.h"
 #include "hate/visibility.h"
@@ -109,7 +109,7 @@ private:
 	DataMap m_local_data;
 	DataMap m_local_data_output;
 
-	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::HemisphereOnDLS>
+	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v1::HemisphereOnDLS>
 	    ticket_request_type;
 	ticket_request_type m_ticket_requests;
 
@@ -123,9 +123,10 @@ private:
 		ticket_type m_ticket_baseline;
 
 		/* TODO: remove once HXv2 present. */
-		halco::common::
-		    typed_array<lola::vx::v1::SynapseLabelMatrix, halco::hicann_dls::vx::HemisphereOnDLS>
-		        m_synapse_labels;
+		halco::common::typed_array<
+		    lola::vx::v1::SynapseLabelMatrix,
+		    halco::hicann_dls::vx::v1::HemisphereOnDLS>
+		    m_synapse_labels;
 
 		// TODO: replace by read of "tick" once available
 		typedef std::optional<
@@ -141,7 +142,7 @@ private:
 	std::vector<BatchEntry> m_batch_entries;
 
 	NeuronResetMaskGenerator m_neuron_resets;
-	halco::common::typed_array<bool, halco::hicann_dls::vx::PADIBusOnDLS> m_used_padi_busses;
+	halco::common::typed_array<bool, halco::hicann_dls::vx::v1::PADIBusOnDLS> m_used_padi_busses;
 
 	/**
 	 * Check if any incoming vertex requires post processing.

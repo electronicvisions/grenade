@@ -1,8 +1,8 @@
 #include "grenade/vx/vertex/synapse_array_view.h"
 
 #include <stdexcept>
-#include "halco/hicann-dls/vx/synapse.h"
-#include "halco/hicann-dls/vx/synapse_driver.h"
+#include "halco/hicann-dls/vx/v1/synapse.h"
+#include "halco/hicann-dls/vx/v1/synapse_driver.h"
 
 namespace grenade::vx::vertex {
 
@@ -80,7 +80,7 @@ SynapseArrayView::Synram const& SynapseArrayView::get_synram() const
 std::vector<Port> SynapseArrayView::inputs() const
 {
 	Port const port(1, ConnectionType::SynapseInputLabel);
-	std::set<halco::hicann_dls::vx::SynapseDriverOnSynapseDriverBlock> drivers;
+	std::set<halco::hicann_dls::vx::v1::SynapseDriverOnSynapseDriverBlock> drivers;
 	std::for_each(m_rows.begin(), m_rows.end(), [&](auto const& r) {
 		drivers.insert(r.toSynapseDriverOnSynapseDriverBlock());
 	});

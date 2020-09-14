@@ -1,13 +1,9 @@
 #pragma once
 #include <map>
 
+#include "halco/hicann-dls/vx/v1/chip.h"
 #include "hate/visibility.h"
 #include "hxcomm/vx/connection_variant.h"
-
-namespace halco::hicann_dls::vx {
-struct DLSGlobal;
-struct HemishereOnDLS;
-} // namespace halco::hicann_dls::vx
 
 namespace grenade::vx {
 
@@ -25,9 +21,10 @@ class JITGraphExecutor
 {
 public:
 	/** List of executors. */
-	typedef std::map<halco::hicann_dls::vx::DLSGlobal, hxcomm::vx::ConnectionVariant&> ExecutorMap;
+	typedef std::map<halco::hicann_dls::vx::v1::DLSGlobal, hxcomm::vx::ConnectionVariant&>
+	    ExecutorMap;
 
-	typedef std::map<halco::hicann_dls::vx::DLSGlobal, ChipConfig> ConfigMap;
+	typedef std::map<halco::hicann_dls::vx::v1::DLSGlobal, ChipConfig> ConfigMap;
 
 	/**
 	 * Run the specified graph with specified inputs using the specified executor collection.

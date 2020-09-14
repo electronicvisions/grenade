@@ -3,11 +3,11 @@
 #include "grenade/vx/compute_single_mac.h"
 
 #include "grenade/vx/data_map.h"
-#include "halco/hicann-dls/vx/chip.h"
-#include "halco/hicann-dls/vx/synapse.h"
+#include "halco/hicann-dls/vx/v1/chip.h"
+#include "halco/hicann-dls/vx/v1/synapse.h"
 #include "haldls/vx/v1/event.h"
 
-using namespace halco::hicann_dls::vx;
+using namespace halco::hicann_dls::vx::v1;
 
 TEST(ComputeSingleMAC, get_spike_label)
 {

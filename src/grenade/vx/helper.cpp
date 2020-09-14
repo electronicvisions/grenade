@@ -1,16 +1,16 @@
 #include "grenade/vx/helper.h"
 
-#include "halco/hicann-dls/vx/synapse_driver.h"
+#include "halco/hicann-dls/vx/v1/padi.h"
 #include "haldls/vx/v1/padi.h"
 
 namespace grenade::vx {
 
 haldls::vx::v1::PADIEvent get_padi_event(
-    halco::hicann_dls::vx::SynapseDriverOnSynapseDriverBlock const syndrv,
+    halco::hicann_dls::vx::v1::SynapseDriverOnSynapseDriverBlock const syndrv,
     haldls::vx::v1::SynapseQuad::Label const label)
 {
 	using namespace haldls::vx::v1;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 
 	PADIEvent event;
 	event.set_event_address(label);
@@ -22,7 +22,7 @@ haldls::vx::v1::PADIEvent get_padi_event(
 }
 
 std::optional<haldls::vx::v1::SynapseQuad::Label> get_address(
-    halco::hicann_dls::vx::SynapseRowOnSynram const synapse_row, UInt5 const activation)
+    halco::hicann_dls::vx::v1::SynapseRowOnSynram const synapse_row, UInt5 const activation)
 {
 	using namespace haldls::vx::v1;
 

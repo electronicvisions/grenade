@@ -8,7 +8,7 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex.h"
-#include "halco/hicann-dls/vx/chip.h"
+#include "halco/hicann-dls/vx/v1/chip.h"
 #include "haldls/vx/v1/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
@@ -17,7 +17,7 @@
 #include "stadls/vx/v1/run.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx;
+using namespace halco::hicann_dls::vx::v1;
 using namespace stadls::vx::v1;
 using namespace lola::vx::v1;
 

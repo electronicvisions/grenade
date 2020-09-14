@@ -68,7 +68,7 @@ private:
 	 * @return SpikeLabel value if activation value is larger than zero
 	 */
 	static std::optional<haldls::vx::v1::SpikeLabel> get_spike_label(
-	    halco::hicann_dls::vx::SynapseRowOnDLS const& row, UInt5 const value) SYMBOL_VISIBLE;
+	    halco::hicann_dls::vx::v1::SynapseRowOnDLS const& row, UInt5 const value) SYMBOL_VISIBLE;
 
 	/**
 	 * Insert a matrix multiplication operation on a synram.
@@ -85,7 +85,7 @@ private:
 	    Weights const& weights,
 	    RowModes const& row_modes,
 	    coordinate::ExecutionInstance const& instance,
-	    halco::hicann_dls::vx::HemisphereOnDLS const& hemisphere,
+	    halco::hicann_dls::vx::v1::HemisphereOnDLS const& hemisphere,
 	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
 
 	struct SynramHandle
@@ -93,7 +93,7 @@ private:
 		Graph::vertex_descriptor input_vertex;
 		size_t input_size;
 		size_t input_offset;
-		halco::hicann_dls::vx::HemisphereOnDLS hemisphere;
+		halco::hicann_dls::vx::v1::HemisphereOnDLS hemisphere;
 	};
 
 	static DataMap generate_input_events(

@@ -5,7 +5,7 @@
 
 #include <sstream>
 #include <stdexcept>
-#include "halco/hicann-dls/vx/neuron.h"
+#include "halco/hicann-dls/vx/v1/neuron.h"
 
 namespace grenade::vx::vertex {
 

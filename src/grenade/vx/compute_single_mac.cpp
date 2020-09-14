@@ -19,11 +19,11 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
     Weights const& weights,
     RowModes const& row_modes,
     coordinate::ExecutionInstance const& instance,
-    halco::hicann_dls::vx::HemisphereOnDLS const& hemisphere,
+    halco::hicann_dls::vx::v1::HemisphereOnDLS const& hemisphere,
     Graph::vertex_descriptor const crossbar_input_vertex)
 {
 	using namespace haldls::vx::v1;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 
 	auto const x_size = weights.at(0).size();
 	auto const y_size = weights.size();
@@ -120,7 +120,7 @@ ComputeSingleMAC::ComputeSingleMAC(
     m_num_sends(num_sends),
     m_wait_between_events(wait_between_events)
 {
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 
 	m_config_map[DLSGlobal()] = config;
 
@@ -227,23 +227,23 @@ size_t ComputeSingleMAC::output_size() const
 }
 
 std::optional<haldls::vx::v1::SpikeLabel> ComputeSingleMAC::get_spike_label(
-    halco::hicann_dls::vx::SynapseRowOnDLS const& row, UInt5 const value)
+    halco::hicann_dls::vx::v1::SynapseRowOnDLS const& row, UInt5 const value)
 {
 	if (value == 0) {
 		return std::nullopt;
 	}
 	haldls::vx::v1::SpikeLabel label;
 	label.set_spl1_address(
-	    halco::hicann_dls::vx::SPL1Address(row.toSynapseRowOnSynram()
-	                                           .toSynapseDriverOnSynapseDriverBlock()
-	                                           .toPADIBusOnPADIBusBlock()));
+	    halco::hicann_dls::vx::v1::SPL1Address(row.toSynapseRowOnSynram()
+	                                               .toSynapseDriverOnSynapseDriverBlock()
+	                                               .toPADIBusOnPADIBusBlock()));
 	label.set_synapse_label(lola::vx::v1::SynapseMatrix::Label(
 	    ((row.toSynapseRowOnSynram() % 2) << 5) | UInt5((UInt5::max - value) + 1)));
 	label.set_row_select_address(
 	    haldls::vx::v1::PADIEvent::RowSelectAddress(row.toSynapseRowOnSynram()
 	                                                    .toSynapseDriverOnSynapseDriverBlock()
 	                                                    .toSynapseDriverOnPADIBus()));
-	label.set_neuron_label(halco::hicann_dls::vx::NeuronLabel(
+	label.set_neuron_label(halco::hicann_dls::vx::v1::NeuronLabel(
 	    label.get_neuron_label() |
 	    (static_cast<uint16_t>(row.toSynramOnDLS().toHemisphereOnDLS()) << 13)));
 	return label;
@@ -273,8 +273,8 @@ DataMap ComputeSingleMAC::generate_input_events(
 			for (size_t i = 0; i < num_sends; ++i) {
 				for (size_t j = 0; j < input_size; ++j) {
 					auto const label = get_spike_label(
-					    halco::hicann_dls::vx::SynapseRowOnDLS(
-					        halco::hicann_dls::vx::SynapseRowOnSynram(j),
+					    halco::hicann_dls::vx::v1::SynapseRowOnDLS(
+					        halco::hicann_dls::vx::v1::SynapseRowOnSynram(j),
 					        hemisphere.toSynramOnDLS()),
 					    inputs.at(batch).at(input_offset + j));
 					if (label) {
@@ -304,7 +304,7 @@ DataMap ComputeSingleMAC::generate_input_events(
 std::vector<std::vector<Int8>> ComputeSingleMAC::run(
     Activations const& inputs, hxcomm::vx::ConnectionVariant& connection)
 {
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 
 
 	// Construct map of one executor and connect to HW

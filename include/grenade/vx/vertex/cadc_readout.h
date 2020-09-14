@@ -6,7 +6,7 @@
 #include <vector>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/cadc.h"
+#include "halco/hicann-dls/vx/v1/cadc.h"
 #include "hate/visibility.h"
 
 namespace grenade::vx {
@@ -24,8 +24,8 @@ struct CADCMembraneReadoutView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::SynapseOnSynapseRow> Columns;
-	typedef halco::hicann_dls::vx::SynramOnDLS Synram;
+	typedef std::vector<halco::hicann_dls::vx::v1::SynapseOnSynapseRow> Columns;
+	typedef halco::hicann_dls::vx::v1::SynramOnDLS Synram;
 
 	/**
 	 * Construct CADCMembraneReadoutView with specified size.

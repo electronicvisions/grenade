@@ -2,9 +2,9 @@
 #include <boost/hana/adapt_struct.hpp>
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/chip.h"
-#include "halco/hicann-dls/vx/routing_crossbar.h"
-#include "halco/hicann-dls/vx/synapse_driver.h"
+#include "halco/hicann-dls/vx/v1/chip.h"
+#include "halco/hicann-dls/vx/v1/routing_crossbar.h"
+#include "halco/hicann-dls/vx/v1/synapse_driver.h"
 #include "haldls/vx/v1/padi.h"
 #include "haldls/vx/v1/routing_crossbar.h"
 #include "haldls/vx/v1/synapse_driver.h"
@@ -28,7 +28,7 @@ public:
 
 	typedef halco::common::typed_array<
 	    haldls::vx::v1::SynapseDriverConfig,
-	    halco::hicann_dls::vx::SynapseDriverOnSynapseDriverBlock>
+	    halco::hicann_dls::vx::v1::SynapseDriverOnSynapseDriverBlock>
 	    _synapse_driver_block_type GENPYBIND(opaque);
 	/** Synapse driver block. TODO: should be lola container. */
 	_synapse_driver_block_type synapse_driver_block;
@@ -51,7 +51,7 @@ public:
 	ChipConfig() SYMBOL_VISIBLE;
 
 	typedef halco::common::
-	    typed_array<grenade::vx::HemisphereConfig, halco::hicann_dls::vx::HemisphereOnDLS>
+	    typed_array<grenade::vx::HemisphereConfig, halco::hicann_dls::vx::v1::HemisphereOnDLS>
 	        _hemispheres_type GENPYBIND(opaque);
 
 	/** HemisphereConfig configuration. */

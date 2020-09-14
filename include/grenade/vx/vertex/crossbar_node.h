@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/routing_crossbar.h"
+#include "halco/hicann-dls/vx/v1/routing_crossbar.h"
 #include "haldls/vx/v1/routing_crossbar.h"
 #include "hate/visibility.h"
 

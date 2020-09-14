@@ -67,7 +67,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 	m_batch_entries.resize(batch_size);
 
 	for (auto& e : m_batch_entries) {
-		for (auto const h : halco::common::iter_all<halco::hicann_dls::vx::HemisphereOnDLS>()) {
+		for (auto const h : halco::common::iter_all<halco::hicann_dls::vx::v1::HemisphereOnDLS>()) {
 			// TODO: remove once HXv2 present
 			e.m_synapse_labels[h].values = m_config->hemispheres[h].synapse_matrix.labels;
 		}
@@ -167,9 +167,9 @@ void ExecutionInstanceBuilder::process(
 	    m_config->hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
-	    data.get_row_modes()[halco::hicann_dls::vx::SynapseRowOnSynapseDriver::top]);
+	    data.get_row_modes()[halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
-	    data.get_row_modes()[halco::hicann_dls::vx::SynapseRowOnSynapseDriver::bottom]);
+	    data.get_row_modes()[halco::hicann_dls::vx::v1::SynapseRowOnSynapseDriver::bottom]);
 	synapse_driver_config.set_row_address_compare_mask(data.get_config());
 }
 
@@ -198,7 +198,7 @@ void ExecutionInstanceBuilder::process(
 {
 	using namespace lola::vx::v1;
 	using namespace haldls::vx::v1;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 	using namespace halco::common;
 	auto const& vertex_map = m_graph.get_vertex_property_map();
 	if (data.output().type == ConnectionType::Int8) {
@@ -352,7 +352,7 @@ void ExecutionInstanceBuilder::process(
 	auto const hemisphere = data.get_synram().toHemisphereOnDLS();
 
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 	using namespace lola::vx::v1;
 	using namespace haldls::vx::v1;
 	if (!m_postprocessing) { // pre-hw-run processing
@@ -389,7 +389,7 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 	using namespace haldls::vx::v1;
 	// TODO: This reset does not really belong here / how do we say when and whether it should
 	// be triggered?
@@ -558,7 +558,7 @@ DataMap ExecutionInstanceBuilder::post_process()
 stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 	using namespace haldls::vx::v1;
 	using namespace stadls::vx::v1;
 	using namespace lola::vx::v1;
@@ -688,9 +688,9 @@ stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 		// wait sufficient amount of time (30us) before baseline reads for membrane to settle
 		if (!builder.empty()) {
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v1::Timer());
+			builder.write(halco::hicann_dls::vx::v1::TimerOnDLS(), haldls::vx::v1::Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::TimerOnDLS(),
+			    halco::hicann_dls::vx::v1::TimerOnDLS(),
 			    haldls::vx::v1::Timer::Value(
 			        30 * haldls::vx::v1::Timer::Value::fpga_clock_cycles_per_us));
 		}
@@ -703,9 +703,9 @@ stadls::vx::v1::PlaybackProgram ExecutionInstanceBuilder::generate()
 		builder.merge_back(builder_input.at(b));
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v1::Timer());
+			builder.write(halco::hicann_dls::vx::v1::TimerOnDLS(), haldls::vx::v1::Timer());
 			builder.block_until(
-			    halco::hicann_dls::vx::TimerOnDLS(),
+			    halco::hicann_dls::vx::v1::TimerOnDLS(),
 			    haldls::vx::v1::Timer::Value(
 			        2 * haldls::vx::v1::Timer::Value::fpga_clock_cycles_per_us));
 		}

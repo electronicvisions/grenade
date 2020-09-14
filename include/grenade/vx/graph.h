@@ -14,16 +14,12 @@
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex.h"
 #include "halco/common/typed_array.h"
+#include "halco/hicann-dls/vx/v1/chip.h"
 #include "hate/visibility.h"
 
 namespace log4cxx {
 class Logger;
 } // namespace log4cxx
-
-namespace halco::hicann_dls::vx {
-struct DLSGlobal;
-struct HemisphereOnDLS;
-} // namespace halco::hicann_dls::vx
 
 namespace grenade::vx {
 
@@ -129,7 +125,7 @@ public:
 
 	typedef std::map<
 	    coordinate::ExecutionIndex,
-	    std::map<halco::hicann_dls::vx::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
+	    std::map<halco::hicann_dls::vx::v1::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
 	    ordered_vertices_type;
 
 	/**

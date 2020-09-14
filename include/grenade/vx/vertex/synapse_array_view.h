@@ -18,9 +18,9 @@ struct SynapseArrayView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::SynapseRowOnSynram> Rows;
-	typedef halco::hicann_dls::vx::SynramOnDLS Synram;
-	typedef std::vector<halco::hicann_dls::vx::SynapseOnSynapseRow> Columns;
+	typedef std::vector<halco::hicann_dls::vx::v1::SynapseRowOnSynram> Rows;
+	typedef halco::hicann_dls::vx::v1::SynramOnDLS Synram;
+	typedef std::vector<halco::hicann_dls::vx::v1::SynapseOnSynapseRow> Columns;
 	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Label>> Labels;
 	typedef std::vector<std::vector<lola::vx::v1::SynapseMatrix::Weight>> Weights;
 

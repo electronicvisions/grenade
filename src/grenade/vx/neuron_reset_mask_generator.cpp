@@ -10,7 +10,7 @@ stadls::vx::v1::PlaybackGeneratorReturn<NeuronResetMaskGenerator::Result>
 NeuronResetMaskGenerator::generate() const
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 	using namespace haldls::vx::v1;
 	using namespace stadls::vx::v1;
 	using namespace lola::vx::v1;

@@ -4,7 +4,7 @@
 #include "stadls/vx/v1/playback_program_builder.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx;
+using namespace halco::hicann_dls::vx::v1;
 using namespace haldls::vx::v1;
 using namespace stadls::vx::v1;
 using namespace lola::vx::v1;

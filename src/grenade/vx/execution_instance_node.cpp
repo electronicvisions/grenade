@@ -1,7 +1,7 @@
 #include "grenade/vx/execution_instance_node.h"
 
 #include <log4cxx/logger.h>
-#include "halco/hicann-dls/vx/coordinates.h"
+#include "halco/hicann-dls/vx/v1/coordinates.h"
 #include "hate/timer.h"
 #include "stadls/vx/v1/playback_program_builder.h"
 #include "stadls/vx/v1/run.h"
@@ -22,7 +22,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 {
 	using namespace stadls::vx::v1;
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v1;
 
 	hate::Timer const preprocess_timer;
 	builder.pre_process();

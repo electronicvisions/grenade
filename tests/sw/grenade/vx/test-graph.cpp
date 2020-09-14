@@ -10,8 +10,9 @@
 #include "grenade/vx/vertex/external_input.h"
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
+#include "halco/hicann-dls/vx/v1/event.h"
 
-using namespace halco::hicann_dls::vx;
+using namespace halco::hicann_dls::vx::v1;
 using namespace grenade::vx;
 using namespace grenade::vx::coordinate;
 using namespace grenade::vx::vertex;
