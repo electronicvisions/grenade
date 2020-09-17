@@ -46,38 +46,17 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_input_list(input_list),
     m_data_output(data_output),
     m_local_external_data(),
-    m_config(chip_config),
+    m_config_builder(graph, execution_instance, chip_config),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output()
 {
-	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
 	// check that input list provides all requested input for local graph
 	if (!has_complete_input_list()) {
 		throw std::runtime_error("Graph requests unprovided input.");
 	}
 
 	m_ticket_requests.fill(false);
-
-	/** Silence everything which is not set in the graph. */
-	for (auto& node : m_config.crossbar_nodes) {
-		node = haldls::vx::v2::CrossbarNode::drop_all;
-	}
-	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
-			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
-		}
-	}
-	{
-		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
-		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-			m_config.hemispheres[hemisphere].synapse_matrix = *new_matrix;
-		}
-	}
 
 	m_postprocessing = false;
 	size_t const batch_size = m_input_list.batch_size();
@@ -132,65 +111,27 @@ bool ExecutionInstanceBuilder::inputs_available(Graph::vertex_descriptor const d
 	});
 }
 
+template <typename T>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, T const& /* data */)
+{
+	// Specialize for types which are not empty
+}
+
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayView const& data)
+    Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
-	auto& config = m_config;
-	auto const& columns = data.get_columns();
-	auto const synram = data.get_synram();
-	auto const hemisphere = synram.toHemisphereOnDLS();
-	for (auto const& var : boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
-		auto const& weights = boost::get<0>(var);
-		auto const& labels = boost::get<1>(var);
-		auto const& row = boost::get<2>(var);
-		auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
-		auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
-		for (size_t index = 0; index < columns.size(); ++index) {
-			auto const syn_column = columns[index];
-			weight_row[syn_column] = weights[index];
-			label_row[syn_column] = labels[index];
-		}
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v2;
+	size_t i = 0;
+	auto const& enable_resets = data.get_enable_resets();
+	for (auto const column : data.get_columns()) {
+		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
+		m_neuron_resets.enable_resets[neuron_reset] = enable_resets.at(i);
+		i++;
 	}
 }
-
-template <>
-void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
-{
-	auto& synapse_driver_config =
-	    m_config.hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
-	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
-	synapse_driver_config.set_row_mode_top(
-	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
-	synapse_driver_config.set_row_mode_bottom(
-	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
-	synapse_driver_config.set_row_address_compare_mask(data.get_config());
-}
-
-template <>
-void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::PADIBus const& data)
-{
-	auto const bus = data.get_coordinate();
-	auto& config =
-	    m_config.hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()].common_padi_bus_config;
-	auto enable_config = config.get_enable_spl1();
-	enable_config[bus.toPADIBusOnPADIBusBlock()] = true;
-	config.set_enable_spl1(enable_config);
-}
-
-template <>
-void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::CrossbarNode const& data)
-{
-	m_config.crossbar_nodes[data.get_coordinate()] = data.get_config();
-}
-
-template <>
-void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::CrossbarL2Output const&)
-{}
 
 template <>
 void ExecutionInstanceBuilder::process(
@@ -309,27 +250,6 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
-{
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	size_t i = 0;
-	auto const& enable_resets = data.get_enable_resets();
-	for (auto const column : data.get_columns()) {
-		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
-		m_neuron_resets.enable_resets[neuron_reset] = enable_resets.at(i);
-		i++;
-	}
-	// TODO: once we have neuron configuration, it should be placed here
-}
-
-template <>
-void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /*vertex*/, vertex::NeuronEventOutputView const& /* data */)
-{}
-
-template <>
-void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
 {
 	if (data.output().type == ConnectionType::DataOutputInt8) {
@@ -429,6 +349,7 @@ void ExecutionInstanceBuilder::pre_process()
 			m_post_vertices.push_back(vertex);
 		}
 	}
+	m_config_builder.pre_process();
 }
 
 IODataMap ExecutionInstanceBuilder::post_process()
@@ -513,17 +434,16 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
-	PPUMemoryBlock ppu_program;
+	auto [config_builder, ppu_symbols] = m_config_builder.generate(enable_ppu);
+
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_result_coord;
 	PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
 	if (enable_ppu) {
-		PPUElfFile ppu_elf_file(get_program_path(ppu_program_name));
-		ppu_program = ppu_elf_file.read_program();
-		auto const ppu_symbols = ppu_elf_file.read_symbols();
-		ppu_status_coord = ppu_symbols.at("status").coordinate.toMin();
-		ppu_result_coord = ppu_symbols.at("cadc_result").coordinate;
-		ppu_neuron_reset_mask_coord = ppu_symbols.at("neuron_reset_mask").coordinate;
+		assert(ppu_symbols);
+		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
+		ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
 	}
 
 	std::vector<PlaybackProgramBuilder> builders;
@@ -541,41 +461,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		return m_chunked_program;
 	}
 
-	// write static configuration
-	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
-		builder.write(SynramOnDLS(hemisphere), m_config.hemispheres[hemisphere].synapse_matrix);
-		for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			builder.write(
-			    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
-			    m_config.hemispheres[hemisphere].synapse_driver_block[synapse_driver]);
-		}
-		builder.write(
-		    hemisphere.toCommonPADIBusConfigOnDLS(),
-		    m_config.hemispheres[hemisphere].common_padi_bus_config);
-	}
-	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
-		builder.write(coord, m_config.crossbar_nodes[coord]);
-	}
-
-	if (enable_ppu) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			// bring PPU in reset state
-			PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(false);
-			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-
-			// write PPU program
-			PPUMemoryBlockOnDLS coord(
-			    PPUMemoryBlockOnPPU(
-			        PPUMemoryWordOnPPU(), PPUMemoryWordOnPPU(ppu_program.get_words().size() - 1)),
-			    ppu);
-			builder.write(coord, ppu_program);
-
-			// bring PPU in running state
-			ctrl.set_inhibit_reset(true);
-			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-		}
-	}
+	builder.merge_back(config_builder);
 
 	// timing-uncritical initial setup
 	builders.push_back(std::move(builder));

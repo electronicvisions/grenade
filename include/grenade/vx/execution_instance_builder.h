@@ -6,6 +6,7 @@
 
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/execution_instance_config_builder.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/neuron_reset_mask_generator.h"
@@ -98,7 +99,7 @@ private:
 
 	ConstantReferenceIODataMap m_local_external_data;
 
-	ChipConfig m_config;
+	ExecutionInstanceConfigBuilder m_config_builder;
 
 	stadls::vx::v2::PlaybackProgramBuilder m_builder_epilogue;
 	stadls::vx::v2::PlaybackProgramBuilder m_builder_prologue;
