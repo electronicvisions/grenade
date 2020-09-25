@@ -80,6 +80,9 @@ public:
 	    ChipConfig const& config,
 	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
 
+	size_t input_size() const SYMBOL_VISIBLE;
+	size_t output_size() const SYMBOL_VISIBLE;
+
 private:
 	FRIEND_TEST(::ComputeSingleMAC, get_spike_label);
 	FRIEND_TEST(::ComputeSingleMAC, generate_input_events);
@@ -132,9 +135,6 @@ private:
 	Weights m_weights{};
 
 	void build_graph() SYMBOL_VISIBLE;
-
-	size_t input_size() const;
-	size_t output_size() const;
 
 	size_t m_num_sends{};
 	haldls::vx::v2::Timer::Value m_wait_between_events{};

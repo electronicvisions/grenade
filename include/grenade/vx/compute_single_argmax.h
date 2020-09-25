@@ -40,6 +40,9 @@ public:
 	    ChipConfig const& config,
 	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
 
+	size_t input_size() const SYMBOL_VISIBLE;
+	size_t output_size() const SYMBOL_VISIBLE;
+
 private:
 	Graph m_graph;
 	Graph::vertex_descriptor m_input_vertex{};

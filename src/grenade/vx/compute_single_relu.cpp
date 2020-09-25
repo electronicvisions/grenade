@@ -49,10 +49,7 @@ std::vector<std::vector<Int8>> ComputeSingleReLU::run(
 		}
 	}
 
-	if (batch_entry_size !=
-	    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
-	        .output()
-	        .size) {
+	if (batch_entry_size != input_size()) {
 		throw std::runtime_error("Provided inputs size does not match ReLU input size.");
 	}
 
@@ -62,6 +59,18 @@ std::vector<std::vector<Int8>> ComputeSingleReLU::run(
 	auto const output_map = JITGraphExecutor::run(m_graph, input_map, connections, configs);
 
 	return output_map.int8.at(m_output_vertex);
+}
+
+size_t ComputeSingleReLU::input_size() const
+{
+	return std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
+	    .output()
+	    .size;
+}
+
+size_t ComputeSingleReLU::output_size() const
+{
+	return input_size();
 }
 
 template <typename Archive>

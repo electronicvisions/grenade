@@ -50,10 +50,7 @@ std::vector<std::vector<UInt32>> ComputeSingleArgMax::run(
 		}
 	}
 
-	if (batch_entry_size !=
-	    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
-	        .output()
-	        .size) {
+	if (batch_entry_size != input_size()) {
 		throw std::runtime_error("Provided inputs size does not match ArgMax input size.");
 	}
 
@@ -63,6 +60,18 @@ std::vector<std::vector<UInt32>> ComputeSingleArgMax::run(
 	auto const output_map = JITGraphExecutor::run(m_graph, input_map, connections, configs);
 
 	return output_map.uint32.at(m_output_vertex);
+}
+
+size_t ComputeSingleArgMax::input_size() const
+{
+	return std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
+	    .output()
+	    .size;
+}
+
+size_t ComputeSingleArgMax::output_size() const
+{
+	return 1;
 }
 
 template <typename Archive>

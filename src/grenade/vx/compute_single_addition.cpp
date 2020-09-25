@@ -33,6 +33,16 @@ ComputeSingleAddition::ComputeSingleAddition(std::vector<Int8> const& other) :
 	m_output_vertex = m_graph.add(vertex::DataOutput(ConnectionType::Int8, size), instance, {va});
 }
 
+size_t ComputeSingleAddition::input_size() const
+{
+	return m_other.size();
+}
+
+size_t ComputeSingleAddition::output_size() const
+{
+	return input_size();
+}
+
 std::vector<std::vector<Int8>> ComputeSingleAddition::run(
     std::vector<std::vector<Int8>> const& inputs,
     ChipConfig const& config,
