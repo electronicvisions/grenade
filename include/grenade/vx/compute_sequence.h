@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/cerealization.h"
+#include "grenade/vx/compute_single_addition.h"
 #include "grenade/vx/compute_single_argmax.h"
 #include "grenade/vx/compute_single_converting_relu.h"
 #include "grenade/vx/compute_single_mac.h"
@@ -21,6 +22,7 @@ struct ChipConfig;
 struct ComputeSequence
 {
 	typedef std::variant<
+	    ComputeSingleAddition,
 	    ComputeSingleArgMax,
 	    ComputeSingleMAC,
 	    ComputeSingleReLU,
