@@ -2,6 +2,7 @@
 #include "grenade/cerealization.h"
 #include "grenade/vx/compute_single_addition.h"
 #include "grenade/vx/compute_single_argmax.h"
+#include "grenade/vx/compute_single_conv1d.h"
 #include "grenade/vx/compute_single_converting_relu.h"
 #include "grenade/vx/compute_single_mac.h"
 #include "grenade/vx/compute_single_relu.h"
@@ -24,6 +25,7 @@ struct ComputeSequence
 	typedef std::variant<
 	    ComputeSingleAddition,
 	    ComputeSingleArgMax,
+	    ComputeSingleConv1d,
 	    ComputeSingleMAC,
 	    ComputeSingleReLU,
 	    ComputeSingleConvertingReLU>
