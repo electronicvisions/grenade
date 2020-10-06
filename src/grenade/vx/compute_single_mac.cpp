@@ -370,7 +370,9 @@ IODataMap ComputeSingleMAC::generate_input_events(
 }
 
 std::vector<std::vector<Int8>> ComputeSingleMAC::run(
-    Activations const& inputs, ChipConfig const& config, hxcomm::vx::ConnectionVariant& connection)
+    Activations const& inputs,
+    ChipConfig const& config,
+    hxcomm::vx::ConnectionVariant& connection) const
 {
 	using namespace halco::hicann_dls::vx::v2;
 	auto logger = log4cxx::Logger::getLogger("grenade.ComputeSingleMAC");

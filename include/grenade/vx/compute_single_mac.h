@@ -64,7 +64,7 @@ public:
 	std::vector<std::vector<Int8>> run(
 	    Activations const& inputs,
 	    ChipConfig const& config,
-	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
+	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
 
 private:
 	FRIEND_TEST(::ComputeSingleMAC, get_spike_label);
