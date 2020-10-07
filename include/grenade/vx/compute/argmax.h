@@ -13,19 +13,22 @@ namespace grenade::vx {
 
 class ChipConfig;
 
+namespace compute {
+
 /**
- * Compute an addition of a constant to given data batches of type Int8.
+ * Compute a argmax operation.
+ * The returned index type is 32bit unsigned integer.
  */
-class ComputeSingleAddition
+class ArgMax
 {
 public:
-	ComputeSingleAddition() = default;
+	ArgMax() = default;
 
 	/**
-	 * Create single Addition compute graph wrapper.
-	 * @param other Value to add to given data.
+	 * Create single ArgMax compute graph wrapper.
+	 * @param size Size of operation.
 	 */
-	ComputeSingleAddition(std::vector<Int8> const& other) SYMBOL_VISIBLE;
+	ArgMax(size_t size) SYMBOL_VISIBLE;
 
 	/**
 	 * Run given operation.
@@ -34,7 +37,7 @@ public:
 	 * @param connection Connection backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<Int8>> run(
+	std::vector<std::vector<UInt32>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    ChipConfig const& config,
 	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
@@ -43,15 +46,15 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	Graph m_graph{};
+	Graph m_graph;
 	Graph::vertex_descriptor m_input_vertex{};
-	Graph::vertex_descriptor m_other_vertex{};
 	Graph::vertex_descriptor m_output_vertex{};
-	std::vector<Int8> m_other{};
 
 	friend class cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };
+
+} // namespace compute
 
 } // namespace grenade::vx

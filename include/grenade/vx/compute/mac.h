@@ -17,19 +17,21 @@ namespace cereal {
 class access;
 } // namespace cereal
 
-class ComputeSingleMAC_get_spike_label_Test;
-class ComputeSingleMAC_generate_input_events_Test;
+class MAC_get_spike_label_Test;
+class MAC_generate_input_events_Test;
 
 namespace grenade::vx {
 
 class ChipConfig;
+
+namespace compute {
 
 /**
  * Compute a multiply-accumulate operation with signed weights.
  * Neurons and synapse rows are filled monotonously.
  * If more synapses are needed than fit on a single chip sequential unrolling is used.
  */
-class ComputeSingleMAC
+class MAC
 {
 public:
 	/**
@@ -52,7 +54,7 @@ public:
 	/** Activations with batch as outer dimension and weight row size as inner dimension. */
 	typedef std::vector<std::vector<UInt5>> Activations;
 
-	ComputeSingleMAC() = default;
+	MAC() = default;
 
 	/**
 	 * Create single MAC compute graph wrapper.
@@ -62,8 +64,7 @@ public:
 	 * @param enable_loopback Enable loopback of events with statistic analysis
 	 */
 	template <typename WeightsT>
-	ComputeSingleMAC(
-	    WeightsT&& weights,
+	MAC(WeightsT&& weights,
 	    size_t num_sends = 1,
 	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
 	    bool enable_loopback = true);
@@ -84,8 +85,8 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	FRIEND_TEST(::ComputeSingleMAC, get_spike_label);
-	FRIEND_TEST(::ComputeSingleMAC, generate_input_events);
+	FRIEND_TEST(::MAC, get_spike_label);
+	FRIEND_TEST(::MAC, generate_input_events);
 
 	/**
 	 * Get spike label value from location and activation value.
@@ -144,6 +145,8 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
+} // namespace compute
+
 } // namespace grenade::vx
 
-#include "grenade/vx/compute_single_mac.tcc"
+#include "grenade/vx/compute/mac.tcc"

@@ -2,7 +2,7 @@
 #include <vector>
 #include <gtest/gtest_prod.h>
 
-#include "grenade/vx/compute_single_mac.h"
+#include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/timer.h"
 #include "hxcomm/vx/connection_variant.h"
@@ -15,15 +15,17 @@ namespace grenade::vx {
 
 class ChipConfig;
 
+namespace compute {
+
 /**
  * Compute a multiply-accumulate operation with signed weights.
  * Neurons and synapse rows are filled monotonously.
  * If more synapses are needed than fit on a single chip sequential unrolling is used.
  */
-class ComputeSingleConv1d
+class Conv1d
 {
 public:
-	typedef ComputeSingleMAC::Weight Weight;
+	typedef MAC::Weight Weight;
 
 	/** Weights of shape (out_channels, in_channels, size) */
 	typedef std::vector<std::vector<std::vector<Weight>>> Weights;
@@ -31,7 +33,7 @@ public:
 	 * dimension. */
 	typedef std::vector<std::vector<UInt5>> Activations;
 
-	ComputeSingleConv1d() = default;
+	Conv1d() = default;
 
 	/**
 	 * Create single Conv1d compute graph wrapper.
@@ -43,7 +45,7 @@ public:
 	 * @param enable_loopback Enable loopback of events with statistic analysis
 	 */
 	template <typename WeightsT>
-	ComputeSingleConv1d(
+	Conv1d(
 	    WeightsT&& weights,
 	    size_t input_size,
 	    size_t stride,
@@ -77,7 +79,7 @@ private:
 	size_t m_stride{};
 	Graph m_graph{};
 
-	ComputeSingleMAC m_mac{};
+	MAC m_mac{};
 
 	size_t m_num_sends{};
 	haldls::vx::v2::Timer::Value m_wait_between_events{};
@@ -87,6 +89,8 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
+} // namespace compute
+
 } // namespace grenade::vx
 
-#include "grenade/vx/compute_single_conv1d.tcc"
+#include "grenade/vx/compute/conv1d.tcc"

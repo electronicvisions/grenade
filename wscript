@@ -79,7 +79,7 @@ def build(bld):
     bld(
         target = 'grenade_hwtest_vx',
         features = 'gtest cxx cxxprogram pyembed',
-        source = bld.path.ant_glob('tests/hw/grenade/vx/test-*.cpp'),
+        source = bld.path.ant_glob('tests/hw/grenade/vx/**/test-*.cpp'),
         use = ['grenade_vx', 'stadls_vx_v2', 'GTEST', 'haldls_vx_v2', 'lola_vx_v2'],
         install_path = '${PREFIX}/bin',
         skip_run = not bld.env.DLSvx_HARDWARE_AVAILABLE

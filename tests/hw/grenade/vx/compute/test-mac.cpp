@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/compute_single_mac.h"
+#include "grenade/vx/compute/mac.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -19,7 +19,7 @@ using namespace halco::hicann_dls::vx::v2;
 using namespace stadls::vx::v2;
 using namespace lola::vx::v2;
 
-TEST(ComputeSingleMAC, Single)
+TEST(MAC, Single)
 {
 	logger_default_config(log4cxx::Level::getTrace());
 
@@ -40,15 +40,15 @@ TEST(ComputeSingleMAC, Single)
 		inputs[i] = grenade::vx::UInt5(i);
 	}
 
-	grenade::vx::ComputeSingleMAC::Weights weights{
-	    {grenade::vx::ComputeSingleMAC::Weight(0)}, {grenade::vx::ComputeSingleMAC::Weight(0)},
-	    {grenade::vx::ComputeSingleMAC::Weight(0)}, {grenade::vx::ComputeSingleMAC::Weight(0)},
-	    {grenade::vx::ComputeSingleMAC::Weight(0)},
+	grenade::vx::compute::MAC::Weights weights{
+	    {grenade::vx::compute::MAC::Weight(0)}, {grenade::vx::compute::MAC::Weight(0)},
+	    {grenade::vx::compute::MAC::Weight(0)}, {grenade::vx::compute::MAC::Weight(0)},
+	    {grenade::vx::compute::MAC::Weight(0)},
 	};
 
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 
-	grenade::vx::ComputeSingleMAC mac(weights);
+	grenade::vx::compute::MAC mac(weights);
 
 	auto const res = mac.run({inputs}, *chip, connection);
 	EXPECT_EQ(res.size(), 1);

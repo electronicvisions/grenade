@@ -1,7 +1,7 @@
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
 template <typename WeightsT>
-ComputeSingleConv1d::ComputeSingleConv1d(
+Conv1d::Conv1d(
     WeightsT&& weights,
     size_t input_size,
     size_t stride,
@@ -17,4 +17,4 @@ ComputeSingleConv1d::ComputeSingleConv1d(
 	build_mac(std::forward<Weights>(weights));
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute

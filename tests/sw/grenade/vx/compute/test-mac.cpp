@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/compute_single_mac.h"
+#include "grenade/vx/compute/mac.h"
 
 #include "grenade/vx/io_data_map.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
@@ -9,7 +9,7 @@
 
 using namespace halco::hicann_dls::vx::v2;
 
-TEST(ComputeSingleMAC, get_spike_label)
+TEST(MAC, get_spike_label)
 {
 	/**
 	 * The label is constituted by
@@ -28,7 +28,7 @@ TEST(ComputeSingleMAC, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
+		auto const label = grenade::vx::compute::MAC::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
 		EXPECT_EQ(label->value(), ((0 << 13) | 1 | ((8 % 4) << 14) | ((8 / 4) << 6)));
 	}
@@ -37,7 +37,7 @@ TEST(ComputeSingleMAC, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::bottom);
 		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
+		auto const label = grenade::vx::compute::MAC::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
 		EXPECT_EQ(label->value(), ((1 << 13) | 1 | ((8 % 4) << 14) | ((8 / 4) << 6)));
 	}
@@ -46,7 +46,7 @@ TEST(ComputeSingleMAC, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::UInt5 value(13);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
+		auto const label = grenade::vx::compute::MAC::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
 		EXPECT_EQ(label->value(), ((0 << 13) | (32 - 13) | ((24 % 4) << 14) | ((24 / 4) << 6)));
 	}
@@ -55,19 +55,19 @@ TEST(ComputeSingleMAC, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::UInt5 value(0);
 
-		auto const label = grenade::vx::ComputeSingleMAC::get_spike_label(drv, value);
+		auto const label = grenade::vx::compute::MAC::get_spike_label(drv, value);
 		EXPECT_FALSE(static_cast<bool>(label));
 	}
 }
 
-TEST(ComputeSingleMAC, generate_input_events)
+TEST(MAC, generate_input_events)
 {
-	grenade::vx::ComputeSingleMAC::SynramHandle synram_handle_top{0, 10, 0, HemisphereOnDLS(0)};
-	grenade::vx::ComputeSingleMAC::SynramHandle synram_handle_bottom{0, 13, 10, HemisphereOnDLS(1)};
-	std::vector<grenade::vx::ComputeSingleMAC::SynramHandle> synram_handles = {
-	    synram_handle_top, synram_handle_bottom};
+	grenade::vx::compute::MAC::SynramHandle synram_handle_top{0, 10, 0, HemisphereOnDLS(0)};
+	grenade::vx::compute::MAC::SynramHandle synram_handle_bottom{0, 13, 10, HemisphereOnDLS(1)};
+	std::vector<grenade::vx::compute::MAC::SynramHandle> synram_handles = {synram_handle_top,
+	                                                                       synram_handle_bottom};
 
-	grenade::vx::ComputeSingleMAC::Activations activations(1);
+	grenade::vx::compute::MAC::Activations activations(1);
 	activations.at(0).resize(25);
 	for (size_t i = 0; i < activations.at(0).size(); ++i) {
 		activations.at(0).at(i) = grenade::vx::UInt5(i);
@@ -76,7 +76,7 @@ TEST(ComputeSingleMAC, generate_input_events)
 	size_t num_sends = 2;
 	haldls::vx::v2::Timer::Value wait_between_events(3);
 
-	auto const events = grenade::vx::ComputeSingleMAC::generate_input_events(
+	auto const events = grenade::vx::compute::MAC::generate_input_events(
 	    activations, synram_handles, num_sends, wait_between_events);
 
 	EXPECT_TRUE(events.int8.empty());

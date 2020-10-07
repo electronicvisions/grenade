@@ -11,22 +11,23 @@ class access;
 
 namespace grenade::vx {
 
-class ChipConfig;
+struct ChipConfig;
+
+namespace compute {
 
 /**
- * Compute a argmax operation.
- * The returned index type is 32bit unsigned integer.
+ * Compute a rectified linear unit operation.
  */
-class ComputeSingleArgMax
+class ReLU
 {
 public:
-	ComputeSingleArgMax() = default;
+	ReLU() = default;
 
 	/**
-	 * Create single ArgMax compute graph wrapper.
+	 * Create single ReLU compute graph wrapper.
 	 * @param size Size of operation.
 	 */
-	ComputeSingleArgMax(size_t size) SYMBOL_VISIBLE;
+	ReLU(size_t size) SYMBOL_VISIBLE;
 
 	/**
 	 * Run given operation.
@@ -35,7 +36,7 @@ public:
 	 * @param connection Connection backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<UInt32>> run(
+	std::vector<std::vector<Int8>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    ChipConfig const& config,
 	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
@@ -44,7 +45,7 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	Graph m_graph;
+	Graph m_graph{};
 	Graph::vertex_descriptor m_input_vertex{};
 	Graph::vertex_descriptor m_output_vertex{};
 
@@ -52,5 +53,7 @@ private:
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };
+
+} // namespace compute
 
 } // namespace grenade::vx

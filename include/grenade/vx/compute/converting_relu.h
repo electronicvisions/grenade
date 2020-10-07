@@ -13,19 +13,23 @@ namespace grenade::vx {
 
 struct ChipConfig;
 
+namespace compute {
+
 /**
- * Compute a rectified linear unit operation.
+ * Compute a rectified linear unit operation converting from Int8 to UInt5.
  */
-class ComputeSingleReLU
+class ConvertingReLU
 {
 public:
-	ComputeSingleReLU() = default;
+	ConvertingReLU() = default;
 
 	/**
-	 * Create single ReLU compute graph wrapper.
-	 * @param size Size of operation.
+	 * Create single ConvertingReLU compute graph wrapper.
+	 * @param size Size of operation
+	 * @param shift Power-of-two (bitshift) scaling parameter before clamping, i.e. saturation to
+	 *        UInt5 value range
 	 */
-	ComputeSingleReLU(size_t size) SYMBOL_VISIBLE;
+	ConvertingReLU(size_t size, uint32_t shift) SYMBOL_VISIBLE;
 
 	/**
 	 * Run given operation.
@@ -34,7 +38,7 @@ public:
 	 * @param connection Connection backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<Int8>> run(
+	std::vector<std::vector<UInt5>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    ChipConfig const& config,
 	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
@@ -51,5 +55,7 @@ private:
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };
+
+} // namespace compute
 
 } // namespace grenade::vx

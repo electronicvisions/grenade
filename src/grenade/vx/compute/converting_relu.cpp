@@ -1,4 +1,4 @@
-#include "grenade/vx/compute_single_converting_relu.h"
+#include "grenade/vx/compute/converting_relu.h"
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
@@ -8,9 +8,9 @@
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
-ComputeSingleConvertingReLU::ComputeSingleConvertingReLU(size_t size, uint32_t shift) :
+ConvertingReLU::ConvertingReLU(size_t size, uint32_t shift) :
     m_graph(), m_input_vertex(), m_output_vertex()
 {
 	using namespace halco::hicann_dls::vx;
@@ -25,7 +25,7 @@ ComputeSingleConvertingReLU::ComputeSingleConvertingReLU(size_t size, uint32_t s
 	m_output_vertex = m_graph.add(vertex::DataOutput(ConnectionType::UInt5, size), instance, {v3});
 }
 
-std::vector<std::vector<UInt5>> ComputeSingleConvertingReLU::run(
+std::vector<std::vector<UInt5>> ConvertingReLU::run(
     std::vector<std::vector<Int8>> const& inputs,
     ChipConfig const& config,
     hxcomm::vx::ConnectionVariant& connection) const
@@ -62,27 +62,27 @@ std::vector<std::vector<UInt5>> ComputeSingleConvertingReLU::run(
 	return output_map.uint5.at(m_output_vertex);
 }
 
-size_t ComputeSingleConvertingReLU::input_size() const
+size_t ConvertingReLU::input_size() const
 {
 	return std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
 	    .output()
 	    .size;
 }
 
-size_t ComputeSingleConvertingReLU::output_size() const
+size_t ConvertingReLU::output_size() const
 {
 	return input_size();
 }
 
 template <typename Archive>
-void ComputeSingleConvertingReLU::serialize(Archive& ar, std::uint32_t const)
+void ConvertingReLU::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_graph);
 	ar(m_input_vertex);
 	ar(m_output_vertex);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute
 
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSingleConvertingReLU)
-CEREAL_CLASS_VERSION(grenade::vx::ComputeSingleConvertingReLU, 0)
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::ConvertingReLU)
+CEREAL_CLASS_VERSION(grenade::vx::compute::ConvertingReLU, 0)

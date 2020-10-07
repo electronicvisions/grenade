@@ -1,11 +1,11 @@
 #pragma once
 #include "grenade/cerealization.h"
-#include "grenade/vx/compute_single_addition.h"
-#include "grenade/vx/compute_single_argmax.h"
-#include "grenade/vx/compute_single_conv1d.h"
-#include "grenade/vx/compute_single_converting_relu.h"
-#include "grenade/vx/compute_single_mac.h"
-#include "grenade/vx/compute_single_relu.h"
+#include "grenade/vx/compute/addition.h"
+#include "grenade/vx/compute/argmax.h"
+#include "grenade/vx/compute/conv1d.h"
+#include "grenade/vx/compute/converting_relu.h"
+#include "grenade/vx/compute/mac.h"
+#include "grenade/vx/compute/relu.h"
 #include "grenade/vx/io_data_list.h"
 #include "hate/visibility.h"
 #include "hxcomm/vx/connection_variant.h"
@@ -20,20 +20,15 @@ namespace grenade::vx {
 
 struct ChipConfig;
 
-struct ComputeSequence
+namespace compute {
+
+struct Sequence
 {
-	typedef std::variant<
-	    ComputeSingleAddition,
-	    ComputeSingleArgMax,
-	    ComputeSingleConv1d,
-	    ComputeSingleMAC,
-	    ComputeSingleReLU,
-	    ComputeSingleConvertingReLU>
-	    Entry;
+	typedef std::variant<Addition, ArgMax, Conv1d, MAC, ReLU, ConvertingReLU> Entry;
 
 	std::list<Entry> data;
 
-	ComputeSequence() = default;
+	Sequence() = default;
 
 	IODataList::Entry run(
 	    IODataList::Entry const& input,
@@ -46,6 +41,8 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
+} // namespace compute
+
 } // namespace grenade::vx
 
-EXTERN_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSequence)
+EXTERN_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::Sequence)

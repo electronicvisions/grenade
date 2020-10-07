@@ -1,11 +1,11 @@
-#include "grenade/vx/compute_sequence.h"
+#include "grenade/vx/compute/sequence.h"
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
 #include <cereal/types/list.hpp>
 #include <cereal/types/variant.hpp>
 
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
 namespace detail {
 
@@ -27,7 +27,7 @@ using run_input_t = typename run_input<F>::type;
 
 } // namespace detail
 
-IODataList::Entry ComputeSequence::run(
+IODataList::Entry Sequence::run(
     IODataList::Entry const& input,
     ChipConfig const& config,
     hxcomm::vx::ConnectionVariant& connection)
@@ -49,12 +49,12 @@ IODataList::Entry ComputeSequence::run(
 }
 
 template <typename Archive>
-void ComputeSequence::serialize(Archive& ar, std::uint32_t const)
+void Sequence::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(data);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute
 
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSequence)
-CEREAL_CLASS_VERSION(grenade::vx::ComputeSequence, 0)
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::Sequence)
+CEREAL_CLASS_VERSION(grenade::vx::compute::Sequence, 0)

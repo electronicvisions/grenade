@@ -1,4 +1,4 @@
-#include "grenade/vx/compute_single_conv1d.h"
+#include "grenade/vx/compute/conv1d.h"
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
@@ -22,20 +22,20 @@
 
 #include <algorithm>
 
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
-size_t ComputeSingleConv1d::input_size() const
+size_t Conv1d::input_size() const
 {
 	return m_input_size;
 }
 
-size_t ComputeSingleConv1d::output_size() const
+size_t Conv1d::output_size() const
 {
 	size_t const num = (m_input_size - m_kernel_size) / m_stride + 1;
 	return m_out_channels * num;
 }
 
-void ComputeSingleConv1d::build_mac(Weights&& weights)
+void Conv1d::build_mac(Weights&& weights)
 {
 	// ensure weights shape
 	if (weights.empty()) {
@@ -59,7 +59,7 @@ void ComputeSingleConv1d::build_mac(Weights&& weights)
 	}
 
 	// generate Conv1d weight matrix
-	grenade::vx::ComputeSingleMAC::Weights mac_weights(m_in_channels * m_kernel_size);
+	grenade::vx::compute::MAC::Weights mac_weights(m_in_channels * m_kernel_size);
 	for (size_t i = 0; i < m_in_channels; ++i) {
 		for (size_t k = 0; k < m_kernel_size; ++k) {
 			auto& local = mac_weights.at(i * m_kernel_size + k);
@@ -70,11 +70,10 @@ void ComputeSingleConv1d::build_mac(Weights&& weights)
 		}
 	}
 
-	m_mac = ComputeSingleMAC(
-	    std::move(mac_weights), m_num_sends, m_wait_between_events, m_enable_loopback);
+	m_mac = MAC(std::move(mac_weights), m_num_sends, m_wait_between_events, m_enable_loopback);
 }
 
-std::vector<std::vector<Int8>> ComputeSingleConv1d::run(
+std::vector<std::vector<Int8>> Conv1d::run(
     Activations const& inputs,
     ChipConfig const& config,
     hxcomm::vx::ConnectionVariant& connection) const
@@ -94,7 +93,7 @@ std::vector<std::vector<Int8>> ComputeSingleConv1d::run(
 	}
 
 	size_t const num = (m_input_size - m_kernel_size) / m_stride + 1;
-	grenade::vx::ComputeSingleConv1d::Activations mac_inputs(inputs.size() * num);
+	grenade::vx::compute::Conv1d::Activations mac_inputs(inputs.size() * num);
 
 	for (size_t b = 0; b < inputs.size(); ++b) {
 		for (size_t n = 0; n < num; ++n) {
@@ -126,7 +125,7 @@ std::vector<std::vector<Int8>> ComputeSingleConv1d::run(
 }
 
 template <typename Archive>
-void ComputeSingleConv1d::serialize(Archive& ar, std::uint32_t const)
+void Conv1d::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_enable_loopback);
 	ar(m_input_size);
@@ -139,7 +138,7 @@ void ComputeSingleConv1d::serialize(Archive& ar, std::uint32_t const)
 	ar(m_wait_between_events);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute
 
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSingleConv1d)
-CEREAL_CLASS_VERSION(grenade::vx::ComputeSingleConv1d, 0)
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::Conv1d)
+CEREAL_CLASS_VERSION(grenade::vx::compute::Conv1d, 0)

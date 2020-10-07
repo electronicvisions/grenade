@@ -1,4 +1,4 @@
-#include "grenade/vx/compute_single_addition.h"
+#include "grenade/vx/compute/addition.h"
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
@@ -10,9 +10,9 @@
 #include "halco/common/cerealization_geometry.h"
 #include <cereal/types/vector.hpp>
 
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
-ComputeSingleAddition::ComputeSingleAddition(std::vector<Int8> const& other) :
+Addition::Addition(std::vector<Int8> const& other) :
     m_graph(), m_input_vertex(), m_other_vertex(), m_output_vertex(), m_other(other)
 {
 	using namespace halco::hicann_dls::vx;
@@ -33,17 +33,17 @@ ComputeSingleAddition::ComputeSingleAddition(std::vector<Int8> const& other) :
 	m_output_vertex = m_graph.add(vertex::DataOutput(ConnectionType::Int8, size), instance, {va});
 }
 
-size_t ComputeSingleAddition::input_size() const
+size_t Addition::input_size() const
 {
 	return m_other.size();
 }
 
-size_t ComputeSingleAddition::output_size() const
+size_t Addition::output_size() const
 {
 	return input_size();
 }
 
-std::vector<std::vector<Int8>> ComputeSingleAddition::run(
+std::vector<std::vector<Int8>> Addition::run(
     std::vector<std::vector<Int8>> const& inputs,
     ChipConfig const& config,
     hxcomm::vx::ConnectionVariant& connection) const
@@ -90,7 +90,7 @@ std::vector<std::vector<Int8>> ComputeSingleAddition::run(
 }
 
 template <typename Archive>
-void ComputeSingleAddition::serialize(Archive& ar, std::uint32_t const)
+void Addition::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_graph);
 	ar(m_input_vertex);
@@ -99,7 +99,7 @@ void ComputeSingleAddition::serialize(Archive& ar, std::uint32_t const)
 	ar(m_other);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute
 
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSingleAddition)
-CEREAL_CLASS_VERSION(grenade::vx::ComputeSingleAddition, 0)
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::Addition)
+CEREAL_CLASS_VERSION(grenade::vx::compute::Addition, 0)

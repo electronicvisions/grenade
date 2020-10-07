@@ -1,7 +1,7 @@
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
 template <typename WeightsT>
-ComputeSingleMAC::ComputeSingleMAC(
+MAC::MAC(
     WeightsT&& weights,
     size_t num_sends,
     haldls::vx::Timer::Value wait_between_events,
@@ -17,4 +17,4 @@ ComputeSingleMAC::ComputeSingleMAC(
 	build_graph();
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute

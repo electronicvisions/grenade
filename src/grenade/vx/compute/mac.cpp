@@ -1,4 +1,4 @@
-#include "grenade/vx/compute_single_mac.h"
+#include "grenade/vx/compute/mac.h"
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/config.h"
@@ -22,19 +22,19 @@
 
 #include <algorithm>
 
-namespace grenade::vx {
+namespace grenade::vx::compute {
 
-ComputeSingleMAC::Weight::UnsignedWeight ComputeSingleMAC::Weight::toExcitatory() const
+MAC::Weight::UnsignedWeight MAC::Weight::toExcitatory() const
 {
 	return UnsignedWeight(std::max(value(), static_cast<value_type>(0)));
 }
 
-ComputeSingleMAC::Weight::UnsignedWeight ComputeSingleMAC::Weight::toInhibitory() const
+MAC::Weight::UnsignedWeight MAC::Weight::toInhibitory() const
 {
 	return UnsignedWeight(-std::min(value(), static_cast<value_type>(0)));
 }
 
-Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
+Graph::vertex_descriptor MAC::insert_synram(
     Graph& graph,
     Weights&& weights,
     coordinate::ExecutionInstance const& instance,
@@ -135,7 +135,7 @@ Graph::vertex_descriptor ComputeSingleMAC::insert_synram(
 	return graph.add(data_output, instance, {v2});
 }
 
-void ComputeSingleMAC::build_graph()
+void MAC::build_graph()
 {
 	using namespace halco::hicann_dls::vx::v2;
 
@@ -232,12 +232,12 @@ void ComputeSingleMAC::build_graph()
 	}
 }
 
-size_t ComputeSingleMAC::input_size() const
+size_t MAC::input_size() const
 {
 	return m_weights.size();
 }
 
-size_t ComputeSingleMAC::output_size() const
+size_t MAC::output_size() const
 {
 	if (m_weights.size()) {
 		return m_weights.at(0).size();
@@ -245,7 +245,7 @@ size_t ComputeSingleMAC::output_size() const
 	return 0;
 }
 
-std::optional<haldls::vx::v2::SpikeLabel> ComputeSingleMAC::get_spike_label(
+std::optional<haldls::vx::v2::SpikeLabel> MAC::get_spike_label(
     halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver, UInt5 const value)
 {
 	if (value == 0) {
@@ -260,7 +260,7 @@ std::optional<haldls::vx::v2::SpikeLabel> ComputeSingleMAC::get_spike_label(
 	return haldls::vx::v2::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
-IODataMap ComputeSingleMAC::generate_input_events(
+IODataMap MAC::generate_input_events(
     Activations const& inputs,
     std::vector<SynramHandle> const& synram_handles,
     size_t const num_sends,
@@ -369,13 +369,13 @@ IODataMap ComputeSingleMAC::generate_input_events(
 	return data_map;
 }
 
-std::vector<std::vector<Int8>> ComputeSingleMAC::run(
+std::vector<std::vector<Int8>> MAC::run(
     Activations const& inputs,
     ChipConfig const& config,
     hxcomm::vx::ConnectionVariant& connection) const
 {
 	using namespace halco::hicann_dls::vx::v2;
-	auto logger = log4cxx::Logger::getLogger("grenade.ComputeSingleMAC");
+	auto logger = log4cxx::Logger::getLogger("grenade.MAC");
 
 	// Construct map of one connection to HW
 	JITGraphExecutor::Connections connections(
@@ -455,7 +455,7 @@ std::vector<std::vector<Int8>> ComputeSingleMAC::run(
 }
 
 template <typename Archive>
-void serialize(Archive& ar, ComputeSingleMAC::SynramHandle& handle)
+void serialize(Archive& ar, MAC::SynramHandle& handle)
 {
 	ar(handle.input_vertex);
 	ar(handle.input_size);
@@ -464,7 +464,7 @@ void serialize(Archive& ar, ComputeSingleMAC::SynramHandle& handle)
 }
 
 template <typename Archive>
-void ComputeSingleMAC::serialize(Archive& ar, std::uint32_t const)
+void MAC::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_enable_loopback);
 	ar(m_graph);
@@ -475,7 +475,7 @@ void ComputeSingleMAC::serialize(Archive& ar, std::uint32_t const)
 	ar(m_wait_between_events);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute
 
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::ComputeSingleMAC)
-CEREAL_CLASS_VERSION(grenade::vx::ComputeSingleMAC, 0)
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::MAC)
+CEREAL_CLASS_VERSION(grenade::vx::compute::MAC, 0)

@@ -11,23 +11,23 @@ class access;
 
 namespace grenade::vx {
 
-struct ChipConfig;
+class ChipConfig;
+
+namespace compute {
 
 /**
- * Compute a rectified linear unit operation converting from Int8 to UInt5.
+ * Compute an addition of a constant to given data batches of type Int8.
  */
-class ComputeSingleConvertingReLU
+class Addition
 {
 public:
-	ComputeSingleConvertingReLU() = default;
+	Addition() = default;
 
 	/**
-	 * Create single ConvertingReLU compute graph wrapper.
-	 * @param size Size of operation
-	 * @param shift Power-of-two (bitshift) scaling parameter before clamping, i.e. saturation to
-	 *        UInt5 value range
+	 * Create single Addition compute graph wrapper.
+	 * @param other Value to add to given data.
 	 */
-	ComputeSingleConvertingReLU(size_t size, uint32_t shift) SYMBOL_VISIBLE;
+	Addition(std::vector<Int8> const& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Run given operation.
@@ -36,7 +36,7 @@ public:
 	 * @param connection Connection backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<UInt5>> run(
+	std::vector<std::vector<Int8>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    ChipConfig const& config,
 	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
@@ -47,11 +47,15 @@ public:
 private:
 	Graph m_graph{};
 	Graph::vertex_descriptor m_input_vertex{};
+	Graph::vertex_descriptor m_other_vertex{};
 	Graph::vertex_descriptor m_output_vertex{};
+	std::vector<Int8> m_other{};
 
 	friend class cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };
+
+} // namespace compute
 
 } // namespace grenade::vx
