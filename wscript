@@ -53,7 +53,7 @@ def build(bld):
     bld(
         target = 'grenade_vx',
         features = 'cxx cxxshlib pyembed',
-        source = bld.path.ant_glob('src/grenade/vx/*.cpp'),
+        source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
         use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
         depends_on = ['grenade_ppu_base_vx'],
@@ -71,7 +71,7 @@ def build(bld):
     bld(
         target = 'grenade_swtest_vx',
         features = 'gtest cxx cxxprogram pyembed',
-        source = bld.path.ant_glob('tests/sw/grenade/vx/test-*.cpp'),
+        source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp'),
         use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc'],
         install_path = '${PREFIX}/bin',
     )
