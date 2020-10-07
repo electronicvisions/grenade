@@ -1,13 +1,13 @@
 #pragma once
+#include "grenade/vx/connection_type.h"
+#include "grenade/vx/port.h"
+#include "halco/hicann-dls/vx/v2/cadc.h"
+#include "hate/visibility.h"
 #include <array>
 #include <optional>
 #include <ostream>
 #include <stddef.h>
 #include <vector>
-#include "grenade/vx/connection_type.h"
-#include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v2/cadc.h"
-#include "hate/visibility.h"
 
 namespace cereal {
 class access;
@@ -73,4 +73,4 @@ private:
 
 } // grenade::vx
 
-#include "grenade/vx/vertex/cadc_readout.tcc"
+#include "grenade/vx/vertex/cadc_membrane_readout_view.tcc"

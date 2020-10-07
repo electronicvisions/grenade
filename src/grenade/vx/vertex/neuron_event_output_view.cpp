@@ -1,4 +1,4 @@
-#include "grenade/vx/vertex/neuron_event_output.h"
+#include "grenade/vx/vertex/neuron_event_output_view.h"
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/port_restriction.h"

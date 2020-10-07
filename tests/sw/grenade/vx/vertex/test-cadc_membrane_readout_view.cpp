@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/vertex/cadc_readout.h"
+#include "grenade/vx/vertex/cadc_membrane_readout_view.h"
 
 using namespace grenade::vx;
 using namespace grenade::vx::vertex;
