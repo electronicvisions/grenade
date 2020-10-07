@@ -21,7 +21,6 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/padi.h"
 #include "haldls/vx/v2/synapse_driver.h"
-#include "hate/history_wrapper.h"
 #include "hate/timer.h"
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/playback_program_builder.h"
