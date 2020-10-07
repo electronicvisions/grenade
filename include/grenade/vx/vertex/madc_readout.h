@@ -38,7 +38,7 @@ struct MADCReadoutView
 	 * @param coord Neuron to read out
 	 * @param config Source to read out at neuron
 	 */
-	explicit MADCReadoutView(Coord const& coord, Config const& config);
+	explicit MADCReadoutView(Coord const& coord, Config const& config) SYMBOL_VISIBLE;
 
 	Coord const& get_coord() const SYMBOL_VISIBLE;
 	Config const& get_config() const SYMBOL_VISIBLE;
