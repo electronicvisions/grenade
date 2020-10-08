@@ -9,7 +9,9 @@ namespace grenade::vx {
 PortRestriction::PortRestriction(size_t const min_in, size_t const max_in)
 {
 	if (min_in > max_in) {
-		throw std::runtime_error("PortRestriction supplied min > supplied max parameter.");
+		throw std::runtime_error(
+		    "PortRestriction supplied min(" + std::to_string(min_in) + ") > supplied max(" +
+		    std::to_string(max_in) + ") parameter.");
 	}
 	m_min = min_in;
 	m_max = max_in;
