@@ -1,33 +1,25 @@
 #include "grenade/vx/jit_graph_executor.h"
 
-#include <algorithm>
-#include <chrono>
-#include <future>
-#include <map>
-#include <mutex>
-#include <set>
-#include <sstream>
-#include <stdexcept>
-#include <vector>
-#include <boost/range/adaptor/map.hpp>
-#include <log4cxx/logger.h>
-#include <tbb/flow_graph.h>
-
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
-#include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/execution_instance_node.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
-#include "haldls/vx/v2/padi.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "haldls/vx/v2/jtag.h"
 #include "hate/timer.h"
-#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v2/playback_program.h"
 #include "stadls/vx/v2/playback_program_builder.h"
 #include "stadls/vx/v2/run.h"
+#include <chrono>
+#include <map>
+#include <mutex>
+#include <sstream>
+#include <stdexcept>
+#include <boost/range/adaptor/map.hpp>
+#include <log4cxx/logger.h>
+#include <tbb/flow_graph.h>
 
 namespace grenade::vx {
 
@@ -37,7 +29,6 @@ IODataMap JITGraphExecutor::run(
     Connections const& connections,
     ChipConfigs const& chip_configs)
 {
-	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
 	hate::Timer const timer;
 
@@ -58,16 +49,14 @@ IODataMap JITGraphExecutor::run(
 	// global data map
 	IODataMap output_activation_map;
 
-	std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::ConnectionTimeInfo>
-	    connection_time_info_begin;
+	std::map<DLSGlobal, hxcomm::ConnectionTimeInfo> connection_time_info_begin;
 	for (auto const [dls, connection] : connections) {
 		connection_time_info_begin.emplace(
 		    dls, std::visit([](auto const& c) { return c.get_time_info(); }, connection));
 	}
 
 	// connection mutex map
-	std::map<halco::hicann_dls::vx::DLSGlobal, std::mutex>
-	    continuous_chunked_program_execution_mutexes;
+	std::map<DLSGlobal, std::mutex> continuous_chunked_program_execution_mutexes;
 	for (auto const [dls, connection] : connections) {
 		continuous_chunked_program_execution_mutexes.emplace(
 		    std::piecewise_construct, std::make_tuple(dls), std::make_tuple());
