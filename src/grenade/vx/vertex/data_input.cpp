@@ -29,6 +29,14 @@ DataInput::DataInput(ConnectionType const output_type, size_t const size) :
 			m_output_type = output_type;
 			break;
 		}
+		case ConnectionType::TimedSpikeFromChipSequence: {
+			m_output_type = output_type;
+			if (m_size > 1) {
+				throw std::runtime_error(
+				    "DataInput only supports size(1) for TimedSpikeFromChipSequence.");
+			}
+			break;
+		}
 		default: {
 			throw std::runtime_error("Specified ConnectionType to DataInput not supported.");
 		}
@@ -50,6 +58,9 @@ std::array<Port, 1> DataInput::inputs() const
 			}
 			case ConnectionType::TimedSpikeSequence: {
 				return ConnectionType::DataTimedSpikeSequence;
+			}
+			case ConnectionType::TimedSpikeFromChipSequence: {
+				return ConnectionType::DataTimedSpikeFromChipSequence;
 			}
 			default: {
 				throw std::logic_error("Field m_output_type value of DataInput not supported.");

@@ -255,6 +255,13 @@ void ExecutionInstanceBuilder::process(
 		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
 
 		m_local_data.spike_events[vertex] = m_local_external_data.spike_events.at(in_vertex);
+	} else if (data.output().type == ConnectionType::TimedSpikeFromChipSequence) {
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
+
+		m_local_data.spike_event_output[vertex] =
+		    m_local_external_data.spike_event_output.at(in_vertex);
 	} else {
 		throw std::logic_error("DataInput output connection type processing not implemented.");
 	}
@@ -518,6 +525,13 @@ void ExecutionInstanceBuilder::process(
 		// check size match only for first because we know that the data map is valid
 		assert(!local_data.size() || (data.output().size == local_data.front().size()));
 		m_local_data_output.int8[vertex] = local_data;
+	} else if (data.inputs().front().type == ConnectionType::TimedSpikeSequence) {
+		// get in edge
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		auto const& local_data =
+		    m_local_data.spike_events.at(boost::source(in_edge, m_graph.get_graph()));
+		m_local_data_output.spike_events[vertex] = local_data;
 	} else if (data.inputs().front().type == ConnectionType::TimedSpikeFromChipSequence) {
 		// get in edge
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
