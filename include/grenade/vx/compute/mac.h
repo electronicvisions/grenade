@@ -17,9 +17,6 @@ namespace cereal {
 class access;
 } // namespace cereal
 
-class MAC_get_spike_label_Test;
-class MAC_generate_input_events_Test;
-
 namespace grenade::vx {
 
 class ChipConfig;
@@ -85,19 +82,6 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	FRIEND_TEST(::MAC, get_spike_label);
-	FRIEND_TEST(::MAC, generate_input_events);
-
-	/**
-	 * Get spike label value from location and activation value.
-	 * @param row Synapse driver to send to
-	 * @param value Activation value to send
-	 * @return SpikeLabel value if activation value is larger than zero
-	 */
-	static std::optional<haldls::vx::v2::SpikeLabel> get_spike_label(
-	    halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver,
-	    UInt5 const value) SYMBOL_VISIBLE;
-
 	/**
 	 * Insert a matrix multiplication operation on a synram.
 	 * @param graph Graph to insert into
@@ -119,14 +103,10 @@ private:
 		Graph::vertex_descriptor input_vertex;
 		size_t input_size;
 		size_t input_offset;
-		halco::hicann_dls::vx::v2::HemisphereOnDLS hemisphere;
 	};
 
 	static IODataMap generate_input_events(
-	    Activations const& inputs,
-	    std::vector<SynramHandle> const& synram_handles,
-	    size_t num_sends,
-	    haldls::vx::v2::Timer::Value wait_between_events) SYMBOL_VISIBLE;
+	    Activations const& inputs, std::vector<SynramHandle> const& synram_handles) SYMBOL_VISIBLE;
 
 	bool m_enable_loopback{false};
 	Graph m_graph{};

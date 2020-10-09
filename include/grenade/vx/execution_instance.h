@@ -23,6 +23,9 @@ struct ExecutionIndex : public halco::common::detail::BaseType<ExecutionIndex, s
 };
 
 
+struct ExecutionInstance;
+size_t hash_value(ExecutionInstance const& e) SYMBOL_VISIBLE;
+
 /**
  * Execution instance identifier.
  * An execution instance describes a unique physically placed isolated execution.
@@ -60,5 +63,14 @@ private:
 namespace std {
 
 HALCO_GEOMETRY_HASH_CLASS(grenade::vx::coordinate::ExecutionIndex)
+
+template <>
+struct hash<grenade::vx::coordinate::ExecutionInstance>
+{
+	size_t operator()(grenade::vx::coordinate::ExecutionInstance const& t) const
+	{
+		return grenade::vx::coordinate::hash_value(t);
+	}
+};
 
 } // namespace std

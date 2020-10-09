@@ -11,6 +11,7 @@
 #include "grenade/vx/range_split.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "grenade/vx/transformation/concatenation.h"
+#include "grenade/vx/transformation/mac_spiketrain_generator.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -22,6 +23,8 @@
 #include <tbb/parallel_for_each.h>
 
 #include <algorithm>
+#include <map>
+#include <unordered_map>
 
 namespace grenade::vx::compute {
 
@@ -136,6 +139,78 @@ Graph::vertex_descriptor MAC::insert_synram(
 	return graph.add(data_output, instance, {v2});
 }
 
+namespace {
+
+auto get_hemisphere_placement(
+    SingleChipExecutionInstanceManager& execution_instance_manager,
+    std::vector<RangeSplit::SubRange> const& x_split_ranges,
+    std::vector<RangeSplit::SubRange> const& y_split_ranges)
+{
+	auto instance = coordinate::ExecutionInstance();
+
+	std::vector<
+	    std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v2::HemisphereOnDLS>>
+	    hemispheres;
+	for ([[maybe_unused]] auto const& x_range : x_split_ranges) {
+		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
+			hemispheres.push_back({instance, execution_instance_manager.get_current_hemisphere()});
+			instance = execution_instance_manager.next();
+		}
+	}
+	return hemispheres;
+}
+
+auto get_placed_ranges(
+    std::vector<RangeSplit::SubRange> const& x_split_ranges,
+    std::vector<RangeSplit::SubRange> const& y_split_ranges,
+    std::vector<
+        std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v2::HemisphereOnDLS>>
+        hemispheres)
+{
+	typedef std::pair<RangeSplit::SubRange, RangeSplit::SubRange> XYSubRange;
+	std::unordered_map<
+	    coordinate::ExecutionInstance,
+	    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, XYSubRange>>
+	    placed_ranges;
+	size_t i = 0;
+	for (auto const& x_range : x_split_ranges) {
+		size_t j = 0;
+		for (auto const& y_range : y_split_ranges) {
+			auto const [instance, hemisphere] = hemispheres.at(i * y_split_ranges.size() + j);
+			placed_ranges[instance][hemisphere] = {x_range, y_range};
+			j++;
+		}
+		i++;
+	}
+	return placed_ranges;
+}
+
+void set_enable_loopback(
+    Graph& graph,
+    bool const enable,
+    coordinate::ExecutionInstance const& instance,
+    Graph::vertex_descriptor const crossbar_input_vertex)
+{
+	using namespace halco::hicann_dls::vx::v2;
+	if (enable) {
+		std::vector<Input> loopback_vertices;
+		loopback_vertices.reserve(SPL1Address::size);
+		for (size_t i = 0; i < SPL1Address::size; ++i) {
+			CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
+			haldls::vx::v2::CrossbarNode config;
+			vertex::CrossbarNode crossbar_node(coordinate, config);
+			loopback_vertices.push_back(
+			    graph.add(crossbar_node, instance, {crossbar_input_vertex}));
+		}
+		vertex::CrossbarL2Output l2_output;
+		auto const vl2 = graph.add(l2_output, instance, loopback_vertices);
+		vertex::DataOutput data_output_loopback(ConnectionType::TimedSpikeFromChipSequence, 1);
+		graph.add(data_output_loopback, instance, {vl2});
+	}
+}
+
+} // namespace
+
 void MAC::build_graph()
 {
 	using namespace halco::hicann_dls::vx::v2;
@@ -152,51 +227,47 @@ void MAC::build_graph()
 	auto const y_split_ranges = y_split(input_size());
 
 	SingleChipExecutionInstanceManager execution_instance_manager;
-	auto instance = coordinate::ExecutionInstance();
 
-	vertex::ExternalInput external_input(ConnectionType::DataTimedSpikeSequence, 1);
-	vertex::DataInput data_input(ConnectionType::TimedSpikeSequence, 1);
-	vertex::CrossbarL2Input crossbar_l2_input;
-	auto last_instance = instance;
+	auto const hemispheres =
+	    get_hemisphere_placement(execution_instance_manager, x_split_ranges, y_split_ranges);
 
-	auto input_vertex = m_graph.add(external_input, instance, {});
-	auto const data_input_vertex = m_graph.add(data_input, instance, {input_vertex});
-	Graph::vertex_descriptor crossbar_input_vertex =
-	    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
+	auto const placed_ranges = get_placed_ranges(x_split_ranges, y_split_ranges, hemispheres);
 
-	auto const set_enable_loopback = [&]() {
-		if (m_enable_loopback) {
-			std::vector<Input> loopback_vertices;
-			loopback_vertices.reserve(SPL1Address::size);
-			for (size_t i = 0; i < SPL1Address::size; ++i) {
-				CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
-				haldls::vx::CrossbarNode config;
-				vertex::CrossbarNode crossbar_node(coordinate, config);
-				loopback_vertices.push_back(
-				    m_graph.add(crossbar_node, instance, {crossbar_input_vertex}));
-			}
-			vertex::CrossbarL2Output l2_output;
-			auto const vl2 = m_graph.add(l2_output, instance, loopback_vertices);
-			vertex::DataOutput data_output_loopback(ConnectionType::TimedSpikeFromChipSequence, 1);
-			m_graph.add(data_output_loopback, instance, {vl2});
+	std::unordered_map<coordinate::ExecutionInstance, std::map<HemisphereOnDLS, Input>>
+	    hemisphere_outputs;
+	for (auto const& [instance, hs] : placed_ranges) {
+		halco::common::typed_array<size_t, HemisphereOnDLS> sizes;
+		sizes.fill(0);
+		std::vector<Input> uint5_inputs;
+		std::map<HemisphereOnDLS, Graph::vertex_descriptor> input_vertices;
+		for (auto const& [hemisphere, xy_range] : hs) {
+			auto const y_size = xy_range.second.size;
+			sizes[hemisphere] = y_size;
+			// Add loads
+			vertex::ExternalInput external_input(ConnectionType::DataUInt5, y_size);
+			vertex::DataInput data_input(ConnectionType::UInt5, y_size);
+			auto const input_vertex = m_graph.add(external_input, instance, {});
+			uint5_inputs.push_back(m_graph.add(data_input, instance, {input_vertex}));
+			input_vertices[hemisphere] = input_vertex;
 		}
-	};
-	set_enable_loopback();
 
-	std::vector<size_t> x_split_sizes;
-	std::vector<Graph::vertex_descriptor> output_vertices;
-	for (auto const& x_range : x_split_ranges) {
-		x_split_sizes.push_back(x_range.size);
+		// Add spiketrain generator, connect to crossbar
+		auto spiketrain_generator = std::make_unique<transformation::MACSpikeTrainGenerator>(
+		    sizes, m_num_sends, m_wait_between_events);
+		Vertex transformation(std::move(vertex::Transformation(std::move(spiketrain_generator))));
+		auto const data_input_vertex =
+		    m_graph.add(std::move(transformation), instance, uint5_inputs);
+		vertex::CrossbarL2Input crossbar_l2_input;
+		Graph::vertex_descriptor crossbar_input_vertex =
+		    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
+
+		// Maybe enable event loopback
+		set_enable_loopback(m_graph, m_enable_loopback, instance, crossbar_input_vertex);
+
 		std::vector<Input> local_output_vertices;
-		for (auto const& y_range : y_split_ranges) {
-			if (instance != last_instance) {
-				input_vertex = m_graph.add(external_input, instance, {});
-				auto const data_input_vertex = m_graph.add(data_input, instance, {input_vertex});
-				crossbar_input_vertex =
-				    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
-				set_enable_loopback();
-			}
-
+		for (auto const& [hemisphere, xy_range] : hs) {
+			auto const x_range = xy_range.first;
+			auto const y_range = xy_range.second;
 			Weights local_weights(y_range.size);
 			for (size_t i = 0; i < local_weights.size(); ++i) {
 				local_weights.at(i).insert(
@@ -205,25 +276,38 @@ void MAC::build_graph()
 				    m_weights.at(i + y_range.offset).begin() + x_range.offset + x_range.size);
 			}
 
-			local_output_vertices.push_back(insert_synram(
-			    m_graph, std::move(local_weights), instance,
-			    execution_instance_manager.get_current_hemisphere(), crossbar_input_vertex));
-			m_synram_handles.push_back({input_vertex, y_range.size, y_range.offset,
-			                            execution_instance_manager.get_current_hemisphere()});
-
-			last_instance = instance;
-			instance = execution_instance_manager.next();
+			hemisphere_outputs[instance].insert(
+			    {hemisphere, Input(insert_synram(
+			                     m_graph, std::move(local_weights), instance, hemisphere,
+			                     crossbar_input_vertex))});
+			m_synram_handles.push_back(
+			    {input_vertices.at(hemisphere), y_range.size, y_range.offset});
 		}
+	}
 
-		if (local_output_vertices.size() > 1) {
-			instance =
-			    execution_instance_manager.next_index(); // FIXME we only want to get next index
+	// Add vertical addition of hemispheres
+	std::vector<Graph::vertex_descriptor> output_vertices;
+	size_t i = 0;
+	std::vector<size_t> x_split_sizes;
+	for (auto const& x_range : x_split_ranges) {
+		x_split_sizes.push_back(x_range.size);
+		std::vector<Input> local_hemisphere_outputs;
+		size_t j = 0;
+		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
+			auto const [instance, hemisphere] = hemispheres.at(i * y_split_ranges.size() + j);
+			local_hemisphere_outputs.push_back(hemisphere_outputs.at(instance).at(hemisphere));
+			j++;
+		}
+		i++;
+
+		if (local_hemisphere_outputs.size() > 1) {
+			auto const instance = execution_instance_manager.next_index();
 			// add additions
 			// load all data
 			vertex::DataInput data_input(ConnectionType::Int8, x_range.size);
 			std::vector<Input> local_inputs;
-			local_inputs.reserve(local_output_vertices.size());
-			for (auto const vertex : local_output_vertices) {
+			local_inputs.reserve(local_hemisphere_outputs.size());
+			for (auto const vertex : local_hemisphere_outputs) {
 				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
 			}
 			// add all data
@@ -234,16 +318,17 @@ void MAC::build_graph()
 			output_vertices.push_back(v_out);
 		} else {
 			std::transform(
-			    local_output_vertices.begin(), local_output_vertices.end(),
-			    std::back_inserter(output_vertices), [](auto const& i) { return i.descriptor; });
+			    local_hemisphere_outputs.begin(), local_hemisphere_outputs.end(),
+			    std::back_inserter(output_vertices), [](auto const& in) { return in.descriptor; });
 		}
 	}
-	// concatenate all outputs
-	instance = execution_instance_manager.next_index();
-	// load all data
+
+	// Concatenate all outputs
+	auto const instance = execution_instance_manager.next_index();
+	// Load all data
 	std::vector<Input> local_inputs;
 	local_inputs.reserve(output_vertices.size());
-	size_t i = 0;
+	i = 0;
 	for (auto const v : output_vertices) {
 		vertex::DataInput data_input(ConnectionType::Int8, x_split_ranges.at(i).size);
 		local_inputs.push_back(m_graph.add(data_input, instance, {v}));
@@ -270,26 +355,8 @@ size_t MAC::output_size() const
 	return 0;
 }
 
-std::optional<haldls::vx::v2::SpikeLabel> MAC::get_spike_label(
-    halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver, UInt5 const value)
-{
-	if (value == 0) {
-		return std::nullopt;
-	}
-	using namespace halco::hicann_dls::vx::v2;
-	auto const synapse_driver = driver.toSynapseDriverOnSynapseDriverBlock();
-	auto const spl1_address = synapse_driver % PADIBusOnPADIBusBlock::size;
-	auto const synapse_label = ((UInt5::max - value.value()) + 1);
-	auto const row_select = synapse_driver / PADIBusOnPADIBusBlock::size;
-	auto const h = (static_cast<size_t>(driver.toSynapseDriverBlockOnDLS()) << 13);
-	return haldls::vx::v2::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
-}
-
 IODataMap MAC::generate_input_events(
-    Activations const& inputs,
-    std::vector<SynramHandle> const& synram_handles,
-    size_t const num_sends,
-    haldls::vx::v2::Timer::Value const wait_between_events)
+    Activations const& inputs, std::vector<SynramHandle> const& synram_handles)
 {
 	using namespace haldls::vx::v2;
 	using namespace halco::hicann_dls::vx::v2;
@@ -297,94 +364,22 @@ IODataMap MAC::generate_input_events(
 	IODataMap data_map;
 
 	size_t const batch_size = inputs.size();
-	// get indices of the same input_vertex
-	std::map<Graph::vertex_descriptor, std::vector<size_t>> indices;
-	for (size_t i = 0; i < synram_handles.size(); ++i) {
-		auto const input_vertex = synram_handles.at(i).input_vertex;
-		indices[input_vertex].push_back(i);
-	}
-
-	// resize event map sequentially
-	for (auto const& [input_vertex, _] : indices) {
-		data_map.spike_events[input_vertex].resize(batch_size);
+	for (auto const& synram_handle : synram_handles) {
+		data_map.uint5[synram_handle.input_vertex].resize(batch_size);
 	}
 
 	auto const generate_events_for_range = [&](tbb::blocked_range<size_t> const& r) {
-		// thread-local label storage
-		halco::common::typed_array<std::vector<SpikeLabel>, HemisphereOnDLS> labels;
-
 		for (size_t batch = r.begin(); batch < r.end(); ++batch) {
 			auto const& local_inputs = inputs.at(batch);
-			for (auto const& [input_vertex, index] : indices) {
-				// reserve thread-local labels
-				for (auto& l : labels) {
-					l.reserve(SynapseDriverOnSynapseDriverBlock::size);
-				}
-
-				// generate spike labels
-				assert(index.size() <= labels.size());
-				for (auto const i : index) {
-					auto const& local_synram_handle = synram_handles.at(i);
-					auto const input_size = local_synram_handle.input_size;
-					auto const input_offset = local_synram_handle.input_offset;
-					auto const hemisphere = local_synram_handle.hemisphere;
-					auto& local_labels = labels[hemisphere];
-
-					// pack all events from one hemisphere after one another
-					assert(local_inputs.size() >= input_offset + input_size);
-					for (size_t j = 0; j < input_size; ++j) {
-						auto const input = local_inputs[input_offset + j];
-						auto const label = get_spike_label(
-						    SynapseDriverOnDLS(
-						        SynapseDriverOnSynapseDriverBlock(j),
-						        hemisphere.toSynapseDriverBlockOnDLS()),
-						    input);
-						if (label) {
-							local_labels.push_back(*label);
-						}
-					}
-				}
-
-				auto const [labels_min_it, labels_max_it] = std::minmax_element(
-				    labels.begin(), labels.end(),
-				    [](auto const& a, auto const& b) { return a.size() < b.size(); });
-				auto const& labels_min = *labels_min_it;
-				auto const& labels_max = *labels_max_it;
-
-				auto& events = data_map.spike_events.at(input_vertex).at(batch);
-				events.reserve(labels_max.size() * num_sends);
-				// add events from back to unsure equal time between last event and readout
-				// for both hemispheres
-				TimedSpike::Time time(labels_max.size() * wait_between_events * num_sends);
-				// add 2-packed events (both hemispheres)
-				size_t const labels_min_size = labels_min.size();
-				size_t const labels_max_size = labels_max.size();
-				size_t const both_hemispheres = labels_min_size * num_sends;
-				for (size_t n = 0; n < both_hemispheres; ++n) {
-					auto const label_min = labels_min[n % labels_min_size];
-					auto const label_max = labels_max[n % labels_max_size];
-					SpikePack2ToChip const payload(
-					    SpikePack2ToChip::labels_type{label_min, label_max});
-					events.push_back(TimedSpike{time, payload});
-					time = TimedSpike::Time(time - wait_between_events);
-				}
-				// add 1-packed left events (hemisphere with more events)
-				size_t const one_hemisphere = labels_max_size * num_sends;
-				for (size_t n = both_hemispheres; n < one_hemisphere; ++n) {
-					auto const label = labels_max[n % labels_max_size];
-					SpikePack1ToChip const payload(SpikePack1ToChip::labels_type{label});
-					events.push_back(TimedSpike{time, payload});
-					time = TimedSpike::Time(time - wait_between_events);
-				}
-
-				// clear label storage
-				for (auto& l : labels) {
-					l.clear();
-				}
-
-				std::sort(events.begin(), events.end(), [](auto const& a, auto const& b) {
-					return a.time < b.time;
-				});
+			for (auto const& synram_handle : synram_handles) {
+				auto const input_offset = synram_handle.input_offset;
+				auto const input_size = synram_handle.input_size;
+				auto& local = data_map.uint5.at(synram_handle.input_vertex).at(batch);
+				local.reserve(input_size);
+				assert((input_offset + input_size) <= local_inputs.size());
+				local.insert(
+				    local.end(), local_inputs.begin() + input_offset,
+				    local_inputs.begin() + input_offset + input_size);
 			}
 		}
 	};
@@ -424,8 +419,7 @@ std::vector<std::vector<Int8>> MAC::run(
 	}
 
 	hate::Timer input_timer;
-	auto const input_list =
-	    generate_input_events(inputs, m_synram_handles, m_num_sends, m_wait_between_events);
+	auto const input_list = generate_input_events(inputs, m_synram_handles);
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
 	JITGraphExecutor::ChipConfigs chip_configs(
@@ -474,7 +468,6 @@ void serialize(Archive& ar, MAC::SynramHandle& handle)
 	ar(handle.input_vertex);
 	ar(handle.input_size);
 	ar(handle.input_offset);
-	ar(handle.hemisphere);
 }
 
 template <typename Archive>
