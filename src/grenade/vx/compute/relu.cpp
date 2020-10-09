@@ -17,7 +17,7 @@ ReLU::ReLU(size_t size) : m_graph(), m_input_vertex(), m_output_vertex()
 	auto const instance = coordinate::ExecutionInstance();
 
 	m_input_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataOutputInt8, size), instance, {});
+	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
 	auto const v2 =
 	    m_graph.add(vertex::DataInput(ConnectionType::Int8, size), instance, {m_input_vertex});
 	auto const v3 = m_graph.add(vertex::ReLU(size), instance, {v2});

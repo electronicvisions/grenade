@@ -22,9 +22,9 @@ Addition::Addition(std::vector<Int8> const& other) :
 	auto const size = other.size();
 
 	m_input_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataOutputInt8, size), instance, {});
+	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
 	m_other_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataOutputInt8, size), instance, {});
+	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
 	auto const vi =
 	    m_graph.add(vertex::DataInput(ConnectionType::Int8, size), instance, {m_input_vertex});
 	auto const vo =

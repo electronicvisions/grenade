@@ -18,7 +18,7 @@ ConvertingReLU::ConvertingReLU(size_t size, uint32_t shift) :
 	auto const instance = coordinate::ExecutionInstance();
 
 	m_input_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataOutputInt8, size), instance, {});
+	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
 	auto const v2 =
 	    m_graph.add(vertex::DataInput(ConnectionType::Int8, size), instance, {m_input_vertex});
 	auto const v3 = m_graph.add(vertex::ConvertingReLU(size, shift), instance, {v2});

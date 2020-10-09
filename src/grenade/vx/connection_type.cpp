@@ -19,12 +19,12 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "SynapticInput");
 		case ConnectionType::MembraneVoltage:
 			return (os << "MembraneVoltage");
-		case ConnectionType::DataOutputUInt5:
-			return (os << "DataOutputUInt5");
-		case ConnectionType::DataOutputUInt32:
-			return (os << "DataOutputUInt32");
-		case ConnectionType::DataOutputInt8:
-			return (os << "DataOutputInt8");
+		case ConnectionType::DataUInt5:
+			return (os << "DataUInt5");
+		case ConnectionType::DataUInt32:
+			return (os << "DataUInt32");
+		case ConnectionType::DataInt8:
+			return (os << "DataInt8");
 		case ConnectionType::DataTimedSpikeFromChipSequence:
 			return (os << "DataTimedSpikeFromChipSequence");
 		case ConnectionType::DataTimedSpikeSequence:

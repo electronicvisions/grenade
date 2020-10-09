@@ -46,13 +46,13 @@ Port DataOutput::output() const
 	auto const type = [&]() {
 		switch (m_input_type) {
 			case ConnectionType::UInt32: {
-				return ConnectionType::DataOutputUInt32;
+				return ConnectionType::DataUInt32;
 			}
 			case ConnectionType::UInt5: {
-				return ConnectionType::DataOutputUInt5;
+				return ConnectionType::DataUInt5;
 			}
 			case ConnectionType::Int8: {
-				return ConnectionType::DataOutputInt8;
+				return ConnectionType::DataInt8;
 			}
 			case ConnectionType::DataTimedSpikeFromChipSequence: {
 				return ConnectionType::DataTimedSpikeFromChipSequence;

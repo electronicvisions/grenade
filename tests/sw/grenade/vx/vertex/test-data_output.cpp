@@ -16,5 +16,5 @@ TEST(DataOutput, General)
 	EXPECT_EQ(vertex.output().size, 123);
 
 	EXPECT_EQ(vertex.inputs().front().type, ConnectionType::Int8);
-	EXPECT_EQ(vertex.output().type, ConnectionType::DataOutputInt8);
+	EXPECT_EQ(vertex.output().type, ConnectionType::DataInt8);
 }

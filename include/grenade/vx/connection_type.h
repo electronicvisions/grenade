@@ -20,9 +20,9 @@ enum class ConnectionType
 	MembraneVoltage,                // Neuron membrane voltage for input of CADC readout
 	DataTimedSpikeSequence,         // Spike sequence to chip data
 	DataTimedSpikeFromChipSequence, // Spike sequence from chip data
-	DataOutputInt8,                 // PPU computation or CADC readout value
-	DataOutputUInt5,                // HAGEN input activation data
-	DataOutputUInt32,               // Index data output
+	DataInt8,                       // PPU computation or CADC readout value
+	DataUInt5,                      // HAGEN input activation data
+	DataUInt32,                     // Index data output
 	CrossbarInputLabel,             // 14Bit label into crossbar
 	CrossbarOutputLabel,            // 14Bit label out of crossbar
 	SynapseDriverInputLabel
@@ -33,9 +33,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type) SYMBOL_VI
 /**
  * Only memory operations are allowed to connect between different execution instances.
  */
-constexpr auto can_connect_different_execution_instances =
-    std::array{ConnectionType::DataOutputUInt5, ConnectionType::DataOutputInt8,
-               ConnectionType::DataTimedSpikeSequence,
-               ConnectionType::DataTimedSpikeFromChipSequence, ConnectionType::DataOutputUInt32};
+constexpr auto can_connect_different_execution_instances = std::array{
+    ConnectionType::DataUInt5, ConnectionType::DataInt8, ConnectionType::DataTimedSpikeSequence,
+    ConnectionType::DataTimedSpikeFromChipSequence, ConnectionType::DataUInt32};
 
 } // namespace grenade::vx

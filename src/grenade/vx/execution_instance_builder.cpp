@@ -81,7 +81,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 		if (std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(vertex))) {
 			auto const& input_vertex =
 			    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
-			if (input_vertex.output().type == ConnectionType::DataOutputUInt32) {
+			if (input_vertex.output().type == ConnectionType::DataUInt32) {
 				if (m_input_list.uint32.find(vertex) == m_input_list.uint32.end()) {
 					return true;
 				} else if (
@@ -89,7 +89,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 				    m_input_list.uint32.at(vertex).front().size() != input_vertex.output().size) {
 					return true;
 				}
-			} else if (input_vertex.output().type == ConnectionType::DataOutputUInt5) {
+			} else if (input_vertex.output().type == ConnectionType::DataUInt5) {
 				if (m_input_list.uint5.find(vertex) == m_input_list.uint5.end()) {
 					// incomplete because value not found
 					return true;
@@ -99,7 +99,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 					// incomplete because value size doesn't match expectation
 					return true;
 				}
-			} else if (input_vertex.output().type == ConnectionType::DataOutputInt8) {
+			} else if (input_vertex.output().type == ConnectionType::DataInt8) {
 				if (m_input_list.int8.find(vertex) == m_input_list.int8.end()) {
 					return true;
 				} else if (
@@ -307,11 +307,11 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
 {
-	if (data.output().type == ConnectionType::DataOutputUInt32) {
+	if (data.output().type == ConnectionType::DataUInt32) {
 		m_local_external_data.uint32.insert({vertex, m_input_list.uint32.at(vertex)});
-	} else if (data.output().type == ConnectionType::DataOutputUInt5) {
+	} else if (data.output().type == ConnectionType::DataUInt5) {
 		m_local_external_data.uint5.insert({vertex, m_input_list.uint5.at(vertex)});
-	} else if (data.output().type == ConnectionType::DataOutputInt8) {
+	} else if (data.output().type == ConnectionType::DataInt8) {
 		m_local_external_data.int8.insert({vertex, m_input_list.int8.at(vertex)});
 	} else if (data.output().type == ConnectionType::DataTimedSpikeSequence) {
 		m_local_external_data.spike_events.insert({vertex, m_input_list.spike_events.at(vertex)});

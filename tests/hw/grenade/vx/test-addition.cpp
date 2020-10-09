@@ -27,8 +27,7 @@ TEST(Addition, Single)
 
 	constexpr size_t size = 256;
 
-	grenade::vx::vertex::ExternalInput external_input(
-	    grenade::vx::ConnectionType::DataOutputInt8, size);
+	grenade::vx::vertex::ExternalInput external_input(grenade::vx::ConnectionType::DataInt8, size);
 
 	grenade::vx::vertex::DataInput data_input(grenade::vx::ConnectionType::Int8, size);
 

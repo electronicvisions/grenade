@@ -25,7 +25,7 @@ TEST(Graph, check_inputs_size)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataOutputInt8, 123);
+	ExternalInput vertex(ConnectionType::DataInt8, 123);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// too much input vertices
@@ -48,7 +48,7 @@ TEST(Graph, check_input_port)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataOutputInt8, 123);
+	ExternalInput vertex(ConnectionType::DataInt8, 123);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
@@ -82,7 +82,7 @@ TEST(Graph, check_execution_instances)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataOutputInt8, 123);
+	ExternalInput vertex(ConnectionType::DataInt8, 123);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// too much input vertices
@@ -113,7 +113,7 @@ void test_check_acyclicity(bool enable_check)
 	Graph graph(enable_check);
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataOutputInt8, 123);
+	ExternalInput vertex(ConnectionType::DataInt8, 123);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
