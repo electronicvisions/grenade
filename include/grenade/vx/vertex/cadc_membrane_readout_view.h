@@ -4,9 +4,10 @@
 #include "halco/hicann-dls/vx/v2/cadc.h"
 #include "hate/visibility.h"
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <iosfwd>
 #include <optional>
-#include <ostream>
-#include <stddef.h>
 #include <vector>
 
 namespace cereal {

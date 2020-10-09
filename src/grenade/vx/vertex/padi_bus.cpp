@@ -4,6 +4,7 @@
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex/crossbar_node.h"
 #include "halco/common/cerealization_geometry.h"
+#include <ostream>
 
 namespace grenade::vx::vertex {
 

@@ -5,6 +5,7 @@
 #include "grenade/vx/vertex/neuron_view.h"
 
 #include "halco/common/cerealization_geometry.h"
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <cereal/types/vector.hpp>

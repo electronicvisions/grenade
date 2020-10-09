@@ -4,8 +4,8 @@
 #include "halco/hicann-dls/vx/v2/neuron.h"
 #include "hate/visibility.h"
 #include <array>
+#include <iosfwd>
 #include <optional>
-#include <ostream>
 
 namespace cereal {
 class access;

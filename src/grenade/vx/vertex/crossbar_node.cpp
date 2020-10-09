@@ -2,6 +2,7 @@
 
 #include "grenade/cerealization.h"
 #include "halco/common/cerealization_geometry.h"
+#include <ostream>
 
 namespace grenade::vx::vertex {
 

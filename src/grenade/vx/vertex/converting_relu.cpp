@@ -1,6 +1,7 @@
 #include "grenade/vx/vertex/converting_relu.h"
 
 #include "grenade/cerealization.h"
+#include <ostream>
 
 namespace grenade::vx::vertex {
 

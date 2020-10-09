@@ -1,9 +1,9 @@
 #pragma once
-#include <ostream>
-#include <stddef.h>
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
+#include <iosfwd>
+#include <stddef.h>
 
 namespace cereal {
 class access;

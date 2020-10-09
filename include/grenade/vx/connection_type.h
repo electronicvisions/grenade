@@ -1,7 +1,7 @@
 #pragma once
-#include <array>
-#include <ostream>
 #include "hate/visibility.h"
+#include <array>
+#include <iosfwd>
 
 namespace grenade::vx {
 

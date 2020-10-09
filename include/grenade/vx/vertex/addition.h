@@ -1,10 +1,11 @@
 #pragma once
-#include <array>
-#include <cstddef>
-#include <ostream>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <iosfwd>
 
 namespace cereal {
 class access;

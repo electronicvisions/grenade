@@ -6,6 +6,7 @@
 #include "halco/common/cerealization_geometry.h"
 
 #include <algorithm>
+#include <ostream>
 #include <stdexcept>
 #include <cereal/types/vector.hpp>
 

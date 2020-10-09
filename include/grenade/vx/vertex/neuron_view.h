@@ -1,13 +1,13 @@
 #pragma once
-#include <array>
-#include <optional>
-#include <ostream>
-#include <stddef.h>
-#include <vector>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "halco/hicann-dls/vx/v2/neuron.h"
 #include "hate/visibility.h"
+#include <array>
+#include <cstddef>
+#include <iosfwd>
+#include <optional>
+#include <vector>
 
 namespace cereal {
 class access;

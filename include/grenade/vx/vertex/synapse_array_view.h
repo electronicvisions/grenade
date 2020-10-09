@@ -1,13 +1,13 @@
 #pragma once
-#include <array>
-#include <ostream>
-#include <stddef.h>
-#include <vector>
-#include <boost/range/iterator_range.hpp>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
+#include <array>
+#include <cstddef>
+#include <iosfwd>
+#include <vector>
+#include <boost/range/iterator_range.hpp>
 
 namespace cereal {
 class access;

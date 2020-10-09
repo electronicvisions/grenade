@@ -1,6 +1,7 @@
 #include "grenade/vx/vertex/data_output.h"
 
 #include "grenade/cerealization.h"
+#include <ostream>
 #include <stdexcept>
 
 namespace grenade::vx::vertex {

@@ -1,9 +1,9 @@
 #pragma once
-#include <optional>
-#include <ostream>
 #include "grenade/vx/graph.h"
 #include "grenade/vx/port_restriction.h"
 #include "hate/visibility.h"
+#include <iosfwd>
+#include <optional>
 
 namespace grenade::vx {
 

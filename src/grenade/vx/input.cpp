@@ -1,5 +1,7 @@
 #include "grenade/vx/input.h"
 
+#include <ostream>
+
 namespace grenade::vx {
 
 bool Input::operator==(Input const& other) const

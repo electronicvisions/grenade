@@ -1,8 +1,9 @@
 #pragma once
-#include <cstddef>
-#include <optional>
-#include <ostream>
 #include "hate/visibility.h"
+#include <cstddef>
+#include <cstdint>
+#include <iosfwd>
+#include <optional>
 
 namespace cereal {
 class access;

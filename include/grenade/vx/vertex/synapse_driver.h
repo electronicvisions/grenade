@@ -1,5 +1,4 @@
 #pragma once
-#include <ostream>
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "halco/common/typed_array.h"
@@ -7,6 +6,7 @@
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
+#include <iosfwd>
 
 namespace cereal {
 class access;

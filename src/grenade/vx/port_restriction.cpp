@@ -2,6 +2,7 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/port.h"
+#include <ostream>
 #include <stdexcept>
 
 namespace grenade::vx {

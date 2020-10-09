@@ -4,7 +4,8 @@
 #include "hate/visibility.h"
 #include <array>
 #include <cstddef>
-#include <ostream>
+#include <cstdint>
+#include <iosfwd>
 
 namespace cereal {
 class access;

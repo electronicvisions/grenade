@@ -5,7 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <ostream>
+#include <iosfwd>
 
 namespace cereal {
 class access;

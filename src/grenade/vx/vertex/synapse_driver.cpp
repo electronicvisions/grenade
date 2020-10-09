@@ -5,6 +5,7 @@
 #include "grenade/vx/vertex/padi_bus.h"
 #include "halco/common/cerealization_geometry.h"
 #include "halco/common/cerealization_typed_array.h"
+#include <ostream>
 
 namespace grenade::vx::vertex {
 

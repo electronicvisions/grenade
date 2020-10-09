@@ -2,6 +2,7 @@
 
 #include "grenade/cerealization.h"
 #include <limits>
+#include <ostream>
 
 namespace grenade::vx::vertex {
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <cstddef>
-#include <ostream>
+#include <iosfwd>
 
 #include "grenade/vx/connection_type.h"
 #include "hate/visibility.h"

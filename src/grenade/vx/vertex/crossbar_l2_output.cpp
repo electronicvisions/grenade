@@ -3,7 +3,7 @@
 #include "grenade/cerealization.h"
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex/crossbar_node.h"
-
+#include <ostream>
 #include <stdexcept>
 
 namespace grenade::vx::vertex {

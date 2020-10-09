@@ -1,5 +1,7 @@
 #include "grenade/vx/connection_type.h"
 
+#include <ostream>
+
 namespace grenade::vx {
 
 std::ostream& operator<<(std::ostream& os, ConnectionType const& type)

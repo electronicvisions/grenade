@@ -4,6 +4,7 @@
 #include "halco/common/cerealization_geometry.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include <ostream>
 #include <stdexcept>
 #include <cereal/types/vector.hpp>
 
