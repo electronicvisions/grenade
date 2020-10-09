@@ -41,7 +41,7 @@ struct CrossbarL2Output
 
 	constexpr Port output() const
 	{
-		return Port(1, ConnectionType::DataTimedSpikeFromChipSequence);
+		return Port(1, ConnectionType::TimedSpikeFromChipSequence);
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, CrossbarL2Output const& config)

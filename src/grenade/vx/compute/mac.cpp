@@ -176,8 +176,7 @@ void MAC::build_graph()
 			}
 			vertex::CrossbarL2Output l2_output;
 			auto const vl2 = m_graph.add(l2_output, instance, loopback_vertices);
-			vertex::DataOutput data_output_loopback(
-			    ConnectionType::DataTimedSpikeFromChipSequence, 1);
+			vertex::DataOutput data_output_loopback(ConnectionType::TimedSpikeFromChipSequence, 1);
 			m_graph.add(data_output_loopback, instance, {vl2});
 		}
 	};

@@ -178,7 +178,7 @@ TEST(Graph, check_supports_input_from)
 	CrossbarL2Output vertex5;
 	auto const v4 = graph.add(vertex5, ExecutionInstance(), {v3});
 
-	DataOutput vertex6(ConnectionType::DataTimedSpikeFromChipSequence, 1);
+	DataOutput vertex6(ConnectionType::TimedSpikeFromChipSequence, 1);
 	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstance(), {v4}));
 
 	// crossbar node not connecting loopback
@@ -263,7 +263,7 @@ TEST(Graph, recurrence)
 	CrossbarL2Output crossbar_l2_output;
 	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstance(), {v15});
 
-	DataOutput data_output(ConnectionType::DataTimedSpikeFromChipSequence, 1);
+	DataOutput data_output(ConnectionType::TimedSpikeFromChipSequence, 1);
 	graph.add(data_output, ExecutionInstance(), {v16});
 
 	// assignment, construction
@@ -352,7 +352,7 @@ TEST(Graph, CerealizeCoverage)
 	CrossbarL2Output crossbar_l2_output;
 	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstance(), {v15});
 
-	DataOutput data_output(ConnectionType::DataTimedSpikeFromChipSequence, 1);
+	DataOutput data_output(ConnectionType::TimedSpikeFromChipSequence, 1);
 	graph.add(data_output, ExecutionInstance(), {v16});
 
 	Graph graph2;

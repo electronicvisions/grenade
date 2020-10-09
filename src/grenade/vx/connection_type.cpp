@@ -21,6 +21,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "MembraneVoltage");
 		case ConnectionType::TimedSpikeSequence:
 			return (os << "TimedSpikeSequence");
+		case ConnectionType::TimedSpikeFromChipSequence:
+			return (os << "TimedSpikeFromChipSequence");
 		case ConnectionType::DataUInt5:
 			return (os << "DataUInt5");
 		case ConnectionType::DataUInt32:

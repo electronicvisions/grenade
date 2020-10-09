@@ -165,6 +165,44 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::CrossbarL2Output const&)
+{
+	if (!m_postprocessing) {
+		if (m_event_output_vertex) {
+			throw std::logic_error("Only one event output vertex allowed.");
+		}
+		m_event_output_vertex = vertex;
+		m_post_vertices.push_back(vertex);
+	} else {
+		stadls::vx::PlaybackProgram::spikes_type spikes;
+		for (auto const& program : m_chunked_program) {
+			auto const local_spikes = program.get_spikes();
+			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
+		}
+		std::sort(spikes.begin(), spikes.end(), [](auto const& a, auto const& b) {
+			return a.get_fpga_time() < b.get_fpga_time();
+		});
+		std::vector<TimedSpikeFromChipSequence> spike_batches;
+		auto begin = spikes.begin();
+		for (auto const& e : m_batch_entries) {
+			assert(e.m_ticket_events_begin);
+			auto const begin_time = e.m_ticket_events_begin->get_fpga_time();
+			auto const end_time = e.m_ticket_events_end->get_fpga_time();
+			begin = std::find_if(begin, spikes.end(), [&](auto const& spike) {
+				return spike.get_fpga_time() > begin_time;
+			});
+			auto const end = std::find_if(begin, spikes.end(), [&](auto const& spike) {
+				return spike.get_fpga_time() > end_time;
+			});
+			spike_batches.push_back(TimedSpikeFromChipSequence(begin, end));
+			begin = end;
+		}
+		m_local_data.spike_event_output[vertex] = spike_batches;
+	}
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
 {
 	using namespace lola::vx::v2;
@@ -480,11 +518,13 @@ void ExecutionInstanceBuilder::process(
 		// check size match only for first because we know that the data map is valid
 		assert(!local_data.size() || (data.output().size == local_data.front().size()));
 		m_local_data_output.int8[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::DataTimedSpikeFromChipSequence) {
-		if (m_event_output_vertex) {
-			throw std::logic_error("Only one event output vertex allowed.");
-		}
-		m_event_output_vertex = vertex;
+	} else if (data.inputs().front().type == ConnectionType::TimedSpikeFromChipSequence) {
+		// get in edge
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		auto const& local_data =
+		    m_local_data.spike_event_output.at(boost::source(in_edge, m_graph.get_graph()));
+		m_local_data_output.spike_event_output[vertex] = local_data;
 	} else {
 		throw std::logic_error("DataOutput data type not implemented.");
 	}
@@ -574,32 +614,6 @@ IODataMap ExecutionInstanceBuilder::post_process()
 		    m_graph.get_vertex_property(vertex));
 	}
 	m_postprocessing = false;
-	if (m_event_output_vertex) {
-		stadls::vx::PlaybackProgram::spikes_type spikes;
-		for (auto const& program : m_chunked_program) {
-			auto const local_spikes = program.get_spikes();
-			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
-		}
-		std::sort(spikes.begin(), spikes.end(), [](auto const& a, auto const& b) {
-			return a.get_fpga_time() < b.get_fpga_time();
-		});
-		std::vector<TimedSpikeFromChipSequence> spike_batches;
-		auto begin = spikes.begin();
-		for (auto const& e : m_batch_entries) {
-			assert(e.m_ticket_events_begin);
-			auto const begin_time = e.m_ticket_events_begin->get_fpga_time();
-			auto const end_time = e.m_ticket_events_end->get_fpga_time();
-			begin = std::find_if(begin, spikes.end(), [&](auto const& spike) {
-				return spike.get_fpga_time() > begin_time;
-			});
-			auto const end = std::find_if(begin, spikes.end(), [&](auto const& spike) {
-				return spike.get_fpga_time() > end_time;
-			});
-			spike_batches.push_back(TimedSpikeFromChipSequence(begin, end));
-			begin = end;
-		}
-		m_local_data_output.spike_event_output[*m_event_output_vertex] = spike_batches;
-	}
 	return std::move(m_local_data_output);
 }
 

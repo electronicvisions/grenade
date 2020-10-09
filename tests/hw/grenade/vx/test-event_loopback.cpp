@@ -40,7 +40,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	grenade::vx::vertex::CrossbarL2Output crossbar_output;
 	grenade::vx::vertex::DataOutput data_output(
-	    grenade::vx::ConnectionType::DataTimedSpikeFromChipSequence, 1);
+	    grenade::vx::ConnectionType::TimedSpikeFromChipSequence, 1);
 
 	grenade::vx::Graph g;
 
