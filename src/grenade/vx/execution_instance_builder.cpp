@@ -617,7 +617,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			builder.write(TimerOnDLS(), Timer());
 			builder.block_until(
 			    TimerOnDLS(),
-			    Timer::Value((enable_ppu ? 4 : 1) * Timer::Value::fpga_clock_cycles_per_us));
+			    Timer::Value((enable_ppu ? 2 : 1) * Timer::Value::fpga_clock_cycles_per_us));
 		}
 		if (enable_ppu) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {

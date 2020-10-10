@@ -40,7 +40,7 @@ int start()
 			case Status::baseline_read: {
 				__vector uint8_t baseline_read_u[dls_num_vectors_per_row];
 				libnux::reset_neurons(neuron_reset_mask[0], neuron_reset_mask[1]);
-				sleep_cycles(default_ppu_cycles_per_us * 30 /* 30us */);
+				sleep_cycles(default_ppu_cycles_per_us * 5 /* us */);
 				get_causal_correlation(&(baseline_read_u[0]), &(baseline_read_u[1]), 0);
 				for (size_t i = 0; i < dls_num_vectors_per_row; ++i) {
 					baseline_read[i] = libnux::uint8_to_int8(baseline_read_u[i]);
