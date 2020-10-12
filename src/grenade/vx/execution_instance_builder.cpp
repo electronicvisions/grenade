@@ -201,6 +201,25 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
+namespace {
+
+template <typename T>
+std::vector<std::vector<T>> apply_restriction(
+    std::vector<std::vector<T>> const& value, PortRestriction const& restriction)
+{
+	std::vector<std::vector<T>> ret(value.size());
+	for (size_t b = 0; b < ret.size(); ++b) {
+		auto& local_ret = ret.at(b);
+		auto const& local_value = value.at(b);
+		local_ret.insert(
+		    local_ret.end(), local_value.begin() + restriction.min(),
+		    local_value.begin() + restriction.max() + 1);
+	}
+	return ret;
+}
+
+} // namespace
+
 template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
@@ -213,42 +232,48 @@ void ExecutionInstanceBuilder::process(
 	if (data.output().type == ConnectionType::UInt32) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		if (m_graph.get_edge_property_map().at(edge)) {
-			throw std::logic_error("Edge with port restriction unsupported.");
-		}
 		auto const in_vertex = boost::source(edge, m_graph.get_graph());
 		auto const& input_values =
 		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
 		         ? m_local_external_data.uint32.at(in_vertex)
 		         : m_data_output.uint32.at(in_vertex));
 
-		m_local_data.uint32[vertex] = input_values;
+		auto const port_restriction = m_graph.get_edge_property_map().at(edge);
+		if (port_restriction) {
+			m_local_data.uint32[vertex] = apply_restriction(input_values, *port_restriction);
+		} else {
+			m_local_data.uint32[vertex] = input_values;
+		}
 	} else if (data.output().type == ConnectionType::UInt5) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		if (m_graph.get_edge_property_map().at(edge)) {
-			throw std::logic_error("Edge with port restriction unsupported.");
-		}
 		auto const in_vertex = boost::source(edge, m_graph.get_graph());
 		auto const& input_values =
 		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
 		         ? m_local_external_data.uint5.at(in_vertex)
 		         : m_data_output.uint5.at(in_vertex));
 
-		m_local_data.uint5[vertex] = input_values;
+		auto const port_restriction = m_graph.get_edge_property_map().at(edge);
+		if (port_restriction) {
+			m_local_data.uint5[vertex] = apply_restriction(input_values, *port_restriction);
+		} else {
+			m_local_data.uint5[vertex] = input_values;
+		}
 	} else if (data.output().type == ConnectionType::Int8) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		if (m_graph.get_edge_property_map().at(edge)) {
-			throw std::logic_error("Edge with port restriction unsupported.");
-		}
 		auto const in_vertex = boost::source(edge, m_graph.get_graph());
 		auto const& input_values =
 		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
 		         ? m_local_external_data.int8.at(in_vertex)
 		         : m_data_output.int8.at(in_vertex));
 
-		m_local_data.int8[vertex] = input_values;
+		auto const port_restriction = m_graph.get_edge_property_map().at(edge);
+		if (port_restriction) {
+			m_local_data.int8[vertex] = apply_restriction(input_values, *port_restriction);
+		} else {
+			m_local_data.int8[vertex] = input_values;
+		}
 	} else if (data.output().type == ConnectionType::TimedSpikeSequence) {
 		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());

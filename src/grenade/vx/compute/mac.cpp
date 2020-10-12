@@ -233,22 +233,28 @@ void MAC::build_graph()
 
 	auto const placed_ranges = get_placed_ranges(x_split_ranges, y_split_ranges, hemispheres);
 
+	vertex::ExternalInput external_input(ConnectionType::DataUInt5, input_size());
+	auto const external_instance = execution_instance_manager.next_index();
+	m_input_vertex = m_graph.add(external_input, external_instance, {});
+
 	std::unordered_map<coordinate::ExecutionInstance, std::map<HemisphereOnDLS, Input>>
 	    hemisphere_outputs;
 	for (auto const& [instance, hs] : placed_ranges) {
 		halco::common::typed_array<size_t, HemisphereOnDLS> sizes;
 		sizes.fill(0);
 		std::vector<Input> uint5_inputs;
-		std::map<HemisphereOnDLS, Graph::vertex_descriptor> input_vertices;
 		for (auto const& [hemisphere, xy_range] : hs) {
 			auto const y_size = xy_range.second.size;
 			sizes[hemisphere] = y_size;
-			// Add loads
-			vertex::ExternalInput external_input(ConnectionType::DataUInt5, y_size);
+			// Add store from (range subset of ) external data and local load
+			vertex::DataInput external_data_input(ConnectionType::UInt5, y_size);
+			vertex::DataOutput external_data_output(ConnectionType::UInt5, y_size);
 			vertex::DataInput data_input(ConnectionType::UInt5, y_size);
-			auto const input_vertex = m_graph.add(external_input, instance, {});
+			auto const v1 = m_graph.add(
+			    external_data_input, external_instance,
+			    {{m_input_vertex, {xy_range.second.offset, xy_range.second.offset + y_size - 1}}});
+			auto const input_vertex = m_graph.add(external_data_output, external_instance, {v1});
 			uint5_inputs.push_back(m_graph.add(data_input, instance, {input_vertex}));
-			input_vertices[hemisphere] = input_vertex;
 		}
 
 		// Add spiketrain generator, connect to crossbar
@@ -280,8 +286,6 @@ void MAC::build_graph()
 			    {hemisphere, Input(insert_synram(
 			                     m_graph, std::move(local_weights), instance, hemisphere,
 			                     crossbar_input_vertex))});
-			m_synram_handles.push_back(
-			    {input_vertices.at(hemisphere), y_range.size, y_range.offset});
 		}
 	}
 
@@ -355,40 +359,6 @@ size_t MAC::output_size() const
 	return 0;
 }
 
-IODataMap MAC::generate_input_events(
-    Activations const& inputs, std::vector<SynramHandle> const& synram_handles)
-{
-	using namespace haldls::vx::v2;
-	using namespace halco::hicann_dls::vx::v2;
-
-	IODataMap data_map;
-
-	size_t const batch_size = inputs.size();
-	for (auto const& synram_handle : synram_handles) {
-		data_map.uint5[synram_handle.input_vertex].resize(batch_size);
-	}
-
-	auto const generate_events_for_range = [&](tbb::blocked_range<size_t> const& r) {
-		for (size_t batch = r.begin(); batch < r.end(); ++batch) {
-			auto const& local_inputs = inputs.at(batch);
-			for (auto const& synram_handle : synram_handles) {
-				auto const input_offset = synram_handle.input_offset;
-				auto const input_size = synram_handle.input_size;
-				auto& local = data_map.uint5.at(synram_handle.input_vertex).at(batch);
-				local.reserve(input_size);
-				assert((input_offset + input_size) <= local_inputs.size());
-				local.insert(
-				    local.end(), local_inputs.begin() + input_offset,
-				    local_inputs.begin() + input_offset + input_size);
-			}
-		}
-	};
-
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, batch_size), generate_events_for_range);
-
-	return data_map;
-}
-
 std::vector<std::vector<Int8>> MAC::run(
     Activations const& inputs,
     ChipConfig const& config,
@@ -419,7 +389,8 @@ std::vector<std::vector<Int8>> MAC::run(
 	}
 
 	hate::Timer input_timer;
-	auto const input_list = generate_input_events(inputs, m_synram_handles);
+	IODataMap input_list;
+	input_list.uint5[m_input_vertex] = inputs;
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
 	JITGraphExecutor::ChipConfigs chip_configs(
@@ -463,19 +434,11 @@ std::vector<std::vector<Int8>> MAC::run(
 }
 
 template <typename Archive>
-void serialize(Archive& ar, MAC::SynramHandle& handle)
-{
-	ar(handle.input_vertex);
-	ar(handle.input_size);
-	ar(handle.input_offset);
-}
-
-template <typename Archive>
 void MAC::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_enable_loopback);
 	ar(m_graph);
-	ar(m_synram_handles);
+	ar(m_input_vertex);
 	ar(m_output_vertex);
 	ar(m_weights);
 	ar(m_num_sends);

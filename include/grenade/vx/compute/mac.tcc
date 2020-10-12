@@ -8,7 +8,7 @@ MAC::MAC(
     bool enable_loopback) :
     m_enable_loopback(enable_loopback),
     m_graph(false),
-    m_synram_handles(),
+    m_input_vertex(),
     m_output_vertex(),
     m_weights(std::forward<Weights>(weights)),
     m_num_sends(num_sends),

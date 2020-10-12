@@ -98,20 +98,10 @@ private:
 	    halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
 	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
 
-	struct SynramHandle
-	{
-		Graph::vertex_descriptor input_vertex;
-		size_t input_size;
-		size_t input_offset;
-	};
-
-	static IODataMap generate_input_events(
-	    Activations const& inputs, std::vector<SynramHandle> const& synram_handles) SYMBOL_VISIBLE;
-
 	bool m_enable_loopback{false};
 	Graph m_graph{};
 
-	std::vector<SynramHandle> m_synram_handles{};
+	Graph::vertex_descriptor m_input_vertex{};
 	Graph::vertex_descriptor m_output_vertex{};
 	Weights m_weights{};
 
