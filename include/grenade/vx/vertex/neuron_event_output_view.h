@@ -28,22 +28,27 @@ struct NeuronEventOutputView
 
 	typedef std::vector<halco::hicann_dls::vx::v2::NeuronColumnOnDLS> Columns;
 	typedef halco::hicann_dls::vx::v2::NeuronRowOnDLS Row;
+	typedef std::map<Row, std::vector<Columns>> Neurons;
 
 	NeuronEventOutputView() = default;
 
 	/**
 	 * Construct NeuronEventOutputView with specified neurons.
-	 * @param columns Neuron columns
-	 * @param row Neuron row
+	 * @param neurons Incoming neurons
 	 */
-	NeuronEventOutputView(Columns const& columns, Row const& row) SYMBOL_VISIBLE;
+	NeuronEventOutputView(Neurons const& neurons) SYMBOL_VISIBLE;
 
-	Columns const& get_columns() const SYMBOL_VISIBLE;
-	Row const& get_row() const SYMBOL_VISIBLE;
+	Neurons const& get_neurons() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
-	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
+	/**
+	 * Input ports are organized in the same order as the specified neuron views.
+	 */
+	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 
+	/**
+	 * Output ports are sorted neuron event output channels.
+	 */
 	Port output() const SYMBOL_VISIBLE;
 
 	friend std::ostream& operator<<(std::ostream& os, NeuronEventOutputView const& config)
@@ -57,8 +62,7 @@ struct NeuronEventOutputView
 	bool operator!=(NeuronEventOutputView const& other) const SYMBOL_VISIBLE;
 
 private:
-	Columns m_columns{};
-	Row m_row{};
+	Neurons m_neurons{};
 
 	friend class cereal::access;
 	template <typename Archive>

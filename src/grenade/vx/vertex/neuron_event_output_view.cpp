@@ -8,81 +8,104 @@
 #include <algorithm>
 #include <ostream>
 #include <stdexcept>
+#include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
 namespace grenade::vx::vertex {
 
-NeuronEventOutputView::NeuronEventOutputView(Columns const& columns, Row const& row) :
-    m_columns(), m_row(row)
+NeuronEventOutputView::NeuronEventOutputView(Neurons const& neurons) : m_neurons()
 {
-	std::set<Columns::value_type> unique(columns.begin(), columns.end());
-	if (unique.size() != columns.size()) {
-		throw std::runtime_error(
-		    "Neuron locations provided to NeuronEventOutputView are not unique.");
+	for (auto const& [_, columns_of_inputs] : neurons) {
+		for (auto const& columns : columns_of_inputs) {
+			std::set<Columns::value_type> unique(columns.begin(), columns.end());
+			if (unique.size() != columns.size()) {
+				throw std::runtime_error(
+				    "Neuron locations provided to NeuronEventOutputView are not unique.");
+			}
+		}
 	}
-	m_columns = columns;
+	m_neurons = neurons;
 }
 
-NeuronEventOutputView::Columns const& NeuronEventOutputView::get_columns() const
+NeuronEventOutputView::Neurons const& NeuronEventOutputView::get_neurons() const
 {
-	return m_columns;
+	return m_neurons;
 }
 
-NeuronEventOutputView::Row const& NeuronEventOutputView::get_row() const
+std::vector<Port> NeuronEventOutputView::inputs() const
 {
-	return m_row;
-}
-
-std::array<Port, 1> NeuronEventOutputView::inputs() const
-{
-	return {Port(m_columns.size(), ConnectionType::MembraneVoltage)};
+	std::vector<Port> ret;
+	for (auto const& [_, columns_of_inputs] : m_neurons) {
+		for (auto const& columns_of_input : columns_of_inputs) {
+			ret.push_back(Port(columns_of_input.size(), ConnectionType::MembraneVoltage));
+		}
+	}
+	return ret;
 }
 
 Port NeuronEventOutputView::output() const
 {
 	std::set<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS> outputs;
-	for (auto const& column : m_columns) {
-		outputs.insert(column.toNeuronEventOutputOnDLS());
+	for (auto const& [_, columns_of_inputs] : m_neurons) {
+		for (auto const& columns_of_input : columns_of_inputs) {
+			for (auto const& column : columns_of_input) {
+				outputs.insert(column.toNeuronEventOutputOnDLS());
+			}
+		}
 	}
 	return Port(outputs.size(), ConnectionType::CrossbarInputLabel);
 }
 
 std::ostream& operator<<(std::ostream& os, NeuronEventOutputView const& config)
 {
-	os << "NeuronEventOutputView(row: " << config.m_row
-	   << ", num_columns: " << config.m_columns.size() << ")";
+	os << "NeuronEventOutputView([";
+	for (auto const& [row, columns_of_inputs] : config.m_neurons) {
+		os << "row: " << row << " num_columns: ";
+		size_t num_columns = 0;
+		for (auto const& columns_of_input : columns_of_inputs) {
+			num_columns += columns_of_input.size();
+		}
+		os << num_columns << "]";
+		if (row != (config.m_neurons.size() - 1)) {
+			os << ", " << std::endl;
+		}
+	}
+	os << "])";
 	return os;
 }
 
 bool NeuronEventOutputView::supports_input_from(
     NeuronView const& input, std::optional<PortRestriction> const& restriction) const
 {
-	if (input.get_row() != m_row) {
+	if (!m_neurons.contains(input.get_row())) {
 		return false;
 	}
 	auto const input_columns = input.get_columns();
+	auto const& local_columns = m_neurons.at(input.get_row());
 	if (!restriction) {
-		if (input_columns.size() != m_columns.size()) {
+		if (std::find(local_columns.begin(), local_columns.end(), input_columns) ==
+		    local_columns.end()) {
 			return false;
 		}
-		return std::equal(input_columns.begin(), input_columns.end(), m_columns.begin());
 	} else {
 		if (!restriction->is_restriction_of(input.output())) {
 			throw std::runtime_error(
 			    "Given restriction is not a restriction of input vertex output port.");
 		}
-		if (restriction->size() != m_columns.size()) {
+		NeuronView::Columns restricted_input_columns(
+		    input_columns.begin() + restriction->min(),
+		    input_columns.begin() + restriction->max() + 1);
+		if (std::find(local_columns.begin(), local_columns.end(), restricted_input_columns) ==
+		    local_columns.end()) {
 			return false;
 		}
-		return std::equal(
-		    input_columns.begin() + restriction->min(),
-		    input_columns.begin() + restriction->max() + 1, m_columns.begin());
 	}
+	return true;
 }
 
 bool NeuronEventOutputView::operator==(NeuronEventOutputView const& other) const
 {
-	return (m_columns == other.m_columns) && (m_row == other.m_row);
+	return (m_neurons == other.m_neurons);
 }
 
 bool NeuronEventOutputView::operator!=(NeuronEventOutputView const& other) const
@@ -93,11 +116,10 @@ bool NeuronEventOutputView::operator!=(NeuronEventOutputView const& other) const
 template <typename Archive>
 void NeuronEventOutputView::serialize(Archive& ar, std::uint32_t const)
 {
-	ar(m_columns);
-	ar(m_row);
+	ar(m_neurons);
 }
 
 } // namespace grenade::vx::vertex
 
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::NeuronEventOutputView)
-CEREAL_CLASS_VERSION(grenade::vx::vertex::NeuronEventOutputView, 0)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::NeuronEventOutputView, 1)

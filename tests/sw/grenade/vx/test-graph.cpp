@@ -236,7 +236,7 @@ TEST(Graph, recurrence)
 	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
-	    NeuronEventOutputView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
+	    {{NeuronRowOnDLS(), {NeuronEventOutputView::Columns{NeuronColumnOnDLS()}}}});
 	auto const v8 = graph.add(neuron_outputs, ExecutionInstance(), {v7});
 
 	// recurrence
@@ -325,7 +325,7 @@ TEST(Graph, CerealizeCoverage)
 	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
-	    NeuronEventOutputView::Columns{NeuronColumnOnDLS()}, NeuronRowOnDLS());
+	    {{NeuronRowOnDLS(), {NeuronEventOutputView::Columns{NeuronColumnOnDLS()}}}});
 	auto const v8 = graph.add(neuron_outputs, ExecutionInstance(), {v7});
 
 	// recurrence
