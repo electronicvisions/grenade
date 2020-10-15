@@ -16,6 +16,7 @@
 #include "grenade/vx/vertex/padi_bus.h"
 #include "grenade/vx/vertex/relu.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
+#include "grenade/vx/vertex/synapse_array_view_sparse.h"
 #include "grenade/vx/vertex/synapse_driver.h"
 #include "grenade/vx/vertex/transformation.h"
 #include "grenade/vx/vertex_concept.h"
@@ -30,6 +31,7 @@ typedef std::variant<
     vertex::CrossbarNode,
     vertex::PADIBus,
     vertex::SynapseDriver,
+    vertex::SynapseArrayViewSparse,
     vertex::SynapseArrayView,
     vertex::ConvertingReLU,
     vertex::ReLU,

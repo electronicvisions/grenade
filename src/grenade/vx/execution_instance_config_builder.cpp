@@ -74,6 +74,24 @@ void ExecutionInstanceConfigBuilder::process(
 
 template <>
 void ExecutionInstanceConfigBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayViewSparse const& data)
+{
+	auto& config = m_config;
+	auto const& columns = data.get_columns();
+	auto const& rows = data.get_rows();
+	auto const synram = data.get_synram();
+	auto const hemisphere = synram.toHemisphereOnDLS();
+	auto& synapse_matrix = config.hemispheres[hemisphere].synapse_matrix;
+	for (auto const& synapse : data.get_synapses()) {
+		auto const row = *(rows.begin() + synapse.index_row);
+		auto const column = *(columns.begin() + synapse.index_column);
+		synapse_matrix.weights[row][column] = synapse.weight;
+		synapse_matrix.labels[row][column] = synapse.label;
+	}
+}
+
+template <>
+void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
 {
 	auto& synapse_driver_config =
