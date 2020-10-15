@@ -6,6 +6,8 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 #include <boost/range/adaptor/map.hpp>
 #include <log4cxx/logger.h>
@@ -150,6 +152,31 @@ bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& c
 	});
 }
 
+namespace {
+
+template <typename Connection>
+void perform_hardware_check(Connection& connection)
+{
+	using namespace halco::common;
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v2;
+	using namespace stadls::vx::v2;
+
+	// perform hardware version check(s)
+	PlaybackProgramBuilder builder;
+	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
+	run(connection, builder.done());
+
+	if (jtag_id_ticket.get().get_version() != 2) {
+		std::stringstream ss;
+		ss << "Unexpected chip version: ";
+		ss << jtag_id_ticket.get().get_version();
+		throw std::runtime_error(ss.str());
+	}
+}
+
+} // namespace
+
 void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
@@ -163,6 +190,12 @@ void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
 	// check all DLSGlobal physical chips used in the graph are present in the provided connections
 	if (!is_executable_on(graph, connections)) {
 		throw std::runtime_error("Graph requests connection not provided.");
+	}
+
+	// check hardware matches expected version
+	for (auto const& [dls, connection] : connections) {
+		static_cast<void>(dls);
+		perform_hardware_check(connection);
 	}
 
 	LOG4CXX_TRACE(
