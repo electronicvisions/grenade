@@ -10,6 +10,7 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/range_split.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
+#include "grenade/vx/transformation/concatenation.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -182,7 +183,10 @@ void MAC::build_graph()
 	};
 	set_enable_loopback();
 
+	std::vector<size_t> x_split_sizes;
+	std::vector<Graph::vertex_descriptor> output_vertices;
 	for (auto const& x_range : x_split_ranges) {
+		x_split_sizes.push_back(x_range.size);
 		std::vector<Input> local_output_vertices;
 		for (auto const& y_range : y_split_ranges) {
 			if (instance != last_instance) {
@@ -227,13 +231,30 @@ void MAC::build_graph()
 			auto const v_add = m_graph.add(addition, instance, local_inputs);
 			vertex::DataOutput data_output(ConnectionType::Int8, x_range.size);
 			auto const v_out = m_graph.add(data_output, instance, {v_add});
-			m_output_vertices.push_back(v_out);
+			output_vertices.push_back(v_out);
 		} else {
 			std::transform(
 			    local_output_vertices.begin(), local_output_vertices.end(),
-			    std::back_inserter(m_output_vertices), [](auto const& i) { return i.descriptor; });
+			    std::back_inserter(output_vertices), [](auto const& i) { return i.descriptor; });
 		}
 	}
+	// concatenate all outputs
+	instance = execution_instance_manager.next_index();
+	// load all data
+	std::vector<Input> local_inputs;
+	local_inputs.reserve(output_vertices.size());
+	size_t i = 0;
+	for (auto const v : output_vertices) {
+		vertex::DataInput data_input(ConnectionType::Int8, x_split_ranges.at(i).size);
+		local_inputs.push_back(m_graph.add(data_input, instance, {v}));
+		i++;
+	}
+	auto concatenation =
+	    std::make_unique<transformation::Concatenation>(ConnectionType::Int8, x_split_sizes);
+	Vertex transformation(std::move(vertex::Transformation(std::move(concatenation))));
+	auto const vc = m_graph.add(std::move(transformation), instance, local_inputs);
+	vertex::DataOutput data_output(ConnectionType::Int8, output_size());
+	m_output_vertex = m_graph.add(data_output, instance, {vc});
 }
 
 size_t MAC::input_size() const
@@ -415,18 +436,7 @@ std::vector<std::vector<Int8>> MAC::run(
 	    JITGraphExecutor::run(m_graph, input_list, connections, chip_configs);
 
 	hate::Timer output_timer;
-	std::vector<std::vector<Int8>> output(output_activation_map.batch_size());
-	for (auto& entry : output) {
-		entry.resize(output_size());
-	}
-	for (size_t i = 0; i < output.size(); ++i) {
-		size_t o_offset = 0;
-		for (auto const vertex : m_output_vertices) {
-			auto const& o = output_activation_map.int8.at(vertex).at(i);
-			std::copy(o.begin(), o.end(), output.at(i).begin() + o_offset);
-			o_offset += o.size();
-		}
-	}
+	auto const output = output_activation_map.int8.at(m_output_vertex);
 
 	if (m_enable_loopback) {
 		boost::accumulators::accumulator_set<
@@ -473,7 +483,7 @@ void MAC::serialize(Archive& ar, std::uint32_t const)
 	ar(m_enable_loopback);
 	ar(m_graph);
 	ar(m_synram_handles);
-	ar(m_output_vertices);
+	ar(m_output_vertex);
 	ar(m_weights);
 	ar(m_num_sends);
 	ar(m_wait_between_events);

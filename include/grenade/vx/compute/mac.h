@@ -132,7 +132,7 @@ private:
 	Graph m_graph{};
 
 	std::vector<SynramHandle> m_synram_handles{};
-	std::vector<Graph::vertex_descriptor> m_output_vertices{};
+	Graph::vertex_descriptor m_output_vertex{};
 	Weights m_weights{};
 
 	void build_graph() SYMBOL_VISIBLE;

@@ -9,7 +9,7 @@ MAC::MAC(
     m_enable_loopback(enable_loopback),
     m_graph(false),
     m_synram_handles(),
-    m_output_vertices(),
+    m_output_vertex(),
     m_weights(std::forward<Weights>(weights)),
     m_num_sends(num_sends),
     m_wait_between_events(wait_between_events)
