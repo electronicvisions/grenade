@@ -30,6 +30,38 @@ class SwTestPygrenadeVx(unittest.TestCase):
         other.hemispheres[0].synapse_matrix.weights[0][0] = 15
         self.assertNotEqual(config, other)
 
+    def test_build_network_graph(self):
+        network_builder = grenade.NetworkBuilder()
+
+        ext_pop = grenade.ExternalPopulation(256)
+
+        neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
+                   for coord in halco.iter_all(halco.NeuronColumnOnDLS)]
+        int_pop = grenade.Population(neurons, True, False)
+
+        ext_pop_descr = network_builder.add(ext_pop)
+        int_pop_descr = network_builder.add(int_pop)
+
+        connections = []
+        for i in range(256):
+            connections.append(grenade.Projection.Connection(i, i, 63))
+        proj = grenade.Projection(
+            grenade.Projection.ReceptorType.excitatory,
+            connections,
+            ext_pop_descr,
+            int_pop_descr
+        )
+
+        network_builder.add(proj)
+
+        network = network_builder.done()
+
+        routing_result = grenade.build_routing(network)
+
+        network_graph = grenade.build_network_graph(network, routing_result)
+
+        self.assertEqual(network_graph.event_input_vertex, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

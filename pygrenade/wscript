@@ -39,6 +39,8 @@ def configure(cfg):
         )
 
 def build(bld):
+    bld.env.DLSvx_HARDWARE_AVAILABLE = "cube" == os.environ.get("SLURM_JOB_PARTITION")
+
     if not bld.env.with_pybind:
         bld.fatal('building pygrenade requires pybind')
 
@@ -47,7 +49,8 @@ def build(bld):
         source='../include/grenade/vx/pygrenade.h',
         genpybind_tags='grenade_vx',
         features='genpybind cxx cxxshlib pyext pyembed',
-        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx_v2', 'pylola_vx_v2', 'pyhalco_hicann_dls_vx_v2'],
+        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx_v2', 'pylola_vx_v2',
+             'pyhalco_hicann_dls_vx_v2', 'pyhxcomm_vx'],
         install_path='${PREFIX}/lib',
         linkflags='-Wl,-z,defs',
     )
@@ -62,5 +65,15 @@ def build(bld):
         pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")
     )
 
+    bld(
+        name='pygrenade_hwtest_vx',
+        tests='test/pygrenade_hwtest_vx.py',
+        features='use pytest pylint pycodestyle',
+        use=['pygrenade_vx', 'dlens_vx_v2'],
+        install_path='${PREFIX}/bin',
+        pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
+        pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle"),
+        skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
+    )
 
     bld.add_post_fun(summary)
