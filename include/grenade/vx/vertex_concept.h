@@ -46,8 +46,8 @@ struct VertexConcept
 
 	/*
 	 * The last element of the input ports can be variadic meaning it can be extended to an
-	 * arbitrary number of distinct ports. For this to be the case `variadic_input` has to be set to
-	 * true.
+	 * arbitrary number (including zero) of distinct ports. For this to be the case `variadic_input`
+	 * has to be set to true.
 	 */
 	static_assert(
 	    std::is_same_v<decltype(Vertex::variadic_input), bool const>,

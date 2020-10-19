@@ -445,11 +445,16 @@ bool Graph::operator!=(Graph const& other) const
 template <bool VariadicInput>
 void Graph::check_inputs_size(size_t const vertex_inputs_size, size_t const inputs_size)
 {
-	if (inputs_size < vertex_inputs_size) {
+	if (vertex_inputs_size < VariadicInput) {
+		throw std::logic_error("Variadic vertex input not supported for input size of zero.");
+	}
+	size_t const vertex_minimal_inputs_size =
+	    vertex_inputs_size - static_cast<size_t>(VariadicInput);
+	if (inputs_size < vertex_minimal_inputs_size) {
 		std::stringstream ss;
-		ss << "Number of supplied inputs (" << inputs_size
-		   << ") is smaller than the expected number of "
-		   << "(" << vertex_inputs_size << ") from vertex.";
+		ss << "Number of supplied inputs (" << inputs_size << ") is smaller than the "
+		   << (VariadicInput ? "minimal " : "") << "expected number of "
+		   << "(" << vertex_minimal_inputs_size << ") from vertex.";
 		throw std::runtime_error(ss.str());
 	}
 
