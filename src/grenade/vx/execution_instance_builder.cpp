@@ -544,6 +544,138 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::Transformation const& data)
+{
+	using namespace lola::vx::v2;
+	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::common;
+
+	// fill input value
+	auto const inputs = data.inputs();
+	auto const get_value_input = [&](Port const& port, Graph::vertex_descriptor const in_vertex) {
+		vertex::Transformation::Function::Value value_input;
+		switch (port.type) {
+			case ConnectionType::UInt32: {
+				auto const& input_values =
+				    ((std::holds_alternative<vertex::ExternalInput>(
+				         m_graph.get_vertex_property(in_vertex)))
+				         ? m_local_external_data.uint32.at(in_vertex)
+				         : m_local_data.uint32.at(in_vertex));
+				if (!input_values.empty() && (input_values.at(0).size() != port.size)) {
+					throw std::runtime_error("Data size does not match expectation.");
+				}
+				value_input = input_values;
+				break;
+			}
+			case ConnectionType::Int8: {
+				auto const& input_values =
+				    ((std::holds_alternative<vertex::ExternalInput>(
+				         m_graph.get_vertex_property(in_vertex)))
+				         ? m_local_external_data.int8.at(in_vertex)
+				         : m_local_data.int8.at(in_vertex));
+				if (!input_values.empty() && (input_values.at(0).size() != port.size)) {
+					throw std::runtime_error("Data size does not match expectation.");
+				}
+				value_input = input_values;
+				break;
+			}
+			case ConnectionType::UInt5: {
+				auto const& input_values =
+				    ((std::holds_alternative<vertex::ExternalInput>(
+				         m_graph.get_vertex_property(in_vertex)))
+				         ? m_local_external_data.uint5.at(in_vertex)
+				         : m_local_data.uint5.at(in_vertex));
+				if (!input_values.empty() && (input_values.at(0).size() != port.size)) {
+					throw std::runtime_error("Data size does not match expectation.");
+				}
+				value_input = input_values;
+				break;
+			}
+			case ConnectionType::TimedSpikeSequence: {
+				auto const& input_values =
+				    ((std::holds_alternative<vertex::ExternalInput>(
+				         m_graph.get_vertex_property(in_vertex)))
+				         ? m_local_external_data.spike_events.at(in_vertex)
+				         : m_local_data.spike_events.at(in_vertex));
+				value_input = input_values;
+				break;
+			}
+			case ConnectionType::TimedSpikeFromChipSequence: {
+				auto const& input_values =
+				    ((std::holds_alternative<vertex::ExternalInput>(
+				         m_graph.get_vertex_property(in_vertex)))
+				         ? m_local_external_data.spike_event_output.at(in_vertex)
+				         : m_local_data.spike_event_output.at(in_vertex));
+				value_input = input_values;
+				break;
+			}
+			default: {
+				throw std::logic_error(
+				    "Transformation output connection type processing not implemented.");
+			}
+		}
+		return value_input;
+	};
+	std::vector<vertex::Transformation::Function::Value> value_input;
+	auto edge_it = boost::in_edges(vertex, m_graph.get_graph()).first;
+	for (auto const& port : inputs) {
+		if (m_graph.get_edge_property_map().at(*edge_it)) {
+			throw std::logic_error("Edge with port restriction unsupported.");
+		}
+		auto const in_vertex = boost::source(*edge_it, m_graph.get_graph());
+		value_input.push_back(get_value_input(port, in_vertex));
+		edge_it++;
+	}
+	// execute transformation
+	auto const value_output = data.apply(value_input);
+	// process output value
+	switch (data.output().type) {
+		case ConnectionType::UInt32: {
+			auto const& value = std::get<decltype(IODataMap::uint32)::mapped_type>(value_output);
+			if (!value.empty() && (value.at(0).size() != data.output().size)) {
+				throw std::runtime_error("Data size does not match expectation.");
+			}
+			m_local_data.uint32[vertex] = value;
+			break;
+		}
+		case ConnectionType::Int8: {
+			auto const& value = std::get<decltype(IODataMap::int8)::mapped_type>(value_output);
+			if (!value.empty() && (value.at(0).size() != data.output().size)) {
+				throw std::runtime_error("Data size does not match expectation.");
+			}
+			m_local_data.int8[vertex] = value;
+			break;
+		}
+		case ConnectionType::UInt5: {
+			auto const& value = std::get<decltype(IODataMap::uint5)::mapped_type>(value_output);
+			if (!value.empty() && (value.at(0).size() != data.output().size)) {
+				throw std::runtime_error("Data size does not match expectation.");
+			}
+			m_local_data.uint5[vertex] = value;
+			break;
+		}
+		case ConnectionType::TimedSpikeSequence: {
+			auto const& value =
+			    std::get<decltype(IODataMap::spike_events)::mapped_type>(value_output);
+			m_local_data.spike_events[vertex] = value;
+			break;
+		}
+		case ConnectionType::TimedSpikeFromChipSequence: {
+			auto const& value =
+			    std::get<decltype(IODataMap::spike_event_output)::mapped_type>(value_output);
+			m_local_data.spike_event_output[vertex] = value;
+			break;
+		}
+		default: {
+			throw std::logic_error(
+			    "Transformation input connection type processing not implemented.");
+		}
+	}
+}
+
 void ExecutionInstanceBuilder::register_epilogue(stadls::vx::v2::PlaybackProgramBuilder&& builder)
 {
 	m_builder_epilogue = std::move(builder);

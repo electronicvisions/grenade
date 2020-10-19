@@ -1,11 +1,11 @@
 #pragma once
+#include "grenade/vx/event.h"
+#include "grenade/vx/graph_representation.h"
+#include "grenade/vx/types.h"
+#include "hate/visibility.h"
 #include <map>
 #include <memory>
 #include <mutex>
-#include "grenade/vx/event.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/types.h"
-#include "hate/visibility.h"
 
 namespace grenade::vx {
 
@@ -21,7 +21,7 @@ struct IODataMap
 	 * @tparam Data Batch-entry data type
 	 */
 	template <typename Data>
-	using DataTypeMap = std::map<Graph::vertex_descriptor, std::vector<Data>>;
+	using DataTypeMap = std::map<detail::vertex_descriptor, std::vector<Data>>;
 
 	/** UInt32 data. */
 	DataTypeMap<std::vector<UInt32>> uint32;
@@ -98,7 +98,7 @@ struct ConstantReferenceIODataMap
 	 * @tparam Data Batch-entry data type
 	 */
 	template <typename Data>
-	using DataTypeMap = std::map<Graph::vertex_descriptor, std::vector<Data> const&>;
+	using DataTypeMap = std::map<detail::vertex_descriptor, std::vector<Data> const&>;
 
 	/** UInt32 data. */
 	DataTypeMap<std::vector<UInt32>> uint32;

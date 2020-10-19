@@ -17,6 +17,7 @@
 #include "grenade/vx/vertex/relu.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
 #include "grenade/vx/vertex/synapse_driver.h"
+#include "grenade/vx/vertex/transformation.h"
 #include "grenade/vx/vertex_concept.h"
 
 namespace grenade::vx {
@@ -36,6 +37,7 @@ typedef std::variant<
     vertex::ExternalInput,
     vertex::DataInput,
     vertex::DataOutput,
+    vertex::Transformation,
     vertex::NeuronView,
     vertex::NeuronEventOutputView,
     vertex::CADCMembraneReadoutView>
