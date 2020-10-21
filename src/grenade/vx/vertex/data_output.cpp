@@ -2,6 +2,7 @@
 
 #include "grenade/cerealization.h"
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 
 namespace grenade::vx::vertex {
@@ -47,7 +48,9 @@ DataOutput::DataOutput(ConnectionType const input_type, size_t const size) :
 			break;
 		}
 		default: {
-			throw std::runtime_error("Specified ConnectionType to DataOutput not supported.");
+			std::stringstream ss;
+			ss << "Specified ConnectionType(" << input_type << ") to DataOutput not supported.";
+			throw std::runtime_error(ss.str());
 		}
 	}
 }

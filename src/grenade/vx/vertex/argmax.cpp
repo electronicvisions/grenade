@@ -3,6 +3,7 @@
 #include "grenade/cerealization.h"
 #include <limits>
 #include <ostream>
+#include <sstream>
 
 namespace grenade::vx::vertex {
 
@@ -22,11 +23,14 @@ ArgMax::ArgMax(size_t const size, ConnectionType const type) : m_size(size), m_t
 			break;
 		}
 		default: {
-			throw std::runtime_error("Specified ConnectionType to ArgMax not supported.");
+			std::stringstream ss;
+			ss << "Specified ConnectionType(" << type << ") to ArgMax not supported.";
+			throw std::runtime_error(ss.str());
 		}
 	}
 	if (m_size > std::numeric_limits<uint32_t>::max()) {
-		throw std::runtime_error("Specified size to ArgMax not representable.");
+		throw std::runtime_error(
+		    "Specified size(" + std::to_string(m_size) + ") to ArgMax not representable.");
 	}
 }
 

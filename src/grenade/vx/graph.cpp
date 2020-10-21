@@ -19,6 +19,7 @@
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/input.h"
 #include "hate/timer.h"
+#include "hate/type_index.h"
 
 namespace cereal {
 
@@ -513,7 +514,10 @@ void Graph::check_supports_input_from(
     std::optional<PortRestriction> const& input_port_restriction)
 {
 	if (!supports_input_from(vertex, input_vertex, input_port_restriction)) {
-		throw std::runtime_error("Vertex does not support input from incoming vertex.");
+		std::stringstream ss;
+		ss << "Vertex(" << vertex << ") does not support input from incoming vertex("
+		   << input_vertex << ").";
+		throw std::runtime_error(ss.str());
 	}
 }
 
@@ -533,12 +537,16 @@ void Graph::check_execution_instances(
 	if (connection_type_can_connect && Vertex::can_connect_different_execution_instances &&
 	    InputVertex::can_connect_different_execution_instances) {
 		if (vertex_execution_instance == input_vertex_execution_instance) {
-			throw std::runtime_error("Connection does not go forward in time dimension.");
+			throw std::runtime_error(
+			    "Connection(" + hate::name<InputVertex>() + " -> " + hate::name<Vertex>() +
+			    ") does not go forward in time dimension.");
 		}
 	} else {
 		if (vertex_execution_instance != input_vertex_execution_instance) {
-			throw std::runtime_error("Connection between specified vertices not allowed "
-			                         "over different times.");
+			throw std::runtime_error(
+			    "Connection(" + hate::name<InputVertex>() + " -> " + hate::name<Vertex>() +
+			    ") not allowed "
+			    "over different times.");
 		}
 	}
 }
