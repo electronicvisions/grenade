@@ -62,6 +62,8 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 	m_postprocessing = false;
 	size_t const batch_size = m_input_list.batch_size();
 	m_batch_entries.resize(batch_size);
+
+	m_local_external_data.runtime = m_input_list.runtime;
 }
 
 bool ExecutionInstanceBuilder::has_complete_input_list() const
@@ -861,7 +863,11 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	PlaybackProgramBuilder builder;
 
 	// if no on-chip computation is to be done, return without static configuration
-	auto const has_computation = m_event_input_vertex.has_value();
+	auto const has_computation =
+	    m_event_input_vertex.has_value() ||
+	    std::any_of(
+	        m_local_external_data.runtime.begin(), m_local_external_data.runtime.end(),
+	        [](auto const& r) { return r != 0; });
 	if (!has_computation) {
 		builder.merge_back(m_builder_epilogue);
 		m_chunked_program = {builder.done()};
@@ -996,20 +1002,25 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		}
 		builder.write(TimerOnDLS(), Timer());
 		TimedSpike::Time current_time(0);
-		assert(m_event_input_vertex);
-		for (auto const& event : m_local_data.spike_events.at(*m_event_input_vertex).at(b)) {
-			if (event.time == current_time + 1) {
-				current_time = event.time;
-			} else if (event.time > current_time) {
-				current_time = event.time;
-				builder.block_until(TimerOnDLS(), current_time);
+		if (m_event_input_vertex) {
+			for (auto const& event : m_local_data.spike_events.at(*m_event_input_vertex).at(b)) {
+				if (event.time == current_time + 1) {
+					current_time = event.time;
+				} else if (event.time > current_time) {
+					current_time = event.time;
+					builder.block_until(TimerOnDLS(), current_time);
+				}
+				std::visit(
+				    [&](auto const& p) {
+					    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
+					    builder.write(typename container_type::coordinate_type(), p);
+				    },
+				    event.payload);
 			}
-			std::visit(
-			    [&](auto const& p) {
-				    typedef hate::remove_all_qualifiers_t<decltype(p)> container_type;
-				    builder.write(typename container_type::coordinate_type(), p);
-			    },
-			    event.payload);
+		}
+		// wait until runtime reached
+		if (!m_local_external_data.runtime.empty()) {
+			builder.block_until(TimerOnDLS(), m_local_external_data.runtime.at(b));
 		}
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());

@@ -2,6 +2,7 @@
 #include "grenade/vx/event.h"
 #include "grenade/vx/graph_representation.h"
 #include "grenade/vx/types.h"
+#include "haldls/vx/v2/timer.h"
 #include "hate/visibility.h"
 #include <map>
 #include <memory>
@@ -22,6 +23,14 @@ struct IODataMap
 	 */
 	template <typename Data>
 	using DataTypeMap = std::map<detail::vertex_descriptor, std::vector<Data>>;
+
+	/**
+	 * Runtime time-interval data.
+	 * The runtime start time coincides with the spike events' and MADC recording start time.
+	 * Event data is only recorded during the runtime.
+	 * If the runtime data is empty it is ignored.
+	 */
+	std::vector<haldls::vx::v2::Timer::Value> runtime;
 
 	/** UInt32 data. */
 	DataTypeMap<std::vector<UInt32>> uint32;
@@ -101,6 +110,9 @@ struct ConstantReferenceIODataMap
 	 */
 	template <typename Data>
 	using DataTypeMap = std::map<detail::vertex_descriptor, std::vector<Data> const&>;
+
+	/** Runtime data. */
+	std::vector<haldls::vx::v2::Timer::Value> runtime;
 
 	/** UInt32 data. */
 	DataTypeMap<std::vector<UInt32>> uint32;
