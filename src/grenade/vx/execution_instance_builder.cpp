@@ -182,25 +182,7 @@ void ExecutionInstanceBuilder::process(
 			auto const local_spikes = program.get_spikes();
 			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
 		}
-		std::sort(spikes.begin(), spikes.end(), [](auto const& a, auto const& b) {
-			return a.get_fpga_time() < b.get_fpga_time();
-		});
-		std::vector<TimedSpikeFromChipSequence> spike_batches;
-		auto begin = spikes.begin();
-		for (auto const& e : m_batch_entries) {
-			assert(e.m_ticket_events_begin);
-			auto const begin_time = e.m_ticket_events_begin->get_fpga_time();
-			auto const end_time = e.m_ticket_events_end->get_fpga_time();
-			begin = std::find_if(begin, spikes.end(), [&](auto const& spike) {
-				return spike.get_fpga_time() > begin_time;
-			});
-			auto const end = std::find_if(begin, spikes.end(), [&](auto const& spike) {
-				return spike.get_fpga_time() > end_time;
-			});
-			spike_batches.push_back(TimedSpikeFromChipSequence(begin, end));
-			begin = end;
-		}
-		m_local_data.spike_event_output[vertex] = spike_batches;
+		m_local_data.spike_event_output[vertex] = filter_events(spikes);
 	}
 }
 
@@ -579,6 +561,70 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
+template <typename T>
+std::vector<std::vector<T>> ExecutionInstanceBuilder::filter_events(std::vector<T>& data) const
+{
+	// early return if no events are recorded
+	if (data.empty()) {
+		std::vector<std::vector<T>> data_batches(m_batch_entries.size());
+		return data_batches;
+	}
+	// sort events by chip time
+	std::sort(data.begin(), data.end(), [](auto const& a, auto const& b) {
+		return a.get_chip_time() < b.get_chip_time();
+	});
+	// iterate over batch entries and extract associated events
+	std::vector<std::vector<T>> data_batches;
+	auto begin = data.begin();
+	for (size_t i = 0; auto const& e : m_batch_entries) {
+		// Extract all events in-between the interval from the event begin FPGATime value to the
+		// event end FPGATime value comparing with the ChipTime value of the events. Comparing the
+		// FPGATime of the interval bounds with the ChipTime of the events leads to a small drift of
+		// the interval towards the past, i.e. the recording starts and stops a one-way
+		// highspeed-link latency too early. We define the to be recorded interval in this way.
+		// In addition, valid relative times are restricted to be within [0, runtime).
+
+		// find begin of interval
+		assert(e.m_ticket_events_begin);
+		auto const interval_begin_time = e.m_ticket_events_begin->get_fpga_time().value();
+		begin = std::find_if(begin, data.end(), [&](auto const& event) {
+			return event.get_chip_time().value() >= interval_begin_time;
+		});
+		// add empty events and continue if no spikes are recorded for this batch entry
+		if (begin == data.end()) {
+			data_batches.push_back({});
+			continue;
+		}
+		// find end of interval
+		auto const offset_chip_time = begin->get_chip_time();
+		assert(e.m_ticket_events_end);
+		auto const interval_end_time = e.m_ticket_events_end->get_fpga_time().value();
+		uintmax_t end_time = 0;
+		if (!m_local_external_data.runtime.empty()) {
+			auto const absolute_end_chip_time =
+			    m_local_external_data.runtime.at(i).value() + offset_chip_time.value();
+			assert(e.m_ticket_events_end);
+			end_time = std::min(interval_end_time, absolute_end_chip_time);
+		} else {
+			end_time = interval_end_time;
+		}
+		auto end = std::find_if(begin, data.end(), [&](auto const& event) {
+			return event.get_chip_time().value() >= end_time;
+		});
+		// copy interval content
+		std::vector<T> data_batch = std::vector<T>(begin, end);
+		// subtract the interval begin time to get relative times
+		for (auto& event : data_batch) {
+			event.set_chip_time(
+			    haldls::vx::v2::ChipTime(event.get_chip_time() - interval_begin_time));
+		}
+		data_batches.push_back(std::move(data_batch));
+		begin = end;
+		i++;
+	}
+	return data_batches;
+}
+
 template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::MADCMembraneReadoutView const&)
@@ -596,25 +642,7 @@ void ExecutionInstanceBuilder::process(
 			madc_samples.insert(
 			    madc_samples.end(), local_madc_samples.begin(), local_madc_samples.end());
 		}
-		std::sort(madc_samples.begin(), madc_samples.end(), [](auto const& a, auto const& b) {
-			return a.get_fpga_time() < b.get_fpga_time();
-		});
-		std::vector<TimedMADCSampleFromChipSequence> madc_sample_batches;
-		auto begin = madc_samples.begin();
-		for (auto const& e : m_batch_entries) {
-			assert(e.m_ticket_events_begin);
-			auto const begin_time = e.m_ticket_events_begin->get_fpga_time();
-			auto const end_time = e.m_ticket_events_end->get_fpga_time();
-			begin = std::find_if(begin, madc_samples.end(), [&](auto const& spike) {
-				return spike.get_fpga_time() > begin_time;
-			});
-			auto const end = std::find_if(begin, madc_samples.end(), [&](auto const& spike) {
-				return spike.get_fpga_time() > end_time;
-			});
-			madc_sample_batches.push_back(TimedMADCSampleFromChipSequence(begin, end));
-			begin = end;
-		}
-		m_local_data.madc_samples[vertex] = madc_sample_batches;
+		m_local_data.madc_samples[vertex] = filter_events(madc_samples);
 	}
 }
 

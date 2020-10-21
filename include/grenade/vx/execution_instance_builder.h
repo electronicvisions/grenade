@@ -186,6 +186,15 @@ private:
 	 * @return Boolean value
 	 */
 	bool has_complete_input_list() const;
+
+	/**
+	 * Filter events via batch entry runtime and recording interval.
+	 * The input data is to be modified because of sorting in-place.
+	 * @param data Event sequence
+	 * @return Event sequences split for the batch entries with relative chip times
+	 */
+	template <typename T>
+	std::vector<std::vector<T>> filter_events(std::vector<T>& data) const;
 };
 
 } // namespace grenade::vx
