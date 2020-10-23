@@ -36,4 +36,7 @@ typedef std::vector<TimedSpike> TimedSpikeSequence;
 /** Sequence of time-annotated from-chip spike events. */
 typedef std::vector<haldls::vx::v2::SpikeFromChip> TimedSpikeFromChipSequence;
 
+/** Sequence of time-annotated from-chip MADC events. */
+typedef std::vector<haldls::vx::v2::MADCSampleFromChip> TimedMADCSampleFromChipSequence;
+
 } // namespace grenade::vx

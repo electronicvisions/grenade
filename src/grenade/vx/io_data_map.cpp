@@ -3,7 +3,12 @@
 namespace grenade::vx {
 
 IODataMap::IODataMap() :
-    uint5(), int8(), spike_events(), spike_event_output(), mutex(std::make_unique<std::mutex>())
+    uint5(),
+    int8(),
+    spike_events(),
+    spike_event_output(),
+    madc_samples(),
+    mutex(std::make_unique<std::mutex>())
 {}
 
 IODataMap::IODataMap(IODataMap&& other) :
@@ -12,6 +17,7 @@ IODataMap::IODataMap(IODataMap&& other) :
     int8(std::move(other.int8)),
     spike_events(std::move(other.spike_events)),
     spike_event_output(std::move(other.spike_event_output)),
+    madc_samples(std::move(other.madc_samples)),
     mutex(std::move(other.mutex))
 {
 	other.mutex = std::make_unique<std::mutex>();
@@ -24,6 +30,7 @@ IODataMap& IODataMap::operator=(IODataMap&& other)
 	int8 = std::move(other.int8);
 	spike_events = std::move(other.spike_events);
 	spike_event_output = std::move(other.spike_event_output);
+	madc_samples = std::move(other.madc_samples);
 	mutex = std::move(other.mutex);
 	other.mutex = std::make_unique<std::mutex>();
 	return *this;
@@ -37,6 +44,7 @@ void IODataMap::merge(IODataMap&& other)
 	int8.merge(other.int8);
 	spike_events.merge(other.spike_events);
 	spike_event_output.merge(other.spike_event_output);
+	madc_samples.merge(other.madc_samples);
 }
 
 void IODataMap::merge(IODataMap& other)
@@ -52,12 +60,13 @@ void IODataMap::clear()
 	int8.clear();
 	spike_events.clear();
 	spike_event_output.clear();
+	madc_samples.clear();
 }
 
 bool IODataMap::empty() const
 {
 	return uint32.empty() && uint5.empty() && int8.empty() && spike_events.empty() &&
-	       spike_event_output.empty();
+	       spike_event_output.empty() && madc_samples.empty();
 }
 
 namespace {
@@ -78,6 +87,8 @@ size_t unsafe_batch_size(IODataMap const& map)
 		size = map.spike_events.begin()->second.size();
 	} else if (map.spike_event_output.size()) {
 		size = map.spike_event_output.begin()->second.size();
+	} else if (map.madc_samples.size()) {
+		size = map.madc_samples.begin()->second.size();
 	}
 	return size;
 }
@@ -110,13 +121,16 @@ bool IODataMap::valid() const
 	bool const spike_event_output_value = std::all_of(
 	    spike_event_output.cbegin(), spike_event_output.cend(),
 	    [size](auto const& list) { return list.second.size() == size; });
+	bool const madc_samples_value = std::all_of(
+	    madc_samples.cbegin(), madc_samples.cend(),
+	    [size](auto const& list) { return list.second.size() == size; });
 	return uint32_value && uint5_value && int8_value && spike_events_value &&
-	       spike_event_output_value;
+	       spike_event_output_value && madc_samples_value;
 }
 
 
 ConstantReferenceIODataMap::ConstantReferenceIODataMap() :
-    uint32(), uint5(), int8(), spike_events(), spike_event_output()
+    uint32(), uint5(), int8(), spike_events(), spike_event_output(), madc_samples()
 {}
 
 void ConstantReferenceIODataMap::clear()
@@ -126,6 +140,7 @@ void ConstantReferenceIODataMap::clear()
 	int8.clear();
 	spike_events.clear();
 	spike_event_output.clear();
+	madc_samples.clear();
 }
 
 } // namespace grenade::vx

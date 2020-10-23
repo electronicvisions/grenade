@@ -33,6 +33,8 @@ struct IODataMap
 	DataTypeMap<TimedSpikeSequence> spike_events;
 	/** Spike output events. */
 	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
+	/** MADC output events. */
+	DataTypeMap<TimedMADCSampleFromChipSequence> madc_samples;
 
 	IODataMap() SYMBOL_VISIBLE;
 
@@ -110,6 +112,8 @@ struct ConstantReferenceIODataMap
 	DataTypeMap<TimedSpikeSequence> spike_events;
 	/** Spike output events. */
 	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
+	/** MADC output events. */
+	DataTypeMap<TimedMADCSampleFromChipSequence> madc_samples;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

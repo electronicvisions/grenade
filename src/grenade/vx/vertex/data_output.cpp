@@ -38,6 +38,14 @@ DataOutput::DataOutput(ConnectionType const input_type, size_t const size) :
 			}
 			break;
 		}
+		case ConnectionType::TimedMADCSampleFromChipSequence: {
+			m_input_type = input_type;
+			if (m_size > 1) {
+				throw std::runtime_error(
+				    "DataOutput only supports size(1) for TimedMADCSampleFromChipSequence.");
+			}
+			break;
+		}
 		default: {
 			throw std::runtime_error("Specified ConnectionType to DataOutput not supported.");
 		}
@@ -67,6 +75,9 @@ Port DataOutput::output() const
 			}
 			case ConnectionType::TimedSpikeFromChipSequence: {
 				return ConnectionType::DataTimedSpikeFromChipSequence;
+			}
+			case ConnectionType::TimedMADCSampleFromChipSequence: {
+				return ConnectionType::DataTimedMADCSampleFromChipSequence;
 			}
 			default: {
 				throw std::logic_error("Field m_input_type value of DataOutput not supported.");

@@ -161,6 +161,8 @@ private:
 	std::vector<BatchEntry> m_batch_entries;
 
 	NeuronResetMaskGenerator m_neuron_resets;
+	// Optional vertex descriptor of MADC readout if the execution instance contains such
+	std::optional<Graph::vertex_descriptor> m_madc_readout_vertex;
 
 	/**
 	 * Check if any incoming vertex requires post processing.

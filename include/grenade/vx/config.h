@@ -1,16 +1,18 @@
 #pragma once
-#include <boost/hana/adapt_struct.hpp>
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "haldls/vx/v2/madc.h"
 #include "haldls/vx/v2/padi.h"
+#include "haldls/vx/v2/readout.h"
 #include "haldls/vx/v2/routing_crossbar.h"
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
 #include "stadls/vx/v2/dumper.h"
+#include <boost/hana/adapt_struct.hpp>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -64,6 +66,12 @@ public:
 	/** Crossbar node configuration. */
 	_crossbar_nodes_type crossbar_nodes;
 
+	/** Readout source selection configuration */
+	haldls::vx::ReadoutSourceSelection readout_source_selection;
+
+	/** MADC configuration */
+	haldls::vx::MADCConfig madc_config;
+
 	bool operator==(ChipConfig const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ChipConfig const& other) const SYMBOL_VISIBLE;
 };
@@ -79,4 +87,5 @@ ChipConfig GENPYBIND(visible)
 } // namespace grenade::vx
 
 BOOST_HANA_ADAPT_STRUCT(grenade::vx::HemisphereConfig, synapse_matrix, synapse_driver_block);
-BOOST_HANA_ADAPT_STRUCT(grenade::vx::ChipConfig, hemispheres, crossbar_nodes);
+BOOST_HANA_ADAPT_STRUCT(
+    grenade::vx::ChipConfig, hemispheres, crossbar_nodes, readout_source_selection, madc_config);

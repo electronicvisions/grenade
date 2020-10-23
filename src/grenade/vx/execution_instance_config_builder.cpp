@@ -52,6 +52,32 @@ void ExecutionInstanceConfigBuilder::process(
 
 template <>
 void ExecutionInstanceConfigBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::MADCMembraneReadoutView const& data)
+{
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v2;
+
+	// MADCMembraneReadoutView inputs size equals 1
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+
+	// Determine readout chain configuration
+	auto& readout_source_selection = m_config.readout_source_selection;
+	auto smux = readout_source_selection.get_buffer(SourceMultiplexerOnReadoutSourceSelection());
+	bool const is_odd = data.get_coord().toNeuronColumnOnDLS() % 2;
+	auto neuron_even = smux.get_neuron_even();
+	neuron_even[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+	smux.set_neuron_even(neuron_even);
+	auto neuron_odd = smux.get_neuron_odd();
+	neuron_odd[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+	smux.set_neuron_odd(neuron_odd);
+	readout_source_selection.set_buffer(SourceMultiplexerOnReadoutSourceSelection(), smux);
+	auto buffer_to_pad = readout_source_selection.get_enable_buffer_to_pad();
+	buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()] = true;
+	readout_source_selection.set_enable_buffer_to_pad(buffer_to_pad);
+}
+
+template <>
+void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayView const& data)
 {
 	auto& config = m_config;
@@ -187,6 +213,26 @@ ExecutionInstanceConfigBuilder::generate(bool const enable_ppu)
 	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
 		builder.write(coord, m_config.crossbar_nodes[coord]);
 	}
+	builder.write(ReadoutSourceSelectionOnDLS(), m_config.readout_source_selection);
+	builder.write(MADCConfigOnDLS(), m_config.madc_config);
+	// FIXME: should be properties of the lola MADC container in the chip object
+	std::map<CapMemCellOnDLS, CapMemCell> readout_cells = {
+	    {CapMemCellOnDLS::readout_out_amp_i_bias_0, CapMemCell(CapMemCell::Value(0))},
+	    {CapMemCellOnDLS::readout_out_amp_i_bias_1, CapMemCell(CapMemCell::Value(0))},
+	    {CapMemCellOnDLS::readout_pseudo_diff_buffer_bias, CapMemCell(CapMemCell::Value(0))},
+	    {CapMemCellOnDLS::readout_ac_mux_i_bias, CapMemCell(CapMemCell::Value(500))},
+	    {CapMemCellOnDLS::readout_madc_in_500na, CapMemCell(CapMemCell::Value(500))},
+	    {CapMemCellOnDLS::readout_sc_amp_i_bias, CapMemCell(CapMemCell::Value(500))},
+	    {CapMemCellOnDLS::readout_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))},
+	    {CapMemCellOnDLS::readout_pseudo_diff_v_ref, CapMemCell(CapMemCell::Value(400))},
+	    {CapMemCellOnDLS::readout_iconv_test_voltage, CapMemCell(CapMemCell::Value(400))},
+	    {CapMemCellOnDLS::readout_iconv_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))}};
+	for (auto const& [coord, config] : readout_cells) {
+		builder.write(coord, config);
+	}
+	// wait for CapMem to settle
+	builder.write(TimerOnDLS(), Timer());
+	builder.block_until(TimerOnDLS(), Timer::Value(20000 * Timer::Value::fpga_clock_cycles_per_us));
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
 	if (enable_ppu) {

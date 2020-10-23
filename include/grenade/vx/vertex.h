@@ -11,6 +11,7 @@
 #include "grenade/vx/vertex/data_input.h"
 #include "grenade/vx/vertex/data_output.h"
 #include "grenade/vx/vertex/external_input.h"
+#include "grenade/vx/vertex/madc_readout.h"
 #include "grenade/vx/vertex/neuron_event_output_view.h"
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/padi_bus.h"
@@ -42,6 +43,7 @@ typedef std::variant<
     vertex::Transformation,
     vertex::NeuronView,
     vertex::NeuronEventOutputView,
+    vertex::MADCMembraneReadoutView,
     vertex::CADCMembraneReadoutView>
     Vertex;
 

@@ -49,7 +49,8 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_config_builder(graph, execution_instance, chip_config),
     m_post_vertices(),
     m_local_data(),
-    m_local_data_output()
+    m_local_data_output(),
+    m_madc_readout_vertex()
 {
 	// check that input list provides all requested input for local graph
 	if (!has_complete_input_list()) {
@@ -564,8 +565,54 @@ void ExecutionInstanceBuilder::process(
 		auto const& local_data =
 		    m_local_data.spike_event_output.at(boost::source(in_edge, m_graph.get_graph()));
 		m_local_data_output.spike_event_output[vertex] = local_data;
+	} else if (data.inputs().front().type == ConnectionType::TimedMADCSampleFromChipSequence) {
+		// get in edge
+		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+		auto const& local_data =
+		    m_local_data.madc_samples.at(boost::source(in_edge, m_graph.get_graph()));
+		m_local_data_output.madc_samples[vertex] = local_data;
 	} else {
 		throw std::logic_error("DataOutput data type not implemented.");
+	}
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::MADCMembraneReadoutView const&)
+{
+	if (!m_postprocessing) {
+		if (m_madc_readout_vertex) {
+			throw std::logic_error("Only one MADC readout vertex allowed.");
+		}
+		m_madc_readout_vertex = vertex;
+		m_post_vertices.push_back(vertex);
+	} else {
+		stadls::vx::PlaybackProgram::madc_samples_type madc_samples;
+		for (auto const& program : m_chunked_program) {
+			auto const local_madc_samples = program.get_madc_samples();
+			madc_samples.insert(
+			    madc_samples.end(), local_madc_samples.begin(), local_madc_samples.end());
+		}
+		std::sort(madc_samples.begin(), madc_samples.end(), [](auto const& a, auto const& b) {
+			return a.get_fpga_time() < b.get_fpga_time();
+		});
+		std::vector<TimedMADCSampleFromChipSequence> madc_sample_batches;
+		auto begin = madc_samples.begin();
+		for (auto const& e : m_batch_entries) {
+			assert(e.m_ticket_events_begin);
+			auto const begin_time = e.m_ticket_events_begin->get_fpga_time();
+			auto const end_time = e.m_ticket_events_end->get_fpga_time();
+			begin = std::find_if(begin, madc_samples.end(), [&](auto const& spike) {
+				return spike.get_fpga_time() > begin_time;
+			});
+			auto const end = std::find_if(begin, madc_samples.end(), [&](auto const& spike) {
+				return spike.get_fpga_time() > end_time;
+			});
+			madc_sample_batches.push_back(TimedMADCSampleFromChipSequence(begin, end));
+			begin = end;
+		}
+		m_local_data.madc_samples[vertex] = madc_sample_batches;
 	}
 }
 
@@ -823,6 +870,42 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 
 	builder.merge_back(config_builder);
 
+	auto const insert_madc_arm = [&](auto& b) {
+		if (m_madc_readout_vertex) {
+			MADCControl config;
+			config.set_enable_power_down_after_sampling(true);
+			config.set_start_recording(false);
+			config.set_wake_up(true);
+			config.set_enable_pre_amplifier(true);
+			config.set_enable_continuous_sampling(true);
+			b.write(MADCControlOnDLS(), config);
+			b.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		}
+	};
+
+	auto const insert_madc_start = [&](auto& b) {
+		if (m_madc_readout_vertex) {
+			MADCControl config;
+			config.set_enable_power_down_after_sampling(true);
+			config.set_start_recording(true);
+			config.set_wake_up(false);
+			config.set_enable_pre_amplifier(true);
+			config.set_enable_continuous_sampling(true);
+			b.write(MADCControlOnDLS(), config);
+			b.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		}
+	};
+
+	auto const insert_madc_stop = [&](auto& b) {
+		if (m_madc_readout_vertex) {
+			MADCControl config;
+			config.set_enable_power_down_after_sampling(true);
+			config.set_enable_continuous_sampling(true);
+			config.set_stop_recording(true);
+			b.write(MADCControlOnDLS(), config);
+		}
+	};
+
 	// timing-uncritical initial setup
 	builders.push_back(std::move(builder));
 	builder = PlaybackProgramBuilder();
@@ -849,6 +932,9 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		auto& batch_entry = m_batch_entries.at(b);
+		// start MADC
+		insert_madc_arm(builder);
+		insert_madc_start(builder);
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
 			if (enable_ppu) {
@@ -905,7 +991,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			}
 		}
 		// send input
-		if (m_event_output_vertex) {
+		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
 		}
 		builder.write(TimerOnDLS(), Timer());
@@ -925,7 +1011,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			    },
 			    event.payload);
 		}
-		if (m_event_output_vertex) {
+		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
 		}
 		// wait for membrane to settle
@@ -967,6 +1053,8 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 				batch_entry.m_ticket = builder.read(CADCSamplesOnDLS());
 			}
 		}
+		// stop MADC
+		insert_madc_stop(builder);
 		// wait for response data
 		if (!builder.empty()) {
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);

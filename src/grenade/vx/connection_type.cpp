@@ -23,6 +23,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "TimedSpikeSequence");
 		case ConnectionType::TimedSpikeFromChipSequence:
 			return (os << "TimedSpikeFromChipSequence");
+		case ConnectionType::TimedMADCSampleFromChipSequence:
+			return (os << "TimedMADCSampleFromChipSequence");
 		case ConnectionType::DataUInt5:
 			return (os << "DataUInt5");
 		case ConnectionType::DataUInt32:
@@ -33,6 +35,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "DataTimedSpikeFromChipSequence");
 		case ConnectionType::DataTimedSpikeSequence:
 			return (os << "DataTimedSpikeSequence");
+		case ConnectionType::DataTimedMADCSampleFromChipSequence:
+			return (os << "DataTimedMADCSampleFromChipSequence");
 		case ConnectionType::CrossbarInputLabel:
 			return (os << "CrossbarInputLabel");
 		case ConnectionType::CrossbarOutputLabel:
