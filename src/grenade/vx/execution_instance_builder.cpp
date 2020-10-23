@@ -820,6 +820,7 @@ void ExecutionInstanceBuilder::pre_process()
 
 IODataMap ExecutionInstanceBuilder::post_process()
 {
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
 
@@ -835,7 +836,14 @@ IODataMap ExecutionInstanceBuilder::post_process()
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
 		std::visit(
-		    [&](auto const& value) { process(vertex, value); },
+		    [&](auto const& value) {
+			    hate::Timer timer;
+			    process(vertex, value);
+			    LOG4CXX_TRACE(
+			        logger, "post_process(): Postprocessed "
+			                    << name<hate::remove_all_qualifiers_t<decltype(value)>>() << " in "
+			                    << timer.print() << ".");
+		    },
 		    m_graph.get_vertex_property(vertex));
 	}
 	m_postprocessing = false;
