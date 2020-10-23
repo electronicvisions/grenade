@@ -4,6 +4,7 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/connection_builder.h"
+#include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
