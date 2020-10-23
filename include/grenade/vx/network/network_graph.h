@@ -18,7 +18,7 @@ struct GENPYBIND(visible) NetworkGraph
 	std::shared_ptr<Network> const network;
 
 	/** Graph representing the network. */
-	Graph const graph GENPYBIND(hidden);
+	Graph const graph;
 
 	/** Vertex descriptor at which to insert external spike data. */
 	std::optional<Graph::vertex_descriptor> const event_input_vertex;

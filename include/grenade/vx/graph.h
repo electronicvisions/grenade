@@ -8,6 +8,7 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 #include <cstddef>
+#include <iosfwd>
 #include <map>
 #include <optional>
 #include <unordered_map>
@@ -175,8 +176,11 @@ public:
 	 */
 	bool is_acyclic_execution_instance_graph() const GENPYBIND(hidden);
 
-	bool operator==(Graph const& other) const SYMBOL_VISIBLE;
-	bool operator!=(Graph const& other) const SYMBOL_VISIBLE;
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, Graph const& graph) SYMBOL_VISIBLE;
+
+	bool operator==(Graph const& other) const GENPYBIND(hidden) SYMBOL_VISIBLE;
+	bool operator!=(Graph const& other) const GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 private:
 	bool m_enable_acyclicity_check;

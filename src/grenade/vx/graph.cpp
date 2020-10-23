@@ -1,9 +1,11 @@
 #include "grenade/vx/graph.h"
 
 #include <iterator>
+#include <ostream>
 #include <sstream>
 
 #include <boost/graph/exception.hpp>
+#include <boost/graph/graphviz.hpp>
 #include <boost/graph/topological_sort.hpp>
 
 #include <cereal/types/map.hpp>
@@ -20,6 +22,7 @@
 #include "grenade/vx/input.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
+#include "hate/type_traits.h"
 
 namespace cereal {
 
@@ -369,6 +372,43 @@ bool Graph::is_acyclic_execution_instance_graph() const
 		return false;
 	}
 	return true;
+}
+
+std::ostream& operator<<(std::ostream& os, Graph const& graph)
+{
+	// get all different vertex properties by storing their raw pointers
+	// this only works because they are stored as shared_ptr
+	std::map<size_t, std::map<Vertex const*, Graph::vertex_descriptor>> same_vertex_configs;
+	for (auto const descriptor : boost::make_iterator_range(boost::vertices(graph.get_graph()))) {
+		auto const& vertex_property = graph.get_vertex_property(descriptor);
+		auto& local = same_vertex_configs[vertex_property.index()];
+		if (local.contains(&vertex_property)) {
+			// update when descriptor is smaller
+			if (descriptor < local.at(&vertex_property)) {
+				local.at(&vertex_property) = descriptor;
+			}
+		} else {
+			local.insert({&vertex_property, descriptor});
+		}
+	}
+	// get vertex name by type name and index to identify (possibly shared) property
+	auto const vertex_name = [graph, same_vertex_configs](
+	                             std::ostream& out, Graph::vertex_descriptor const descriptor) {
+		auto const& vertex_property = graph.get_vertex_property(descriptor);
+		// generate a unique index to the associated vertex property
+		// ordering of the index follows the smallest vertex descriptor of same property
+		auto const& local = same_vertex_configs.at(vertex_property.index());
+		auto const index = local.at(&vertex_property);
+		auto const name = std::visit(
+		    [index](auto const& v) {
+			    return hate::name<hate::remove_all_qualifiers_t<decltype(v)>>() + "(" +
+			           std::to_string(index) + ")";
+		    },
+		    vertex_property);
+		out << "[label=\"" << name << "\"]";
+	};
+	boost::write_graphviz(os, graph.get_graph(), vertex_name);
+	return os;
 }
 
 namespace {
