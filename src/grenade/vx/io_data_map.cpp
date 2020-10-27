@@ -3,6 +3,7 @@
 namespace grenade::vx {
 
 IODataMap::IODataMap() :
+    uint32(),
     uint5(),
     int8(),
     spike_events(),
