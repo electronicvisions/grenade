@@ -35,7 +35,7 @@ NetworkGraph build_network_graph(
 	builder.add_external_input(graph, resources, instance);
 
 	// add on-chip populations without input
-	builder.add_populations(graph, resources, instance);
+	builder.add_populations(graph, resources, routing_result, instance);
 
 	// add neuron event outputs
 	builder.add_neuron_event_outputs(graph, resources, instance);
@@ -146,6 +146,7 @@ void NetworkGraphBuilder::add_population(
     Resources& resources,
     std::map<HemisphereOnDLS, Input> const& input,
     PopulationDescriptor const& descriptor,
+    RoutingResult const& connection_result,
     coordinate::ExecutionInstance const& instance) const
 {
 	hate::Timer timer;
@@ -169,9 +170,27 @@ void NetworkGraphBuilder::add_population(
 		}
 		// add a neuron view per hemisphere
 		for (auto&& [row, nrn] : neurons) {
-			// TODO: expose
-			vertex::NeuronView::EnableResets enable_resets(nrn.size());
-			vertex::NeuronView neuron_view(std::move(nrn), std::move(enable_resets), row);
+			vertex::NeuronView::Configs configs;
+			if (!connection_result.internal_neuron_labels.contains(descriptor)) {
+				std::stringstream ss;
+				ss << "Connection builder result does not contain the neuron labels for "
+				   << descriptor << ".";
+				throw std::runtime_error(ss.str());
+			}
+			for (auto const c : nrn) {
+				AtomicNeuronOnDLS const an(c, row);
+				auto const it = std::find(population.neurons.begin(), population.neurons.end(), an);
+				if (it == population.neurons.end()) {
+					std::stringstream ss;
+					ss << "Connection builder result the neuron label for " << an << ".";
+				}
+				auto const index = std::distance(population.neurons.begin(), it);
+				vertex::NeuronView::Config config{
+				    connection_result.internal_neuron_labels.at(descriptor).at(index),
+				    false /* TODO: expose reset */};
+				configs.push_back(config);
+			}
+			vertex::NeuronView neuron_view(std::move(nrn), std::move(configs), row);
 			auto const hemisphere = row.toHemisphereOnDLS();
 			// use input for specific hemisphere
 			std::vector<Input> inputs;
@@ -555,7 +574,8 @@ void NetworkGraphBuilder::add_projection_from_external_input(
 	    resources.projections.at(descriptor).synapses.begin(),
 	    resources.projections.at(descriptor).synapses.end());
 	add_population(
-	    graph, resources, inputs, m_network.projections.at(descriptor).population_post, instance);
+	    graph, resources, inputs, m_network.projections.at(descriptor).population_post,
+	    connection_result, instance);
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_external(): Added projection(" << descriptor << ") in "
 	                                                                  << timer.print() << ".");
@@ -629,21 +649,25 @@ void NetworkGraphBuilder::add_projection_from_internal_input(
 	    resources.projections.at(descriptor).synapses.begin(),
 	    resources.projections.at(descriptor).synapses.end());
 	add_population(
-	    graph, resources, inputs, m_network.projections.at(descriptor).population_post, instance);
+	    graph, resources, inputs, m_network.projections.at(descriptor).population_post,
+	    connection_result, instance);
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_internal(): Added projection(" << descriptor << ") in "
 	                                                                  << timer.print() << ".");
 }
 
 void NetworkGraphBuilder::add_populations(
-    Graph& graph, Resources& resources, coordinate::ExecutionInstance const& instance) const
+    Graph& graph,
+    Resources& resources,
+    RoutingResult const& connection_result,
+    coordinate::ExecutionInstance const& instance) const
 {
 	// place all populations without input
 	for (auto const& [descriptor, population] : m_network.populations) {
 		if (std::holds_alternative<ExternalPopulation>(population)) {
 			continue;
 		}
-		add_population(graph, resources, {}, descriptor, instance);
+		add_population(graph, resources, {}, descriptor, connection_result, instance);
 	}
 }
 

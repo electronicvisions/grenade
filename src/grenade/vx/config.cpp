@@ -42,6 +42,9 @@ ChipConfig convert_to_chip(stadls::vx::v2::Dumper::done_type const& cocos)
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::SynapseDriverConfig>) {
 			chip.hemispheres[coord.toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 			    .synapse_driver_block[coord.toSynapseDriverOnSynapseDriverBlock()] = config;
+		} else if constexpr (std::is_same_v<config_t, lola::vx::v2::AtomicNeuron>) {
+			chip.hemispheres[coord.toNeuronRowOnDLS().toHemisphereOnDLS()]
+			    .neuron_block[coord.toNeuronColumnOnDLS()] = config;
 		} else if constexpr (std::is_same_v<config_t, lola::vx::v2::SynapseMatrix>) {
 			chip.hemispheres[coord.toHemisphereOnDLS()].synapse_matrix = config;
 		}

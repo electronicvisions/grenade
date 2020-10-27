@@ -1,12 +1,12 @@
 namespace grenade::vx::vertex {
 
-template <typename ColumnsT, typename EnableResetsT, typename RowT>
-NeuronView::NeuronView(ColumnsT&& columns, EnableResetsT&& enable_resets, RowT&& row) :
+template <typename ColumnsT, typename ConfigsT, typename RowT>
+NeuronView::NeuronView(ColumnsT&& columns, ConfigsT&& configs, RowT&& row) :
     m_columns(), m_row(std::forward<RowT>(row))
 {
-	check(columns, enable_resets);
+	check(columns, configs);
 	m_columns = std::forward<ColumnsT>(columns);
-	m_enable_resets = std::forward<EnableResetsT>(enable_resets);
+	m_configs = std::forward<ConfigsT>(configs);
 }
 
 } // namespace grenade::vx::vertex

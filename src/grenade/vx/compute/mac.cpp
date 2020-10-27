@@ -127,7 +127,8 @@ Graph::vertex_descriptor MAC::insert_synram(
 		auto const nrn = NeuronColumnOnDLS(o);
 		nrns.push_back(nrn);
 	}
-	vertex::NeuronView::EnableResets enable_resets(x_size, true);
+	vertex::NeuronView::Config config{lola::vx::v2::AtomicNeuron::EventRouting::Address(), true};
+	vertex::NeuronView::Configs enable_resets(x_size, config);
 	vertex::NeuronView neurons(
 	    std::move(nrns), std::move(enable_resets), hemisphere.toNeuronRowOnDLS());
 	auto const v1 = graph.add(std::move(neurons), instance, {synapse_array_vertex});

@@ -111,6 +111,7 @@ public:
 	    Resources& resources,
 	    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input> const& input,
 	    PopulationDescriptor const& descriptor,
+	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
 	void add_projection_from_external_input(
@@ -128,7 +129,10 @@ public:
 	    coordinate::ExecutionInstance const& instance) const;
 
 	void add_populations(
-	    Graph& graph, Resources& resources, coordinate::ExecutionInstance const& instance) const;
+	    Graph& graph,
+	    Resources& resources,
+	    RoutingResult const& connection_result,
+	    coordinate::ExecutionInstance const& instance) const;
 
 	void add_neuron_event_outputs(
 	    Graph& graph, Resources& resources, coordinate::ExecutionInstance const& instance) const;

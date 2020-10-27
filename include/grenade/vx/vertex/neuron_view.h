@@ -3,6 +3,7 @@
 #include "grenade/vx/port.h"
 #include "halco/hicann-dls/vx/v2/neuron.h"
 #include "hate/visibility.h"
+#include "lola/vx/v2/neuron.h"
 #include <array>
 #include <cstddef>
 #include <iosfwd>
@@ -33,6 +34,22 @@ struct NeuronView
 	typedef std::vector<bool> EnableResets;
 	typedef halco::hicann_dls::vx::v2::NeuronRowOnDLS Row;
 
+	struct Config
+	{
+		typedef lola::vx::v2::AtomicNeuron::EventRouting::Address Label;
+		Label label;
+		bool enable_reset;
+
+		bool operator==(Config const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
+
+	private:
+		friend class cereal::access;
+		template <typename Archive>
+		void serialize(Archive& ar, std::uint32_t version);
+	};
+	typedef std::vector<Config> Configs;
+
 	NeuronView() = default;
 
 	/**
@@ -41,11 +58,11 @@ struct NeuronView
 	 * @param enable_resets Enable values for initial reset of the neurons
 	 * @param row Neuron row
 	 */
-	template <typename ColumnsT, typename EnableResetsT, typename RowT>
-	explicit NeuronView(ColumnsT&& columns, EnableResetsT&& enable_resets, RowT&& row);
+	template <typename ColumnsT, typename ConfigsT, typename RowT>
+	explicit NeuronView(ColumnsT&& columns, ConfigsT&& enable_resets, RowT&& row);
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
-	EnableResets const& get_enable_resets() const SYMBOL_VISIBLE;
+	Configs const& get_configs() const SYMBOL_VISIBLE;
 	Row const& get_row() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = true;
@@ -63,10 +80,10 @@ struct NeuronView
 	bool operator!=(NeuronView const& other) const SYMBOL_VISIBLE;
 
 private:
-	void check(Columns const& columns, EnableResets const& enable_resets) SYMBOL_VISIBLE;
+	void check(Columns const& columns, Configs const& configs) SYMBOL_VISIBLE;
 
 	Columns m_columns{};
-	EnableResets m_enable_resets{};
+	Configs m_configs{};
 	Row m_row{};
 
 	friend class cereal::access;

@@ -232,7 +232,8 @@ TEST(Graph, recurrence)
 	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
 
 	NeuronView neurons(
-	    NeuronView::Columns{NeuronColumnOnDLS()}, NeuronView::EnableResets{true}, NeuronRowOnDLS());
+	    NeuronView::Columns{NeuronColumnOnDLS()},
+	    NeuronView::Configs{{NeuronView::Config::Label(0), true}}, NeuronRowOnDLS());
 	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
@@ -321,7 +322,8 @@ TEST(Graph, CerealizeCoverage)
 	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
 
 	NeuronView neurons(
-	    NeuronView::Columns{NeuronColumnOnDLS()}, NeuronView::EnableResets{true}, NeuronRowOnDLS());
+	    NeuronView::Columns{NeuronColumnOnDLS()},
+	    NeuronView::Configs{{NeuronView::Config::Label(0), true}}, NeuronRowOnDLS());
 	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
 
 	NeuronEventOutputView neuron_outputs(

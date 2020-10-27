@@ -156,13 +156,15 @@ void ExecutionInstanceConfigBuilder::process(
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
 	size_t i = 0;
-	auto const& enable_resets = data.get_enable_resets();
+	auto const& configs = data.get_configs();
+	auto& hemisphere = m_config.hemispheres[data.get_row().toHemisphereOnDLS()];
 	for (auto const column : data.get_columns()) {
+		auto const& config = configs.at(i);
 		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
-		m_enabled_neuron_resets[neuron_reset] = enable_resets.at(i);
+		m_enabled_neuron_resets[neuron_reset] = config.enable_reset;
+		hemisphere.neuron_block[column].event_routing.address = config.label;
 		i++;
 	}
-	// TODO: once we have neuron configuration, it should be placed here
 }
 
 void ExecutionInstanceConfigBuilder::pre_process()
@@ -209,6 +211,11 @@ ExecutionInstanceConfigBuilder::generate(bool const enable_ppu)
 		builder.write(
 		    hemisphere.toCommonPADIBusConfigOnDLS(),
 		    m_config.hemispheres[hemisphere].common_padi_bus_config);
+		for (auto const column : iter_all<NeuronColumnOnDLS>()) {
+			builder.write(
+			    AtomicNeuronOnDLS(column, hemisphere.toNeuronRowOnDLS()),
+			    m_config.hemispheres[hemisphere].neuron_block[column]);
+		}
 	}
 	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
 		builder.write(coord, m_config.crossbar_nodes[coord]);

@@ -45,33 +45,14 @@ grenade::vx::ChipConfig initialize_excitatory_bypass(hxcomm::vx::ConnectionVaria
 		}
 		auto [builder, _] = generate(init);
 		// enable excitatory bypass mode
-		for (auto const neuron : iter_all<NeuronColumnOnDLS>()) {
-			NeuronBackendConfig neuron_backend_config;
-			// FIXME: should be in graph
-			// neurons per crossbar input channel
-			constexpr size_t neuron_columns_per_channel =
-			    NeuronColumnOnDLS::size / NeuronEventOutputOnDLS::size;
-			// uniquely identify a neuron column on a event output channel
-			size_t const neuron_on_channel = neuron % neuron_columns_per_channel;
-			// uniquely identify a neuron on a event output channel block
-			size_t const neuron_channel_block =
-			    neuron / (NeuronColumnOnDLS::size / NeuronBackendConfigBlockOnDLS::size);
-			// uniquely identify a neuron column in the lower 6-bit -> at a synapse.
-			// This leads to full usage possibility of the top neurons
-			haldls::vx::v2::NeuronBackendConfig::AddressOut label(
-			    neuron_on_channel + (neuron_channel_block * neuron_columns_per_channel));
-			neuron_backend_config.set_address_out(label);
-			neuron_backend_config.set_enable_spike_out(true);
-			builder.write(
-			    AtomicNeuronOnDLS(neuron, NeuronRowOnDLS()).toNeuronBackendConfigOnDLS(),
-			    neuron_backend_config);
-		}
-		NeuronConfig neuron_config;
-		neuron_config.set_enable_threshold_comparator(false);
-		neuron_config.set_enable_fire(true);
-		neuron_config.set_enable_bypass_excitatory(true);
-		for (auto const nrn : iter_all<NeuronConfigOnDLS>()) {
-			builder.write(nrn, neuron_config);
+		for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
+			auto& config = chip->hemispheres[neuron.toNeuronRowOnDLS().toHemisphereOnDLS()]
+			                   .neuron_block[neuron.toNeuronColumnOnDLS()];
+			config.event_routing.enable_digital = true;
+			config.event_routing.analog_output =
+			    lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
+			config.event_routing.enable_bypass_excitatory = true;
+			config.threshold.enable = false;
 		}
 		for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
 			auto& padi_config = chip->hemispheres[block.toHemisphereOnDLS()].common_padi_bus_config;

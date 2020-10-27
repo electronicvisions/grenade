@@ -13,23 +13,23 @@ using namespace grenade::vx::vertex;
 TEST(NeuronView, General)
 {
 	typename NeuronView::Columns columns;
-	typename NeuronView::EnableResets enable_resets;
+	typename NeuronView::Configs configs;
 	for (auto nrn : iter_all<NeuronColumnOnDLS>()) {
 		columns.push_back(nrn);
-		enable_resets.push_back(true);
+		configs.push_back({NeuronView::Config::Label(0), true});
 	}
 	NeuronView::Row row(0);
 
-	EXPECT_NO_THROW(NeuronView(columns, enable_resets, row));
+	EXPECT_NO_THROW(NeuronView(columns, configs, row));
 
 	// produce duplicate entry
 	columns.at(1) = NeuronColumnOnDLS(0);
-	EXPECT_THROW(NeuronView(columns, enable_resets, row);, std::runtime_error);
+	EXPECT_THROW(NeuronView(columns, configs, row);, std::runtime_error);
 	columns.at(1) = NeuronColumnOnDLS(1);
 
-	NeuronView config(columns, enable_resets, row);
+	NeuronView config(columns, configs, row);
 	EXPECT_EQ(config.get_columns(), columns);
-	EXPECT_EQ(config.get_enable_resets(), enable_resets);
+	EXPECT_EQ(config.get_configs(), configs);
 	EXPECT_EQ(config.get_row(), row);
 	EXPECT_EQ(config.inputs().size(), 1);
 	EXPECT_EQ(config.inputs().front().size, NeuronColumnOnDLS::size);

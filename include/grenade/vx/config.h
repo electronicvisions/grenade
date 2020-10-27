@@ -10,6 +10,7 @@
 #include "haldls/vx/v2/routing_crossbar.h"
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
+#include "lola/vx/v2/neuron.h"
 #include "lola/vx/v2/synapse.h"
 #include "stadls/vx/v2/dumper.h"
 #include <boost/hana/adapt_struct.hpp>
@@ -36,6 +37,12 @@ public:
 	_synapse_driver_block_type synapse_driver_block;
 
 	haldls::vx::v2::CommonPADIBusConfig common_padi_bus_config;
+
+	typedef halco::common::
+	    typed_array<lola::vx::v2::AtomicNeuron, halco::hicann_dls::vx::v2::NeuronColumnOnDLS>
+	        _neuron_block_type GENPYBIND(opaque);
+	/** Neuron block. TODO: should be lola container. */
+	_neuron_block_type neuron_block;
 
 	bool operator==(HemisphereConfig const& other) const SYMBOL_VISIBLE;
 	bool operator!=(HemisphereConfig const& other) const SYMBOL_VISIBLE;
@@ -86,6 +93,7 @@ ChipConfig GENPYBIND(visible)
 
 } // namespace grenade::vx
 
-BOOST_HANA_ADAPT_STRUCT(grenade::vx::HemisphereConfig, synapse_matrix, synapse_driver_block);
+BOOST_HANA_ADAPT_STRUCT(
+    grenade::vx::HemisphereConfig, synapse_matrix, synapse_driver_block, neuron_block);
 BOOST_HANA_ADAPT_STRUCT(
     grenade::vx::ChipConfig, hemispheres, crossbar_nodes, readout_source_selection, madc_config);

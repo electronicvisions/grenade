@@ -147,10 +147,10 @@ void ExecutionInstanceBuilder::process(
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
 	size_t i = 0;
-	auto const& enable_resets = data.get_enable_resets();
+	auto const& configs = data.get_configs();
 	for (auto const column : data.get_columns()) {
 		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
-		m_neuron_resets.enable_resets[neuron_reset] = enable_resets.at(i);
+		m_neuron_resets.enable_resets[neuron_reset] = configs.at(i).enable_reset;
 		i++;
 	}
 }
