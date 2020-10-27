@@ -67,7 +67,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 bool ExecutionInstanceBuilder::has_complete_input_list() const
 {
 	if (m_input_list.empty()) {
-		return false;
+		return true;
 	}
 	if (!m_input_list.valid()) {
 		return false;
