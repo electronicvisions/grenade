@@ -99,9 +99,10 @@ Graph::vertex_descriptor MAC::insert_synram(
 		vertex::SynapseDriver synapse_driver(
 		    SynapseDriverOnDLS(
 		        SynapseDriverOnSynapseDriverBlock(i), hemisphere.toSynapseDriverBlockOnDLS()),
-		    vertex::SynapseDriver::Config(0b11111),
-		    {vertex::SynapseDriver::RowModes::value_type::excitatory,
-		     vertex::SynapseDriver::RowModes::value_type::inhibitory});
+		    {vertex::SynapseDriver::Config::RowAddressCompareMask(0b11111),
+		     {vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
+		      vertex::SynapseDriver::Config::RowModes::value_type::inhibitory},
+		     false});
 		synapse_driver_vertices.push_back(graph.add(synapse_driver, instance, {padi_bus_vertex}));
 	}
 	// add synapse array

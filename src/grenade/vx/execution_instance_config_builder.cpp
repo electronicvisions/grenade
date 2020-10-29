@@ -125,10 +125,11 @@ void ExecutionInstanceConfigBuilder::process(
 	    m_config.hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
-	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
+	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
-	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
-	synapse_driver_config.set_row_address_compare_mask(data.get_config());
+	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
+	synapse_driver_config.set_row_address_compare_mask(data.get_config().row_address_compare_mask);
+	synapse_driver_config.set_enable_address_out(data.get_config().enable_address_out);
 	synapse_driver_config.set_enable_receiver(true);
 }
 

@@ -307,7 +307,7 @@ void NetworkGraphBuilder::add_synapse_driver(
 			vertex = graph.add(vertex, instance, inputs);
 		}
 	} else { // synapse driver not added yet
-		vertex::SynapseDriver::RowModes row_modes;
+		vertex::SynapseDriver::Config::RowModes row_modes;
 		for (auto const r : iter_all<SynapseRowOnSynapseDriver>()) {
 			auto const synapse_row = SynapseRowOnDLS(
 			    coordinate.toSynapseDriverOnSynapseDriverBlock().toSynapseRowOnSynram()[r],
@@ -320,7 +320,8 @@ void NetworkGraphBuilder::add_synapse_driver(
 			row_modes[r] = connection_result.synapse_row_modes.at(synapse_row);
 		}
 		vertex::SynapseDriver synapse_driver(
-		    coordinate, connection_result.synapse_driver_compare_masks.at(coordinate), row_modes);
+		    coordinate, {connection_result.synapse_driver_compare_masks.at(coordinate), row_modes,
+		                 true /* TODO: expose */});
 		resources.synapse_drivers[coordinate] = graph.add(synapse_driver, instance, inputs);
 	}
 	LOG4CXX_TRACE(

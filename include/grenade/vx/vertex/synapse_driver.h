@@ -27,12 +27,29 @@ struct SynapseDriver
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask Config;
 	typedef halco::hicann_dls::vx::v2::SynapseDriverOnDLS Coordinate;
-	typedef halco::common::typed_array<
-	    haldls::vx::v2::SynapseDriverConfig::RowMode,
-	    halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver>
-	    RowModes;
+
+	struct Config
+	{
+		typedef haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask RowAddressCompareMask;
+		RowAddressCompareMask row_address_compare_mask{};
+
+		typedef halco::common::typed_array<
+		    haldls::vx::v2::SynapseDriverConfig::RowMode,
+		    halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver>
+		    RowModes;
+		RowModes row_modes{};
+
+		bool enable_address_out{false};
+
+		bool operator==(Config const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
+
+	private:
+		friend class cereal::access;
+		template <typename Archive>
+		void serialize(Archive& ar, std::uint32_t);
+	};
 
 	SynapseDriver() = default;
 
@@ -41,8 +58,7 @@ struct SynapseDriver
 	 * @param coordinate Location
 	 * @param config Configuration
 	 */
-	SynapseDriver(Coordinate const& coordinate, Config const& config, RowModes const& row_modes)
-	    SYMBOL_VISIBLE;
+	SynapseDriver(Coordinate const& coordinate, Config const& config) SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	constexpr std::array<Port, 1> inputs() const
@@ -61,7 +77,6 @@ struct SynapseDriver
 
 	Coordinate get_coordinate() const SYMBOL_VISIBLE;
 	Config get_config() const SYMBOL_VISIBLE;
-	RowModes get_row_modes() const SYMBOL_VISIBLE;
 
 	friend std::ostream& operator<<(std::ostream& os, SynapseDriver const& config) SYMBOL_VISIBLE;
 
@@ -71,7 +86,6 @@ struct SynapseDriver
 private:
 	Coordinate m_coordinate{};
 	Config m_config{};
-	RowModes m_row_modes{};
 
 	friend class cereal::access;
 	template <typename Archive>

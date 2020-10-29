@@ -219,9 +219,11 @@ TEST(Graph, recurrence)
 	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
 
 	SynapseDriver synapse_driver(
-	    SynapseDriver::Coordinate(), SynapseDriver::Config(),
-	    {haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
-	     haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory});
+	    SynapseDriver::Coordinate(),
+	    {vertex::SynapseDriver::Config::RowAddressCompareMask(0b11111),
+	     {vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
+	      vertex::SynapseDriver::Config::RowModes::value_type::excitatory},
+	     false});
 	auto const v5 = graph.add(synapse_driver, ExecutionInstance(), {v4});
 
 	SynapseArrayView synapses(
@@ -309,9 +311,11 @@ TEST(Graph, CerealizeCoverage)
 	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
 
 	SynapseDriver synapse_driver(
-	    SynapseDriver::Coordinate(), SynapseDriver::Config(),
-	    {haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory,
-	     haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory});
+	    SynapseDriver::Coordinate(),
+	    {vertex::SynapseDriver::Config::RowAddressCompareMask(0b11111),
+	     {vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
+	      vertex::SynapseDriver::Config::RowModes::value_type::excitatory},
+	     false});
 	auto const v5 = graph.add(synapse_driver, ExecutionInstance(), {v4});
 
 	SynapseArrayView synapses(
