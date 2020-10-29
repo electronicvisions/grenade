@@ -79,6 +79,14 @@ public:
 	/** MADC configuration */
 	haldls::vx::MADCConfig madc_config;
 
+	typedef halco::common::typed_array<
+	    haldls::vx::v2::CommonNeuronBackendConfig,
+	    haldls::vx::v2::CommonNeuronBackendConfig::coordinate_type>
+	    _neuron_backend_type GENPYBIND(visible);
+
+	/** Neuron backend configuration. */
+	_neuron_backend_type neuron_backend;
+
 	bool operator==(ChipConfig const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ChipConfig const& other) const SYMBOL_VISIBLE;
 };
@@ -96,4 +104,9 @@ ChipConfig GENPYBIND(visible)
 BOOST_HANA_ADAPT_STRUCT(
     grenade::vx::HemisphereConfig, synapse_matrix, synapse_driver_block, neuron_block);
 BOOST_HANA_ADAPT_STRUCT(
-    grenade::vx::ChipConfig, hemispheres, crossbar_nodes, readout_source_selection, madc_config);
+    grenade::vx::ChipConfig,
+    hemispheres,
+    crossbar_nodes,
+    readout_source_selection,
+    madc_config,
+    neuron_backend);

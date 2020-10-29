@@ -35,7 +35,9 @@ ChipConfig convert_to_chip(stadls::vx::v2::Dumper::done_type const& cocos)
 	auto const apply_coco = [&chip](auto const& coco) {
 		auto const& [coord, config] = coco;
 		typedef std::decay_t<decltype(config)> config_t;
-		if constexpr (std::is_same_v<config_t, haldls::vx::v2::CrossbarNode>) {
+		if constexpr (std::is_same_v<config_t, haldls::vx::v2::CommonNeuronBackendConfig>) {
+			chip.neuron_backend[coord] = config;
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::CrossbarNode>) {
 			chip.crossbar_nodes[coord] = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::CommonPADIBusConfig>) {
 			chip.hemispheres[coord.toHemisphereOnDLS()].common_padi_bus_config = config;

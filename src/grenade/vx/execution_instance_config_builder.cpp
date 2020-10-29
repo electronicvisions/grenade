@@ -36,6 +36,9 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_enable_receiver(false);
 		}
 	}
+	for (auto const backend : iter_all<CommonNeuronBackendConfigOnDLS>()) {
+		m_config.neuron_backend[backend].set_enable_event_registers(false);
+	}
 	{
 		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
 		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
@@ -49,6 +52,23 @@ void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, T const& /* data */)
 {
 	// Spezialize for types which change static configuration
+}
+
+template <>
+void ExecutionInstanceConfigBuilder::process(
+    Graph::vertex_descriptor const, vertex::NeuronEventOutputView const& data)
+{
+	for (auto const& [row, columns] : data.get_neurons()) {
+		for (auto const& cs : columns) {
+			for (auto const& column : cs) {
+				m_config
+				    .neuron_backend[column.toNeuronEventOutputOnDLS()
+				                        .toNeuronBackendConfigBlockOnDLS()
+				                        .toCommonNeuronBackendConfigOnDLS()]
+				    .set_enable_event_registers(true);
+			}
+		}
+	}
 }
 
 template <>
@@ -222,6 +242,9 @@ ExecutionInstanceConfigBuilder::generate(bool const enable_ppu)
 	}
 	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
 		builder.write(coord, m_config.crossbar_nodes[coord]);
+	}
+	for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
+		builder.write(coord, m_config.neuron_backend[coord]);
 	}
 	builder.write(ReadoutSourceSelectionOnDLS(), m_config.readout_source_selection);
 	builder.write(MADCConfigOnDLS(), m_config.madc_config);

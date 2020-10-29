@@ -33,7 +33,7 @@ grenade::vx::ChipConfig initialize_excitatory_bypass(hxcomm::vx::ConnectionVaria
 	{
 		ExperimentInit init;
 		for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-			init.common_neuron_backend_config[c].set_enable_event_registers(true);
+			chip->neuron_backend[c].set_enable_clocks(true);
 		}
 		for (auto const c : iter_all<ColumnCurrentQuadOnDLS>()) {
 			for (auto const e : iter_all<EntryOnQuad>()) {
