@@ -33,6 +33,7 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
 			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
 			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_enable_receiver(false);
 		}
 	}
 	{
@@ -128,6 +129,7 @@ void ExecutionInstanceConfigBuilder::process(
 	synapse_driver_config.set_row_mode_bottom(
 	    data.get_row_modes()[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
 	synapse_driver_config.set_row_address_compare_mask(data.get_config());
+	synapse_driver_config.set_enable_receiver(true);
 }
 
 template <>
