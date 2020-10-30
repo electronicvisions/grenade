@@ -12,6 +12,39 @@
 
 namespace {
 
+void check_link_notifications(
+    log4cxx::Logger* logger,
+    stadls::vx::v2::PlaybackProgram::highspeed_link_notifications_type const& link_notifications,
+    size_t n_expected_notifications)
+{
+	using namespace halco::common;
+	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v2;
+	using namespace stadls::vx::v2;
+
+	std::map<PhyStatusOnFPGA, HighspeedLinkNotification> notis_per_phy;
+	for (auto const& noti : link_notifications) {
+		if (!((n_expected_notifications > 0) && noti.get_link_up() &&
+		      (notis_per_phy.find(noti.get_phy()) == notis_per_phy.end()))) {
+			// one "link up" message per phy is expected (when turned on after init),
+			// everything else is not expected:
+			LOG4CXX_WARN(logger, noti);
+		}
+		notis_per_phy[noti.get_phy()] = noti;
+	}
+
+	if (notis_per_phy.size() < n_expected_notifications) {
+		LOG4CXX_ERROR(logger, "Not all configured highspeed links sent link notifications.");
+	}
+
+	if ((notis_per_phy.size() == PhyStatusOnFPGA::size) &&
+	    (std::count_if(notis_per_phy.begin(), notis_per_phy.end(), [](auto const& item) {
+		     return item.second.get_link_up() == true;
+	     }) == 0)) {
+		LOG4CXX_ERROR(logger, "All configured highspeed links down at the end of the experiment.");
+	}
+}
+
 template <typename Connection>
 void perform_post_fail_analysis(
     log4cxx::Logger* logger,
@@ -113,7 +146,11 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		for (auto& p : program) {
 			try {
 				stadls::vx::v2::run(connection, p);
+				check_link_notifications(
+				    logger, p.get_highspeed_link_notifications(), PhyStatusOnFPGA::size);
 			} catch (std::runtime_error const&) {
+				check_link_notifications(
+				    logger, p.get_highspeed_link_notifications(), PhyStatusOnFPGA::size);
 				// TODO: use specific exception for fisch run() fails, cf. task #3724
 				perform_post_fail_analysis(logger, connection, p);
 				throw;
