@@ -1,4 +1,12 @@
 #pragma once
+#include "grenade/vx/execution_instance.h"
+#include "grenade/vx/genpybind.h"
+#include "grenade/vx/graph_representation.h"
+#include "grenade/vx/port_restriction.h"
+#include "grenade/vx/vertex.h"
+#include "halco/common/typed_array.h"
+#include "halco/hicann-dls/vx/v2/chip.h"
+#include "hate/visibility.h"
 #include <cstddef>
 #include <map>
 #include <optional>
@@ -10,14 +18,6 @@
 #include <boost/bimap/unordered_set_of.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/smart_ptr/local_shared_ptr.hpp>
-
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph_representation.h"
-#include "grenade/vx/port_restriction.h"
-#include "grenade/vx/vertex.h"
-#include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "hate/visibility.h"
 
 namespace cereal {
 class access;
@@ -31,7 +31,7 @@ namespace log4cxx {
 class Logger;
 } // namespace log4cxx
 
-namespace grenade::vx {
+namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
 struct Input;
 
@@ -50,7 +50,7 @@ struct Input;
  * a subgraph tied to a execution instance can partly be cyclic, e.g. via recurrent routing of
  * on-chip events. This is enforced by checks on addition of vertices/edges.
  */
-class Graph
+class GENPYBIND(visible) Graph
 {
 public:
 	typedef detail::graph_type graph_type;
@@ -74,12 +74,12 @@ public:
 	 * @param enable_acyclicity_check Enable check for acyclicity in execution instance graph on
 	 * every add call where a connection between previously unconnected execution instances is made.
 	 */
-	Graph(bool enable_acyclicity_check = true) SYMBOL_VISIBLE;
+	Graph(bool enable_acyclicity_check = true) GENPYBIND(hidden) SYMBOL_VISIBLE;
 
-	Graph(Graph const&) SYMBOL_VISIBLE;
-	Graph(Graph&&) SYMBOL_VISIBLE;
-	Graph& operator=(Graph const&) SYMBOL_VISIBLE;
-	Graph& operator=(Graph&&) SYMBOL_VISIBLE;
+	Graph(Graph const&) GENPYBIND(hidden) SYMBOL_VISIBLE;
+	Graph(Graph&&) GENPYBIND(hidden) SYMBOL_VISIBLE;
+	Graph& operator=(Graph const&) GENPYBIND(hidden) SYMBOL_VISIBLE;
+	Graph& operator=(Graph&&) GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Add vertex on specified execution instance with specified inputs.
@@ -101,7 +101,7 @@ public:
 	vertex_descriptor add(
 	    VertexT&& vertex,
 	    coordinate::ExecutionInstance execution_instance,
-	    std::vector<Input> inputs);
+	    std::vector<Input> inputs) GENPYBIND(hidden);
 
 	/**
 	 * Add vertex by reference on specified execution instance with specified inputs.
@@ -121,44 +121,47 @@ public:
 	vertex_descriptor add(
 	    vertex_descriptor vertex_reference,
 	    coordinate::ExecutionInstance execution_instance,
-	    std::vector<Input> inputs) SYMBOL_VISIBLE;
+	    std::vector<Input> inputs) GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to underlying graph.
 	 * @return Constant reference to underlying graph
 	 */
-	graph_type const& get_graph() const SYMBOL_VISIBLE;
+	graph_type const& get_graph() const GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to underlying graph of execution instances.
 	 * @return Constant reference to underlying graph of execution instances
 	 */
-	graph_type const& get_execution_instance_graph() const SYMBOL_VISIBLE;
+	graph_type const& get_execution_instance_graph() const GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to a vertex property.
 	 * @param descriptor Vertex descriptor to get property for
 	 * @return Constant reference to a vertex property
 	 */
-	Vertex const& get_vertex_property(vertex_descriptor descriptor) const SYMBOL_VISIBLE;
+	Vertex const& get_vertex_property(vertex_descriptor descriptor) const
+	    GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to edge property map.
 	 * @return Constant reference to edge property map
 	 */
-	edge_property_map_type const& get_edge_property_map() const SYMBOL_VISIBLE;
+	edge_property_map_type const& get_edge_property_map() const GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to vertex property map.
 	 * @return Constant reference to vertex property map
 	 */
-	execution_instance_map_type const& get_execution_instance_map() const SYMBOL_VISIBLE;
+	execution_instance_map_type const& get_execution_instance_map() const
+	    GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
 	 * Get constant reference to vertex descriptor map.
 	 * @return Constant reference to vertex descriptor map
 	 */
-	vertex_descriptor_map_type const& get_vertex_descriptor_map() const SYMBOL_VISIBLE;
+	vertex_descriptor_map_type const& get_vertex_descriptor_map() const
+	    GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	typedef std::map<
 	    coordinate::ExecutionIndex,
@@ -170,7 +173,7 @@ public:
 	 * This is a necessary requirement for executability.
 	 * @return Boolean value
 	 */
-	bool is_acyclic_execution_instance_graph() const;
+	bool is_acyclic_execution_instance_graph() const GENPYBIND(hidden);
 
 	bool operator==(Graph const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Graph const& other) const SYMBOL_VISIBLE;

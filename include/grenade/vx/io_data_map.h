@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/event.h"
+#include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph_representation.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/timer.h"
@@ -8,13 +9,13 @@
 #include <memory>
 #include <mutex>
 
-namespace grenade::vx {
+namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
 /**
  * Data map used for external data exchange in graph execution.
  * For each type of data a separate member allows access.
  */
-struct IODataMap
+struct GENPYBIND(visible) IODataMap
 {
 	/**
 	 * Data is connected to specified vertex descriptors.
@@ -33,11 +34,11 @@ struct IODataMap
 	std::vector<haldls::vx::v2::Timer::Value> runtime;
 
 	/** UInt32 data. */
-	DataTypeMap<std::vector<UInt32>> uint32;
+	DataTypeMap<std::vector<UInt32>> uint32 GENPYBIND(hidden);
 	/** UInt5 data. */
-	DataTypeMap<std::vector<UInt5>> uint5;
+	DataTypeMap<std::vector<UInt5>> uint5 GENPYBIND(hidden);
 	/** Int8 data. */
-	DataTypeMap<std::vector<Int8>> int8;
+	DataTypeMap<std::vector<Int8>> int8 GENPYBIND(hidden);
 	/** Spike input events. */
 	DataTypeMap<TimedSpikeSequence> spike_events;
 	/** Spike output events. */
@@ -51,13 +52,13 @@ struct IODataMap
 
 	IODataMap(IODataMap&& other) SYMBOL_VISIBLE;
 
-	IODataMap& operator=(IODataMap&& other) SYMBOL_VISIBLE;
+	IODataMap& operator=(IODataMap&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
 
 	/**
 	 * Merge other map content into this one's.
 	 * @param other Other map to merge into this instance
 	 */
-	void merge(IODataMap&& other) SYMBOL_VISIBLE;
+	void merge(IODataMap&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
 
 	/**
 	 * Merge other map content into this one's.

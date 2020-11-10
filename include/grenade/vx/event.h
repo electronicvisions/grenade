@@ -1,17 +1,17 @@
 #pragma once
-#include <variant>
-#include <vector>
-
+#include "grenade/vx/genpybind.h"
 #include "haldls/vx/v2/event.h"
 #include "haldls/vx/v2/timer.h"
 #include "hate/visibility.h"
+#include <variant>
+#include <vector>
 
-namespace grenade::vx {
+namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
 /**
  * Timed to-chip spike.
  */
-struct TimedSpike
+struct GENPYBIND(visible) TimedSpike
 {
 	typedef haldls::vx::v2::Timer::Value Time;
 	/** Time value when to emit spike. */
@@ -25,6 +25,9 @@ struct TimedSpike
 
 	/** Spike payload data. */
 	Payload payload;
+
+	TimedSpike() = default;
+	TimedSpike(Time const& time, Payload const& payload) SYMBOL_VISIBLE;
 
 	bool operator==(TimedSpike const& other) const SYMBOL_VISIBLE;
 	bool operator!=(TimedSpike const& other) const SYMBOL_VISIBLE;
