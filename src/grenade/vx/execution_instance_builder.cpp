@@ -628,7 +628,7 @@ std::vector<std::vector<T>> ExecutionInstanceBuilder::filter_events(std::vector<
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::MADCMembraneReadoutView const&)
+    Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const&)
 {
 	if (!m_postprocessing) {
 		if (m_madc_readout_vertex) {

@@ -73,12 +73,12 @@ void ExecutionInstanceConfigBuilder::process(
 
 template <>
 void ExecutionInstanceConfigBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::MADCMembraneReadoutView const& data)
+    Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const& data)
 {
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
 
-	// MADCMembraneReadoutView inputs size equals 1
+	// MADCReadoutView inputs size equals 1
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 
 	// Determine readout chain configuration
@@ -95,6 +95,10 @@ void ExecutionInstanceConfigBuilder::process(
 	auto buffer_to_pad = readout_source_selection.get_enable_buffer_to_pad();
 	buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()] = true;
 	readout_source_selection.set_enable_buffer_to_pad(buffer_to_pad);
+	// Set source configuration at neuron
+	m_config.hemispheres[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()]
+	    .neuron_block[data.get_coord().toNeuronColumnOnDLS()]
+	    .readout.source = data.get_config();
 }
 
 template <>

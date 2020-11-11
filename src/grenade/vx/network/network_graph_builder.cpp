@@ -201,7 +201,7 @@ void NetworkGraphBuilder::add_population(
 			auto const neuron_view_vertex = graph.add(neuron_view, instance, inputs);
 			resources.populations[descriptor].neurons[row.toHemisphereOnDLS()] = neuron_view_vertex;
 		}
-		if (population.enable_record_v) {
+		if (population.record_source) {
 			add_madc_recording(graph, resources, descriptor, instance);
 		}
 	}
@@ -774,7 +774,8 @@ void NetworkGraphBuilder::add_madc_recording(
 	hate::Timer timer;
 	auto const& population = std::get<Population>(m_network.populations.at(descriptor));
 	assert(population.neurons.size() == 1);
-	vertex::MADCMembraneReadoutView madc_readout(population.neurons.at(0));
+	assert(population.record_source);
+	vertex::MADCReadoutView madc_readout(population.neurons.at(0), *population.record_source);
 	assert(resources.populations.at(descriptor).neurons.size() == 1);
 	for (auto const& [_, neuron_vertex] : resources.populations.at(descriptor).neurons) {
 		auto const madc_vertex = graph.add(madc_readout, instance, {neuron_vertex});

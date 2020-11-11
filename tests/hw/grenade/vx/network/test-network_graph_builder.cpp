@@ -102,7 +102,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	for (auto const column : iter_all<NeuronColumnOnDLS>()) {
 		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
 	}
-	grenade::vx::network::Population population_internal{std::move(neurons), true, false};
+	grenade::vx::network::Population population_internal{std::move(neurons), true, std::nullopt};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	grenade::vx::network::Projection::Connections projection_connections;
@@ -188,7 +188,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	for (auto const column : iter_all<NeuronColumnOnDLS>()) {
 		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
 	}
-	grenade::vx::network::Population population_internal{std::move(neurons), true, false};
+	grenade::vx::network::Population population_internal{std::move(neurons), true, std::nullopt};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	grenade::vx::network::Projection::Connections projection_connections;
@@ -288,7 +288,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		bool const enable_spike_recording =
 		    true; //(column == NeuronColumnOnDLS::max - (128 + 48 + 1));
 		grenade::vx::network::Population population_internal{std::move(neurons),
-		                                                     enable_spike_recording, false};
+		                                                     enable_spike_recording, std::nullopt};
 		population_internal_descriptors.push_back(network_builder.add(population_internal));
 	}
 

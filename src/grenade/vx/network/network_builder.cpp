@@ -39,19 +39,19 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 		}
 	}
 
-	// check that only one neuron is present, if membrane potential recording is enabled
-	if (population.enable_record_v && (population.neurons.size() != 1)) {
+	// check that only one neuron is present, if MADC potential recording is enabled
+	if (population.record_source && (population.neurons.size() != 1)) {
 		throw std::runtime_error("Membrane potential recording only supported for one neuron.");
 	}
 
-	// check that no already added population has enabled membrane potential recording
-	if (population.enable_record_v) {
+	// check that no already added population has enabled MADC potential recording
+	if (population.record_source) {
 		for (auto const& [descriptor, other] : m_populations) {
 			if (!std::holds_alternative<Population>(other)) {
 				continue;
 			}
 			auto const& o = std::get<Population>(other);
-			if (o.enable_record_v) {
+			if (o.record_source) {
 				std::stringstream ss;
 				ss << "Population(" << descriptor
 				   << ") already has membrane potential recording enabled.";

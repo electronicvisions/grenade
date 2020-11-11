@@ -10,30 +10,37 @@
 
 namespace grenade::vx::vertex {
 
-MADCMembraneReadoutView::MADCMembraneReadoutView(Coord const& coord) : m_coord(coord) {}
+MADCReadoutView::MADCReadoutView(Coord const& coord, Config const& config) :
+    m_coord(coord), m_config(config)
+{}
 
-MADCMembraneReadoutView::Coord const& MADCMembraneReadoutView::get_coord() const
+MADCReadoutView::Coord const& MADCReadoutView::get_coord() const
 {
 	return m_coord;
 }
 
-std::array<Port, 1> MADCMembraneReadoutView::inputs() const
+MADCReadoutView::Config const& MADCReadoutView::get_config() const
+{
+	return m_config;
+}
+
+std::array<Port, 1> MADCReadoutView::inputs() const
 {
 	return {Port(1, ConnectionType::MembraneVoltage)};
 }
 
-Port MADCMembraneReadoutView::output() const
+Port MADCReadoutView::output() const
 {
 	return Port(1, ConnectionType::TimedMADCSampleFromChipSequence);
 }
 
-std::ostream& operator<<(std::ostream& os, MADCMembraneReadoutView const& config)
+std::ostream& operator<<(std::ostream& os, MADCReadoutView const& config)
 {
-	os << "MADCMembraneReadoutView(coord: " << config.m_coord << ")";
+	os << "MADCReadoutView(coord: " << config.m_coord << ")";
 	return os;
 }
 
-bool MADCMembraneReadoutView::supports_input_from(
+bool MADCReadoutView::supports_input_from(
     NeuronView const& input, std::optional<PortRestriction> const& restriction) const
 {
 	auto const input_columns = input.get_columns();
@@ -54,23 +61,24 @@ bool MADCMembraneReadoutView::supports_input_from(
 	}
 }
 
-bool MADCMembraneReadoutView::operator==(MADCMembraneReadoutView const& other) const
+bool MADCReadoutView::operator==(MADCReadoutView const& other) const
 {
-	return m_coord == other.m_coord;
+	return (m_coord == other.m_coord) && (m_config == other.m_config);
 }
 
-bool MADCMembraneReadoutView::operator!=(MADCMembraneReadoutView const& other) const
+bool MADCReadoutView::operator!=(MADCReadoutView const& other) const
 {
 	return !(*this == other);
 }
 
 template <typename Archive>
-void MADCMembraneReadoutView::serialize(Archive& ar, std::uint32_t const)
+void MADCReadoutView::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_coord);
+	ar(m_config);
 }
 
 } // namespace grenade::vx::vertex
 
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::MADCMembraneReadoutView)
-CEREAL_CLASS_VERSION(grenade::vx::vertex::MADCMembraneReadoutView, 0)
+EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::MADCReadoutView)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::MADCReadoutView, 0)

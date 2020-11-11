@@ -43,7 +43,7 @@ typedef std::variant<
     vertex::Transformation,
     vertex::NeuronView,
     vertex::NeuronEventOutputView,
-    vertex::MADCMembraneReadoutView,
+    vertex::MADCReadoutView,
     vertex::CADCMembraneReadoutView>
     Vertex;
 
