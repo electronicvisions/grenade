@@ -37,7 +37,7 @@ class SwTestPygrenadeVx(unittest.TestCase):
 
         neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
                    for coord in halco.iter_all(halco.NeuronColumnOnDLS)]
-        int_pop = grenade.Population(neurons, True, None)
+        int_pop = grenade.Population(neurons, [True], None)
 
         ext_pop_descr = network_builder.add(ext_pop)
         int_pop_descr = network_builder.add(int_pop)

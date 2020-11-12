@@ -23,7 +23,9 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 		auto const& population =
 		    std::get<Population>(network_graph.network->populations.at(descriptor));
 		for (size_t i = 0; i < labels.size(); ++i) {
-			label_lookup[labels.at(i)] = population.neurons.at(i);
+			if (population.enable_record_spikes.at(i)) {
+				label_lookup[labels.at(i)] = population.neurons.at(i);
+			}
 		}
 	}
 	// convert spikes

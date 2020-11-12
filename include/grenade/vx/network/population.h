@@ -17,16 +17,17 @@ struct GENPYBIND(visible) Population
 	typedef std::vector<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> Neurons;
 	Neurons neurons{};
 	/** Enable spike recording. */
-	bool enable_record_spikes{false};
+	typedef std::vector<bool> EnableRecordSpikes;
+	EnableRecordSpikes enable_record_spikes{};
 	/** Enable MADC potential recording. */
 	typedef std::optional<lola::vx::v2::AtomicNeuron::Readout::Source> RecordSource;
 	RecordSource record_source;
 
 	Population() = default;
-	Population(Neurons const& neurons, bool enable_record_spikes, RecordSource record_source)
-	    SYMBOL_VISIBLE;
-	Population(Neurons&& neurons, bool enable_record_spikes, RecordSource record_source)
-	    SYMBOL_VISIBLE;
+	Population(
+	    Neurons const& neurons,
+	    EnableRecordSpikes const& enable_record_spikes,
+	    RecordSource const& record_source) SYMBOL_VISIBLE;
 };
 
 /** External spike source population. */

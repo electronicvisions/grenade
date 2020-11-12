@@ -347,8 +347,10 @@ void NetworkGraphBuilder::add_neuron_event_output(
 		    std::find_if(
 		        m_network.projections.begin(), m_network.projections.end(),
 		        is_outgoing_projection) != m_network.projections.end();
-		bool const enable_record_spikes =
-		    std::get<Population>(m_network.populations.at(descriptor)).enable_record_spikes;
+		auto const& population = std::get<Population>(m_network.populations.at(descriptor));
+		bool const enable_record_spikes = std::any_of(
+		    population.enable_record_spikes.begin(), population.enable_record_spikes.end(),
+		    [](auto const c) { return c; });
 		if (!has_outgoing_projection && !enable_record_spikes) {
 			continue;
 		}
@@ -694,7 +696,9 @@ void NetworkGraphBuilder::add_external_output(
 			continue;
 		}
 		auto const& population = std::get<Population>(pop);
-		if (population.enable_record_spikes) {
+		if (std::any_of(
+		        population.enable_record_spikes.begin(), population.enable_record_spikes.end(),
+		        [](auto const c) { return c; })) {
 			for (auto const& neuron : population.neurons) {
 				neuron_event_outputs.insert(
 				    neuron.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
@@ -739,7 +743,9 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			continue;
 		}
 		auto const& population = std::get<Population>(pop);
-		if (!population.enable_record_spikes) {
+		if (!std::any_of(
+		        population.enable_record_spikes.begin(), population.enable_record_spikes.end(),
+		        [](auto const c) { return c; })) {
 			continue;
 		}
 		auto& local_spike_labels = spike_labels[descriptor];
