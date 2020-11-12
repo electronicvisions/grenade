@@ -19,15 +19,10 @@ struct GENPYBIND(visible) Population
 	/** Enable spike recording. */
 	typedef std::vector<bool> EnableRecordSpikes;
 	EnableRecordSpikes enable_record_spikes{};
-	/** Enable MADC potential recording. */
-	typedef std::optional<lola::vx::v2::AtomicNeuron::Readout::Source> RecordSource;
-	RecordSource record_source;
 
 	Population() = default;
-	Population(
-	    Neurons const& neurons,
-	    EnableRecordSpikes const& enable_record_spikes,
-	    RecordSource const& record_source) SYMBOL_VISIBLE;
+	Population(Neurons const& neurons, EnableRecordSpikes const& enable_record_spikes)
+	    SYMBOL_VISIBLE;
 };
 
 /** External spike source population. */

@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
+#include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
@@ -41,6 +42,13 @@ public:
 	 */
 	ProjectionDescriptor add(Projection const& projection) SYMBOL_VISIBLE;
 
+	/**
+	 * Add MADC recording of a single neuron.
+	 * Only one MADC recording per network is allowed.
+	 * @param madc_recording MADC recording to add
+	 */
+	void add(MADCRecording const& madc_recording) SYMBOL_VISIBLE;
+
 	NetworkBuilder() SYMBOL_VISIBLE;
 
 	std::shared_ptr<Network> done() SYMBOL_VISIBLE;
@@ -48,6 +56,7 @@ public:
 private:
 	std::map<PopulationDescriptor, std::variant<Population, ExternalPopulation>> m_populations{};
 	std::map<ProjectionDescriptor, Projection> m_projections{};
+	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	log4cxx::Logger* m_logger;
 };
 

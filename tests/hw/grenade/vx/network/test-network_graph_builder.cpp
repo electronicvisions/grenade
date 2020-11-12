@@ -104,8 +104,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
 		enable_record_spikes.push_back(true);
 	}
-	grenade::vx::network::Population population_internal{std::move(neurons), enable_record_spikes,
-	                                                     std::nullopt};
+	grenade::vx::network::Population population_internal{std::move(neurons), enable_record_spikes};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	grenade::vx::network::Projection::Connections projection_connections;
@@ -193,8 +192,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
 		enable_record_spikes.push_back(true);
 	}
-	grenade::vx::network::Population population_internal{std::move(neurons), enable_record_spikes,
-	                                                     std::nullopt};
+	grenade::vx::network::Population population_internal{std::move(neurons), enable_record_spikes};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	grenade::vx::network::Projection::Connections projection_connections;
@@ -291,8 +289,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		}
 		grenade::vx::network::Population::Neurons neurons{
 		    AtomicNeuronOnDLS(column, NeuronRowOnDLS::top)};
-		grenade::vx::network::Population population_internal{
-		    std::move(neurons), {true}, std::nullopt};
+		grenade::vx::network::Population population_internal{std::move(neurons), {true}};
 		population_internal_descriptors.push_back(network_builder.add(population_internal));
 	}
 

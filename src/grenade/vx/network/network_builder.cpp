@@ -39,27 +39,6 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 		}
 	}
 
-	// check that only one neuron is present, if MADC potential recording is enabled
-	if (population.record_source && (population.neurons.size() != 1)) {
-		throw std::runtime_error("Membrane potential recording only supported for one neuron.");
-	}
-
-	// check that no already added population has enabled MADC potential recording
-	if (population.record_source) {
-		for (auto const& [descriptor, other] : m_populations) {
-			if (!std::holds_alternative<Population>(other)) {
-				continue;
-			}
-			auto const& o = std::get<Population>(other);
-			if (o.record_source) {
-				std::stringstream ss;
-				ss << "Population(" << descriptor
-				   << ") already has membrane potential recording enabled.";
-				throw std::runtime_error(ss.str());
-			}
-		}
-	}
-
 	PopulationDescriptor descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
@@ -123,10 +102,34 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	return descriptor;
 }
 
+void NetworkBuilder::add(MADCRecording const& madc_recording)
+{
+	hate::Timer timer;
+	if (m_madc_recording) {
+		throw std::runtime_error("Only one MADC recording per network possible.");
+	}
+	if (!m_populations.contains(madc_recording.population)) {
+		throw std::runtime_error("MADC recording references unknown population.");
+	}
+	if (!std::holds_alternative<Population>(m_populations.at(madc_recording.population))) {
+		throw std::runtime_error("MADC recording does not reference internal population.");
+	}
+	if (madc_recording.index >=
+	    std::get<Population>(m_populations.at(madc_recording.population)).neurons.size()) {
+		throw std::runtime_error(
+		    "MADC recording references neuron index out of range of population.");
+	}
+	m_madc_recording = madc_recording;
+	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
+}
+
 std::shared_ptr<Network> NetworkBuilder::done()
 {
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
-	return std::make_shared<Network>(std::move(m_populations), std::move(m_projections));
+	auto const ret = std::make_shared<Network>(
+	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording));
+	m_madc_recording.reset();
+	return ret;
 }
 
 } // namespace grenade::vx::network

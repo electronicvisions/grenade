@@ -37,6 +37,11 @@ NetworkGraph build_network_graph(
 	// add on-chip populations without input
 	builder.add_populations(graph, resources, routing_result, instance);
 
+	// add MADC recording
+	if (network->madc_recording) {
+		builder.add_madc_recording(graph, resources, *(network->madc_recording), instance);
+	}
+
 	// add neuron event outputs
 	builder.add_neuron_event_outputs(graph, resources, instance);
 
@@ -200,9 +205,6 @@ void NetworkGraphBuilder::add_population(
 			// add neuron view to graph and vertex descriptor to resources
 			auto const neuron_view_vertex = graph.add(neuron_view, instance, inputs);
 			resources.populations[descriptor].neurons[row.toHemisphereOnDLS()] = neuron_view_vertex;
-		}
-		if (population.record_source) {
-			add_madc_recording(graph, resources, descriptor, instance);
 		}
 	}
 	LOG4CXX_TRACE(
@@ -774,21 +776,28 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 void NetworkGraphBuilder::add_madc_recording(
     Graph& graph,
     Resources& resources,
-    PopulationDescriptor const descriptor,
+    MADCRecording const& madc_recording,
     coordinate::ExecutionInstance const& instance) const
 {
 	hate::Timer timer;
-	auto const& population = std::get<Population>(m_network.populations.at(descriptor));
-	assert(population.neurons.size() == 1);
-	assert(population.record_source);
-	vertex::MADCReadoutView madc_readout(population.neurons.at(0), *population.record_source);
-	assert(resources.populations.at(descriptor).neurons.size() == 1);
-	for (auto const& [_, neuron_vertex] : resources.populations.at(descriptor).neurons) {
-		auto const madc_vertex = graph.add(madc_readout, instance, {neuron_vertex});
-		resources.madc_output = graph.add(
-		    vertex::DataOutput(ConnectionType::TimedMADCSampleFromChipSequence, 1), instance,
-		    {madc_vertex});
-	}
+	auto const& population =
+	    std::get<Population>(m_network.populations.at(madc_recording.population));
+	auto const neuron = population.neurons.at(madc_recording.index);
+	vertex::MADCReadoutView madc_readout(neuron, madc_recording.source);
+	auto const neuron_vertex_descriptor =
+	    resources.populations.at(madc_recording.population)
+	        .neurons.at(neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
+	auto const neuron_vertex =
+	    std::get<vertex::NeuronView>(graph.get_vertex_property(neuron_vertex_descriptor));
+	auto const& columns = neuron_vertex.get_columns();
+	auto const in_view_location = static_cast<size_t>(std::distance(
+	    columns.begin(), std::find(columns.begin(), columns.end(), neuron.toNeuronColumnOnDLS())));
+	assert(in_view_location < columns.size());
+	auto const madc_vertex = graph.add(
+	    madc_readout, instance, {{neuron_vertex_descriptor, {in_view_location, in_view_location}}});
+	resources.madc_output = graph.add(
+	    vertex::DataOutput(ConnectionType::TimedMADCSampleFromChipSequence, 1), instance,
+	    {madc_vertex});
 	LOG4CXX_TRACE(
 	    m_logger, "add_madc_recording(): Added MADC recording in " << timer.print() << ".");
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/network/population.h"
@@ -146,7 +147,7 @@ public:
 	void add_madc_recording(
 	    Graph& graph,
 	    Resources& resources,
-	    PopulationDescriptor descriptor,
+	    MADCRecording const& madc_recording,
 	    coordinate::ExecutionInstance const& instance) const;
 
 	NetworkGraph::SpikeLabels get_spike_labels(RoutingResult const& connection_result);
