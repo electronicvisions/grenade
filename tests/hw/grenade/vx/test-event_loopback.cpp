@@ -30,7 +30,9 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	grenade::vx::vertex::ExternalInput external_input(
 	    grenade::vx::ConnectionType::DataTimedSpikeSequence, 1);
 
-	grenade::vx::vertex::DataInput data_input(grenade::vx::ConnectionType::CrossbarInputLabel, 1);
+	grenade::vx::vertex::DataInput data_input(grenade::vx::ConnectionType::TimedSpikeSequence, 1);
+
+	grenade::vx::vertex::CrossbarL2Input crossbar_l2_input;
 
 	grenade::vx::vertex::CrossbarNode crossbar_node(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8 + node.toEnum()), node.toCrossbarOutputOnDLS()),
@@ -46,9 +48,10 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	auto const v1 = g.add(external_input, instance, {});
 	auto const v2 = g.add(data_input, instance, {v1});
-	auto const v3 = g.add(crossbar_node, instance, {v2});
-	auto const v4 = g.add(crossbar_output, instance, {v3});
-	auto const v5 = g.add(data_output, instance, {v4});
+	auto const v3 = g.add(crossbar_l2_input, instance, {v2});
+	auto const v4 = g.add(crossbar_node, instance, {v3});
+	auto const v5 = g.add(crossbar_output, instance, {v4});
+	auto const v6 = g.add(data_output, instance, {v5});
 
 	// fill graph inputs
 	grenade::vx::IODataMap input_list;
@@ -63,9 +66,9 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	EXPECT_EQ(result_map.spike_event_output.size(), 1);
 
-	EXPECT_TRUE(result_map.spike_event_output.find(v5) != result_map.spike_event_output.end());
-	EXPECT_EQ(result_map.spike_event_output.at(v5).size(), inputs.size());
-	return result_map.spike_event_output.at(v5);
+	EXPECT_TRUE(result_map.spike_event_output.find(v6) != result_map.spike_event_output.end());
+	EXPECT_EQ(result_map.spike_event_output.at(v6).size(), inputs.size());
+	return result_map.spike_event_output.at(v6);
 }
 
 TEST(JITGraphExecutor, EventLoopback)
