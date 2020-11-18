@@ -7,6 +7,7 @@
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
+#include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/jtag.h"
 #include "hate/timer.h"
 #include "stadls/vx/v2/playback_program.h"
@@ -154,6 +155,7 @@ void perform_hardware_check(Connection& connection)
 	// perform hardware version check(s)
 	PlaybackProgramBuilder builder;
 	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
+	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
 	run(connection, builder.done());
 
 	if (jtag_id_ticket.get().get_version() != 2) {

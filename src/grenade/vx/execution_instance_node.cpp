@@ -3,6 +3,7 @@
 #include "halco/hicann-dls/vx/v2/coordinates.h"
 #include "haldls/vx/arq.h"
 #include "haldls/vx/phy.h"
+#include "haldls/vx/v2/barrier.h"
 #include "hate/timer.h"
 #include "stadls/vx/v2/playback_program_builder.h"
 #include "stadls/vx/v2/run.h"
@@ -49,6 +50,7 @@ void perform_post_fail_analysis(
 			tickets_phy.emplace_back(builder.read(coord));
 		}
 
+		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		run(connection, builder.done());
 
 		std::stringstream ss;
