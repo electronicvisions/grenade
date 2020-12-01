@@ -116,6 +116,11 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 			time = TimedSpike::Time(time - m_wait_between_events);
 		}
 
+		// clear labels
+		for (auto& l : labels) {
+			l.clear();
+		}
+
 		std::sort(local_events.begin(), local_events.end(), [](auto const& a, auto const& b) {
 			return a.time < b.time;
 		});
