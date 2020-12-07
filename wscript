@@ -13,13 +13,18 @@ def depends(ctx):
     ctx('hate')
     ctx('libnux')
 
-    ctx('grenade', 'pygrenade')
+    if getattr(ctx.options, 'with_grenade_python_bindings', True):
+        ctx('grenade', 'pygrenade')
 
 
 def options(opt):
     opt.load('compiler_cxx')
     opt.load('gtest')
     opt.load('doxygen')
+
+    hopts = opt.add_option_group('grenade options')
+    hopts.add_withoption('grenade-python-bindings', default=True,
+                         help='Toggle the generation and build of grenade python bindings')
 
 
 def configure(cfg):
