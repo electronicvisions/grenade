@@ -578,9 +578,26 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 	auto const& local_data = m_local_data.data.at(boost::source(in_edge, m_graph.get_graph()));
+	// maybe apply port restriction
+	auto const maybe_apply_restriction = [&](auto const& d) -> IODataMap::Entry {
+		typedef std::remove_cvref_t<decltype(d)> Data;
+		typedef hate::type_list<
+		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
+		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
+		    std::vector<TimedDataSequence<std::vector<Int8>>>>
+		    MatrixData;
+		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
+			auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
+			if (port_restriction) {
+				return apply_restriction(d, *port_restriction);
+			}
+		}
+		return d;
+	};
+	auto const maybe_restricted_local_data = std::visit(maybe_apply_restriction, local_data);
 	// check size match only for first because we know that the data map is valid
-	assert(IODataMap::is_match(local_data, data.output()));
-	m_local_data_output.data[vertex] = local_data;
+	assert(IODataMap::is_match(maybe_restricted_local_data, data.output()));
+	m_local_data_output.data[vertex] = maybe_restricted_local_data;
 }
 
 template <typename T>
