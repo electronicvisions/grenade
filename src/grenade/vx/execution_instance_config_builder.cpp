@@ -23,6 +23,7 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
 	m_requires_ppu = false;
+	m_used_madc = false;
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar.nodes) {
@@ -107,6 +108,7 @@ void ExecutionInstanceConfigBuilder::process(
 	m_config.hemispheres[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()]
 	    .neuron_block[data.get_coord().toNeuronColumnOnDLS()]
 	    .readout.source = data.get_config();
+	m_used_madc = true;
 }
 
 template <>
@@ -271,22 +273,24 @@ ExecutionInstanceConfigBuilder::generate()
 	for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
 		builder.write(coord, m_config.neuron_backend[coord]);
 	}
-	builder.write(ReadoutSourceSelectionOnDLS(), m_config.readout_source_selection);
-	builder.write(MADCConfigOnDLS(), m_config.madc_config);
-	// FIXME: should be properties of the lola MADC container in the chip object
-	std::map<CapMemCellOnDLS, CapMemCell> readout_cells = {
-	    {CapMemCellOnDLS::readout_out_amp_i_bias_0, CapMemCell(CapMemCell::Value(0))},
-	    {CapMemCellOnDLS::readout_out_amp_i_bias_1, CapMemCell(CapMemCell::Value(0))},
-	    {CapMemCellOnDLS::readout_pseudo_diff_buffer_bias, CapMemCell(CapMemCell::Value(0))},
-	    {CapMemCellOnDLS::readout_ac_mux_i_bias, CapMemCell(CapMemCell::Value(500))},
-	    {CapMemCellOnDLS::readout_madc_in_500na, CapMemCell(CapMemCell::Value(500))},
-	    {CapMemCellOnDLS::readout_sc_amp_i_bias, CapMemCell(CapMemCell::Value(500))},
-	    {CapMemCellOnDLS::readout_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))},
-	    {CapMemCellOnDLS::readout_pseudo_diff_v_ref, CapMemCell(CapMemCell::Value(400))},
-	    {CapMemCellOnDLS::readout_iconv_test_voltage, CapMemCell(CapMemCell::Value(400))},
-	    {CapMemCellOnDLS::readout_iconv_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))}};
-	for (auto const& [coord, config] : readout_cells) {
-		builder.write(coord, config);
+	if (m_used_madc) {
+		builder.write(ReadoutSourceSelectionOnDLS(), m_config.readout_source_selection);
+		builder.write(MADCConfigOnDLS(), m_config.madc_config);
+		// FIXME: should be properties of the lola MADC container in the chip object
+		std::map<CapMemCellOnDLS, CapMemCell> readout_cells = {
+		    {CapMemCellOnDLS::readout_out_amp_i_bias_0, CapMemCell(CapMemCell::Value(0))},
+		    {CapMemCellOnDLS::readout_out_amp_i_bias_1, CapMemCell(CapMemCell::Value(0))},
+		    {CapMemCellOnDLS::readout_pseudo_diff_buffer_bias, CapMemCell(CapMemCell::Value(0))},
+		    {CapMemCellOnDLS::readout_ac_mux_i_bias, CapMemCell(CapMemCell::Value(500))},
+		    {CapMemCellOnDLS::readout_madc_in_500na, CapMemCell(CapMemCell::Value(500))},
+		    {CapMemCellOnDLS::readout_sc_amp_i_bias, CapMemCell(CapMemCell::Value(500))},
+		    {CapMemCellOnDLS::readout_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))},
+		    {CapMemCellOnDLS::readout_pseudo_diff_v_ref, CapMemCell(CapMemCell::Value(400))},
+		    {CapMemCellOnDLS::readout_iconv_test_voltage, CapMemCell(CapMemCell::Value(400))},
+		    {CapMemCellOnDLS::readout_iconv_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))}};
+		for (auto const& [coord, config] : readout_cells) {
+			builder.write(coord, config);
+		}
 	}
 	// wait for CapMem to settle
 	builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
