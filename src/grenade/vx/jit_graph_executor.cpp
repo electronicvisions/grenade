@@ -18,6 +18,7 @@
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
+#include <variant>
 #include <boost/range/adaptor/map.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/flow_graph.h>
@@ -146,6 +147,10 @@ namespace {
 
 void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 {
+	if (std::holds_alternative<hxcomm::vx::ZeroMockConnection>(connection)) {
+		return;
+	}
+
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
