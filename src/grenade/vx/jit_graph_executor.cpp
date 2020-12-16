@@ -144,8 +144,7 @@ bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& c
 
 namespace {
 
-template <typename Connection>
-void perform_hardware_check(Connection& connection)
+void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
