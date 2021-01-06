@@ -19,6 +19,8 @@ namespace grenade::vx::transformation {
 
 struct MACSpikeTrainGenerator : public vertex::Transformation::Function
 {
+	~MACSpikeTrainGenerator() SYMBOL_VISIBLE;
+
 	MACSpikeTrainGenerator() = default;
 
 	/**

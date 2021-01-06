@@ -9,8 +9,10 @@ class access;
 
 namespace grenade::vx::transformation {
 
-struct Concatenation : public vertex::Transformation::Function
+struct SYMBOL_VISIBLE Concatenation : public vertex::Transformation::Function
 {
+	~Concatenation();
+
 	Concatenation() = default;
 
 	/**
@@ -18,14 +20,14 @@ struct Concatenation : public vertex::Transformation::Function
 	 * @param type Data type
 	 * @param sizes Sizes
 	 */
-	Concatenation(ConnectionType type, std::vector<size_t> const& sizes) SYMBOL_VISIBLE;
+	Concatenation(ConnectionType type, std::vector<size_t> const& sizes);
 
-	std::vector<Port> inputs() const SYMBOL_VISIBLE;
-	Port output() const SYMBOL_VISIBLE;
+	std::vector<Port> inputs() const;
+	Port output() const;
 
-	bool equal(vertex::Transformation::Function const& other) const SYMBOL_VISIBLE;
+	bool equal(vertex::Transformation::Function const& other) const;
 
-	Value apply(std::vector<Value> const& value) const SYMBOL_VISIBLE;
+	Value apply(std::vector<Value> const& value) const;
 
 private:
 	ConnectionType m_type{};

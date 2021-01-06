@@ -10,6 +10,8 @@
 
 namespace grenade::vx::transformation {
 
+MACSpikeTrainGenerator::~MACSpikeTrainGenerator() {}
+
 MACSpikeTrainGenerator::MACSpikeTrainGenerator(
     halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::HemisphereOnDLS> const&
         hemisphere_sizes,

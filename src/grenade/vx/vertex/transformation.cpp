@@ -6,6 +6,8 @@
 
 namespace grenade::vx::vertex {
 
+Transformation::Function::~Function() {}
+
 Transformation::Transformation(std::unique_ptr<Function> function) : m_function(std::move(function))
 {}
 

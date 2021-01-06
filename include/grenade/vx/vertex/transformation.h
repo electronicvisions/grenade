@@ -25,9 +25,11 @@ struct Transformation
 	/**
 	 * Function base for transforming a single input value to a single output value.
 	 */
-	struct Function
+	struct SYMBOL_VISIBLE Function
 	{
 		typedef IODataMap::Entry Value;
+
+		virtual ~Function() = 0;
 
 		/**
 		 * Provided input ports provided.

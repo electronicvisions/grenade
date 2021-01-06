@@ -11,6 +11,8 @@ Concatenation::Concatenation(ConnectionType const type, std::vector<size_t> cons
     m_type(type), m_sizes(sizes)
 {}
 
+Concatenation::~Concatenation() {}
+
 std::vector<Port> Concatenation::inputs() const
 {
 	std::vector<Port> ports;
@@ -41,12 +43,14 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 		for (auto& entry : ret) {
 			entry.resize(output_size);
 		}
-		for (auto const& svalue : value) {
-			auto const& v = std::get<std::remove_reference_t<decltype(ret)>>(svalue);
-			for (size_t i = 0; i < ret.size(); ++i) {
-				size_t o_offset = 0;
-				std::copy(v.at(i).begin(), v.at(i).end(), ret.at(i).begin() + o_offset);
-				o_offset += v.size();
+		for (size_t i = 0; i < ret.size(); ++i) {
+			size_t o_offset = 0;
+			for (auto const& svalue : value) {
+				auto const& v = std::get<std::remove_reference_t<decltype(ret)>>(svalue);
+				for (size_t k = 0; k < v.at(i).size(); ++k) {
+					ret.at(i).at(k + o_offset) = v.at(i).at(k);
+				}
+				o_offset += v.at(i).size();
 			}
 		}
 		return ret;
