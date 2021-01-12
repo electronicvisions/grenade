@@ -24,7 +24,7 @@ ExecutionIndex ExecutionInstance::toExecutionIndex() const
 bool ExecutionInstance::operator==(ExecutionInstance const& other) const
 {
 	return std::tie(m_execution_index, m_dls_global) ==
-	       std::tie(other.m_execution_index, m_dls_global);
+	       std::tie(other.m_execution_index, other.m_dls_global);
 }
 
 bool ExecutionInstance::operator!=(ExecutionInstance const& other) const
