@@ -21,7 +21,8 @@ Graph::vertex_descriptor Graph::add(
 	}
 
 	// add vertex to graph
-	auto const descriptor = boost::add_vertex(m_graph);
+	assert(m_graph);
+	auto const descriptor = boost::add_vertex(*m_graph);
 	assert(descriptor == m_vertex_property_map.size());
 
 	if constexpr (std::is_same_v<std::decay_t<VertexT>, vertex_descriptor>) {

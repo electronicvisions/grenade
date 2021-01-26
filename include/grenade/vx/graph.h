@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <iosfwd>
 #include <map>
+#include <memory>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -184,8 +185,8 @@ public:
 
 private:
 	bool m_enable_acyclicity_check;
-	graph_type m_graph;
-	graph_type m_execution_instance_graph;
+	std::unique_ptr<graph_type> m_graph;
+	std::unique_ptr<graph_type> m_execution_instance_graph;
 	edge_property_map_type m_edge_property_map;
 	vertex_property_map_type m_vertex_property_map;
 	vertex_descriptor_map_type m_vertex_descriptor_map;

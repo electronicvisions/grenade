@@ -90,7 +90,7 @@ NetworkGraph build_network_graph(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
 
 	return {network,
-	        graph,
+	        std::move(graph),
 	        resources.external_input,
 	        resources.external_output,
 	        resources.madc_output,

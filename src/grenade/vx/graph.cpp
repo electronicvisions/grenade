@@ -130,8 +130,8 @@ namespace grenade::vx {
 
 Graph::Graph(bool enable_acyclicity_check) :
     m_enable_acyclicity_check(enable_acyclicity_check),
-    m_graph(),
-    m_execution_instance_graph(),
+    m_graph(std::make_unique<graph_type>()),
+    m_execution_instance_graph(std::make_unique<graph_type>()),
     m_edge_property_map(),
     m_vertex_property_map(),
     m_vertex_descriptor_map(),
@@ -170,9 +170,15 @@ Graph::edge_property_map_type copy_edge_property_map(
 
 Graph::Graph(Graph const& other) :
     m_enable_acyclicity_check(other.m_enable_acyclicity_check),
-    m_graph(other.m_graph),
-    m_execution_instance_graph(other.m_execution_instance_graph),
-    m_edge_property_map(copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph)),
+    m_graph(other.m_graph ? std::make_unique<graph_type>(*other.m_graph) : nullptr),
+    m_execution_instance_graph(
+        other.m_execution_instance_graph
+            ? std::make_unique<graph_type>(*other.m_execution_instance_graph)
+            : nullptr),
+    m_edge_property_map(
+        (m_graph && other.m_graph)
+            ? copy_edge_property_map(other.m_edge_property_map, *m_graph, *other.m_graph)
+            : other.m_edge_property_map),
     m_vertex_property_map(other.m_vertex_property_map),
     m_vertex_descriptor_map(other.m_vertex_descriptor_map),
     m_execution_instance_map(other.m_execution_instance_map),
@@ -181,9 +187,9 @@ Graph::Graph(Graph const& other) :
 
 Graph::Graph(Graph&& other) :
     m_enable_acyclicity_check(other.m_enable_acyclicity_check),
-    m_graph(other.m_graph),                                       // only copy constructable
-    m_execution_instance_graph(other.m_execution_instance_graph), // only copy constructable
-    m_edge_property_map(copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph)),
+    m_graph(std::move(other.m_graph)),
+    m_execution_instance_graph(std::move(other.m_execution_instance_graph)),
+    m_edge_property_map(std::move(other.m_edge_property_map)),
     m_vertex_property_map(std::move(other.m_vertex_property_map)),
     m_vertex_descriptor_map(std::move(other.m_vertex_descriptor_map)),
     m_execution_instance_map(std::move(other.m_execution_instance_map)),
@@ -196,9 +202,15 @@ Graph& Graph::operator=(Graph const& other)
 		return *this;
 	}
 	m_enable_acyclicity_check = other.m_enable_acyclicity_check;
-	m_graph = other.m_graph;
-	m_execution_instance_graph = other.m_execution_instance_graph;
-	m_edge_property_map = copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph);
+	m_graph = other.m_graph ? std::make_unique<graph_type>(*other.m_graph) : nullptr;
+	m_execution_instance_graph =
+	    other.m_execution_instance_graph
+	        ? std::make_unique<graph_type>(*other.m_execution_instance_graph)
+	        : nullptr;
+	m_edge_property_map =
+	    (m_graph && other.m_graph)
+	        ? copy_edge_property_map(other.m_edge_property_map, *m_graph, *other.m_graph)
+	        : other.m_edge_property_map;
 	m_vertex_property_map = other.m_vertex_property_map;
 	m_vertex_descriptor_map = other.m_vertex_descriptor_map;
 	m_execution_instance_map = other.m_execution_instance_map;
@@ -211,9 +223,9 @@ Graph& Graph::operator=(Graph&& other)
 		return *this;
 	}
 	m_enable_acyclicity_check = other.m_enable_acyclicity_check;
-	m_graph = other.m_graph;
-	m_execution_instance_graph = other.m_execution_instance_graph;
-	m_edge_property_map = copy_edge_property_map(other.m_edge_property_map, m_graph, other.m_graph);
+	m_graph = std::move(other.m_graph);
+	m_execution_instance_graph = std::move(other.m_execution_instance_graph);
+	m_edge_property_map = std::move(other.m_edge_property_map);
 	m_vertex_property_map = std::move(other.m_vertex_property_map);
 	m_vertex_descriptor_map = std::move(other.m_vertex_descriptor_map);
 	m_execution_instance_map = std::move(other.m_execution_instance_map);
@@ -237,7 +249,8 @@ void Graph::add_edges(
 	vertex_descriptor execution_instance_descriptor;
 	auto const execution_instance_map_it = m_execution_instance_map.right.find(execution_instance);
 	if (execution_instance_map_it == m_execution_instance_map.right.end()) {
-		execution_instance_descriptor = boost::add_vertex(m_execution_instance_graph);
+		assert(m_execution_instance_graph);
+		execution_instance_descriptor = boost::add_vertex(*m_execution_instance_graph);
 		m_execution_instance_map.insert({execution_instance_descriptor, execution_instance});
 	} else {
 		execution_instance_descriptor = execution_instance_map_it->second;
@@ -247,10 +260,12 @@ void Graph::add_edges(
 	m_vertex_descriptor_map.insert({descriptor, execution_instance_descriptor});
 
 	bool new_edges_across_execution_instances = false;
+	assert(m_graph);
+	assert(m_execution_instance_graph);
 	for (auto const& input : inputs) {
 		// add edge between vertex descriptors
 		{
-			auto const [edge, success] = boost::add_edge(input.descriptor, descriptor, m_graph);
+			auto const [edge, success] = boost::add_edge(input.descriptor, descriptor, *m_graph);
 			if (!success) {
 				throw std::logic_error("Adding edge to graph unsuccessful.");
 			}
@@ -265,15 +280,15 @@ void Graph::add_edges(
 		if (input_execution_instance_descriptor != execution_instance_descriptor) {
 			// only add new edge if not already present
 			auto const in_edges =
-			    boost::in_edges(execution_instance_descriptor, m_execution_instance_graph);
+			    boost::in_edges(execution_instance_descriptor, *m_execution_instance_graph);
 			if (std::none_of(in_edges.first, in_edges.second, [&](auto const& i) {
-				    return boost::source(i, m_execution_instance_graph) ==
+				    return boost::source(i, *m_execution_instance_graph) ==
 				           input_execution_instance_descriptor;
 			    })) {
 				new_edges_across_execution_instances = true;
 				auto const [_, success] = boost::add_edge(
 				    input_execution_instance_descriptor, execution_instance_descriptor,
-				    m_execution_instance_graph);
+				    *m_execution_instance_graph);
 				if (!success) {
 					throw std::logic_error("Adding edge to execution instance graph unsuccessful.");
 				}
@@ -306,12 +321,14 @@ void Graph::add_log(
 
 Graph::graph_type const& Graph::get_graph() const
 {
-	return m_graph;
+	assert(m_graph);
+	return *m_graph;
 }
 
 Graph::graph_type const& Graph::get_execution_instance_graph() const
 {
-	return m_execution_instance_graph;
+	assert(m_execution_instance_graph);
+	return *m_execution_instance_graph;
 }
 
 Vertex const& Graph::get_vertex_property(vertex_descriptor const descriptor) const
@@ -365,9 +382,10 @@ public:
 
 bool Graph::is_acyclic_execution_instance_graph() const
 {
+	assert(m_execution_instance_graph);
 	try {
 		boost::topological_sort(
-		    m_execution_instance_graph, detail::NullOutputIterator<vertex_descriptor>{});
+		    *m_execution_instance_graph, detail::NullOutputIterator<vertex_descriptor>{});
 	} catch (boost::not_a_dag const&) {
 		return false;
 	}
@@ -470,9 +488,15 @@ bool value_equal(
 bool Graph::operator==(Graph const& other) const
 {
 	return (m_enable_acyclicity_check == other.m_enable_acyclicity_check) &&
-	       value_equal(m_graph, other.m_graph) &&
-	       value_equal(m_execution_instance_graph, other.m_execution_instance_graph) &&
-	       value_equal(m_edge_property_map, other.m_edge_property_map, m_graph, other.m_graph) &&
+	       (m_graph && other.m_graph ? value_equal(*m_graph, *other.m_graph)
+	                                 : (m_graph == other.m_graph)) &&
+	       (m_execution_instance_graph && other.m_execution_instance_graph
+	            ? value_equal(*m_execution_instance_graph, *other.m_execution_instance_graph)
+	            : (m_execution_instance_graph == other.m_execution_instance_graph)) &&
+	       (m_graph && other.m_graph
+	            ? value_equal(
+	                  m_edge_property_map, other.m_edge_property_map, *m_graph, *other.m_graph)
+	            : m_edge_property_map == other.m_edge_property_map) &&
 	       value_equal(m_vertex_property_map, other.m_vertex_property_map) &&
 	       (m_vertex_descriptor_map == other.m_vertex_descriptor_map) &&
 	       (m_execution_instance_map == other.m_execution_instance_map);
@@ -632,13 +656,16 @@ void Graph::save(Archive& ar, std::uint32_t const) const
 	// Manual serialization of m_edge_property_map because edge_descriptor is not invariant under
 	// serialization, but its position in boost::edges(m_graph) is.
 	std::vector<std::pair<size_t, std::optional<PortRestriction>>> edge_property_list;
-	std::vector<edge_descriptor> edges(boost::edges(m_graph).first, boost::edges(m_graph).second);
-	for (auto const& p : m_edge_property_map) {
-		auto const epos = std::find(edges.begin(), edges.end(), p.first);
-		assert(epos != edges.end());
-		edge_property_list.push_back({std::distance(edges.begin(), epos), p.second});
+	if (m_graph) {
+		std::vector<edge_descriptor> edges(
+		    boost::edges(*m_graph).first, boost::edges(*m_graph).second);
+		for (auto const& p : m_edge_property_map) {
+			auto const epos = std::find(edges.begin(), edges.end(), p.first);
+			assert(epos != edges.end());
+			edge_property_list.push_back({std::distance(edges.begin(), epos), p.second});
+		}
+		ar(edge_property_list);
 	}
-	ar(edge_property_list);
 
 	ar(m_vertex_property_map);
 	ar(m_vertex_descriptor_map);
@@ -655,10 +682,13 @@ void Graph::load(Archive& ar, std::uint32_t const)
 	// Manual serialization of m_edge_property_map because edge_descriptor is not invariant under
 	// serialization, but its position in boost::edges(m_graph) is.
 	std::vector<std::pair<size_t, std::optional<PortRestriction>>> edge_property_list;
-	std::vector<edge_descriptor> edges(boost::edges(m_graph).first, boost::edges(m_graph).second);
-	ar(edge_property_list);
-	for (auto const& p : edge_property_list) {
-		m_edge_property_map.insert({edges.at(p.first), p.second});
+	if (m_graph) {
+		std::vector<edge_descriptor> edges(
+		    boost::edges(*m_graph).first, boost::edges(*m_graph).second);
+		ar(edge_property_list);
+		for (auto const& p : edge_property_list) {
+			m_edge_property_map.insert({edges.at(p.first), p.second});
+		}
 	}
 
 	ar(m_vertex_property_map);
