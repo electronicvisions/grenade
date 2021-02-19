@@ -9,6 +9,7 @@
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
+#include <iosfwd>
 #include <map>
 #include <vector>
 
@@ -31,6 +32,9 @@ struct GENPYBIND(visible) RoutingResult
 		lola::vx::v2::SynapseMatrix::Label const label;
 		halco::hicann_dls::vx::v2::SynapseRowOnDLS const synapse_row;
 		halco::hicann_dls::vx::v2::SynapseOnSynapseRow const synapse_on_row;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
 	};
 	typedef std::map<ProjectionDescriptor, std::vector<PlacedConnection>> Connections;
 	Connections connections;
@@ -82,6 +86,9 @@ struct GENPYBIND(visible) RoutingResult
 	CrossbarNodes crossbar_nodes;
 
 	RoutingResult() = default;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream&, RoutingResult const&) SYMBOL_VISIBLE;
 };
 
 } // namespace network
