@@ -268,7 +268,8 @@ ExecutionInstanceConfigBuilder::generate(bool const enable_ppu)
 	}
 	// wait for CapMem to settle
 	builder.write(TimerOnDLS(), Timer());
-	builder.block_until(TimerOnDLS(), Timer::Value(20000 * Timer::Value::fpga_clock_cycles_per_us));
+	builder.block_until(
+	    TimerOnDLS(), Timer::Value(100000 * Timer::Value::fpga_clock_cycles_per_us));
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
 	if (enable_ppu) {
