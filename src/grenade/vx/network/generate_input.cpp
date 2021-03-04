@@ -16,6 +16,16 @@ InputGenerator::InputGenerator(NetworkGraph const& network_graph) :
 void InputGenerator::add(
     std::vector<TimedSpike::Time> const& times, PopulationDescriptor const population)
 {
+	// Exit early if population is not connected to any other population
+	auto const has_population = [population](auto const& projection) {
+		return (projection.second.population_pre == population);
+	};
+	if (std::none_of(
+	        m_network_graph.network->projections.begin(),
+	        m_network_graph.network->projections.end(), has_population)) {
+		return;
+	}
+
 	auto& data_spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
 
 	auto const& spike_labels = m_network_graph.spike_labels.at(population);
@@ -33,6 +43,16 @@ void InputGenerator::add(
 void InputGenerator::add(
     std::vector<std::vector<TimedSpike::Time>> const& times, PopulationDescriptor const population)
 {
+	// Exit early if population is not connected to any other population
+	auto const has_population = [population](auto const& projection) {
+		return (projection.second.population_pre == population);
+	};
+	if (std::none_of(
+	        m_network_graph.network->projections.begin(),
+	        m_network_graph.network->projections.end(), has_population)) {
+		return;
+	}
+
 	auto& data_spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
 
 	auto const& spike_labels = m_network_graph.spike_labels.at(population);
@@ -49,6 +69,27 @@ void InputGenerator::add(
 
 	data_spikes.reserve(size);
 	for (size_t i = 0; i < times.size(); ++i) {
+		// Exit early if neuron is not connected to any other neuron
+		auto const has_neuron = [population, i](auto const& projection) {
+			if (projection.second.population_pre != population) {
+				return false;
+			}
+
+			// Check if neuron is part of any connection
+			for (auto const& c : projection.second.connections) {
+				if (c.index_pre == i) {
+					return true;
+				}
+			}
+			return false;
+		};
+
+		if (std::none_of(
+		        m_network_graph.network->projections.begin(),
+		        m_network_graph.network->projections.end(), has_neuron)) {
+			continue;
+		}
+
 		auto const label = spike_labels.at(i);
 		for (auto const time : times.at(i)) {
 			data_spikes.push_back(grenade::vx::TimedSpike{
