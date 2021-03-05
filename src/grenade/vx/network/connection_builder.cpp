@@ -245,7 +245,7 @@ halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock ConnectionBuilder::
 		std::vector<SynapseRowOnSynapseDriver> added_rows;
 		for (auto const r : iter_all<SynapseRowOnSynapseDriver>()) {
 			if (!driver->second.rows.contains(r)) {
-				driver->second.rows.insert({r, {}});
+				driver->second.rows.insert({r, {{}, receptor_type}});
 				added_rows.push_back(r);
 			}
 		}
