@@ -31,10 +31,11 @@ struct GENPYBIND(visible) NetworkGraph
 
 	/**
 	 * Spike labels corresponding to each neuron in a population.
-	 * For external populations this is the input spike label, for internal population this is only
-	 * given for populations with enabled recording.
+	 * For external populations these are the input spike labels, for internal population this is
+	 * only given for populations with enabled recording.
 	 */
-	typedef std::map<PopulationDescriptor, std::vector<haldls::vx::v2::SpikeLabel>> SpikeLabels;
+	typedef std::map<PopulationDescriptor, std::vector<std::vector<haldls::vx::v2::SpikeLabel>>>
+	    SpikeLabels;
 	SpikeLabels spike_labels;
 };
 

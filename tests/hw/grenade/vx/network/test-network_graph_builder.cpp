@@ -133,7 +133,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 			grenade::vx::TimedSpike spike{
 			    Timer::Value(j * isi),
 			    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			        network_graph.spike_labels.at(population_external_descriptor).at(i)})};
+			        network_graph.spike_labels.at(population_external_descriptor).at(i).at(0)})};
 			input_spikes.at(i).push_back(spike);
 		}
 		inputs.runtime.push_back(Timer::Value(num * isi));
@@ -156,7 +156,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 		// count wrong spikes
 		size_t not_matching = 0;
 		auto const expected_label =
-		    network_graph.spike_labels.at(population_internal_descriptor).at(i);
+		    network_graph.spike_labels.at(population_internal_descriptor).at(i).at(0);
 		for (auto const spike : spikes) {
 			if (spike.get_label() != expected_label) {
 				not_matching++;
@@ -227,7 +227,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			grenade::vx::TimedSpike spike{
 			    Timer::Value(j * isi),
 			    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			        network_graph.spike_labels.at(population_external_descriptor).at(i)})};
+			        network_graph.spike_labels.at(population_external_descriptor).at(i).at(0)})};
 			input_spikes.at(i).push_back(spike);
 		}
 		inputs.runtime.push_back(Timer::Value(num * isi));
@@ -249,7 +249,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			// count correct spikes
 			size_t matching = 0;
 			auto const expected_label =
-			    network_graph.spike_labels.at(population_internal_descriptor).at(i);
+			    network_graph.spike_labels.at(population_internal_descriptor).at(i).at(0);
 			for (auto const& spike : spikes) {
 				if (spike.get_label() == expected_label) {
 					matching++;
@@ -326,7 +326,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		grenade::vx::TimedSpike spike{
 		    Timer::Value(j * isi),
 		    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-		        network_graph.spike_labels.at(population_external_descriptor).at(0)})};
+		        network_graph.spike_labels.at(population_external_descriptor).at(0).at(0)})};
 		input_spikes.at(0).push_back(spike);
 	}
 	inputs.runtime.push_back(Timer::Value(num * isi));
@@ -346,7 +346,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	// count correct spikes
 	size_t matching = 0;
 	auto const expected_label =
-	    network_graph.spike_labels.at(population_internal_descriptors.back()).at(0);
+	    network_graph.spike_labels.at(population_internal_descriptors.back()).at(0).at(0);
 	for (auto const& spike : spikes) {
 		if (spike.get_label() == expected_label) {
 			matching++;

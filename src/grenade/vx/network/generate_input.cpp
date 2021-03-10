@@ -28,14 +28,16 @@ void InputGenerator::add(
 
 	auto& data_spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
 
-	auto const& spike_labels = m_network_graph.spike_labels.at(population);
+	auto const& neurons = m_network_graph.spike_labels.at(population);
 
-	data_spikes.reserve(times.size() * spike_labels.size());
+	data_spikes.reserve(times.size() * neurons.size());
 	for (auto const time : times) {
-		for (auto const label : spike_labels) {
-			data_spikes.push_back(grenade::vx::TimedSpike{
-			    time, haldls::vx::v2::SpikePack1ToChip(
-			              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
+		for (auto const neuron : neurons) {
+			for (auto const label : neuron) {
+				data_spikes.push_back(grenade::vx::TimedSpike{
+				    time, haldls::vx::v2::SpikePack1ToChip(
+				              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
+			}
 		}
 	}
 }
@@ -55,9 +57,9 @@ void InputGenerator::add(
 
 	auto& data_spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
 
-	auto const& spike_labels = m_network_graph.spike_labels.at(population);
+	auto const& neurons = m_network_graph.spike_labels.at(population);
 
-	if (times.size() != spike_labels.size()) {
+	if (times.size() != neurons.size()) {
 		throw std::runtime_error(
 		    "Times number of neurons does not match expected number from spike labels.");
 	}
@@ -90,11 +92,13 @@ void InputGenerator::add(
 			continue;
 		}
 
-		auto const label = spike_labels.at(i);
+		auto const labels = neurons.at(i);
 		for (auto const time : times.at(i)) {
-			data_spikes.push_back(grenade::vx::TimedSpike{
-			    time, haldls::vx::v2::SpikePack1ToChip(
-			              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
+			for (auto const label : labels) {
+				data_spikes.push_back(grenade::vx::TimedSpike{
+				    time, haldls::vx::v2::SpikePack1ToChip(
+				              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
+			}
 		}
 	}
 }

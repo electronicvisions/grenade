@@ -483,7 +483,7 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 			for (size_t addr = 0; addr < used_driver.pres.size(); ++addr) {
 				label.set_synapse_label(lola::vx::v2::SynapseMatrix::Label(addr));
 				auto const& index = used_driver.pres.at(addr);
-				external_spike_labels.at(index.first).at(index.second) = label;
+				external_spike_labels.at(index.first).at(index.second).push_back(label);
 			}
 		}
 	}

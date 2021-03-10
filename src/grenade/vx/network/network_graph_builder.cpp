@@ -552,8 +552,10 @@ void NetworkGraphBuilder::add_projection_from_external_input(
 		        .toSynapseDriverOnSynapseDriverBlock(),
 		    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
 		auto const index_pre = m_network.projections.at(descriptor).connections.at(i).index_pre;
-		used_spl1_addresses[padi_bus].insert(
-		    external_spike_labels.at(index_pre).get_spl1_address());
+
+		for (auto label : external_spike_labels.at(index_pre)) {
+			used_spl1_addresses[padi_bus].insert(label.get_spl1_address());
+		}
 		i++;
 	}
 	// add crossbar nodes from L2 input to PADI busses
@@ -765,7 +767,7 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS() %
 			    SPL1Address::size));
 			spike_label.set_neuron_backend_address_out(local_neuron_labels.at(i));
-			local_spike_labels.push_back(spike_label);
+			local_spike_labels.push_back({spike_label});
 		}
 	}
 	LOG4CXX_TRACE(

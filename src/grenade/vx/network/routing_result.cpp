@@ -24,10 +24,15 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 	}
 
 	os << "External spike labels:\n";
-	for (auto const& [descriptor, labels] : result.external_spike_labels) {
+	for (auto const& [descriptor, neurons] : result.external_spike_labels) {
 		os << descriptor << '\n';
-		for (auto const& label : labels) {
-			os << '\t' << label << '\n';
+		size_t neuron_index = 0;
+		for (auto const& neuron : neurons) {
+			os << '\t' << neuron_index << '\n';
+			neuron_index++;
+			for (auto const& label : neuron) {
+				os << "\t\t" << label << '\n';
+			}
 		}
 	}
 

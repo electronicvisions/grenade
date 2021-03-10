@@ -42,7 +42,7 @@ struct GENPYBIND(visible) RoutingResult
 	/**
 	 * Spike label corresponding to each neuron in a external population.
 	 */
-	typedef std::map<PopulationDescriptor, std::vector<haldls::vx::v2::SpikeLabel>>
+	typedef std::map<PopulationDescriptor, std::vector<std::vector<haldls::vx::v2::SpikeLabel>>>
 	    ExternalSpikeLabels;
 	ExternalSpikeLabels external_spike_labels;
 

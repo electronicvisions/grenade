@@ -15,16 +15,18 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 	// generate reverse lookup table from spike label to neuron coordinate
 	std::map<haldls::vx::v2::SpikeLabel, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> label_lookup;
 	assert(network_graph.network);
-	for (auto const& [descriptor, labels] : network_graph.spike_labels) {
+	for (auto const& [descriptor, neurons] : network_graph.spike_labels) {
 		if (!std::holds_alternative<Population>(
 		        network_graph.network->populations.at(descriptor))) {
 			continue;
 		}
 		auto const& population =
 		    std::get<Population>(network_graph.network->populations.at(descriptor));
-		for (size_t i = 0; i < labels.size(); ++i) {
+		for (size_t i = 0; i < neurons.size(); ++i) {
 			if (population.enable_record_spikes.at(i)) {
-				label_lookup[labels.at(i)] = population.neurons.at(i);
+				// internal neurons only have one label assigned
+				assert(neurons.at(i).size() == 1);
+				label_lookup[neurons.at(i).at(0)] = population.neurons.at(i);
 			}
 		}
 	}
