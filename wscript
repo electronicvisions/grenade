@@ -98,7 +98,7 @@ def build(bld):
         pars = {
             "PROJECT_NAME": "\"GRENADE\"",
             "INPUT": "%s/grenade/include/grenade" % get_toplevel_path(),
-            "OUTPUT_DIRECTORY": "%s/build/grenade/grenade/doc" % get_toplevel_path(),
+            "OUTPUT_DIRECTORY": "%s/build/grenade/doc" % get_toplevel_path(),
             "PREDEFINED": "GENPYBIND()= GENPYBIND_MANUAL()= GENPYBIND_TAG_GRENADE_VX=",
             "WARN_LOGFILE": join(get_toplevel_path(), "build/grenade/grenade_doxygen_warnings.log"),
             "INCLUDE_PATH": join(get_toplevel_path(), "grenade", "include")
