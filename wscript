@@ -91,6 +91,7 @@ def build(bld):
     )
 
     bld(
+        target = 'doxygen_grenade',
         features = 'doxygen',
         doxyfile = bld.root.make_node('%s/code-format/doxyfile' % get_toplevel_path()),
         install_path = 'doc/grenade',
