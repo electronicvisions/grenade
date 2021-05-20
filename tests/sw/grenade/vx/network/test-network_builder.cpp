@@ -11,7 +11,12 @@ TEST(NetworkBuilder, General)
 {
 	NetworkBuilder builder;
 
-	Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true});
+	// pop size and spike record information have to have same size
+	EXPECT_THROW(
+	    Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true}),
+	    std::runtime_error);
+
+	Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true, false});
 
 	auto const descriptor = builder.add(population);
 

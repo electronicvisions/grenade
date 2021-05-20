@@ -13,7 +13,9 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
                    for coord in halco.iter_all(halco.NeuronColumnOnDLS)]
-        int_pop = grenade.Population(neurons, [enable_spikes])
+        record_spikes = [False] * len(neurons)
+        record_spikes[0] = enable_spikes
+        int_pop = grenade.Population(neurons, record_spikes)
 
         ext_pop_descr = network_builder.add(ext_pop)
         int_pop_descr = network_builder.add(int_pop)
