@@ -37,10 +37,17 @@ class SwTestPygrenadeVx(unittest.TestCase):
 
         neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
                    for coord in halco.iter_all(halco.NeuronColumnOnDLS)]
-        int_pop = grenade.Population(neurons, [True])
+        record_spikes = [False] * len(neurons)
+        record_spikes[0] = True
+        int_pop = grenade.Population(neurons, record_spikes)
 
         ext_pop_descr = network_builder.add(ext_pop)
         int_pop_descr = network_builder.add(int_pop)
+
+        madc_recording = grenade.MADCRecording()
+        madc_recording.population = int_pop_descr
+        madc_recording.index = 0
+        network_builder.add(madc_recording)
 
         connections = []
         for i in range(256):
