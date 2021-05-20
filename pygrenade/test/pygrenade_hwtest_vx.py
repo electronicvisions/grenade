@@ -67,6 +67,22 @@ class HwTestPygrenadeVx(unittest.TestCase):
             for enable_v in [False, True]:
                 self.run_network_graph(enable_spikes, enable_v)
 
+    def test_run_empty_graph(self):
+        network_builder = grenade.NetworkBuilder()
+        network = network_builder.done()
+
+        network_graph = grenade.build_network_graph(
+            network, grenade.build_routing(network))
+        inputs = grenade.IODataMap()
+        with hxcomm.ManagedConnection() as connection:
+            init, _ = sta.generate(sta.DigitalInit())
+            sta.run(connection, init.done())
+            grenade.run(
+                connection,
+                grenade.ChipConfig(),
+                network_graph,
+                inputs)
+
 
 if __name__ == "__main__":
     unittest.main()
