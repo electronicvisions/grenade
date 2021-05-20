@@ -19,6 +19,7 @@
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/run.h"
 #include <gtest/gtest.h>
+#include <log4cxx/logger.h>
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v2;
@@ -80,7 +81,6 @@ grenade::vx::ChipConfig initialize_excitatory_bypass(hxcomm::vx::ConnectionVaria
 
 TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 {
-	logger_default_config(log4cxx::Level::getTrace());
 	// Construct connection to HW
 	auto connection = hxcomm::vx::get_connection_from_env();
 	grenade::vx::JITGraphExecutor::Connections connections;
@@ -168,7 +168,8 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 {
-	logger_default_config(log4cxx::Level::getTrace());
+	static log4cxx::Logger* logger =
+	    log4cxx::Logger::getLogger("grenade.NetworkBuilderTest.FeedForwardAllToAll");
 	// Construct connection to HW
 	auto connection = hxcomm::vx::get_connection_from_env();
 	grenade::vx::JITGraphExecutor::Connections connections;
@@ -253,6 +254,10 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			for (auto const& spike : spikes) {
 				if (spike.get_label() == expected_label) {
 					matching++;
+				} else {
+					LOG4CXX_INFO(
+					    logger, spike << spike.get_label().get_neuron_backend_address_out()
+					                  << spike.get_label().get_neuron_event_output());
 				}
 			}
 			EXPECT_GE(matching, num * 0.8);
@@ -263,7 +268,6 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 
 TEST(NetworkGraphBuilder, SynfireChain)
 {
-	logger_default_config(log4cxx::Level::getTrace());
 	// Construct connection to HW
 	auto connection = hxcomm::vx::get_connection_from_env();
 	grenade::vx::JITGraphExecutor::Connections connections;
@@ -342,7 +346,6 @@ TEST(NetworkGraphBuilder, SynfireChain)
 
 	EXPECT_EQ(result.size(), inputs.spike_events.at(*network_graph.event_input_vertex).size());
 	auto const& spikes = result.at(0);
-	std::cout << spikes.size() << std::endl;
 	// count correct spikes
 	size_t matching = 0;
 	auto const expected_label =
@@ -350,9 +353,6 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	for (auto const& spike : spikes) {
 		if (spike.get_label() == expected_label) {
 			matching++;
-		} else {
-			std::cout << spike << spike.get_label().get_neuron_backend_address_out()
-			          << spike.get_label().get_neuron_event_output() << std::endl;
 		}
 	}
 	EXPECT_GE(matching, num * 0.8);

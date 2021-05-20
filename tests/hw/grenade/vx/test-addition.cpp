@@ -23,8 +23,6 @@ using namespace lola::vx::v2;
 
 TEST(Addition, Single)
 {
-	logger_default_config(log4cxx::Level::getTrace());
-
 	constexpr size_t size = 256;
 
 	grenade::vx::vertex::ExternalInput external_input(grenade::vx::ConnectionType::DataInt8, size);

@@ -21,8 +21,6 @@ using namespace lola::vx::v2;
 
 TEST(MAC, Single)
 {
-	logger_default_config(log4cxx::Level::getTrace());
-
 	// Construct connection to HW
 	auto connection = hxcomm::vx::get_connection_from_env();
 

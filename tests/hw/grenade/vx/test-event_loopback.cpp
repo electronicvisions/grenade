@@ -25,8 +25,6 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
     grenade::vx::JITGraphExecutor::Connections const& connections,
     std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
 {
-	logger_default_config(log4cxx::Level::getTrace());
-
 	grenade::vx::vertex::ExternalInput external_input(
 	    grenade::vx::ConnectionType::DataTimedSpikeSequence, 1);
 
