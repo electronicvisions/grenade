@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import unittest
-from dlens_vx_v2 import halco, hxcomm
+from dlens_vx_v2 import halco, hxcomm, sta
 import pygrenade_vx as grenade
 
 
@@ -45,11 +45,11 @@ class HwTestPygrenadeVx(unittest.TestCase):
         config = grenade.ChipConfig()
 
         inputs = grenade.IODataMap()
-        # pylint: disable=unsupported-assignment-operation
-        # Issue 3921
-        inputs.spike_events[network_graph.event_input_vertex] = [[]]
+        inputs.spike_events = {network_graph.event_input_vertex: [[]]}
 
         with hxcomm.ManagedConnection() as connection:
+            init, _ = sta.generate(sta.DigitalInit())
+            sta.run(connection, init.done())
             outputs = grenade.run(connection, config, network_graph, inputs)
 
         if enable_spikes:
@@ -62,7 +62,6 @@ class HwTestPygrenadeVx(unittest.TestCase):
                 outputs.madc_samples[network_graph.madc_sample_output_vertex]
             ), 1)
 
-    @unittest.skip("Issue 3920")
     def test_run_network_graph(self):
         for enable_spikes in [True, False]:
             for enable_v in [False, True]:
