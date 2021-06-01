@@ -305,7 +305,7 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 			return (projection.receptor_type == other.second.receptor_type) &&
 			       (projection.population_pre == other.second.population_pre) &&
 			       (projection.population_post == other.second.population_post) &&
-			       !hate::has_intersection(
+			       hate::has_intersection(
 			           get_unique_connections(projection.connections),
 			           get_unique_connections(other.second.connections));
 		};
