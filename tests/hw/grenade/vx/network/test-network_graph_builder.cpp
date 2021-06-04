@@ -109,7 +109,8 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 	grenade::vx::network::Projection::Connections projection_connections;
 	for (size_t i = 0; i < population_external.size; ++i) {
-		projection_connections.push_back({i, i, lola::vx::v2::SynapseMatrix::Weight(63)});
+		projection_connections.push_back(
+		    {i, i, grenade::vx::network::Projection::Connection::Weight(63)});
 	}
 	grenade::vx::network::Projection projection{
 	    grenade::vx::network::Projection::ReceptorType::excitatory,
@@ -203,7 +204,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			// while this effectively is a very inefficient on-to-one connectivity, the algorithm
 			// is forced to generate an all-to-all mapping
 			projection_connections.push_back(
-			    {i, j, lola::vx::v2::SynapseMatrix::Weight(i == j ? 63 : 0)});
+			    {i, j, grenade::vx::network::Projection::Connection::Weight(i == j ? 63 : 0)});
 		}
 	}
 	grenade::vx::network::Projection projection{
@@ -299,7 +300,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 
 	for (size_t i = 0; i < population_internal_descriptors.size(); ++i) {
 		grenade::vx::network::Projection::Connections projection_connections{
-		    {0, 0, lola::vx::v2::SynapseMatrix::Weight(63)}};
+		    {0, 0, grenade::vx::network::Projection::Connection::Weight(63)}};
 		if (i == 0) {
 			grenade::vx::network::Projection projection{
 			    grenade::vx::network::Projection::ReceptorType::excitatory,

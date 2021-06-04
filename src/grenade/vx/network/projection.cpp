@@ -3,9 +3,7 @@
 namespace grenade::vx::network {
 
 Projection::Connection::Connection(
-    size_t const index_pre,
-    size_t const index_post,
-    lola::vx::v2::SynapseMatrix::Weight const weight) :
+    size_t const index_pre, size_t const index_post, Weight const weight) :
     index_pre(index_pre), index_post(index_post), weight(weight)
 {}
 

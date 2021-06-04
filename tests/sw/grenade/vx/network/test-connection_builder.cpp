@@ -17,10 +17,10 @@ TEST(build_routing, ProjectionOverlap)
 	auto descriptor = builder.add(population);
 
 	Projection projection_1(
-	    Projection::ReceptorType::excitatory, {{0, 0, lola::vx::v2::SynapseMatrix::Weight()}},
+	    Projection::ReceptorType::excitatory, {{0, 0, Projection::Connection::Weight()}},
 	    descriptor, descriptor);
 	Projection projection_2(
-	    Projection::ReceptorType::excitatory, {{1, 1, lola::vx::v2::SynapseMatrix::Weight()}},
+	    Projection::ReceptorType::excitatory, {{1, 1, Projection::Connection::Weight()}},
 	    descriptor, descriptor);
 
 	builder.add(projection_1);
@@ -33,7 +33,7 @@ TEST(build_routing, ProjectionOverlap)
 	descriptor = builder.add(population);
 
 	Projection projection_3(
-	    Projection::ReceptorType::excitatory, {{0, 0, lola::vx::v2::SynapseMatrix::Weight()}},
+	    Projection::ReceptorType::excitatory, {{0, 0, Projection::Connection::Weight()}},
 	    descriptor, descriptor);
 
 	builder.add(projection_3);
@@ -41,4 +41,22 @@ TEST(build_routing, ProjectionOverlap)
 
 	network = builder.done();
 	EXPECT_THROW(grenade::vx::network::build_routing(network), std::runtime_error);
+}
+
+TEST(build_routing, WeightOutOfRange)
+{
+	NetworkBuilder builder;
+
+	Population population({AtomicNeuronOnDLS(Enum(0))}, {true});
+
+	auto descriptor = builder.add(population);
+
+	Projection projection(
+	    Projection::ReceptorType::excitatory, {{0, 0, Projection::Connection::Weight(1234)}},
+	    descriptor, descriptor);
+
+	builder.add(projection);
+
+	auto network = builder.done();
+	EXPECT_THROW(grenade::vx::network::build_routing(network), std::out_of_range);
 }

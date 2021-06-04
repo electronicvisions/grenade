@@ -104,7 +104,10 @@ ConnectionBuilder::Result::PlacedConnection ConnectionBuilder::get_placed_connec
 	    synapse_row.synapse_driver.toSynapseDriverBlockOnDLS().toSynramOnDLS());
 	SynapseOnSynapseRow const synapse = post.toNeuronColumnOnDLS().toSynapseOnSynapseRow();
 
-	return {connection.weight, label, row, synapse};
+	if (connection.weight > lola::vx::v2::SynapseMatrix::Weight::max) {
+		throw std::out_of_range("Single synaptic weight larger than hardware range not supported.");
+	}
+	return {lola::vx::v2::SynapseMatrix::Weight(connection.weight), label, row, synapse};
 }
 
 ConnectionBuilder::Result::PlacedConnection ConnectionBuilder::get_placed_connection(
@@ -129,7 +132,11 @@ ConnectionBuilder::Result::PlacedConnection ConnectionBuilder::get_placed_connec
 			    synapse_driver.toSynapseRowOnSynram().at(r),
 			    post.toNeuronRowOnDLS().toSynramOnDLS());
 			SynapseOnSynapseRow const synapse = post.toNeuronColumnOnDLS().toSynapseOnSynapseRow();
-			return {connection.weight, label, row, synapse};
+			if (connection.weight > lola::vx::v2::SynapseMatrix::Weight::max) {
+				throw std::out_of_range(
+				    "Single synaptic weight larger than hardware range not supported.");
+			}
+			return {lola::vx::v2::SynapseMatrix::Weight(connection.weight), label, row, synapse};
 		}
 	}
 	throw std::logic_error("Supplied synapse driver row does not have post-synaptic neuron free.");
