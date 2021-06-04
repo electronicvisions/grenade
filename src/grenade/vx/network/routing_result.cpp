@@ -18,8 +18,13 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 	os << "Connections:\n";
 	for (auto const& [descriptor, projections] : result.connections) {
 		os << descriptor << '\n';
+		size_t i = 0;
 		for (auto const& projection : projections) {
-			os << '\t' << projection << '\n';
+			os << '\t' << i << '\n';
+			for (auto const& connection : projection) {
+				os << "\t\t" << connection << '\n';
+			}
+			i++;
 		}
 	}
 

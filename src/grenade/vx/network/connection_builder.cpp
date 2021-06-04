@@ -345,7 +345,7 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 			auto const placed_connection =
 			    builder.get_placed_connection(pre, post, synapse_row, projection.connections.at(i));
 
-			placed_connections[p].push_back(placed_connection);
+			placed_connections[p].push_back({placed_connection});
 		}
 	}
 
@@ -402,7 +402,7 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 								assert(post.toNeuronRowOnDLS() == row);
 								auto const placed_connection = builder.get_placed_connection(
 								    pre, post, synapse_driver, connection);
-								placed_connections[j].push_back(placed_connection);
+								placed_connections[j].push_back({placed_connection});
 							}
 						}
 					}

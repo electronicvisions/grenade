@@ -23,7 +23,7 @@ namespace network {
 struct GENPYBIND(visible) RoutingResult
 {
 	/**
-	 * Placed single synapse connections with a one-to-one correspondence to an unplaced
+	 * Placed single synapse connections with a N-to-one correspondence to an unplaced
 	 * `Projection::Connection` with equal indexing.
 	 */
 	struct PlacedConnection
@@ -36,7 +36,7 @@ struct GENPYBIND(visible) RoutingResult
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
 	};
-	typedef std::map<ProjectionDescriptor, std::vector<PlacedConnection>> Connections;
+	typedef std::map<ProjectionDescriptor, std::vector<std::vector<PlacedConnection>>> Connections;
 	Connections connections;
 
 	/**
