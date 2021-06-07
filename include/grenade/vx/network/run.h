@@ -1,4 +1,5 @@
 #include "grenade/vx/config.h"
+#include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/network_graph.h"
@@ -19,6 +20,7 @@ namespace network {
  * @param connection Connection instance to be used for running the graph
  * @param network_graph Network hardware graph to run
  * @param config Static chip configuration to use
+ * @param inputs Inputs to use
  * @return Run time information
  */
 IODataMap run(
@@ -26,6 +28,23 @@ IODataMap run(
     ChipConfig const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs) SYMBOL_VISIBLE;
+
+/**
+ * Execute the given network hardware graph and fetch results.
+ *
+ * @param connection Connection instance to be used for running the graph
+ * @param network_graph Network hardware graph to run
+ * @param config Static chip configuration to use
+ * @param inputs Inputs to use
+ * @param playback_hooks Optional playback sequences to inject
+ * @return Run time information
+ */
+IODataMap run(
+    hxcomm::vx::ConnectionVariant& connection,
+    ChipConfig const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs,
+    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
@@ -61,6 +80,16 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 
 	RunUnrollPyBind11Helper(pybind11::module& m) : parent_t(m)
 	{
+		m.def(
+		    "run",
+		    [](T& conn, ChipConfig const& config, NetworkGraph const& network_graph,
+		       IODataMap const& inputs,
+		       ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
+			    ConnectionAcquisor acquisor(conn);
+			    return run(acquisor.connection, config, network_graph, inputs, playback_hooks);
+		    },
+		    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
+		    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
 		m.def(
 		    "run",
 		    [](T& conn, ChipConfig const& config, NetworkGraph const& network_graph,

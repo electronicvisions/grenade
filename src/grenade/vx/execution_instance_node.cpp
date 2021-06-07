@@ -74,7 +74,8 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     coordinate::ExecutionInstance const& execution_instance,
     ChipConfig const& chip_config,
     hxcomm::vx::ConnectionVariant& connection,
-    std::mutex& continuous_chunked_program_execution_mutex) :
+    std::mutex& continuous_chunked_program_execution_mutex,
+    ExecutionInstancePlaybackHooks& playback_hooks) :
     data_map(data_map),
     input_data_map(input_data_map),
     graph(graph),
@@ -82,6 +83,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     chip_config(chip_config),
     connection(connection),
     continuous_chunked_program_execution_mutex(continuous_chunked_program_execution_mutex),
+    playback_hooks(playback_hooks),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
 
@@ -92,7 +94,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace halco::hicann_dls::vx::v2;
 
 	ExecutionInstanceBuilder builder(
-	    graph, execution_instance, input_data_map, data_map, chip_config);
+	    graph, execution_instance, input_data_map, data_map, chip_config, playback_hooks);
 
 	hate::Timer const preprocess_timer;
 	builder.pre_process();

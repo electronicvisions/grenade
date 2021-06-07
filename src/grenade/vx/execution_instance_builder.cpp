@@ -41,13 +41,15 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     coordinate::ExecutionInstance const& execution_instance,
     IODataMap const& input_list,
     IODataMap const& data_output,
-    ChipConfig const& chip_config) :
+    ChipConfig const& chip_config,
+    ExecutionInstancePlaybackHooks& playback_hooks) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_input_list(input_list),
     m_data_output(data_output),
     m_local_external_data(),
     m_config_builder(graph, execution_instance, chip_config),
+    m_playback_hooks(playback_hooks),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output(),
@@ -779,16 +781,6 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
-void ExecutionInstanceBuilder::register_epilogue(stadls::vx::v2::PlaybackProgramBuilder&& builder)
-{
-	m_builder_epilogue = std::move(builder);
-}
-
-void ExecutionInstanceBuilder::register_prologue(stadls::vx::v2::PlaybackProgramBuilder&& builder)
-{
-	m_builder_prologue = std::move(builder);
-}
-
 void ExecutionInstanceBuilder::pre_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
@@ -897,7 +889,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	};
 
 	std::vector<PlaybackProgramBuilder> builders;
-	builders.push_back(std::move(m_builder_prologue));
+	builders.push_back(std::move(m_playback_hooks.pre_static_config));
 
 	PlaybackProgramBuilder builder;
 
@@ -908,7 +900,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	        m_local_external_data.runtime.begin(), m_local_external_data.runtime.end(),
 	        [](auto const& r) { return r != 0; });
 	if (!has_computation) {
-		builder.merge_back(m_builder_epilogue);
+		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
 		return m_chunked_program;
 	}
@@ -954,6 +946,8 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	// timing-uncritical initial setup
 	builders.push_back(std::move(builder));
 	builder = PlaybackProgramBuilder();
+
+	builders.push_back(std::move(m_playback_hooks.pre_realtime));
 
 	// build neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
@@ -1078,7 +1072,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		builder = PlaybackProgramBuilder();
 	}
 
-	builders.push_back(std::move(m_builder_epilogue));
+	builders.push_back(std::move(m_playback_hooks.post_realtime));
 
 	// Merge builders sequentially into chunks smaller than the FPGA playback memory size.
 	// If a single builder is larger than the memory, it is placed isolated in a program.

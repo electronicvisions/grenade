@@ -3,6 +3,7 @@
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/execution_instance_builder.h"
+#include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
 #include "hate/visibility.h"
@@ -29,7 +30,8 @@ struct ExecutionInstanceNode
 	    coordinate::ExecutionInstance const& execution_instance,
 	    ChipConfig const& chip_config,
 	    hxcomm::vx::ConnectionVariant& connection,
-	    std::mutex& continuous_chunked_program_execution_mutex) SYMBOL_VISIBLE;
+	    std::mutex& continuous_chunked_program_execution_mutex,
+	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
@@ -41,6 +43,7 @@ private:
 	ChipConfig const& chip_config;
 	hxcomm::vx::ConnectionVariant& connection;
 	std::mutex& continuous_chunked_program_execution_mutex;
+	ExecutionInstancePlaybackHooks& playback_hooks;
 	log4cxx::Logger* logger;
 };
 

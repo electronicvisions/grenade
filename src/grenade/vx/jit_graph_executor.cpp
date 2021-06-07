@@ -31,6 +31,17 @@ IODataMap JITGraphExecutor::run(
     Connections const& connections,
     ChipConfigs const& chip_configs)
 {
+	PlaybackHooks empty;
+	return run(graph, input_list, connections, chip_configs, empty);
+}
+
+IODataMap JITGraphExecutor::run(
+    Graph const& graph,
+    IODataMap const& input_list,
+    Connections const& connections,
+    ChipConfigs const& chip_configs,
+    PlaybackHooks& playback_hooks)
+{
 	using namespace halco::hicann_dls::vx::v2;
 	hate::Timer const timer;
 
@@ -72,7 +83,8 @@ IODataMap JITGraphExecutor::run(
 		ExecutionInstanceNode node_body(
 		    output_activation_map, input_list, graph, execution_instance,
 		    chip_configs.at(dls_global), connections.at(dls_global),
-		    continuous_chunked_program_execution_mutexes.at(dls_global));
+		    continuous_chunked_program_execution_mutexes.at(dls_global),
+		    playback_hooks[execution_instance]);
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}
@@ -122,7 +134,20 @@ IODataList JITGraphExecutor::run(
     ChipConfigs const& chip_configs,
     bool only_unconnected_output)
 {
-	auto const output_map = run(graph, input_list.to_input_map(graph), connections, chip_configs);
+	PlaybackHooks empty;
+	return run(graph, input_list, connections, chip_configs, empty, only_unconnected_output);
+}
+
+IODataList JITGraphExecutor::run(
+    Graph const& graph,
+    IODataList const& input_list,
+    Connections const& connections,
+    ChipConfigs const& chip_configs,
+    PlaybackHooks& playback_hooks,
+    bool only_unconnected_output)
+{
+	auto const output_map =
+	    run(graph, input_list.to_input_map(graph), connections, chip_configs, playback_hooks);
 	IODataList output;
 	output.from_output_map(output_map, graph, only_unconnected_output);
 	return output;
