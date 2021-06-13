@@ -69,7 +69,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
             for enable_v in [False, True]:
                 self.run_network_graph(enable_spikes, enable_v)
 
-    def test_run_empty_graph(self):
+    @staticmethod
+    def test_run_empty_graph():
         network_builder = grenade.NetworkBuilder()
         network = network_builder.done()
 
