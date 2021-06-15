@@ -23,7 +23,7 @@ public:
 	GENPYBIND_MANUAL({
 		auto const convert_ms = [](float const t) {
 			return grenade::vx::TimedSpike::Time(
-			    t * 1000. * grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us);
+			    std::llround(t * 1000. * grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us));
 		};
 		parent.def(
 		    "add",
