@@ -26,11 +26,18 @@ TEST(convert_to_chip, General)
 	chip.hemispheres[HemisphereOnDLS(1)]
 	    .synapse_matrix.weights[SynapseRowOnSynram(13)][SynapseOnSynapseRow(3)] =
 	    SynapseMatrix::Weight(42);
+	auto buffer_to_pad = chip.readout_source_selection.get_enable_buffer_to_pad();
+	buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()] =
+	    !buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()];
+	chip.readout_source_selection.set_enable_buffer_to_pad(buffer_to_pad);
+	chip.madc_config.set_enable_calibration(chip.madc_config.get_enable_calibration());
 
 	PlaybackProgramBuilderDumper dumper;
 	for (auto const node : iter_all<CrossbarNodeOnDLS>()) {
 		dumper.write(node, chip.crossbar_nodes[node]);
 	}
+	dumper.write(ReadoutSourceSelectionOnDLS(), chip.readout_source_selection);
+	dumper.write(MADCConfigOnDLS(), chip.madc_config);
 	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
 		dumper.write(hemisphere.toSynramOnDLS(), chip.hemispheres[hemisphere].synapse_matrix);
 		dumper.write(
