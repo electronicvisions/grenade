@@ -111,7 +111,6 @@ void CEREAL_LOAD_FUNCTION_NAME(Archive& ar, grenade::vx::Graph::graph_type& data
 	while (num_vertices-- > 0) {
 		auto const v = boost::add_vertex(data);
 		vertices[i++] = v;
-		//		ar(CEREAL_NVP_("vertex_property", boost::get(boost::vertex_all_t(), data, v)));
 	}
 	while (num_edges-- > 0) {
 		int u;
@@ -119,7 +118,6 @@ void CEREAL_LOAD_FUNCTION_NAME(Archive& ar, grenade::vx::Graph::graph_type& data
 		ar(CEREAL_NVP(u));
 		ar(CEREAL_NVP(v));
 		auto const [_, inserted] = boost::add_edge(vertices.at(u), vertices.at(v), data);
-		//		ar(CEREAL_NVP_("edge_property", boost::get(boost::edge_all_t(), data, e)));
 		assert(inserted);
 	}
 }
