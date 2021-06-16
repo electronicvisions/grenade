@@ -24,7 +24,9 @@ NetworkGraph build_network_graph(
 	assert(network);
 	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.build_network_graph");
 
-	Graph graph;
+	NetworkGraph result;
+	result.m_network = network;
+
 	coordinate::ExecutionInstance const instance; // Only one instance used
 
 	NetworkGraphBuilder::Resources resources;
@@ -32,21 +34,21 @@ NetworkGraph build_network_graph(
 	NetworkGraphBuilder builder(*network);
 
 	// add external populations input
-	builder.add_external_input(graph, resources, instance);
+	builder.add_external_input(result.m_graph, resources, instance);
 
 	// add on-chip populations without input
-	builder.add_populations(graph, resources, routing_result, instance);
+	builder.add_populations(result.m_graph, resources, routing_result, instance);
 
 	// add MADC recording
 	if (network->madc_recording) {
-		builder.add_madc_recording(graph, resources, *(network->madc_recording), instance);
+		builder.add_madc_recording(result.m_graph, resources, *(network->madc_recording), instance);
 	}
 
 	// add neuron event outputs
-	builder.add_neuron_event_outputs(graph, resources, instance);
+	builder.add_neuron_event_outputs(result.m_graph, resources, instance);
 
 	// add external output
-	builder.add_external_output(graph, resources, routing_result, instance);
+	builder.add_external_output(result.m_graph, resources, routing_result, instance);
 
 	// add projections iteratively
 	// keep track of unplaced projections
@@ -70,11 +72,11 @@ NetworkGraph build_network_graph(
 			    hate::overloaded(
 			        [&](ExternalPopulation const&) {
 				        builder.add_projection_from_external_input(
-				            graph, resources, descriptor, routing_result, instance);
+				            result.m_graph, resources, descriptor, routing_result, instance);
 			        },
 			        [&](Population const&) {
 				        builder.add_projection_from_internal_input(
-				            graph, resources, descriptor, routing_result, instance);
+				            result.m_graph, resources, descriptor, routing_result, instance);
 			        }),
 			    network->populations.at(descriptor_pre));
 			newly_placed_projections.insert(descriptor);
@@ -84,17 +86,15 @@ NetworkGraph build_network_graph(
 		}
 	}
 
-	auto const spike_labels = builder.get_spike_labels(routing_result);
+	result.m_spike_labels = builder.get_spike_labels(routing_result);
+	result.m_event_input_vertex = resources.external_input;
+	result.m_event_output_vertex = resources.external_output;
+	result.m_madc_sample_output_vertex = resources.madc_output;
 
 	LOG4CXX_TRACE(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
 
-	return {network,
-	        std::move(graph),
-	        resources.external_input,
-	        resources.external_output,
-	        resources.madc_output,
-	        spike_labels};
+	return result;
 }
 
 

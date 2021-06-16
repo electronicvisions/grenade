@@ -38,7 +38,7 @@ IODataMap run(
 	        coordinate::ExecutionInstance(), std::move(playback_hooks)));
 
 	return JITGraphExecutor::run(
-	    network_graph.graph, inputs, connections, configs, playback_hooks_map);
+	    network_graph.get_graph(), inputs, connections, configs, playback_hooks_map);
 }
 
 } // namespace grenade::vx::network

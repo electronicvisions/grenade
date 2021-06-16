@@ -7,10 +7,10 @@ namespace grenade::vx::network {
 InputGenerator::InputGenerator(NetworkGraph const& network_graph) :
     m_data(), m_network_graph(network_graph)
 {
-	if (!m_network_graph.event_input_vertex) {
+	if (!m_network_graph.get_event_input_vertex()) {
 		throw std::runtime_error("Network graph does not feature an event input vertex.");
 	}
-	m_data.spike_events.insert({*m_network_graph.event_input_vertex, {{}}});
+	m_data.spike_events.insert({*m_network_graph.get_event_input_vertex(), {{}}});
 }
 
 void InputGenerator::add(
@@ -21,14 +21,14 @@ void InputGenerator::add(
 		return (projection.second.population_pre == population);
 	};
 	if (std::none_of(
-	        m_network_graph.network->projections.begin(),
-	        m_network_graph.network->projections.end(), has_population)) {
+	        m_network_graph.get_network()->projections.begin(),
+	        m_network_graph.get_network()->projections.end(), has_population)) {
 		return;
 	}
 
-	auto& data_spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
+	auto& data_spikes = m_data.spike_events.at(*m_network_graph.get_event_input_vertex()).at(0);
 
-	auto const& neurons = m_network_graph.spike_labels.at(population);
+	auto const& neurons = m_network_graph.get_spike_labels().at(population);
 
 	data_spikes.reserve(times.size() * neurons.size());
 	for (auto const time : times) {
@@ -50,14 +50,14 @@ void InputGenerator::add(
 		return (projection.second.population_pre == population);
 	};
 	if (std::none_of(
-	        m_network_graph.network->projections.begin(),
-	        m_network_graph.network->projections.end(), has_population)) {
+	        m_network_graph.get_network()->projections.begin(),
+	        m_network_graph.get_network()->projections.end(), has_population)) {
 		return;
 	}
 
-	auto& data_spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
+	auto& data_spikes = m_data.spike_events.at(*m_network_graph.get_event_input_vertex()).at(0);
 
-	auto const& neurons = m_network_graph.spike_labels.at(population);
+	auto const& neurons = m_network_graph.get_spike_labels().at(population);
 
 	if (times.size() != neurons.size()) {
 		throw std::runtime_error(
@@ -87,8 +87,8 @@ void InputGenerator::add(
 		};
 
 		if (std::none_of(
-		        m_network_graph.network->projections.begin(),
-		        m_network_graph.network->projections.end(), has_neuron)) {
+		        m_network_graph.get_network()->projections.begin(),
+		        m_network_graph.get_network()->projections.end(), has_neuron)) {
 			continue;
 		}
 
@@ -105,8 +105,8 @@ void InputGenerator::add(
 
 IODataMap InputGenerator::done()
 {
-	assert(m_network_graph.event_input_vertex);
-	auto& spikes = m_data.spike_events.at(*m_network_graph.event_input_vertex).at(0);
+	assert(m_network_graph.get_event_input_vertex());
+	auto& spikes = m_data.spike_events.at(*m_network_graph.get_event_input_vertex()).at(0);
 	std::stable_sort(
 	    spikes.begin(), spikes.end(), [](auto const& a, auto const& b) { return a.time < b.time; });
 	return std::move(m_data);

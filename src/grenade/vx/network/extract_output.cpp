@@ -6,7 +6,7 @@ std::vector<
     std::vector<std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
 extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 {
-	if (!network_graph.event_output_vertex) {
+	if (!network_graph.get_event_output_vertex()) {
 		std::vector<std::vector<
 		    std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
 		    ret(data.batch_size());
@@ -14,14 +14,14 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 	}
 	// generate reverse lookup table from spike label to neuron coordinate
 	std::map<haldls::vx::v2::SpikeLabel, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> label_lookup;
-	assert(network_graph.network);
-	for (auto const& [descriptor, neurons] : network_graph.spike_labels) {
+	assert(network_graph.get_network());
+	for (auto const& [descriptor, neurons] : network_graph.get_spike_labels()) {
 		if (!std::holds_alternative<Population>(
-		        network_graph.network->populations.at(descriptor))) {
+		        network_graph.get_network()->populations.at(descriptor))) {
 			continue;
 		}
 		auto const& population =
-		    std::get<Population>(network_graph.network->populations.at(descriptor));
+		    std::get<Population>(network_graph.get_network()->populations.at(descriptor));
 		for (size_t i = 0; i < neurons.size(); ++i) {
 			if (population.enable_record_spikes.at(i)) {
 				// internal neurons only have one label assigned
@@ -31,7 +31,7 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 		}
 	}
 	// convert spikes
-	auto const& spikes = data.spike_event_output.at(*network_graph.event_output_vertex);
+	auto const& spikes = data.spike_event_output.at(*network_graph.get_event_output_vertex());
 	std::vector<std::vector<
 	    std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
 	    ret(spikes.size());
@@ -51,14 +51,14 @@ std::vector<
     std::vector<std::pair<haldls::vx::v2::ChipTime, haldls::vx::v2::MADCSampleFromChip::Value>>>
 extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 {
-	if (!network_graph.madc_sample_output_vertex) {
+	if (!network_graph.get_madc_sample_output_vertex()) {
 		std::vector<std::vector<
 		    std::pair<haldls::vx::v2::ChipTime, haldls::vx::v2::MADCSampleFromChip::Value>>>
 		    ret(data.batch_size());
 		return ret;
 	}
 	// convert samples
-	auto const& samples = data.madc_samples.at(*network_graph.madc_sample_output_vertex);
+	auto const& samples = data.madc_samples.at(*network_graph.get_madc_sample_output_vertex());
 	std::vector<
 	    std::vector<std::pair<haldls::vx::v2::ChipTime, haldls::vx::v2::MADCSampleFromChip::Value>>>
 	    ret(samples.size());
