@@ -850,7 +850,8 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
-	auto [config_builder, ppu_symbols] = m_config_builder.generate(enable_ppu);
+	auto [config_builder, ppu_symbols] = m_config_builder.generate();
+	enable_ppu = static_cast<bool>(ppu_symbols);
 
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_result_coord;

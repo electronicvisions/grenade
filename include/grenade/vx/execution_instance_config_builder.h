@@ -36,14 +36,13 @@ public:
 
 	/**
 	 * Generate playback program builder.
-	 * @param enable_ppu Enable use and configuration of PPUs
 	 * @return PlaybackProgramBuilder generated via local graph traversal and optional PPU program
 	 * symbols
 	 */
 	std::tuple<
 	    stadls::vx::v2::PlaybackProgramBuilder,
 	    std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
-	generate(bool enable_ppu) SYMBOL_VISIBLE;
+	generate() SYMBOL_VISIBLE;
 
 private:
 	Graph const& m_graph;
@@ -53,6 +52,7 @@ private:
 
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
+	bool m_requires_ppu;
 
 	/**
 	 * Process single vertex.

@@ -21,6 +21,7 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
+	m_requires_ppu = false;
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar_nodes) {
@@ -51,6 +52,13 @@ void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, T const& /* data */)
 {
 	// Spezialize for types which change static configuration
+}
+
+template <>
+void ExecutionInstanceConfigBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::CADCMembraneReadoutView const& /* data */)
+{
+	m_requires_ppu = true;
 }
 
 template <>
@@ -217,7 +225,7 @@ void ExecutionInstanceConfigBuilder::pre_process()
 std::tuple<
     stadls::vx::v2::PlaybackProgramBuilder,
     std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
-ExecutionInstanceConfigBuilder::generate(bool const enable_ppu)
+ExecutionInstanceConfigBuilder::generate()
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
@@ -272,7 +280,7 @@ ExecutionInstanceConfigBuilder::generate(bool const enable_ppu)
 	    TimerOnDLS(), Timer::Value(100000 * Timer::Value::fpga_clock_cycles_per_us));
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
-	if (enable_ppu) {
+	if (m_requires_ppu) {
 		PPUMemoryBlock ppu_program;
 		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
 		{
