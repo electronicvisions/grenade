@@ -21,7 +21,6 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx;
-	m_used_padi_busses.fill(false);
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar_nodes) {

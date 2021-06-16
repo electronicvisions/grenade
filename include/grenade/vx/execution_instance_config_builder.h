@@ -53,7 +53,6 @@ private:
 
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
-	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::PADIBusOnDLS> m_used_padi_busses;
 
 	/**
 	 * Process single vertex.
