@@ -1,5 +1,6 @@
 #include "grenade/vx/jit_graph_executor.h"
 
+#include "grenade/vx/backend/run.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_node.h"
@@ -12,7 +13,6 @@
 #include "hate/timer.h"
 #include "stadls/vx/v2/playback_program.h"
 #include "stadls/vx/v2/playback_program_builder.h"
-#include "stadls/vx/v2/run.h"
 #include <chrono>
 #include <map>
 #include <mutex>
@@ -185,7 +185,7 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 	PlaybackProgramBuilder builder;
 	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
 	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
-	run(connection, builder.done());
+	backend::run(connection, builder.done());
 
 	if (jtag_id_ticket.get().get_version() != 2) {
 		std::stringstream ss;
