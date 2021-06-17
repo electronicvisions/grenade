@@ -12,6 +12,7 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/generator/madc.h"
+#include "grenade/vx/generator/ppu.h"
 #include "grenade/vx/generator/timed_spike_sequence.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
@@ -808,38 +809,26 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_result_coord;
 	PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
-	typed_array<PollingOmnibusBlockConfig, PPUOnDLS> ppu_status_poll;
 	if (enable_ppu) {
 		assert(ppu_symbols);
 		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
 		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
 		ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			ppu_status_poll[ppu].set_address(
-			    PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-			        PPUMemoryWordOnDLS(ppu_status_coord, ppu))
-			        .at(0));
-			ppu_status_poll[ppu].set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
-			ppu_status_poll[ppu].set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
-		}
 	}
 
-	auto const insert_ppu_idle_poll = [&](auto& builder) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			builder.write(PollingOmnibusBlockConfigOnFPGA(), ppu_status_poll[ppu]);
-			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-		}
-	};
+	auto const blocking_ppu_command_baseline_read =
+	    stadls::vx::generate(
+	        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::baseline_read))
+	        .builder;
 
-	auto const insert_blocking_ppu_command = [&](auto& builder, auto const command) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(command)));
-			builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-		}
-		insert_ppu_idle_poll(builder);
-	};
+	auto const blocking_ppu_command_reset_neurons =
+	    stadls::vx::generate(
+	        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::reset_neurons))
+	        .builder;
+
+	auto const blocking_ppu_command_read =
+	    stadls::vx::generate(generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::read))
+	        .builder;
 
 	std::vector<PlaybackProgramBuilder> builders;
 	builders.push_back(std::move(m_playback_hooks.pre_static_config));
@@ -896,12 +885,12 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
 			assert(enable_ppu);
-			insert_blocking_ppu_command(builder, ppu::Status::baseline_read);
+			builder.copy_back(blocking_ppu_command_baseline_read);
 		}
 
 		// reset neurons
 		if (enable_ppu) {
-			insert_blocking_ppu_command(builder, ppu::Status::reset_neurons);
+			builder.copy_back(blocking_ppu_command_reset_neurons);
 		} else {
 			builder.copy_back(builder_neuron_reset);
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
@@ -946,7 +935,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 				    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::read)));
 				builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
 			}
-			insert_blocking_ppu_command(builder, ppu::Status::read);
+			builder.copy_back(blocking_ppu_command_read);
 			// readout result
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				batch_entry.m_ppu_result[ppu] =
