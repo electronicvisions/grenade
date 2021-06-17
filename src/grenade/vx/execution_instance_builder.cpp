@@ -322,57 +322,18 @@ void ExecutionInstanceBuilder::process(
 		// extract Int8 values
 		auto& sample_batches = m_local_data.int8[vertex];
 		resize_rectangular(sample_batches, m_batch_entries.size(), data.output().size);
-		if (enable_ppu) {
-			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-				assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
-				auto const block =
-				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
-				auto const values = from_vector_unit_row(block);
-				auto& samples = sample_batches.at(batch_index);
+		for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+			assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
+			auto const block =
+			    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
+			auto const values = from_vector_unit_row(block);
+			auto& samples = sample_batches.at(batch_index);
 
-				// get samples via neuron mapping from incoming NeuronView
-				size_t i = 0;
-				for (auto const& column : columns) {
-					samples.at(i) = Int8(values[column]);
-					i++;
-				}
-			}
-		} else {
-			if (enable_cadc_baseline) {
-				for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-					assert(m_batch_entries.at(batch_index).m_cadc_values);
-					auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
-					auto const& synram_values = values.causal[synram];
-					assert(m_batch_entries.at(batch_index).m_cadc_baseline_values);
-					auto const& values_baseline =
-					    *(m_batch_entries.at(batch_index).m_cadc_baseline_values);
-					auto const& synram_values_baseline = values_baseline.causal[synram];
-					auto& samples = sample_batches.at(batch_index);
-
-					// get samples via neuron mapping from incoming NeuronView
-					size_t i = 0;
-					for (auto const& column : columns) {
-						samples.at(i) = Int8(
-						    static_cast<intmax_t>(synram_values[column].value()) -
-						    static_cast<intmax_t>(synram_values_baseline[column].value()));
-						i++;
-					}
-				}
-			} else {
-				for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-					assert(m_batch_entries.at(batch_index).m_cadc_values);
-					auto const& values = *(m_batch_entries.at(batch_index).m_cadc_values);
-					auto const& synram_values = values.causal[synram];
-					auto& samples = sample_batches.at(batch_index);
-
-					// get samples via neuron mapping from incoming NeuronView
-					size_t i = 0;
-					for (auto const& column : columns) {
-						samples.at(i) =
-						    Int8(static_cast<intmax_t>(synram_values[column].value()) - 128);
-						i++;
-					}
-				}
+			// get samples via neuron mapping from incoming NeuronView
+			size_t i = 0;
+			for (auto const& column : columns) {
+				samples.at(i) = Int8(values[column]);
+				i++;
 			}
 		}
 	}
@@ -813,17 +774,6 @@ void ExecutionInstanceBuilder::pre_process()
 IODataMap ExecutionInstanceBuilder::post_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
-	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
-
-	for (auto& batch_entry : m_batch_entries) {
-		if (batch_entry.m_ticket) {
-			batch_entry.m_cadc_values = batch_entry.m_ticket->get();
-		}
-		if (batch_entry.m_ticket_baseline) {
-			batch_entry.m_cadc_baseline_values = batch_entry.m_ticket_baseline->get();
-		}
-	}
 
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
@@ -851,7 +801,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	using namespace lola::vx::v2;
 
 	auto [config_builder, ppu_symbols] = m_config_builder.generate();
-	enable_ppu = static_cast<bool>(ppu_symbols);
+	bool const enable_ppu = static_cast<bool>(ppu_symbols);
 
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_result_coord;
@@ -977,21 +927,8 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		insert_madc_start(builder);
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
-			if (enable_ppu) {
-				insert_blocking_ppu_command(builder, ppu::Status::baseline_read);
-			} else {
-				// reset neurons (baseline read)
-				builder.copy_back(builder_neuron_reset);
-				// wait sufficient amount of time (30us) before baseline reads for membrane
-				// to settle
-				if (!builder.empty()) {
-					builder.write(TimerOnDLS(), Timer());
-					builder.block_until(
-					    TimerOnDLS(), Timer::Value(30 * Timer::Value::fpga_clock_cycles_per_us));
-				}
-				// readout baselines of neurons
-				batch_entry.m_ticket_baseline = builder.read(CADCSamplesOnDLS());
-			}
+			assert(enable_ppu);
+			insert_blocking_ppu_command(builder, ppu::Status::baseline_read);
 		}
 
 		// reset neurons
@@ -1035,20 +972,17 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {
-			if (enable_ppu) {
-				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					PPUMemoryWord config(
-					    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::read)));
-					builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-				}
-				insert_blocking_ppu_command(builder, ppu::Status::read);
-				// readout result
-				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					batch_entry.m_ppu_result[ppu] =
-					    builder.read(PPUMemoryBlockOnDLS(ppu_result_coord, ppu));
-				}
-			} else {
-				batch_entry.m_ticket = builder.read(CADCSamplesOnDLS());
+			assert(enable_ppu);
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				PPUMemoryWord config(
+				    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::read)));
+				builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+			}
+			insert_blocking_ppu_command(builder, ppu::Status::read);
+			// readout result
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				batch_entry.m_ppu_result[ppu] =
+				    builder.read(PPUMemoryBlockOnDLS(ppu_result_coord, ppu));
 			}
 		}
 		// stop MADC

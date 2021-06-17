@@ -75,11 +75,6 @@ public:
 	 */
 	bool enable_cadc_baseline = true;
 
-	/**
-	 * Enable using the PPUs for neuron reset, readout and computation.
-	 */
-	bool enable_ppu = true;
-
 private:
 	Graph const& m_graph;
 	coordinate::ExecutionInstance m_execution_instance;
@@ -110,13 +105,6 @@ private:
 
 	struct BatchEntry
 	{
-		typedef std::optional<
-		    stadls::vx::v2::PlaybackProgram::ContainerTicket<lola::vx::v2::CADCSamples>>
-		    ticket_type;
-
-		ticket_type m_ticket;
-		ticket_type m_ticket_baseline;
-
 		typedef halco::common::typed_array<
 		    std::optional<
 		        stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::PPUMemoryBlock>>,
@@ -124,10 +112,6 @@ private:
 		    ticket_ppu_type;
 
 		ticket_ppu_type m_ppu_result;
-
-		typedef std::optional<lola::vx::v2::CADCSamples> value_type;
-		value_type m_cadc_values;
-		value_type m_cadc_baseline_values;
 
 		typedef std::optional<
 		    stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::NullPayloadReadable>>
