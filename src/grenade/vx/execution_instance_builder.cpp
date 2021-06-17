@@ -11,6 +11,7 @@
 #include <tbb/parallel_for_each.h>
 
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/generator/timed_spike_sequence.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/status.h"
@@ -950,7 +951,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
 		}
 		if (m_event_input_vertex) {
-			TimedSpikeSequenceGenerator event_generator(
+			generator::TimedSpikeSequence event_generator(
 			    m_local_data.spike_events.at(*m_event_input_vertex).at(b));
 			auto [builder_events, _] = stadls::vx::generate(event_generator);
 			builder.merge_back(builder_events);

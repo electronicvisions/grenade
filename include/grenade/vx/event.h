@@ -46,30 +46,4 @@ typedef std::vector<haldls::vx::v2::SpikeFromChip> TimedSpikeFromChipSequence;
 /** Sequence of time-annotated from-chip MADC events. */
 typedef std::vector<haldls::vx::v2::MADCSampleFromChip> TimedMADCSampleFromChipSequence;
 
-
-/**
- * Generator for a playback program snippet from a timed spike sequence.
- */
-class TimedSpikeSequenceGenerator
-{
-public:
-	TimedSpikeSequenceGenerator(TimedSpikeSequence const& values) : m_values(values) {}
-
-	typedef hate::Nil Result;
-	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
-
-protected:
-	/**
-	 * Generate PlaybackProgramBuilder.
-	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
-	 */
-	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
-
-private:
-	friend auto stadls::vx::generate<TimedSpikeSequenceGenerator>(
-	    TimedSpikeSequenceGenerator const&);
-
-	TimedSpikeSequence const& m_values;
-};
-
 } // namespace grenade::vx

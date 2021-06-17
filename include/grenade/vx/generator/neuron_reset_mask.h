@@ -6,19 +6,19 @@
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/playback_program_builder.h"
 
-namespace grenade::vx {
+namespace grenade::vx::generator {
 
 /**
  * Generator for neuron resets.
  * If all resets in a quad are to be resetted, more efficient packing is used.
  */
-class NeuronResetMaskGenerator
+class NeuronResetMask
 {
 public:
 	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS>
 	    enable_resets_type;
 
-	NeuronResetMaskGenerator() SYMBOL_VISIBLE;
+	NeuronResetMask() SYMBOL_VISIBLE;
 
 	/** Enable reset value per neuron. */
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS> enable_resets;
@@ -34,7 +34,7 @@ protected:
 	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 private:
-	friend auto stadls::vx::generate<NeuronResetMaskGenerator>(NeuronResetMaskGenerator const&);
+	friend auto stadls::vx::generate<NeuronResetMask>(NeuronResetMask const&);
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::generator

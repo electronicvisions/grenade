@@ -1,13 +1,12 @@
-#include "grenade/vx/neuron_reset_mask_generator.h"
+#include "grenade/vx/generator/neuron_reset_mask.h"
 
 #include <hate/join.h>
 
-namespace grenade::vx {
+namespace grenade::vx::generator {
 
-NeuronResetMaskGenerator::NeuronResetMaskGenerator() : enable_resets() {}
+NeuronResetMask::NeuronResetMask() : enable_resets() {}
 
-stadls::vx::v2::PlaybackGeneratorReturn<NeuronResetMaskGenerator::Result>
-NeuronResetMaskGenerator::generate() const
+stadls::vx::v2::PlaybackGeneratorReturn<NeuronResetMask::Result> NeuronResetMask::generate() const
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
@@ -33,4 +32,4 @@ NeuronResetMaskGenerator::generate() const
 	return {std::move(builder), Result{}};
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::generator

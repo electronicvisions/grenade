@@ -8,9 +8,9 @@
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_config_builder.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
+#include "grenade/vx/generator/neuron_reset_mask.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/neuron_reset_mask_generator.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/ppu.h"
@@ -122,7 +122,7 @@ private:
 
 	std::vector<BatchEntry> m_batch_entries;
 
-	NeuronResetMaskGenerator m_neuron_resets;
+	generator::NeuronResetMask m_neuron_resets;
 	// Optional vertex descriptor of MADC readout if the execution instance contains such
 	std::optional<Graph::vertex_descriptor> m_madc_readout_vertex;
 
