@@ -11,6 +11,7 @@
 #include <tbb/parallel_for_each.h>
 
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/generator/madc.h"
 #include "grenade/vx/generator/timed_spike_sequence.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
@@ -859,42 +860,6 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 
 	builder.merge_back(config_builder);
 
-	auto const insert_madc_arm = [&](auto& b) {
-		if (m_madc_readout_vertex) {
-			MADCControl config;
-			config.set_enable_power_down_after_sampling(true);
-			config.set_start_recording(false);
-			config.set_wake_up(true);
-			config.set_enable_pre_amplifier(true);
-			config.set_enable_continuous_sampling(true);
-			b.write(MADCControlOnDLS(), config);
-			b.block_until(BarrierOnFPGA(), Barrier::omnibus);
-		}
-	};
-
-	auto const insert_madc_start = [&](auto& b) {
-		if (m_madc_readout_vertex) {
-			MADCControl config;
-			config.set_enable_power_down_after_sampling(true);
-			config.set_start_recording(true);
-			config.set_wake_up(false);
-			config.set_enable_pre_amplifier(true);
-			config.set_enable_continuous_sampling(true);
-			b.write(MADCControlOnDLS(), config);
-			b.block_until(BarrierOnFPGA(), Barrier::omnibus);
-		}
-	};
-
-	auto const insert_madc_stop = [&](auto& b) {
-		if (m_madc_readout_vertex) {
-			MADCControl config;
-			config.set_enable_power_down_after_sampling(true);
-			config.set_enable_continuous_sampling(true);
-			config.set_stop_recording(true);
-			b.write(MADCControlOnDLS(), config);
-		}
-	};
-
 	// timing-uncritical initial setup
 	builders.push_back(std::move(builder));
 	builder = PlaybackProgramBuilder();
@@ -924,8 +889,10 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		auto& batch_entry = m_batch_entries.at(b);
 		// start MADC
-		insert_madc_arm(builder);
-		insert_madc_start(builder);
+		if (m_madc_readout_vertex) {
+			builder.merge_back(stadls::vx::generate(generator::MADCArm()).builder);
+			builder.merge_back(stadls::vx::generate(generator::MADCStart()).builder);
+		}
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
 			assert(enable_ppu);
@@ -987,7 +954,9 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			}
 		}
 		// stop MADC
-		insert_madc_stop(builder);
+		if (m_madc_readout_vertex) {
+			builder.merge_back(stadls::vx::generate(generator::MADCStop()).builder);
+		}
 		// wait for response data
 		if (!builder.empty()) {
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
