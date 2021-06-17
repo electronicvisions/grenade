@@ -27,10 +27,6 @@ public:
 	typedef hate::Nil Result;
 
 protected:
-	/**
-	 * Generate PlaybackProgramBuilder.
-	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
-	 */
 	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 private:

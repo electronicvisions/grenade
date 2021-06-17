@@ -14,10 +14,6 @@ struct MADCArm
 	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
 
 protected:
-	/**
-	 * Generate PlaybackProgramBuilder.
-	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
-	 */
 	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCArm>(MADCArm const&);
@@ -33,10 +29,6 @@ struct MADCStart
 	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
 
 protected:
-	/**
-	 * Generate PlaybackProgramBuilder.
-	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
-	 */
 	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCStart>(MADCStart const&);
@@ -52,10 +44,6 @@ struct MADCStop
 	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
 
 protected:
-	/**
-	 * Generate PlaybackProgramBuilder.
-	 * @return PlaybackGeneratorReturn instance with sequence embodied and specified Result value
-	 */
 	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCStop>(MADCStop const&);
