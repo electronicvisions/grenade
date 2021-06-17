@@ -1,6 +1,7 @@
 #include "grenade/vx/compute/sequence.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include <cereal/types/list.hpp>
 #include <cereal/types/variant.hpp>
@@ -16,7 +17,7 @@ template <
     typename C,
     typename Ret,
     typename Input,
-    Ret (C::*F)(Input const&, ChipConfig const&, hxcomm::vx::ConnectionVariant&) const>
+    Ret (C::*F)(Input const&, ChipConfig const&, grenade::vx::backend::Connection&) const>
 struct run_input<F>
 {
 	typedef Input type;
@@ -28,9 +29,7 @@ using run_input_t = typename run_input<F>::type;
 } // namespace detail
 
 IODataList::Entry Sequence::run(
-    IODataList::Entry const& input,
-    ChipConfig const& config,
-    hxcomm::vx::ConnectionVariant& connection)
+    IODataList::Entry const& input, ChipConfig const& config, backend::Connection& connection)
 {
 	if (data.empty()) {
 		throw std::runtime_error("Empty compute sequence can't be run.");

@@ -1,5 +1,6 @@
 #include "grenade/vx/execution_instance_node.h"
 
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
 #include "hate/timer.h"
 #include <log4cxx/logger.h>
@@ -12,7 +13,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
     ChipConfig const& chip_config,
-    hxcomm::vx::ConnectionVariant& connection,
+    backend::Connection& connection,
     std::mutex& continuous_chunked_program_execution_mutex,
     ExecutionInstancePlaybackHooks& playback_hooks) :
     data_map(data_map),

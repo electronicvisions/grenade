@@ -1,5 +1,6 @@
 #include "grenade/vx/network/run.h"
 
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
@@ -26,8 +27,8 @@ IODataMap run(
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	JITGraphExecutor::Connections connections;
-	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	backend::Connection backend_connection(std::move(connection));
+	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), backend_connection));
 
 	JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<DLSGlobal, ChipConfig>(DLSGlobal(), config));
@@ -37,8 +38,10 @@ IODataMap run(
 	    std::pair<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>(
 	        coordinate::ExecutionInstance(), std::move(playback_hooks)));
 
-	return JITGraphExecutor::run(
+	auto ret = JITGraphExecutor::run(
 	    network_graph.get_graph(), inputs, connections, configs, playback_hooks_map);
+	connection = connections.at(DLSGlobal()).release();
+	return ret;
 }
 
 } // namespace grenade::vx::network

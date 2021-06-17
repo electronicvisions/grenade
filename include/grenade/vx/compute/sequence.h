@@ -8,7 +8,6 @@
 #include "grenade/vx/compute/relu.h"
 #include "grenade/vx/io_data_list.h"
 #include "hate/visibility.h"
-#include "hxcomm/vx/connection_variant.h"
 #include <list>
 #include <variant>
 
@@ -19,6 +18,10 @@ class access;
 namespace grenade::vx {
 
 struct ChipConfig;
+
+namespace backend {
+class Connection;
+} // namespace backend
 
 namespace compute {
 
@@ -33,7 +36,7 @@ struct Sequence
 	IODataList::Entry run(
 	    IODataList::Entry const& input,
 	    ChipConfig const& config,
-	    hxcomm::vx::ConnectionVariant& connection) SYMBOL_VISIBLE;
+	    backend::Connection& connection) SYMBOL_VISIBLE;
 
 private:
 	friend class cereal::access;

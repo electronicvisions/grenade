@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -44,17 +45,9 @@ TEST(Addition, Single)
 
 	// Construct map of one connection and connect to HW
 	grenade::vx::JITGraphExecutor::Connections connections;
-	auto connection = hxcomm::vx::get_connection_from_env();
+	grenade::vx::backend::Connection connection;
 	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
-
-	// Initialize chip
-	{
-		DigitalInit const init;
-		auto [builder, _] = generate(init);
-		auto program = builder.done();
-		stadls::vx::v2::run(connections.at(DLSGlobal()), program);
-	}
+	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 
 	// fill graph inputs
 	grenade::vx::IODataMap input_list;

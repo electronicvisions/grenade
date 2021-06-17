@@ -3,7 +3,6 @@
 
 #include "grenade/vx/graph.h"
 #include "grenade/vx/types.h"
-#include "hxcomm/vx/connection_variant.h"
 
 namespace cereal {
 class access;
@@ -12,6 +11,10 @@ class access;
 namespace grenade::vx {
 
 struct ChipConfig;
+
+namespace backend {
+class Connection;
+} // namespace backend
 
 namespace compute {
 
@@ -39,7 +42,7 @@ public:
 	std::vector<std::vector<Int8>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    ChipConfig const& config,
-	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
+	    backend::Connection& connection) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
 	size_t output_size() const SYMBOL_VISIBLE;

@@ -1,6 +1,7 @@
 #include "grenade/vx/compute/addition.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -46,13 +47,12 @@ size_t Addition::output_size() const
 std::vector<std::vector<Int8>> Addition::run(
     std::vector<std::vector<Int8>> const& inputs,
     ChipConfig const& config,
-    hxcomm::vx::ConnectionVariant& connection) const
+    backend::Connection& connection) const
 {
 	using namespace halco::hicann_dls::vx;
 
 	JITGraphExecutor::Connections connections;
-	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<DLSGlobal, ChipConfig>(DLSGlobal(), config));

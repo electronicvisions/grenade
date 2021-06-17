@@ -106,25 +106,27 @@ using namespace stadls::vx::v2;
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v2;
 
-stadls::vx::RunTimeInfo run(hxcomm::vx::ConnectionVariant& connection, PlaybackProgram& program)
+stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram& program)
 {
 	static log4cxx::Logger* const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 	stadls::vx::RunTimeInfo ret;
 	try {
-		ret = stadls::vx::v2::run(connection, program);
+		ret = stadls::vx::v2::run(connection.m_connection, program);
 		check_link_notifications(
-		    logger, program.get_highspeed_link_notifications(), PhyStatusOnFPGA::size);
+		    logger, program.get_highspeed_link_notifications(),
+		    connection.m_expected_link_notification_count);
 	} catch (std::runtime_error const&) {
 		check_link_notifications(
-		    logger, program.get_highspeed_link_notifications(), PhyStatusOnFPGA::size);
+		    logger, program.get_highspeed_link_notifications(),
+		    connection.m_expected_link_notification_count);
 		// TODO: use specific exception for fisch run() fails, cf. task #3724
-		perform_post_fail_analysis(logger, connection, program);
+		perform_post_fail_analysis(logger, connection.m_connection, program);
 		throw;
 	}
 	return ret;
 }
 
-stadls::vx::RunTimeInfo run(hxcomm::vx::ConnectionVariant& connection, PlaybackProgram&& program)
+stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram&& program)
 {
 	return run(connection, program);
 }

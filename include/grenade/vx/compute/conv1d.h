@@ -5,7 +5,6 @@
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/timer.h"
-#include "hxcomm/vx/connection_variant.h"
 
 namespace cereal {
 class access;
@@ -14,6 +13,10 @@ class access;
 namespace grenade::vx {
 
 class ChipConfig;
+
+namespace backend {
+class Connection;
+} // namespace backend
 
 namespace compute {
 
@@ -63,7 +66,7 @@ public:
 	std::vector<std::vector<Int8>> run(
 	    Activations const& inputs,
 	    ChipConfig const& config,
-	    hxcomm::vx::ConnectionVariant& connection) const SYMBOL_VISIBLE;
+	    backend::Connection& connection) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
 	size_t output_size() const SYMBOL_VISIBLE;

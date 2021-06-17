@@ -1,6 +1,7 @@
 #include "grenade/vx/compute/mac.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
@@ -362,16 +363,14 @@ size_t MAC::output_size() const
 }
 
 std::vector<std::vector<Int8>> MAC::run(
-    Activations const& inputs,
-    ChipConfig const& config,
-    hxcomm::vx::ConnectionVariant& connection) const
+    Activations const& inputs, ChipConfig const& config, backend::Connection& connection) const
 {
 	using namespace halco::hicann_dls::vx::v2;
 	auto logger = log4cxx::Logger::getLogger("grenade.MAC");
 
 	// Construct map of one connection to HW
-	JITGraphExecutor::Connections connections(
-	    {std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection)});
+	JITGraphExecutor::Connections connections;
+	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

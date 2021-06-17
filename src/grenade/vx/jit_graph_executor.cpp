@@ -1,6 +1,6 @@
 #include "grenade/vx/jit_graph_executor.h"
 
-#include "grenade/vx/backend/run.h"
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_node.h"
@@ -8,11 +8,7 @@
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/jtag.h"
 #include "hate/timer.h"
-#include "stadls/vx/v2/playback_program.h"
-#include "stadls/vx/v2/playback_program_builder.h"
 #include <chrono>
 #include <map>
 #include <mutex>
@@ -64,8 +60,7 @@ IODataMap JITGraphExecutor::run(
 
 	std::map<DLSGlobal, hxcomm::ConnectionTimeInfo> connection_time_info_begin;
 	for (auto const [dls, connection] : connections) {
-		connection_time_info_begin.emplace(
-		    dls, std::visit([](auto const& c) { return c.get_time_info(); }, connection));
+		connection_time_info_begin.emplace(dls, connection.get_time_info());
 	}
 
 	// connection mutex map
@@ -111,8 +106,7 @@ IODataMap JITGraphExecutor::run(
 	LOG4CXX_INFO(logger, "run(): Executed graph in " << hate::to_string(total_time) << ".");
 	for (auto const& [dls, e] : connections) {
 		auto const connection_time_info_difference =
-		    std::visit([](auto const& c) { return c.get_time_info(); }, e) -
-		    connection_time_info_begin.at(dls);
+		    e.get_time_info() - connection_time_info_begin.at(dls);
 		LOG4CXX_INFO(
 		    logger, "run(): Chip at "
 		                << dls << " spent "
@@ -168,35 +162,6 @@ bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& c
 	});
 }
 
-namespace {
-
-void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
-{
-	if (std::holds_alternative<hxcomm::vx::ZeroMockConnection>(connection)) {
-		return;
-	}
-
-	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
-
-	// perform hardware version check(s)
-	PlaybackProgramBuilder builder;
-	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
-	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
-	backend::run(connection, builder.done());
-
-	if (jtag_id_ticket.get().get_version() != 2) {
-		std::stringstream ss;
-		ss << "Unexpected chip version: ";
-		ss << jtag_id_ticket.get().get_version();
-		throw std::runtime_error(ss.str());
-	}
-}
-
-} // namespace
-
 void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
@@ -210,12 +175,6 @@ void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
 	// check all DLSGlobal physical chips used in the graph are present in the provided connections
 	if (!is_executable_on(graph, connections)) {
 		throw std::runtime_error("Graph requests connection not provided.");
-	}
-
-	// check hardware matches expected version
-	for (auto const& [dls, connection] : connections) {
-		static_cast<void>(dls);
-		perform_hardware_check(connection);
 	}
 
 	LOG4CXX_TRACE(

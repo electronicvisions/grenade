@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
@@ -8,7 +9,6 @@
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/systime.h"
-#include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_generator.h"
@@ -22,15 +22,7 @@ using namespace lola::vx::v2;
 TEST(MAC, Single)
 {
 	// Construct connection to HW
-	auto connection = hxcomm::vx::get_connection_from_env();
-
-	// Initialize chip
-	{
-		DigitalInit const init;
-		auto [builder, _] = generate(init);
-		auto program = builder.done();
-		stadls::vx::v2::run(connection, program);
-	}
+	grenade::vx::backend::Connection connection;
 
 	// fill graph inputs (with UInt5(0))
 	std::vector<grenade::vx::UInt5> inputs(5);

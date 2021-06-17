@@ -1,3 +1,5 @@
+#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/backend/run.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -27,11 +29,10 @@ using namespace stadls::vx::v2;
 using namespace lola::vx::v2;
 using namespace haldls::vx::v2;
 
-grenade::vx::ChipConfig initialize_excitatory_bypass(hxcomm::vx::ConnectionVariant& connection)
+std::pair<grenade::vx::ChipConfig, grenade::vx::backend::Connection> initialize_excitatory_bypass()
 {
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 	// Initialize chip
-	{
 		ExperimentInit init;
 		for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
 			chip->neuron_backend[c].set_enable_clocks(true);
@@ -44,53 +45,53 @@ grenade::vx::ChipConfig initialize_excitatory_bypass(hxcomm::vx::ConnectionVaria
 				init.column_current_quad_config[c].set_switch(e, s);
 			}
 		}
-		auto [builder, _] = generate(init);
-		// enable excitatory bypass mode
-		for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
-			auto& config = chip->hemispheres[neuron.toNeuronRowOnDLS().toHemisphereOnDLS()]
-			                   .neuron_block[neuron.toNeuronColumnOnDLS()];
-			config.event_routing.enable_digital = true;
-			config.event_routing.analog_output =
-			    lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
-			config.event_routing.enable_bypass_excitatory = true;
-			config.threshold.enable = false;
-		}
-		for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
-			auto& padi_config = chip->hemispheres[block.toHemisphereOnDLS()].common_padi_bus_config;
-			auto dacen = padi_config.get_dacen_pulse_extension();
-			for (auto const block : iter_all<PADIBusOnPADIBusBlock>()) {
-				dacen[block] = CommonPADIBusConfig::DacenPulseExtension(15);
-			}
-			padi_config.set_dacen_pulse_extension(dacen);
-		}
-		for (auto const drv : iter_all<SynapseDriverOnDLS>()) {
-			auto& config = chip->hemispheres[drv.toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
-			                   .synapse_driver_block[drv.toSynapseDriverOnSynapseDriverBlock()];
-			config.set_enable_receiver(true);
-			config.set_enable_address_out(true);
-		}
-		for (auto const block : iter_all<CapMemBlockOnDLS>()) {
-			CapMemCell cell(CapMemCell::Value(1022));
-			builder.write(CapMemCellOnDLS(CapMemCellOnCapMemBlock::syn_i_bias_dac, block), cell);
-		}
-		auto program = builder.done();
-		stadls::vx::v2::run(connection, program);
-	}
-	return *chip;
+	    grenade::vx::backend::Connection connection(hxcomm::vx::get_connection_from_env(), init);
+	    stadls::vx::v2::PlaybackProgramBuilder builder;
+	    // enable excitatory bypass mode
+	    for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
+		    auto& config = chip->hemispheres[neuron.toNeuronRowOnDLS().toHemisphereOnDLS()]
+		                       .neuron_block[neuron.toNeuronColumnOnDLS()];
+		    config.event_routing.enable_digital = true;
+		    config.event_routing.analog_output =
+		        lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
+		    config.event_routing.enable_bypass_excitatory = true;
+		    config.threshold.enable = false;
+	    }
+	    for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
+		    auto& padi_config = chip->hemispheres[block.toHemisphereOnDLS()].common_padi_bus_config;
+		    auto dacen = padi_config.get_dacen_pulse_extension();
+		    for (auto const block : iter_all<PADIBusOnPADIBusBlock>()) {
+			    dacen[block] = CommonPADIBusConfig::DacenPulseExtension(15);
+		    }
+		    padi_config.set_dacen_pulse_extension(dacen);
+	    }
+	    for (auto const drv : iter_all<SynapseDriverOnDLS>()) {
+		    auto& config = chip->hemispheres[drv.toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
+		                       .synapse_driver_block[drv.toSynapseDriverOnSynapseDriverBlock()];
+		    config.set_enable_receiver(true);
+		    config.set_enable_address_out(true);
+	    }
+	    for (auto const block : iter_all<CapMemBlockOnDLS>()) {
+		    CapMemCell cell(CapMemCell::Value(1022));
+		    builder.write(CapMemCellOnDLS(CapMemCellOnCapMemBlock::syn_i_bias_dac, block), cell);
+	    }
+	    auto program = builder.done();
+	    grenade::vx::backend::run(connection, program);
+	    return std::make_pair(*chip, std::move(connection));
 }
 
 TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 {
 	// Construct connection to HW
-	auto connection = hxcomm::vx::get_connection_from_env();
+	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::Connections connections;
 	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = initialize_excitatory_bypass(connection);
+	chip_configs[DLSGlobal()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -175,15 +176,15 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	static log4cxx::Logger* logger =
 	    log4cxx::Logger::getLogger("grenade.NetworkBuilderTest.FeedForwardAllToAll");
 	// Construct connection to HW
-	auto connection = hxcomm::vx::get_connection_from_env();
+	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::Connections connections;
 	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = initialize_excitatory_bypass(connection);
+	chip_configs[DLSGlobal()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -276,15 +277,15 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 TEST(NetworkGraphBuilder, SynfireChain)
 {
 	// Construct connection to HW
-	auto connection = hxcomm::vx::get_connection_from_env();
+	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::Connections connections;
 	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
+	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = initialize_excitatory_bypass(connection);
+	chip_configs[DLSGlobal()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;

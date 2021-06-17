@@ -1,6 +1,7 @@
 #include "grenade/vx/compute/conv1d.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
@@ -74,9 +75,7 @@ void Conv1d::build_mac(Weights&& weights)
 }
 
 std::vector<std::vector<Int8>> Conv1d::run(
-    Activations const& inputs,
-    ChipConfig const& config,
-    hxcomm::vx::ConnectionVariant& connection) const
+    Activations const& inputs, ChipConfig const& config, backend::Connection& connection) const
 {
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

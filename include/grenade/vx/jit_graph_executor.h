@@ -6,9 +6,12 @@
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
-#include "hxcomm/vx/connection_variant.h"
 
 namespace grenade::vx {
+
+namespace backend {
+struct Connection;
+} // namespace backend
 
 class Graph;
 class IODataMap;
@@ -26,8 +29,7 @@ class JITGraphExecutor
 {
 public:
 	/** Map of connections. */
-	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, hxcomm::vx::ConnectionVariant&>
-	    Connections;
+	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, backend::Connection&> Connections;
 
 	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, ChipConfig> ChipConfigs;
 

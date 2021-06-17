@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -9,7 +10,6 @@
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/systime.h"
-#include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_generator.h"
@@ -73,17 +73,9 @@ TEST(JITGraphExecutor, EventLoopback)
 {
 	// Construct map of one connection and connect to HW
 	grenade::vx::JITGraphExecutor::Connections connections;
-	auto connection = hxcomm::vx::get_connection_from_env();
+	grenade::vx::backend::Connection connection;
 	connections.insert(
-	    std::pair<DLSGlobal, hxcomm::vx::ConnectionVariant&>(DLSGlobal(), connection));
-
-	// Initialize chip
-	{
-		DigitalInit const init;
-		auto [builder, _] = generate(init);
-		auto program = builder.done();
-		stadls::vx::v2::run(connections.at(DLSGlobal()), program);
-	}
+	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 
 	constexpr size_t max_batch_size = 5;
 
