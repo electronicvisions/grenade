@@ -803,38 +803,6 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
-	auto [config_builder, ppu_symbols] = m_config_builder.generate();
-	bool const enable_ppu = static_cast<bool>(ppu_symbols);
-
-	PPUMemoryWordOnPPU ppu_status_coord;
-	PPUMemoryBlockOnPPU ppu_result_coord;
-	PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
-	if (enable_ppu) {
-		assert(ppu_symbols);
-		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
-		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
-		ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
-	}
-
-	auto const blocking_ppu_command_baseline_read =
-	    stadls::vx::generate(
-	        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::baseline_read))
-	        .builder;
-
-	auto const blocking_ppu_command_reset_neurons =
-	    stadls::vx::generate(
-	        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::reset_neurons))
-	        .builder;
-
-	auto const blocking_ppu_command_read =
-	    stadls::vx::generate(generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::read))
-	        .builder;
-
-	std::vector<PlaybackProgramBuilder> builders;
-	builders.push_back(std::move(m_playback_hooks.pre_static_config));
-
-	PlaybackProgramBuilder builder;
-
 	// if no on-chip computation is to be done, return without static configuration
 	auto const has_computation =
 	    m_event_input_vertex.has_value() ||
@@ -842,40 +810,63 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	        m_local_external_data.runtime.begin(), m_local_external_data.runtime.end(),
 	        [](auto const& r) { return r != 0; });
 	if (!has_computation) {
+		PlaybackProgramBuilder builder;
+		builder.merge_back(m_playback_hooks.pre_static_config);
+		builder.merge_back(m_playback_hooks.pre_realtime);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
 		return m_chunked_program;
 	}
 
-	builder.merge_back(config_builder);
+	// playback builder sequence to be concatenated in the end
+	std::vector<PlaybackProgramBuilder> builders;
 
-	// timing-uncritical initial setup
-	builders.push_back(std::move(builder));
-	builder = PlaybackProgramBuilder();
+	// add pre static config playback hook
+	builders.push_back(std::move(m_playback_hooks.pre_static_config));
 
-	builders.push_back(std::move(m_playback_hooks.pre_realtime));
+	// generate static configuration
+	auto [config_builder, ppu_symbols] = m_config_builder.generate();
 
-	// build neuron resets
+	// add static config
+	builders.push_back(std::move(config_builder));
+
+	// generate playback snippet for neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 
+	// look-up PPU-program symbols
+	bool const enable_ppu = static_cast<bool>(ppu_symbols);
+	PPUMemoryBlockOnPPU ppu_result_coord;
+	PlaybackProgramBuilder blocking_ppu_command_baseline_read;
+	PlaybackProgramBuilder blocking_ppu_command_reset_neurons;
+	PlaybackProgramBuilder blocking_ppu_command_read;
 	if (enable_ppu) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			// write neuron reset mask
-			std::vector<int8_t> values(NeuronColumnOnDLS::size);
-			for (auto const col : iter_all<NeuronColumnOnDLS>()) {
-				values[col] =
-				    m_neuron_resets.enable_resets[AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS())
-				                                      .toNeuronResetOnDLS()];
-			}
-			auto const neuron_reset_mask = to_vector_unit_row(values);
-			builder.write(PPUMemoryBlockOnDLS(ppu_neuron_reset_mask_coord, ppu), neuron_reset_mask);
-		}
+		assert(ppu_symbols);
+		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
+
+		// generate playback snippets for PPU command polling
+		blocking_ppu_command_baseline_read =
+		    stadls::vx::generate(
+		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::baseline_read))
+		        .builder;
+		blocking_ppu_command_reset_neurons =
+		    stadls::vx::generate(
+		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::reset_neurons))
+		        .builder;
+		blocking_ppu_command_read =
+		    stadls::vx::generate(generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::read))
+		        .builder;
 	}
+
+	// add pre realtime playback hook
+	builders.push_back(std::move(m_playback_hooks.pre_realtime));
 
 	bool const has_cadc_readout = std::any_of(
 	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
+	assert(has_cadc_readout ? enable_ppu : true);
 
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
+		PlaybackProgramBuilder builder;
 		auto& batch_entry = m_batch_entries.at(b);
 		// start MADC
 		if (m_madc_readout_vertex) {
@@ -884,10 +875,8 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		}
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
-			assert(enable_ppu);
 			builder.copy_back(blocking_ppu_command_baseline_read);
 		}
-
 		// reset neurons
 		if (enable_ppu) {
 			builder.copy_back(blocking_ppu_command_reset_neurons);
@@ -895,13 +884,11 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			builder.copy_back(builder_neuron_reset);
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		}
-
 		// wait for membrane to settle
 		if (!builder.empty()) {
 			builder.write(TimerOnDLS(), Timer());
 			builder.block_until(TimerOnDLS(), Timer::Value::fpga_clock_cycles_per_us);
 		}
-
 		// send input
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
@@ -929,12 +916,6 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {
-			assert(enable_ppu);
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				PPUMemoryWord config(
-				    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::read)));
-				builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-			}
 			builder.copy_back(blocking_ppu_command_read);
 			// readout result
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -951,14 +932,14 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		}
 		builders.push_back(std::move(builder));
-		builder = PlaybackProgramBuilder();
 	}
 
+	// add post realtime playback hook
 	builders.push_back(std::move(m_playback_hooks.post_realtime));
 
 	// Merge builders sequentially into chunks smaller than the FPGA playback memory size.
 	// If a single builder is larger than the memory, it is placed isolated in a program.
-	assert(builder.empty());
+	PlaybackProgramBuilder builder;
 	for (auto& b : builders) {
 		if ((builder.size_to_fpga() + b.size_to_fpga()) >
 		    stadls::vx::playback_memory_size_to_fpga) {
