@@ -1,7 +1,5 @@
 #include "grenade/vx/generator/neuron_reset_mask.h"
 
-#include <hate/join.h>
-
 namespace grenade::vx::generator {
 
 NeuronResetMask::NeuronResetMask() : enable_resets() {}
