@@ -4,12 +4,10 @@
 #include <map>
 #include <set>
 #include <vector>
-
 #include <boost/range/combine.hpp>
 #include <boost/type_index.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
-
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/generator/madc.h"
 #include "grenade/vx/generator/ppu.h"
@@ -505,11 +503,6 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::Transformation const& data)
 {
-	using namespace lola::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace halco::common;
-
 	// fill input value
 	auto const inputs = data.inputs();
 	std::vector<vertex::Transformation::Function::Value> value_input;
