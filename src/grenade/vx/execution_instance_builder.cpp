@@ -88,41 +88,16 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 	return std::none_of(vertices.begin(), vertices.end(), [&](auto const& p) {
 		auto const vertex = p.second;
 		if (std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(vertex))) {
+			if (m_input_list.data.find(vertex) == m_input_list.data.end()) {
+				return true;
+			}
+			if (batch_size == 0) {
+				return false;
+			}
 			auto const& input_vertex =
 			    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
-			if (input_vertex.output().type == ConnectionType::DataUInt32) {
-				if (m_input_list.uint32.find(vertex) == m_input_list.uint32.end()) {
-					return true;
-				} else if (
-				    (batch_size != 0) &&
-				    m_input_list.uint32.at(vertex).front().size() != input_vertex.output().size) {
-					return true;
-				}
-			} else if (input_vertex.output().type == ConnectionType::DataUInt5) {
-				if (m_input_list.uint5.find(vertex) == m_input_list.uint5.end()) {
-					// incomplete because value not found
-					return true;
-				} else if (
-				    (batch_size != 0) &&
-				    m_input_list.uint5.at(vertex).front().size() != input_vertex.output().size) {
-					// incomplete because value size doesn't match expectation
-					return true;
-				}
-			} else if (input_vertex.output().type == ConnectionType::DataInt8) {
-				if (m_input_list.int8.find(vertex) == m_input_list.int8.end()) {
-					return true;
-				} else if (
-				    (batch_size != 0) &&
-				    m_input_list.int8.at(vertex).front().size() != input_vertex.output().size) {
-					return true;
-				}
-			} else if (input_vertex.output().type == ConnectionType::DataTimedSpikeSequence) {
-				if (m_input_list.spike_events.find(vertex) == m_input_list.spike_events.end()) {
-					return true;
-				}
-			} else {
-				throw std::runtime_error("ExternalInput output type not supported.");
-			}
+			return !IODataMap::is_match(
+			    m_input_list.data.find(vertex)->second, input_vertex.output());
 		}
 		return false;
 	});
@@ -168,7 +143,7 @@ void ExecutionInstanceBuilder::process(
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
 
-	m_local_data.spike_events[vertex] = m_local_data.spike_events.at(in_vertex);
+	m_local_data.data[vertex] = m_local_data.data.at(in_vertex);
 	m_event_input_vertex = vertex;
 }
 
@@ -193,7 +168,7 @@ void ExecutionInstanceBuilder::process(
 
 			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
 		}
-		m_local_data.spike_event_output[vertex] = filter_events(spikes);
+		m_local_data.data[vertex] = filter_events(spikes);
 	}
 }
 
@@ -218,74 +193,36 @@ std::vector<std::vector<T>> apply_restriction(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::DataInput const& data)
+    Graph::vertex_descriptor const vertex, vertex::DataInput const& /* data */)
 {
 	using namespace lola::vx::v2;
 	using namespace haldls::vx::v2;
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace halco::common;
-	// TODO: reduce double code by providing get<Type>(data_map) (Issue #3717)
-	if (data.output().type == ConnectionType::UInt32) {
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const in_vertex = boost::source(edge, m_graph.get_graph());
-		auto const& input_values =
-		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
-		         ? m_local_external_data.uint32.at(in_vertex)
-		         : m_data_output.uint32.at(in_vertex));
 
-		auto const port_restriction = m_graph.get_edge_property_map().at(edge);
-		if (port_restriction) {
-			m_local_data.uint32[vertex] = apply_restriction(input_values, *port_restriction);
-		} else {
-			m_local_data.uint32[vertex] = input_values;
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+	auto const in_vertex = boost::source(edge, m_graph.get_graph());
+	auto const& input_values =
+	    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
+	         ? m_local_external_data.data.at(in_vertex)
+	         : m_data_output.data.at(in_vertex));
+
+	auto const maybe_apply_restriction = [&](auto const& d) -> IODataMap::Entry {
+		typedef std::remove_cvref_t<decltype(d)> Data;
+		typedef hate::type_list<
+		    std::vector<std::vector<UInt32>>, std::vector<std::vector<UInt5>>,
+		    std::vector<std::vector<Int8>>>
+		    MatrixData;
+		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
+			auto const port_restriction = m_graph.get_edge_property_map().at(edge);
+			if (port_restriction) {
+				return apply_restriction(d, *port_restriction);
+			}
 		}
-	} else if (data.output().type == ConnectionType::UInt5) {
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const in_vertex = boost::source(edge, m_graph.get_graph());
-		auto const& input_values =
-		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
-		         ? m_local_external_data.uint5.at(in_vertex)
-		         : m_data_output.uint5.at(in_vertex));
-
-		auto const port_restriction = m_graph.get_edge_property_map().at(edge);
-		if (port_restriction) {
-			m_local_data.uint5[vertex] = apply_restriction(input_values, *port_restriction);
-		} else {
-			m_local_data.uint5[vertex] = input_values;
-		}
-	} else if (data.output().type == ConnectionType::Int8) {
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const in_vertex = boost::source(edge, m_graph.get_graph());
-		auto const& input_values =
-		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
-		         ? m_local_external_data.int8.at(in_vertex)
-		         : m_data_output.int8.at(in_vertex));
-
-		auto const port_restriction = m_graph.get_edge_property_map().at(edge);
-		if (port_restriction) {
-			m_local_data.int8[vertex] = apply_restriction(input_values, *port_restriction);
-		} else {
-			m_local_data.int8[vertex] = input_values;
-		}
-	} else if (data.output().type == ConnectionType::TimedSpikeSequence) {
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
-
-		m_local_data.spike_events[vertex] = m_local_external_data.spike_events.at(in_vertex);
-	} else if (data.output().type == ConnectionType::TimedSpikeFromChipSequence) {
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-		auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
-
-		m_local_data.spike_event_output[vertex] =
-		    m_local_external_data.spike_event_output.at(in_vertex);
-	} else {
-		throw std::logic_error("DataInput output connection type processing not implemented.");
-	}
+		return d;
+	};
+	m_local_data.data[vertex] = std::visit(maybe_apply_restriction, input_values);
 }
 
 namespace {
@@ -323,7 +260,7 @@ void ExecutionInstanceBuilder::process(
 		m_post_vertices.push_back(vertex);
 	} else { // post-hw-run processing
 		// extract Int8 values
-		auto& sample_batches = m_local_data.int8[vertex];
+		std::vector<std::vector<Int8>> sample_batches;
 		resize_rectangular(sample_batches, m_batch_entries.size(), data.output().size);
 		for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 			assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
@@ -339,24 +276,16 @@ void ExecutionInstanceBuilder::process(
 				i++;
 			}
 		}
+		m_local_data.data[vertex] = sample_batches;
 	}
 }
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::ExternalInput const& data)
+    Graph::vertex_descriptor const vertex, vertex::ExternalInput const& /* data */)
 {
-	if (data.output().type == ConnectionType::DataUInt32) {
-		m_local_external_data.uint32.insert({vertex, m_input_list.uint32.at(vertex)});
-	} else if (data.output().type == ConnectionType::DataUInt5) {
-		m_local_external_data.uint5.insert({vertex, m_input_list.uint5.at(vertex)});
-	} else if (data.output().type == ConnectionType::DataInt8) {
-		m_local_external_data.int8.insert({vertex, m_input_list.int8.at(vertex)});
-	} else if (data.output().type == ConnectionType::DataTimedSpikeSequence) {
-		m_local_external_data.spike_events.insert({vertex, m_input_list.spike_events.at(vertex)});
-	} else {
-		throw std::runtime_error("ExternalInput output type processing not implemented.");
-	}
+	auto const& input_values = m_input_list.data.at(vertex);
+	m_local_external_data.data.insert({vertex, input_values});
 }
 
 template <>
@@ -371,7 +300,9 @@ void ExecutionInstanceBuilder::process(
 	for (size_t j = 0; j < values.size(); ++j) {
 		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
 			auto const& local_data =
-			    m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph())).at(j);
+			    std::get<std::vector<std::vector<Int8>>>(
+			        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
+			        .at(j);
 			assert(tmps.size() == local_data.size());
 			for (size_t i = 0; i < data.output().size; ++i) {
 				tmps[i] += local_data[i];
@@ -383,7 +314,7 @@ void ExecutionInstanceBuilder::process(
 		});
 		std::fill(tmps.begin(), tmps.end(), 0);
 	}
-	m_local_data.int8[vertex] = values;
+	m_local_data.data[vertex] = values;
 }
 
 template <>
@@ -408,22 +339,23 @@ void ExecutionInstanceBuilder::process(
 			    UInt32(std::distance(entry.begin(), std::max_element(entry.begin(), entry.end())));
 			i++;
 		}
-		m_local_data.uint32[vertex] = tmps;
+		m_local_data.data[vertex] = tmps;
 	};
 
-	if (data.inputs().front().type == ConnectionType::UInt32) {
-		auto const& local_data =
-		    m_local_data.uint32.at(boost::source(in_edge, m_graph.get_graph()));
-		compute(local_data);
-	} else if (data.inputs().front().type == ConnectionType::UInt5) {
-		auto const& local_data = m_local_data.uint5.at(boost::source(in_edge, m_graph.get_graph()));
-		compute(local_data);
-	} else if (data.inputs().front().type == ConnectionType::Int8) {
-		auto const& local_data = m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph()));
-		compute(local_data);
-	} else {
-		throw std::logic_error("ArgMax data type not implemented.");
-	}
+	auto const visitor = [&](auto const& d) {
+		typedef std::remove_cvref_t<decltype(d)> Data;
+		typedef hate::type_list<
+		    std::vector<std::vector<UInt32>>, std::vector<std::vector<UInt5>>,
+		    std::vector<std::vector<Int8>>>
+		    MatrixData;
+		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
+			compute(d);
+		} else {
+			throw std::logic_error("ArgMax data type not implemented.");
+		}
+	};
+	auto const& local_data = m_local_data.data.at(boost::source(in_edge, m_graph.get_graph()));
+	std::visit(visitor, local_data);
 }
 
 template <>
@@ -436,11 +368,13 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
+		auto const& d =
+		    std::get<std::vector<std::vector<Int8>>>(m_local_data.data.at(source)).at(j);
 		for (size_t i = 0; i < data.output().size; ++i) {
-			values.at(j).at(i) = std::max(m_local_data.int8.at(source).at(j).at(i), Int8(0));
+			values.at(j).at(i) = std::max(d.at(i), Int8(0));
 		}
 	}
-	m_local_data.int8[vertex] = values;
+	m_local_data.data[vertex] = values;
 }
 
 template <>
@@ -454,73 +388,27 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
+		auto const& d =
+		    std::get<std::vector<std::vector<Int8>>>(m_local_data.data.at(source)).at(j);
 		for (size_t i = 0; i < data.output().size; ++i) {
 			values.at(j).at(i) = UInt5(std::min(
-			    static_cast<UInt5::value_type>(
-			        std::max(m_local_data.int8.at(source).at(j).at(i), Int8(0)) >> shift),
-			    UInt5::max));
+			    static_cast<UInt5::value_type>(std::max(d.at(i), Int8(0)) >> shift), UInt5::max));
 		}
 	}
-	m_local_data.uint5[vertex] = values;
+	m_local_data.data[vertex] = values;
 }
 
 template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataOutput const& data)
 {
-	if (data.inputs().front().type == ConnectionType::UInt32) {
-		// get in edge
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const& local_data =
-		    m_local_data.uint32.at(boost::source(in_edge, m_graph.get_graph()));
-		// check size match only for first because we know that the data map is valid
-		if (local_data.size()) {
-			assert(data.output().size == local_data.front().size());
-		}
-		m_local_data_output.uint32[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::UInt5) {
-		// get in edge
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const& local_data = m_local_data.uint5.at(boost::source(in_edge, m_graph.get_graph()));
-		// check size match only for first because we know that the data map is valid
-		if (local_data.size()) {
-			assert(data.output().size == local_data.front().size());
-		}
-		m_local_data_output.uint5[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::Int8) {
-		// get in edge
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const& local_data = m_local_data.int8.at(boost::source(in_edge, m_graph.get_graph()));
-		// check size match only for first because we know that the data map is valid
-		assert(!local_data.size() || (data.output().size == local_data.front().size()));
-		m_local_data_output.int8[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::TimedSpikeSequence) {
-		// get in edge
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const& local_data =
-		    m_local_data.spike_events.at(boost::source(in_edge, m_graph.get_graph()));
-		m_local_data_output.spike_events[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::TimedSpikeFromChipSequence) {
-		// get in edge
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const& local_data =
-		    m_local_data.spike_event_output.at(boost::source(in_edge, m_graph.get_graph()));
-		m_local_data_output.spike_event_output[vertex] = local_data;
-	} else if (data.inputs().front().type == ConnectionType::TimedMADCSampleFromChipSequence) {
-		// get in edge
-		assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-		auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-		auto const& local_data =
-		    m_local_data.madc_samples.at(boost::source(in_edge, m_graph.get_graph()));
-		m_local_data_output.madc_samples[vertex] = local_data;
-	} else {
-		throw std::logic_error("DataOutput data type not implemented.");
-	}
+	// get in edge
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
+	auto const& local_data = m_local_data.data.at(boost::source(in_edge, m_graph.get_graph()));
+	// check size match only for first because we know that the data map is valid
+	assert(IODataMap::is_match(local_data, data.output()));
+	m_local_data_output.data[vertex] = local_data;
 }
 
 template <typename T>
@@ -609,7 +497,7 @@ void ExecutionInstanceBuilder::process(
 			madc_samples.insert(
 			    madc_samples.end(), local_madc_samples.begin(), local_madc_samples.end());
 		}
-		m_local_data.madc_samples[vertex] = filter_events(madc_samples);
+		m_local_data.data[vertex] = filter_events(madc_samples);
 	}
 }
 
@@ -624,70 +512,6 @@ void ExecutionInstanceBuilder::process(
 
 	// fill input value
 	auto const inputs = data.inputs();
-	auto const get_value_input = [&](Port const& port, Graph::vertex_descriptor const in_vertex) {
-		vertex::Transformation::Function::Value value_input;
-		switch (port.type) {
-			case ConnectionType::UInt32: {
-				auto const& input_values =
-				    ((std::holds_alternative<vertex::ExternalInput>(
-				         m_graph.get_vertex_property(in_vertex)))
-				         ? m_local_external_data.uint32.at(in_vertex)
-				         : m_local_data.uint32.at(in_vertex));
-				if (!input_values.empty() && (input_values.at(0).size() != port.size)) {
-					throw std::runtime_error("Data size does not match expectation.");
-				}
-				value_input = input_values;
-				break;
-			}
-			case ConnectionType::Int8: {
-				auto const& input_values =
-				    ((std::holds_alternative<vertex::ExternalInput>(
-				         m_graph.get_vertex_property(in_vertex)))
-				         ? m_local_external_data.int8.at(in_vertex)
-				         : m_local_data.int8.at(in_vertex));
-				if (!input_values.empty() && (input_values.at(0).size() != port.size)) {
-					throw std::runtime_error("Data size does not match expectation.");
-				}
-				value_input = input_values;
-				break;
-			}
-			case ConnectionType::UInt5: {
-				auto const& input_values =
-				    ((std::holds_alternative<vertex::ExternalInput>(
-				         m_graph.get_vertex_property(in_vertex)))
-				         ? m_local_external_data.uint5.at(in_vertex)
-				         : m_local_data.uint5.at(in_vertex));
-				if (!input_values.empty() && (input_values.at(0).size() != port.size)) {
-					throw std::runtime_error("Data size does not match expectation.");
-				}
-				value_input = input_values;
-				break;
-			}
-			case ConnectionType::TimedSpikeSequence: {
-				auto const& input_values =
-				    ((std::holds_alternative<vertex::ExternalInput>(
-				         m_graph.get_vertex_property(in_vertex)))
-				         ? m_local_external_data.spike_events.at(in_vertex)
-				         : m_local_data.spike_events.at(in_vertex));
-				value_input = input_values;
-				break;
-			}
-			case ConnectionType::TimedSpikeFromChipSequence: {
-				auto const& input_values =
-				    ((std::holds_alternative<vertex::ExternalInput>(
-				         m_graph.get_vertex_property(in_vertex)))
-				         ? m_local_external_data.spike_event_output.at(in_vertex)
-				         : m_local_data.spike_event_output.at(in_vertex));
-				value_input = input_values;
-				break;
-			}
-			default: {
-				throw std::logic_error(
-				    "Transformation output connection type processing not implemented.");
-			}
-		}
-		return value_input;
-	};
 	std::vector<vertex::Transformation::Function::Value> value_input;
 	auto edge_it = boost::in_edges(vertex, m_graph.get_graph()).first;
 	for (auto const& port : inputs) {
@@ -695,54 +519,23 @@ void ExecutionInstanceBuilder::process(
 			throw std::logic_error("Edge with port restriction unsupported.");
 		}
 		auto const in_vertex = boost::source(*edge_it, m_graph.get_graph());
-		value_input.push_back(get_value_input(port, in_vertex));
+		auto const& input_values =
+		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
+		         ? m_local_external_data.data.at(in_vertex)
+		         : m_local_data.data.at(in_vertex));
+		if (!IODataMap::is_match(input_values, port)) {
+			throw std::runtime_error("Data size does not match expectation.");
+		}
+		value_input.push_back(input_values);
 		edge_it++;
 	}
 	// execute transformation
 	auto const value_output = data.apply(value_input);
 	// process output value
-	switch (data.output().type) {
-		case ConnectionType::UInt32: {
-			auto const& value = std::get<decltype(IODataMap::uint32)::mapped_type>(value_output);
-			if (!value.empty() && (value.at(0).size() != data.output().size)) {
-				throw std::runtime_error("Data size does not match expectation.");
-			}
-			m_local_data.uint32[vertex] = value;
-			break;
-		}
-		case ConnectionType::Int8: {
-			auto const& value = std::get<decltype(IODataMap::int8)::mapped_type>(value_output);
-			if (!value.empty() && (value.at(0).size() != data.output().size)) {
-				throw std::runtime_error("Data size does not match expectation.");
-			}
-			m_local_data.int8[vertex] = value;
-			break;
-		}
-		case ConnectionType::UInt5: {
-			auto const& value = std::get<decltype(IODataMap::uint5)::mapped_type>(value_output);
-			if (!value.empty() && (value.at(0).size() != data.output().size)) {
-				throw std::runtime_error("Data size does not match expectation.");
-			}
-			m_local_data.uint5[vertex] = value;
-			break;
-		}
-		case ConnectionType::TimedSpikeSequence: {
-			auto const& value =
-			    std::get<decltype(IODataMap::spike_events)::mapped_type>(value_output);
-			m_local_data.spike_events[vertex] = value;
-			break;
-		}
-		case ConnectionType::TimedSpikeFromChipSequence: {
-			auto const& value =
-			    std::get<decltype(IODataMap::spike_event_output)::mapped_type>(value_output);
-			m_local_data.spike_event_output[vertex] = value;
-			break;
-		}
-		default: {
-			throw std::logic_error(
-			    "Transformation input connection type processing not implemented.");
-		}
+	if (!IODataMap::is_match(value_output, data.output())) {
+		throw std::runtime_error("Data size does not match expectation.");
 	}
+	m_local_data.data[vertex] = value_output;
 }
 
 void ExecutionInstanceBuilder::pre_process()
@@ -895,7 +688,9 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		}
 		if (m_event_input_vertex) {
 			generator::TimedSpikeSequence event_generator(
-			    m_local_data.spike_events.at(*m_event_input_vertex).at(b));
+			    std::get<std::vector<TimedSpikeSequence>>(
+			        m_local_data.data.at(*m_event_input_vertex))
+			        .at(b));
 			auto [builder_events, _] = stadls::vx::generate(event_generator);
 			builder.merge_back(builder_events);
 		}

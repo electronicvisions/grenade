@@ -54,15 +54,15 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 
 	switch (m_type) {
 		case ConnectionType::UInt32: {
-			decltype(IODataMap::uint32)::mapped_type output(batch_size);
+			std::vector<std::vector<UInt32>> output(batch_size);
 			return copy(output);
 		}
 		case ConnectionType::Int8: {
-			decltype(IODataMap::int8)::mapped_type output(batch_size);
+			std::vector<std::vector<Int8>> output(batch_size);
 			return copy(output);
 		}
 		case ConnectionType::UInt5: {
-			decltype(IODataMap::uint5)::mapped_type output(batch_size);
+			std::vector<std::vector<UInt5>> output(batch_size);
 			return copy(output);
 		}
 		default: {

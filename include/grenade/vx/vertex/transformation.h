@@ -27,13 +27,7 @@ struct Transformation
 	 */
 	struct Function
 	{
-		typedef std::variant<
-		    decltype(IODataMap::uint32)::mapped_type,
-		    decltype(IODataMap::uint5)::mapped_type,
-		    decltype(IODataMap::int8)::mapped_type,
-		    decltype(IODataMap::spike_events)::mapped_type,
-		    decltype(IODataMap::spike_event_output)::mapped_type>
-		    Value;
+		typedef IODataMap::Entry Value;
 
 		/**
 		 * Provided input ports provided.

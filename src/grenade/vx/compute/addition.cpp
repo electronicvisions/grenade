@@ -76,17 +76,17 @@ std::vector<std::vector<Int8>> Addition::run(
 	}
 
 	IODataMap input_map;
-	input_map.int8[m_input_vertex] = inputs;
+	input_map.data[m_input_vertex] = inputs;
 
 	std::vector<std::vector<Int8>> others(inputs.size());
 	for (auto& o : others) {
 		o = m_other;
 	}
-	input_map.int8[m_other_vertex] = others;
+	input_map.data[m_other_vertex] = others;
 
 	auto const output_map = JITGraphExecutor::run(m_graph, input_map, connections, configs);
 
-	return output_map.int8.at(m_output_vertex);
+	return std::get<std::vector<std::vector<Int8>>>(output_map.data.at(m_output_vertex));
 }
 
 template <typename Archive>

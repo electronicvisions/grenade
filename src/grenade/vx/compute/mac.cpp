@@ -391,7 +391,7 @@ std::vector<std::vector<Int8>> MAC::run(
 
 	hate::Timer input_timer;
 	IODataMap input_list;
-	input_list.uint5[m_input_vertex] = inputs;
+	input_list.data[m_input_vertex] = inputs;
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
 	JITGraphExecutor::ChipConfigs chip_configs(
@@ -402,15 +402,19 @@ std::vector<std::vector<Int8>> MAC::run(
 	    JITGraphExecutor::run(m_graph, input_list, connections, chip_configs);
 
 	hate::Timer output_timer;
-	auto const output = output_activation_map.int8.at(m_output_vertex);
+	auto const output =
+	    std::get<std::vector<std::vector<Int8>>>(output_activation_map.data.at(m_output_vertex));
 
 	if (m_enable_loopback) {
 		boost::accumulators::accumulator_set<
 		    double, boost::accumulators::features<
 		                boost::accumulators::tag::mean, boost::accumulators::tag::variance>>
 		    acc;
-		for (auto const& l : output_activation_map.spike_event_output) {
-			for (auto const& b : l.second) {
+		for (auto const& l : output_activation_map.data) {
+			if (!std::holds_alternative<std::vector<TimedSpikeFromChipSequence>>(l.second)) {
+				continue;
+			}
+			for (auto const& b : std::get<std::vector<TimedSpikeFromChipSequence>>(l.second)) {
 				halco::common::typed_array<std::vector<haldls::vx::ChipTime>, HemisphereOnDLS> t;
 				for (auto const& s : b) {
 					t[HemisphereOnDLS(s.get_label().get_neuron_label() & (1 << 13) ? 1 : 0)]

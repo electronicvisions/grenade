@@ -10,7 +10,8 @@ InputGenerator::InputGenerator(NetworkGraph const& network_graph) :
 	if (!m_network_graph.get_event_input_vertex()) {
 		throw std::runtime_error("Network graph does not feature an event input vertex.");
 	}
-	m_data.spike_events.insert({*m_network_graph.get_event_input_vertex(), {{}}});
+	m_data.data.insert(
+	    {*m_network_graph.get_event_input_vertex(), std::vector<TimedSpikeSequence>{{}}});
 }
 
 void InputGenerator::add(
@@ -26,7 +27,9 @@ void InputGenerator::add(
 		return;
 	}
 
-	auto& data_spikes = m_data.spike_events.at(*m_network_graph.get_event_input_vertex()).at(0);
+	auto& data_spikes = std::get<std::vector<TimedSpikeSequence>>(
+	                        m_data.data.at(*m_network_graph.get_event_input_vertex()))
+	                        .at(0);
 
 	auto const& neurons = m_network_graph.get_spike_labels().at(population);
 
@@ -55,7 +58,9 @@ void InputGenerator::add(
 		return;
 	}
 
-	auto& data_spikes = m_data.spike_events.at(*m_network_graph.get_event_input_vertex()).at(0);
+	auto& data_spikes = std::get<std::vector<TimedSpikeSequence>>(
+	                        m_data.data.at(*m_network_graph.get_event_input_vertex()))
+	                        .at(0);
 
 	auto const& neurons = m_network_graph.get_spike_labels().at(population);
 
@@ -106,7 +111,9 @@ void InputGenerator::add(
 IODataMap InputGenerator::done()
 {
 	assert(m_network_graph.get_event_input_vertex());
-	auto& spikes = m_data.spike_events.at(*m_network_graph.get_event_input_vertex()).at(0);
+	auto& spikes = std::get<std::vector<TimedSpikeSequence>>(
+	                   m_data.data.at(*m_network_graph.get_event_input_vertex()))
+	                   .at(0);
 	std::stable_sort(
 	    spikes.begin(), spikes.end(), [](auto const& a, auto const& b) { return a.time < b.time; });
 	return std::move(m_data);

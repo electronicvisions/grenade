@@ -54,11 +54,11 @@ std::vector<std::vector<Int8>> ReLU::run(
 	}
 
 	IODataMap input_map;
-	input_map.int8[m_input_vertex] = inputs;
+	input_map.data[m_input_vertex] = inputs;
 
 	auto const output_map = JITGraphExecutor::run(m_graph, input_map, connections, configs);
 
-	return output_map.int8.at(m_output_vertex);
+	return std::get<std::vector<std::vector<Int8>>>(output_map.data.at(m_output_vertex));
 }
 
 size_t ReLU::input_size() const

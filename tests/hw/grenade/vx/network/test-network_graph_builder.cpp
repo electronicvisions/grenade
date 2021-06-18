@@ -143,17 +143,20 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 		inputs.runtime.push_back(Timer::Value(num * isi));
 	}
 	assert(network_graph.get_event_input_vertex());
-	inputs.spike_events[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
+	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
 	// run graph with given inputs and return results
 	auto const result_map = grenade::vx::JITGraphExecutor::run(
 	    network_graph.get_graph(), inputs, connections, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
-	auto const result = result_map.spike_event_output.at(*network_graph.get_event_output_vertex());
+	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
+	    result_map.data.at(*network_graph.get_event_output_vertex()));
 
 	EXPECT_EQ(
-	    result.size(), inputs.spike_events.at(*network_graph.get_event_input_vertex()).size());
+	    result.size(), std::get<std::vector<grenade::vx::TimedSpikeSequence>>(
+	                       inputs.data.at(*network_graph.get_event_input_vertex()))
+	                       .size());
 	for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
 		auto const& spikes = result.at(i);
 		EXPECT_GE(spikes.size(), num * 0.8);
@@ -241,17 +244,20 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 		inputs.runtime.push_back(Timer::Value(num * isi));
 	}
 	assert(network_graph.get_event_input_vertex());
-	inputs.spike_events[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
+	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
 	// run graph with given inputs and return results
 	auto const result_map = grenade::vx::JITGraphExecutor::run(
 	    network_graph.get_graph(), inputs, connections, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
-	auto const result = result_map.spike_event_output.at(*network_graph.get_event_output_vertex());
+	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
+	    result_map.data.at(*network_graph.get_event_output_vertex()));
 
 	EXPECT_EQ(
-	    result.size(), inputs.spike_events.at(*network_graph.get_event_input_vertex()).size());
+	    result.size(), std::get<std::vector<grenade::vx::TimedSpikeSequence>>(
+	                       inputs.data.at(*network_graph.get_event_input_vertex()))
+	                       .size());
 	for (size_t j = 0; j < population_external.size; ++j) {
 		for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
 			auto const& spikes = result.at(i);
@@ -343,17 +349,20 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	}
 	inputs.runtime.push_back(Timer::Value(num * isi));
 	assert(network_graph.get_event_input_vertex());
-	inputs.spike_events[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
+	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
 	// run graph with given inputs and return results
 	auto const result_map = grenade::vx::JITGraphExecutor::run(
 	    network_graph.get_graph(), inputs, connections, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
-	auto const result = result_map.spike_event_output.at(*network_graph.get_event_output_vertex());
+	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
+	    result_map.data.at(*network_graph.get_event_output_vertex()));
 
 	EXPECT_EQ(
-	    result.size(), inputs.spike_events.at(*network_graph.get_event_input_vertex()).size());
+	    result.size(), std::get<std::vector<grenade::vx::TimedSpikeSequence>>(
+	                       inputs.data.at(*network_graph.get_event_input_vertex()))
+	                       .size());
 	auto const& spikes = result.at(0);
 	// count correct spikes
 	size_t matching = 0;

@@ -49,12 +49,12 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 
 	halco::common::typed_array<std::vector<SpikeLabel>, HemisphereOnDLS> labels;
 
-	std::vector<std::reference_wrapper<decltype(IODataMap::uint5)::mapped_type const>> uvalue;
+	std::vector<std::reference_wrapper<std::vector<std::vector<UInt5>> const>> uvalue;
 	for (auto const& v : value) {
-		uvalue.push_back(std::get<decltype(IODataMap::uint5)::mapped_type>(v));
+		uvalue.push_back(std::get<std::vector<std::vector<UInt5>>>(v));
 	}
 
-	decltype(IODataMap::spike_events)::mapped_type events(batch_size);
+	std::vector<TimedSpikeSequence> events(batch_size);
 
 	for (size_t batch = 0; batch < batch_size; ++batch) {
 		// reserve labels

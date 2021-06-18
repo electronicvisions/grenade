@@ -31,7 +31,8 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 		}
 	}
 	// convert spikes
-	auto const& spikes = data.spike_event_output.at(*network_graph.get_event_output_vertex());
+	auto const& spikes = std::get<std::vector<TimedSpikeFromChipSequence>>(
+	    data.data.at(*network_graph.get_event_output_vertex()));
 	std::vector<std::vector<
 	    std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
 	    ret(spikes.size());
@@ -58,7 +59,8 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 		return ret;
 	}
 	// convert samples
-	auto const& samples = data.madc_samples.at(*network_graph.get_madc_sample_output_vertex());
+	auto const& samples = std::get<std::vector<TimedMADCSampleFromChipSequence>>(
+	    data.data.at(*network_graph.get_madc_sample_output_vertex()));
 	std::vector<
 	    std::vector<std::pair<haldls::vx::v2::ChipTime, haldls::vx::v2::MADCSampleFromChip::Value>>>
 	    ret(samples.size());

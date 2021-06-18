@@ -2,12 +2,14 @@
 #include "grenade/vx/event.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph_representation.h"
+#include "grenade/vx/port.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/timer.h"
 #include "hate/visibility.h"
 #include <map>
 #include <memory>
 #include <mutex>
+#include <variant>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -17,13 +19,28 @@ namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
  */
 struct GENPYBIND(visible) IODataMap
 {
+	typedef std::variant<
+	    std::vector<std::vector<UInt32>>,
+	    std::vector<std::vector<UInt5>>,
+	    std::vector<std::vector<Int8>>,
+	    std::vector<TimedSpikeSequence>,
+	    std::vector<TimedSpikeFromChipSequence>,
+	    std::vector<TimedMADCSampleFromChipSequence>>
+	    Entry;
+
+	/**
+	 * Get whether the data held in the entry match the port shape and type information.
+	 * @param entry Entry to check
+	 * @param port Port to check
+	 * @return  Boolean value
+	 */
+	static bool is_match(Entry const& entry, Port const& port) SYMBOL_VISIBLE;
+
 	/**
 	 * Data is connected to specified vertex descriptors.
 	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
-	 * @tparam Data Batch-entry data type
 	 */
-	template <typename Data>
-	using DataTypeMap = std::map<detail::vertex_descriptor, std::vector<Data>>;
+	std::map<detail::vertex_descriptor, Entry> data GENPYBIND(hidden);
 
 	/**
 	 * Runtime time-interval data.
@@ -32,19 +49,6 @@ struct GENPYBIND(visible) IODataMap
 	 * If the runtime data is empty it is ignored.
 	 */
 	std::vector<haldls::vx::v2::Timer::Value> runtime;
-
-	/** UInt32 data. */
-	DataTypeMap<std::vector<UInt32>> uint32 GENPYBIND(hidden);
-	/** UInt5 data. */
-	DataTypeMap<std::vector<UInt5>> uint5 GENPYBIND(hidden);
-	/** Int8 data. */
-	DataTypeMap<std::vector<Int8>> int8 GENPYBIND(hidden);
-	/** Spike input events. */
-	DataTypeMap<TimedSpikeSequence> spike_events;
-	/** Spike output events. */
-	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
-	/** MADC output events. */
-	DataTypeMap<TimedMADCSampleFromChipSequence> madc_samples;
 
 	IODataMap() SYMBOL_VISIBLE;
 
@@ -104,29 +108,16 @@ private:
  */
 struct ConstantReferenceIODataMap
 {
+	typedef IODataMap::Entry Entry;
+
 	/**
 	 * Data is connected to specified vertex descriptors.
 	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
-	 * @tparam Data Batch-entry data type
 	 */
-	template <typename Data>
-	using DataTypeMap = std::map<detail::vertex_descriptor, std::vector<Data> const&>;
+	std::map<detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
 	std::vector<haldls::vx::v2::Timer::Value> runtime;
-
-	/** UInt32 data. */
-	DataTypeMap<std::vector<UInt32>> uint32;
-	/** UInt5 data. */
-	DataTypeMap<std::vector<UInt5>> uint5;
-	/** Int8 data. */
-	DataTypeMap<std::vector<Int8>> int8;
-	/** Spike input events. */
-	DataTypeMap<TimedSpikeSequence> spike_events;
-	/** Spike output events. */
-	DataTypeMap<TimedSpikeFromChipSequence> spike_event_output;
-	/** MADC output events. */
-	DataTypeMap<TimedMADCSampleFromChipSequence> madc_samples;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

@@ -53,7 +53,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	// fill graph inputs
 	grenade::vx::IODataMap input_list;
-	input_list.spike_events[v1] = inputs;
+	input_list.data[v1] = inputs;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs.insert({DLSGlobal(), grenade::vx::ChipConfig()});
@@ -62,11 +62,14 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	auto const result_map =
 	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
 
-	EXPECT_EQ(result_map.spike_event_output.size(), 1);
+	EXPECT_EQ(result_map.data.size(), 1);
 
-	EXPECT_TRUE(result_map.spike_event_output.find(v6) != result_map.spike_event_output.end());
-	EXPECT_EQ(result_map.spike_event_output.at(v6).size(), inputs.size());
-	return result_map.spike_event_output.at(v6);
+	EXPECT_TRUE(result_map.data.find(v6) != result_map.data.end());
+	EXPECT_EQ(
+	    std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(result_map.data.at(v6))
+	        .size(),
+	    inputs.size());
+	return std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(result_map.data.at(v6));
 }
 
 TEST(JITGraphExecutor, EventLoopback)
