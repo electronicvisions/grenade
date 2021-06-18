@@ -8,6 +8,7 @@ using namespace grenade::vx::vertex;
 TEST(ExternalInput, General)
 {
 	EXPECT_NO_THROW(ExternalInput(ConnectionType::DataInt8, 123));
+	EXPECT_THROW(ExternalInput(ConnectionType::Int8, 123), std::runtime_error);
 
 	ExternalInput vertex(ConnectionType::DataInt8, 123);
 	EXPECT_EQ(vertex.inputs().size(), 0);

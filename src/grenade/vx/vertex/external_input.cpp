@@ -8,7 +8,51 @@ namespace grenade::vx::vertex {
 
 ExternalInput::ExternalInput(ConnectionType const output_type, size_t const size) :
     m_size(size), m_output_type(output_type)
-{}
+{
+	switch (output_type) {
+		case ConnectionType::DataUInt32: {
+			m_output_type = output_type;
+			break;
+		}
+		case ConnectionType::DataUInt5: {
+			m_output_type = output_type;
+			break;
+		}
+		case ConnectionType::DataInt8: {
+			m_output_type = output_type;
+			break;
+		}
+		case ConnectionType::DataTimedSpikeSequence: {
+			if (m_size > 1) {
+				throw std::runtime_error(
+				    "ExternalInput only supports size(1) for DataTimedSpikeSequence.");
+			}
+			m_output_type = output_type;
+			break;
+		}
+		case ConnectionType::DataTimedSpikeFromChipSequence: {
+			m_output_type = output_type;
+			if (m_size > 1) {
+				throw std::runtime_error(
+				    "ExternalInput only supports size(1) for DataTimedSpikeFromChipSequence.");
+			}
+			break;
+		}
+		case ConnectionType::DataTimedMADCSampleFromChipSequence: {
+			m_output_type = output_type;
+			if (m_size > 1) {
+				throw std::runtime_error(
+				    "ExternalInput only supports size(1) for DataTimedMADCSampleFromChipSequence.");
+			}
+			break;
+		}
+		default: {
+			std::stringstream ss;
+			ss << "Specified ConnectionType(" << output_type << ") to ExternalInput not supported.";
+			throw std::runtime_error(ss.str());
+		}
+	}
+}
 
 Port ExternalInput::output() const
 {
