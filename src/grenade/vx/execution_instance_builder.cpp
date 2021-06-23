@@ -634,9 +634,14 @@ void ExecutionInstanceBuilder::process(
 		m_madc_readout_vertex = vertex;
 		m_post_vertices.push_back(vertex);
 	} else {
+		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+
 		stadls::vx::PlaybackProgram::madc_samples_type madc_samples;
 		for (auto const& program : m_chunked_program) {
 			auto const local_madc_samples = program.get_madc_samples();
+
+			LOG4CXX_INFO(logger, "process(): " << local_madc_samples.size() << " MADC samples");
+
 			madc_samples.insert(
 			    madc_samples.end(), local_madc_samples.begin(), local_madc_samples.end());
 		}
