@@ -608,7 +608,9 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 		vertex::SynapseArrayViewSparse config(
 		    synram, std::move(rs), std::move(cs), std::move(syns));
 
-		assert(!resources.projections.contains(descriptor));
+		assert(
+		    !resources.projections.contains(descriptor) ||
+		    !resources.projections.at(descriptor).synapses.contains(hemisphere));
 		resources.projections[descriptor].synapses[hemisphere] =
 		    graph.add(config, instance, inputs.at(hemisphere));
 	}

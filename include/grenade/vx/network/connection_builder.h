@@ -102,7 +102,10 @@ struct ConnectionBuilder
 	    FreeForExternalSynapseDrivers;
 
 	std::vector<UsedSynapseRow> m_used_synapse_rows_internal{};
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS> m_used_padi_rows;
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	    m_used_padi_rows_even;
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	    m_used_padi_rows_odd;
 	FreeForExternalSynapseDrivers m_free_for_external_synapse_drivers;
 	std::map<
 	    halco::hicann_dls::vx::v2::HemisphereOnDLS,

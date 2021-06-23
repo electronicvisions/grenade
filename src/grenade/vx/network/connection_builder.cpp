@@ -55,9 +55,38 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 	return false;
 }
 
+namespace {
+
+/**
+ * Parity to make neurons in both hemispheres distinguishable.
+ * Instead of choosing neuron.toNeuronRowOnDLS() as parity, which would look like
+ * 0 0
+ * 1 1
+ * we chose equal parity for top-left and bottom-right, as well as top-right and bottom-left like:
+ * 0 1
+ * 1 0
+ * This results in ability to utilize all synapse drivers with neurons from a single hemisphere,
+ * which for example is a requirement when connecting all-to-all within all neurons from a
+ * hemisphere.
+ */
+bool get_parity(AtomicNeuronOnDLS const neuron)
+{
+	return neuron.toNeuronRowOnDLS().value() != neuron.toNeuronColumnOnDLS()
+	                                                .toNeuronEventOutputOnDLS()
+	                                                .toNeuronBackendConfigBlockOnDLS();
+}
+
+bool get_parity(SynapseDriverOnDLS const syndrv)
+{
+	return syndrv.toSynapseDriverOnSynapseDriverBlock().toSynapseDriverOnPADIBus() % 2;
+}
+
+} // namespace
+
 ConnectionBuilder::ConnectionBuilder()
 {
-	m_used_padi_rows.fill(0);
+	m_used_padi_rows_even.fill(0);
+	m_used_padi_rows_odd.fill(0);
 }
 
 std::vector<ConnectionBuilder::UsedSynapseRow> const& ConnectionBuilder::get_used_synapse_rows()
@@ -88,7 +117,10 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
 		    used_synapse_row.synapse_driver.toSynapseDriverOnSynapseDriverBlock()
 		        .toPADIBusOnPADIBusBlock(),
 		    used_synapse_row.synapse_driver.toSynapseDriverBlockOnDLS().toPADIBusBlockOnDLS());
-		if ((used_padi_bus == padi_bus) && (used_synapse_row.receptor_type == receptor_type) &&
+		auto const matches_parity =
+		    (get_parity(pre) == get_parity(used_synapse_row.synapse_driver));
+		if (matches_parity && (used_padi_bus == padi_bus) &&
+		    (used_synapse_row.receptor_type == receptor_type) &&
 		    !used_synapse_row.neurons_post.contains(post)) {
 			used_synapse_row.neurons_post.insert(post);
 			return used_synapse_row;
@@ -96,8 +128,10 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
 	}
 
 	// check if there is a driver available
-	auto& padi_row_index = m_used_padi_rows.at(padi_bus);
-	if (padi_row_index >= SynapseDriverOnPADIBus::size * SynapseRowOnSynapseDriver::size) {
+	auto& padi_row_index =
+	    (get_parity(pre) ? m_used_padi_rows_odd : m_used_padi_rows_even).at(padi_bus);
+	if (padi_row_index >=
+	    SynapseDriverOnPADIBus::size * SynapseRowOnSynapseDriver::size / NeuronRowOnDLS::size) {
 		throw std::runtime_error(
 		    "Too many connections. Try decreasing the weight values in a way they do not exceed "
 		    "large multiples of the maximum synaptic weight (63) or reduce the number of "
@@ -106,7 +140,9 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
 
 	// set synapse driver row address compare mask
 	auto const syndrv(
-	    SynapseDriverOnPADIBus(padi_row_index / SynapseRowOnSynapseDriver::size)
+	    SynapseDriverOnPADIBus(
+	        (padi_row_index / SynapseRowOnSynapseDriver::size) * NeuronRowOnDLS::size +
+	        get_parity(pre))
 	        .toSynapseDriverOnSynapseDriverBlock()[padi_bus.toPADIBusOnPADIBusBlock()]);
 	SynapseDriverOnDLS const global_syndrv(
 	    syndrv, padi_bus.toPADIBusBlockOnDLS().toSynapseDriverBlockOnDLS());
@@ -183,7 +219,7 @@ void ConnectionBuilder::calculate_free_for_external_synapse_drivers()
 {
 	size_t free_drivers = 0;
 	for (auto const padibus : iter_all<PADIBusOnDLS>()) {
-		auto used = m_used_padi_rows.at(padibus);
+		auto used = std::max(m_used_padi_rows_odd.at(padibus), m_used_padi_rows_even.at(padibus));
 		// Higher PADI bus on block is given for non-zero NeuronEventOutputOnNeuronBackendBlock.
 		// This results in bits [8,9] being filled with its value and therefore restriction on the
 		// allowed mask.
@@ -211,16 +247,16 @@ void ConnectionBuilder::calculate_free_for_external_synapse_drivers()
 			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11111);
 		} else if (used <= 4) {
 			free_drivers = 28;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11100);
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11101);
 		} else if (used <= 8) {
 			free_drivers = 24;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11000);
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11001);
 		} else if (used <= 16) {
 			free_drivers = 16;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b10000);
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b10001);
 		} else {
 			free_drivers = 0;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b00000);
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b00001);
 		}
 
 		// The free synapse drivers are the ones with higher index on PADI-bus
@@ -338,19 +374,6 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 	ConnectionBuilder builder;
 
 	assert(network);
-	// TODO (Issue FIXME): This restrictions should not be present, but the current routing only
-	// supports it.
-	for (auto const& [_, pop] : network->populations) {
-		if (!std::holds_alternative<Population>(pop)) {
-			continue;
-		}
-		auto const& population = std::get<Population>(pop);
-		for (auto const& neuron : population.neurons) {
-			if (neuron.toNeuronRowOnDLS() == 1) {
-				throw std::runtime_error("Routing only supports neurons on the top hemisphere.");
-			}
-		}
-	}
 
 	// check that no connection between equal ends is contained in multiple projections
 	for (auto const& [descriptor, projection] : network->projections) {
@@ -451,9 +474,6 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 
 	for (auto const& [receptor_type, p] : connections_external_unplaced) {
 		for (auto const& [pre, nrns] : p) {
-			assert(
-			    nrns.size() ==
-			    1); // FIXME: external neurons can't be connected to neurons on both hemispheres
 			for (auto const& [row, neurons] : nrns) {
 				auto const synapse_driver = builder.get_synapse_driver(
 				    pre, neurons, row.toHemisphereOnDLS(), receptor_type);
@@ -464,7 +484,9 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 						    network->populations.at(projection.population_post));
 						for (size_t i = 0; i < projection.connections.size(); ++i) {
 							auto const& connection = projection.connections.at(i);
-							if (connection.index_pre == pre.second) {
+							auto const post = population_post.neurons.at(connection.index_post);
+							if ((connection.index_pre == pre.second) &&
+							    (post.toNeuronRowOnDLS() == row)) {
 								auto const post = population_post.neurons.at(connection.index_post);
 								assert(post.toNeuronRowOnDLS() == row);
 								auto const placed_connection = builder.get_placed_connection(
@@ -527,10 +549,11 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 			size_t const neuron_channel_block =
 			    neuron.toNeuronColumnOnDLS() /
 			    (NeuronColumnOnDLS::size / NeuronBackendConfigBlockOnDLS::size);
-			assert(neuron.toNeuronRowOnDLS() == NeuronRowOnDLS::top);
 			// uniquely identify a neuron column in the lower 6-bit -> at a synapse.
 			// This leads to full usage possibility of the top neurons
 			haldls::vx::v2::NeuronBackendConfig::AddressOut label(
+			    (get_parity(neuron) * NeuronColumnOnDLS::size /
+			     NeuronEventOutputOnNeuronBackendBlock::size) +
 			    neuron_on_channel + (neuron_channel_block * neuron_columns_per_channel));
 			local_neuron_labels.push_back(label);
 		}
@@ -564,10 +587,16 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 
 	// calculate crossbar node config
 	auto& crossbar_nodes = result.crossbar_nodes;
-	// enable recurrent connections within top half
+	// enable recurrent connections
 	for (auto const cinput : iter_all<NeuronEventOutputOnDLS>()) {
 		CrossbarNodeOnDLS const coord(
 		    CrossbarOutputOnDLS(cinput % PADIBusOnPADIBusBlock::size),
+		    cinput.toCrossbarInputOnDLS());
+		crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode();
+	}
+	for (auto const cinput : iter_all<NeuronEventOutputOnDLS>()) {
+		CrossbarNodeOnDLS const coord(
+		    CrossbarOutputOnDLS(cinput % PADIBusOnPADIBusBlock::size + PADIBusOnPADIBusBlock::size),
 		    cinput.toCrossbarInputOnDLS());
 		crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode();
 	}
