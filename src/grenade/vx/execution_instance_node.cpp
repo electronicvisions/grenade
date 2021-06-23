@@ -33,7 +33,9 @@ void check_link_notifications(
 		notis_per_phy[noti.get_phy()] = noti;
 	}
 
-	if (notis_per_phy.size() < n_expected_notifications) {
+	// FPGA will send one up notification per phy after a successful highspeed init;
+	// if no HS init is performed and the links are stable there will be zero notis.
+	if (!notis_per_phy.empty() && (notis_per_phy.size() < n_expected_notifications)) {
 		LOG4CXX_ERROR(logger, "Not all configured highspeed links sent link notifications.");
 	}
 
