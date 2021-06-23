@@ -44,7 +44,6 @@ struct ConnectionBuilder
 	{
 		halco::hicann_dls::vx::v2::SynapseDriverOnDLS synapse_driver;
 		halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver synapse_row;
-		halco::hicann_dls::vx::v2::AtomicNeuronOnDLS neuron_pre;
 		std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> neurons_post;
 		Projection::ReceptorType receptor_type;
 	};

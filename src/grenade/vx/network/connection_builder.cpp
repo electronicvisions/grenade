@@ -33,18 +33,6 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
     halco::hicann_dls::vx::v2::AtomicNeuronOnDLS const post,
     Projection::ReceptorType const receptor_type)
 {
-	// check if a synapse driver for the presynaptic neuron with given
-	// receptor type was already allocated and if its synapse to the
-	// postsynaptic neuron is still available
-	for (auto& used_synapse_row : m_used_synapse_rows_internal) {
-		if ((used_synapse_row.neuron_pre == pre) &&
-		    (used_synapse_row.receptor_type == receptor_type) &&
-		    !used_synapse_row.neurons_post.contains(post)) {
-			used_synapse_row.neurons_post.insert(post);
-			return used_synapse_row;
-		}
-	}
-
 	// calculate crossbar output, PADI bus
 	// neurons per crossbar input channel
 	auto const crossbar_input =
@@ -53,6 +41,21 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
 	PADIBusOnPADIBusBlock const padi_bus_on_block(
 	    crossbar_input.toEnum() % PADIBusOnPADIBusBlock::size);
 	PADIBusOnDLS const padi_bus(padi_bus_on_block, padi_bus_block);
+
+	// check if a synapse driver for the presynaptic neuron's padi bus with given
+	// receptor type was already allocated and if its synapse to the
+	// postsynaptic neuron is still available
+	for (auto& used_synapse_row : m_used_synapse_rows_internal) {
+		PADIBusOnDLS const used_padi_bus(
+		    used_synapse_row.synapse_driver.toSynapseDriverOnSynapseDriverBlock()
+		        .toPADIBusOnPADIBusBlock(),
+		    used_synapse_row.synapse_driver.toSynapseDriverBlockOnDLS().toPADIBusBlockOnDLS());
+		if ((used_padi_bus == padi_bus) && (used_synapse_row.receptor_type == receptor_type) &&
+		    !used_synapse_row.neurons_post.contains(post)) {
+			used_synapse_row.neurons_post.insert(post);
+			return used_synapse_row;
+		}
+	}
 
 	// check if there is a driver available
 	auto& padi_row_index = m_used_padi_rows.at(padi_bus);
@@ -76,7 +79,6 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
 	UsedSynapseRow const used_synapse_row{
 	    global_syndrv,
 	    SynapseRowOnSynapseDriver(padi_row_index % SynapseRowOnSynapseDriver::size),
-	    pre,
 	    {post},
 	    receptor_type};
 	m_used_synapse_rows_internal.push_back(used_synapse_row);
@@ -146,7 +148,27 @@ void ConnectionBuilder::calculate_free_for_external_synapse_drivers()
 {
 	size_t free_drivers = 0;
 	for (auto const padibus : iter_all<PADIBusOnDLS>()) {
-		auto const used = m_used_padi_rows.at(padibus);
+		auto used = m_used_padi_rows.at(padibus);
+		// Higher PADI bus on block is given for non-zero NeuronEventOutputOnNeuronBackendBlock.
+		// This results in bits [8,9] being filled with its value and therefore restriction on the
+		// allowed mask.
+		// Example:
+		// - NeuronColumnOnDLS(32) is located on NeuronEventOutputOnNeuronBackendBlock(1)
+		// -> bit 8 is set in 14-bit crossbar label and 11-bit PADI-label (crossbar: 00000100000000)
+		// -> equals bit 2 in 5-bit RowAddressCompareMask, therefore until this bit the mask is to
+		//    be zero (synapse driver: 00100xxxxxx, x is forwarded to synapses)
+		// -> calculation below can be used when setting 4 < used <=8
+		// -> for NeuronEventOutputOnNeuronBackendBlock(2,3) the calculation below can be used for
+		//    8 < used <= 16, since bit 9 (and maybe 8) is set: (crossbar: 00001?00000000, synapse
+		//    driver: 01?00xxxxxx)
+		auto const bus_on_block = padibus.toPADIBusOnPADIBusBlock();
+		if (used) {
+			if (bus_on_block.value() == 1) {
+				used = std::max(used, static_cast<size_t>(8));
+			} else if (bus_on_block.value() > 1) {
+				used = std::max(used, static_cast<size_t>(16));
+			}
+		}
 
 		haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask config;
 		if (used == 0) {
