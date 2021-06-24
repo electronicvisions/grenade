@@ -69,8 +69,8 @@ def build(bld):
         target = 'grenade_ppu_base_vx',
         features = 'cxx',
         source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp'),
-        use = ['grenade_inc', 'nux_vx', 'nux_runtime_vx'],
-        env = bld.all_envs['nux_vx'],
+        use = ['grenade_inc', 'nux_vx_v2', 'nux_runtime_vx_v2'],
+        env = bld.all_envs['nux_vx_v2'],
     )
 
     bld(
