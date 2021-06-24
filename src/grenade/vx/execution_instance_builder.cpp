@@ -180,9 +180,14 @@ void ExecutionInstanceBuilder::process(
 		m_event_output_vertex = vertex;
 		m_post_vertices.push_back(vertex);
 	} else {
+		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+
 		stadls::vx::PlaybackProgram::spikes_type spikes;
 		for (auto const& program : m_chunked_program) {
 			auto const local_spikes = program.get_spikes();
+
+			LOG4CXX_INFO(logger, "process(): " << local_spikes.size() << " spikes");
+
 			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
 		}
 		m_local_data.spike_event_output[vertex] = filter_events(spikes);
