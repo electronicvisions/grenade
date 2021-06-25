@@ -433,20 +433,10 @@ void ExecutionInstanceBuilder::process(
 		for (auto& t : tmps) {
 			t.resize(1 /* data.output().size */);
 		}
-		// We compare with <= and not < and therefore chose the last highest value.
 		size_t i = 0;
 		for (auto const& entry : local_data) {
-			uint32_t index = 0;
-			auto max = entry.front();
-			uint32_t j = 0;
-			for (auto const e : entry) {
-				if (max <= e) {
-					max = e;
-					index = j;
-				}
-				j++;
-			}
-			tmps.at(i).at(0) = UInt32(index);
+			tmps.at(i).at(0) =
+			    UInt32(std::distance(entry.begin(), std::max_element(entry.begin(), entry.end())));
 			i++;
 		}
 		m_local_data.uint32[vertex] = tmps;
