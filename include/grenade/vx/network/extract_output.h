@@ -53,8 +53,8 @@ GENPYBIND_MANUAL({
 		    }
 		    assert(spikes.size() == 1);
 		    auto const neuron_spikes = spikes.at(0);
-		    pybind11::array_t<float> times({neuron_spikes.size()});
-		    pybind11::array_t<int> neurons({neuron_spikes.size()});
+		    pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(neuron_spikes.size())});
+		    pybind11::array_t<int> neurons({static_cast<pybind11::ssize_t>(neuron_spikes.size())});
 		    for (size_t i = 0; i < neuron_spikes.size(); ++i) {
 			    auto const& spike = neuron_spikes.at(i);
 			    times.mutable_at(i) = convert_ms(spike.first);
@@ -71,8 +71,8 @@ GENPYBIND_MANUAL({
 		}
 		assert(samples.size() == 1);
 		auto const madc_samples = samples.at(0);
-		pybind11::array_t<float> times({madc_samples.size()});
-		pybind11::array_t<int> values({madc_samples.size()});
+		pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(madc_samples.size())});
+		pybind11::array_t<int> values({static_cast<pybind11::ssize_t>(madc_samples.size())});
 		for (size_t i = 0; i < madc_samples.size(); ++i) {
 			auto const& sample = madc_samples.at(i);
 			times.mutable_at(i) = convert_ms(sample.first);
