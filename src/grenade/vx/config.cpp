@@ -29,9 +29,13 @@ bool ChipConfig::operator!=(ChipConfig const& other) const
 	return unequal(*this, other);
 }
 
-ChipConfig convert_to_chip(stadls::vx::v2::Dumper::done_type const& cocos)
+ChipConfig convert_to_chip(
+    stadls::vx::v2::Dumper::done_type const& cocos, std::optional<ChipConfig> const& previous)
 {
 	ChipConfig chip;
+	if (previous) {
+		chip = *previous;
+	}
 	auto const apply_coco = [&chip](auto const& coco) {
 		auto const& [coord, config] = coco;
 		typedef std::decay_t<decltype(config)> config_t;

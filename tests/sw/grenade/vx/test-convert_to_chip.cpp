@@ -30,7 +30,7 @@ TEST(convert_to_chip, General)
 	buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()] =
 	    !buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()];
 	chip.readout_source_selection.set_enable_buffer_to_pad(buffer_to_pad);
-	chip.madc_config.set_enable_calibration(chip.madc_config.get_enable_calibration());
+	chip.madc_config.set_enable_calibration(!chip.madc_config.get_enable_calibration());
 
 	PlaybackProgramBuilderDumper dumper;
 	for (auto const node : iter_all<CrossbarNodeOnDLS>()) {
@@ -56,4 +56,37 @@ TEST(convert_to_chip, General)
 	auto const converted_chip = convert_to_chip(cocos);
 
 	EXPECT_EQ(converted_chip, chip);
+
+	// resetting enable_calibration
+	chip.madc_config.set_enable_calibration(!chip.madc_config.get_enable_calibration());
+	chip.madc_config.set_enable_dummy_data(!chip.madc_config.get_enable_dummy_data());
+
+	ChipConfig chip_previous;
+	chip_previous.madc_config.set_enable_dummy_data(
+	    !chip_previous.madc_config.get_enable_dummy_data());
+
+	dumper = PlaybackProgramBuilderDumper();
+	for (auto const node : iter_all<CrossbarNodeOnDLS>()) {
+		dumper.write(node, chip.crossbar_nodes[node]);
+	}
+	dumper.write(ReadoutSourceSelectionOnDLS(), chip.readout_source_selection);
+	// leaving out madc_config here
+	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
+		dumper.write(hemisphere.toSynramOnDLS(), chip.hemispheres[hemisphere].synapse_matrix);
+		dumper.write(
+		    hemisphere.toCommonPADIBusConfigOnDLS(),
+		    chip.hemispheres[hemisphere].common_padi_bus_config);
+
+		for (auto const syndrv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
+			dumper.write(
+			    SynapseDriverOnDLS(syndrv, hemisphere.toSynapseDriverBlockOnDLS()),
+			    chip.hemispheres[hemisphere].synapse_driver_block[syndrv]);
+		}
+	}
+
+	auto const cocos_partial = dumper.done();
+
+	auto const converted_chip_with_previous = convert_to_chip(cocos_partial, chip_previous);
+
+	EXPECT_EQ(converted_chip_with_previous, chip);
 }

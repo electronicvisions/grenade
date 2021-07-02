@@ -13,6 +13,7 @@
 #include "lola/vx/v2/neuron.h"
 #include "lola/vx/v2/synapse.h"
 #include "stadls/vx/v2/dumper.h"
+#include <optional>
 #include <boost/hana/adapt_struct.hpp>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -95,9 +96,11 @@ public:
  * Convert the PlaybackProgramBuilderDumper result to a ChipConfig.
  * This conversion is not bijective.
  * @param cocos Coordinate container pair sequence
+ * @param previous Optional previous ChipConfig to apply changes to
  */
-ChipConfig GENPYBIND(visible)
-    convert_to_chip(stadls::vx::v2::Dumper::done_type const& cocos) SYMBOL_VISIBLE;
+ChipConfig GENPYBIND(visible) convert_to_chip(
+    stadls::vx::v2::Dumper::done_type const& cocos,
+    std::optional<ChipConfig> const& previous = std::nullopt) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx
 
