@@ -353,6 +353,11 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 		        network->populations.at(projection.population_pre))) {
 			continue;
 		}
+		if (projection.connections.empty()) {
+			placed_connections.emplace(
+			    std::make_pair(p, std::vector<std::vector<RoutingResult::PlacedConnection>>{}));
+			continue;
+		}
 		auto const& population_pre =
 		    std::get<Population>(network->populations.at(projection.population_pre));
 		auto const& population_post =
@@ -382,6 +387,11 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 	for (auto const& [p, projection] : network->projections) {
 		if (!std::holds_alternative<ExternalPopulation>(
 		        network->populations.at(projection.population_pre))) {
+			continue;
+		}
+		if (projection.connections.empty()) {
+			placed_connections.emplace(
+			    std::make_pair(p, std::vector<std::vector<RoutingResult::PlacedConnection>>{}));
 			continue;
 		}
 		auto const& population_post =

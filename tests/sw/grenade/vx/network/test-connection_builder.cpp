@@ -127,3 +127,22 @@ TEST(build_routing, WeightOutOfRange)
 	auto network = builder.done();
 	EXPECT_THROW(grenade::vx::network::build_routing(network), std::out_of_range);
 }
+
+TEST(build_routing, EmptyProjection)
+{
+	NetworkBuilder builder;
+
+	Population population({AtomicNeuronOnDLS(Enum(0))}, {true});
+
+	auto descriptor = builder.add(population);
+
+	// empty projection
+	Projection projection(Projection::ReceptorType::excitatory, {}, descriptor, descriptor);
+
+	auto const projection_descriptor = builder.add(projection);
+
+	auto network = builder.done();
+	auto const routing_result = grenade::vx::network::build_routing(network);
+
+	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
+}

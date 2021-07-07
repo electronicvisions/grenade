@@ -157,12 +157,12 @@ void NetworkGraphBuilder::add_population(
 	hate::Timer timer;
 	if (resources.populations.contains(
 	        descriptor)) { // population already added, readd by data-reference with new input
-		for (auto& [hemisphere, neuron_view_vertex] :
-		     resources.populations.at(descriptor).neurons) {
+		for (auto const& [hemisphere, new_input] : input) {
+			auto& neuron_view_vertex = resources.populations.at(descriptor).neurons.at(hemisphere);
 			// use all former inputs
 			auto inputs = get_inputs(graph, neuron_view_vertex);
 			// append new input
-			inputs.push_back(input.at(hemisphere));
+			inputs.push_back(new_input);
 			// add by using present data from former vertex with new inputs
 			neuron_view_vertex = graph.add(neuron_view_vertex, instance, inputs);
 		}
@@ -408,6 +408,10 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
     RoutingResult const& connection_result,
     coordinate::ExecutionInstance const& instance) const
 {
+	if (connection_result.connections.at(descriptor).empty()) {
+		resources.projections[descriptor] = {};
+		return;
+	}
 	hate::Timer timer;
 	// get columns of post-synaptic population
 	std::map<HemisphereOnDLS, vertex::SynapseArrayViewSparse::Columns> columns;
