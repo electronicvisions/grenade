@@ -34,6 +34,12 @@ public:
 	PopulationDescriptor add(ExternalPopulation const& population) SYMBOL_VISIBLE;
 
 	/**
+	 * Add on-chip background spike source population.
+	 * @param population Population to add
+	 */
+	PopulationDescriptor add(BackgroundSpikeSourcePopulation const& population) SYMBOL_VISIBLE;
+
+	/**
 	 * Add projection between already added populations.
 	 * The projection is expected to be free of single connections present in already added
 	 * projections. A single connection is considered equal, if it connects the same pre- and
@@ -54,7 +60,10 @@ public:
 	std::shared_ptr<Network> done() SYMBOL_VISIBLE;
 
 private:
-	std::map<PopulationDescriptor, std::variant<Population, ExternalPopulation>> m_populations{};
+	std::map<
+	    PopulationDescriptor,
+	    std::variant<Population, ExternalPopulation, BackgroundSpikeSourcePopulation>>
+	    m_populations{};
 	std::map<ProjectionDescriptor, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	log4cxx::Logger* m_logger;

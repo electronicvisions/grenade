@@ -41,6 +41,14 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 		}
 	}
 
+	os << "Background neuron labels:\n";
+	for (auto const& [descriptor, labels] : result.background_spike_source_labels) {
+		os << '\t' << descriptor << '\n';
+		for (auto const& [hemisphere, label] : labels) {
+			os << "\t\t" << hemisphere << ": " << label << '\n';
+		}
+	}
+
 	os << "Internal neuron labels:\n";
 	for (auto const& [descriptor, labels] : result.internal_neuron_labels) {
 		os << '\t' << descriptor << '\n';

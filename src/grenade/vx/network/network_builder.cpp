@@ -59,14 +59,55 @@ PopulationDescriptor NetworkBuilder::add(ExternalPopulation const& population)
 	return descriptor;
 }
 
+PopulationDescriptor NetworkBuilder::add(BackgroundSpikeSourcePopulation const& population)
+{
+	// check that supplied coordinate doesn't overlap with already added populations
+	for (auto const& [descriptor, other] : m_populations) {
+		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(other)) {
+			continue;
+		}
+		auto const& o = std::get<BackgroundSpikeSourcePopulation>(other);
+		for (auto const& [hemisphere, bus] : population.coordinate) {
+			if (o.coordinate.contains(hemisphere) && o.coordinate.at(hemisphere) == bus) {
+				std::stringstream ss;
+				ss << "Background spike source location(" << hemisphere << ", " << bus
+				   << ") provided by Population already present in other population(" << descriptor
+				   << ").";
+				throw std::runtime_error(ss.str());
+			}
+		}
+	}
+	if (population.config.enable_random) {
+		// only power of two size supported
+		if (population.size && (population.size & (population.size - 1))) {
+			throw std::runtime_error(
+			    "Population size " + std::to_string(population.size) +
+			    " of background spike source needs to be power of two.");
+		}
+	} else {
+		// only size one supported
+		if (population.size != 1) {
+			throw std::runtime_error(
+			    "Population size " + std::to_string(population.size) +
+			    " of background spike source needs to be one for regular spike train.");
+		}
+	}
+
+	PopulationDescriptor descriptor(m_populations.size());
+	m_populations.insert({descriptor, population});
+	LOG4CXX_TRACE(
+	    m_logger, "add(): Added background spike source population(" << descriptor << ").");
+	return descriptor;
+}
+
 ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 {
 	hate::Timer timer;
 	auto const& population_pre = m_populations.at(projection.population_pre);
 	auto const& population_post = m_populations.at(projection.population_post);
 
-	// check that target population is not external
-	if (std::holds_alternative<ExternalPopulation>(population_post)) {
+	// check that target population is internal population
+	if (!std::holds_alternative<Population>(population_post)) {
 		throw std::runtime_error(
 		    "Projections with external post-synaptic population not supported.");
 	}
@@ -74,7 +115,8 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	// check that no single connection index is out of range of its population
 	auto const get_size = hate::overloaded(
 	    [](Population const& p) { return p.neurons.size(); },
-	    [](ExternalPopulation const& p) { return p.size; });
+	    [](ExternalPopulation const& p) { return p.size; },
+	    [](BackgroundSpikeSourcePopulation const& p) { return p.size; });
 	auto const size_pre = std::visit(get_size, population_pre);
 	auto const size_post = std::visit(get_size, population_post);
 
@@ -96,6 +138,21 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	if (unique_connections.size() != projection.connections.size()) {
 		throw std::runtime_error(
 		    "Projection to be added features same single connection multiple times.");
+	}
+
+	// check that if source is background the hemisphere matches
+	if (std::holds_alternative<BackgroundSpikeSourcePopulation>(
+	        m_populations.at(projection.population_pre))) {
+		auto const& pre = std::get<BackgroundSpikeSourcePopulation>(population_pre);
+		auto const& post = std::get<Population>(population_post);
+		for (auto const& connection : projection.connections) {
+			if (!pre.coordinate.contains(post.neurons.at(connection.index_post)
+			                                 .toNeuronRowOnDLS()
+			                                 .toHemisphereOnDLS())) {
+				throw std::runtime_error(
+				    "Source population of projection to be added can't reach target neuron(s).");
+			}
+		}
 	}
 
 	ProjectionDescriptor descriptor(m_projections.size());

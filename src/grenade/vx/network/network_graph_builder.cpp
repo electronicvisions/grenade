@@ -144,6 +144,9 @@ NetworkGraph build_network_graph(
 	// add external populations input
 	builder.add_external_input(result.m_graph, resources, instance);
 
+	// add background spike sources
+	builder.add_background_spike_sources(result.m_graph, resources, instance, routing_result);
+
 	// add on-chip populations without input
 	builder.add_populations(result.m_graph, resources, routing_result, instance);
 
@@ -172,14 +175,17 @@ NetworkGraph build_network_graph(
 			auto const descriptor_pre = network->projections.at(descriptor).population_pre;
 			// skip projection if presynaptic population is not yet present
 			if (!resources.populations.contains(descriptor_pre) &&
-			    !std::holds_alternative<ExternalPopulation>(
-			        network->populations.at(descriptor_pre))) {
+			    std::holds_alternative<Population>(network->populations.at(descriptor_pre))) {
 				continue;
 			}
 			std::visit(
 			    hate::overloaded(
 			        [&](ExternalPopulation const&) {
 				        builder.add_projection_from_external_input(
+				            result.m_graph, resources, descriptor, routing_result, instance);
+			        },
+			        [&](BackgroundSpikeSourcePopulation const&) {
+				        builder.add_projection_from_background_spike_source(
 				            result.m_graph, resources, descriptor, routing_result, instance);
 			        },
 			        [&](Population const&) {
@@ -258,6 +264,52 @@ void NetworkGraphBuilder::add_external_input(
 	resources.crossbar_l2_input = crossbar_l2_input_vertex;
 	LOG4CXX_TRACE(
 	    m_logger, "add_external_input(): Added external input in " << timer.print() << ".");
+}
+
+void NetworkGraphBuilder::add_background_spike_sources(
+    Graph& graph,
+    Resources& resources,
+    coordinate::ExecutionInstance const& instance,
+    RoutingResult const& routing_result) const
+{
+	hate::Timer timer;
+	for (auto const& [descriptor, population] : m_network.populations) {
+		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+			continue;
+		}
+		auto const& pop = std::get<BackgroundSpikeSourcePopulation>(population);
+		if (!routing_result.background_spike_source_labels.contains(descriptor)) {
+			throw std::runtime_error(
+			    "Connection builder result does not contain spike labels for the population(" +
+			    std::to_string(descriptor) + ").");
+		}
+		auto const& label = routing_result.background_spike_source_labels.at(descriptor);
+		haldls::vx::v2::BackgroundSpikeSource config;
+		config.set_period(pop.config.period);
+		config.set_rate(pop.config.rate);
+		config.set_seed(pop.config.seed);
+		config.set_enable(true);
+		config.set_enable_random(pop.config.enable_random);
+		if (pop.config.enable_random) {
+			assert(!(pop.size == 0) && !(pop.size & (pop.size - 1)));
+			config.set_mask(haldls::vx::v2::BackgroundSpikeSource::Mask(pop.size - 1));
+		} else {
+			assert(pop.size == 1);
+		}
+		for (auto const& [hemisphere, bus] : pop.coordinate) {
+			config.set_neuron_label(label.at(hemisphere));
+			vertex::BackgroundSpikeSource background_spike_source(
+			    config, BackgroundSpikeSourceOnDLS(
+			                bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size));
+			auto const background_spike_source_vertex =
+			    graph.add(background_spike_source, instance, {});
+			resources.background_spike_sources[descriptor][hemisphere] =
+			    background_spike_source_vertex;
+		}
+	}
+	LOG4CXX_TRACE(
+	    m_logger,
+	    "add_external_input(): Added background spike sources in " << timer.print() << ".");
 }
 
 void NetworkGraphBuilder::add_population(
@@ -380,7 +432,17 @@ void NetworkGraphBuilder::add_crossbar_node(
 		    *(coordinate.toCrossbarInputOnDLS().toNeuronEventOutputOnDLS());
 		inputs.push_back(resources.neuron_event_outputs.at(neuron_event_output));
 	} else { // other (currently only background sources)
-		throw std::logic_error("Unimplemented.");
+		for (auto const& [dd, d] : resources.background_spike_sources) {
+			for (auto const& [hemisphere, bus] :
+			     std::get<BackgroundSpikeSourcePopulation>(m_network.populations.at(dd))
+			         .coordinate) {
+				BackgroundSpikeSourceOnDLS source(
+				    bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size);
+				if (source.toCrossbarInputOnDLS() == coordinate.toCrossbarInputOnDLS()) {
+					inputs.push_back(d.at(hemisphere));
+				}
+			}
+		}
 	}
 	// add crossbar node to graph
 	if (resources.crossbar_nodes.contains(
@@ -743,6 +805,91 @@ void NetworkGraphBuilder::add_projection_from_external_input(
 	                                                                  << timer.print() << ".");
 }
 
+void NetworkGraphBuilder::add_projection_from_background_spike_source(
+    Graph& graph,
+    Resources& resources,
+    ProjectionDescriptor const& descriptor,
+    RoutingResult const& connection_result,
+    coordinate::ExecutionInstance const& instance) const
+{
+	hate::Timer timer;
+	auto const population_pre = m_network.projections.at(descriptor).population_pre;
+	if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(
+	        m_network.populations.at(population_pre))) {
+		throw std::logic_error(
+		    "Projection's presynaptic population is not a background spike source.");
+	}
+	// get used PADI busses and synapse drivers
+	std::set<PADIBusOnDLS> used_padi_bus;
+	std::set<SynapseDriverOnDLS> used_synapse_drivers;
+	if (!connection_result.connections.contains(descriptor)) {
+		throw std::runtime_error(
+		    "Connection builder result does not contain connections the projection(" +
+		    std::to_string(descriptor) + ").");
+	}
+	auto const num_connections_result = connection_result.connections.at(descriptor).size();
+	auto const num_connections_projection = m_network.projections.at(descriptor).connections.size();
+	if (num_connections_result != num_connections_projection) {
+		throw std::runtime_error(
+		    "Connection builder result connection number(" +
+		    std::to_string(num_connections_result) +
+		    ") is larger than expected number of connections by projection (" +
+		    std::to_string(num_connections_projection) + ").");
+	}
+	size_t i = 0;
+	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
+		for (auto const& placed_connection : placed_connections) {
+			auto const padi_bus_block =
+			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
+			auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
+			                                   .toSynapseDriverOnSynapseDriverBlock()
+			                                   .toPADIBusOnPADIBusBlock();
+			PADIBusOnDLS padi_bus(padi_bus_on_block, padi_bus_block);
+			used_padi_bus.insert(padi_bus);
+			used_synapse_drivers.insert(SynapseDriverOnDLS(
+			    placed_connection.synapse_row.toSynapseRowOnSynram()
+			        .toSynapseDriverOnSynapseDriverBlock(),
+			    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
+		}
+		i++;
+	}
+	// add crossbar nodes from source to PADI busses
+	for (auto const& [hemisphere, bus] :
+	     std::get<BackgroundSpikeSourcePopulation>(m_network.populations.at(population_pre))
+	         .coordinate) {
+		auto const crossbar_input =
+		    BackgroundSpikeSourceOnDLS(
+		        bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size)
+		        .toCrossbarInputOnDLS();
+		for (auto const& padi_bus : used_padi_bus) {
+			if (padi_bus.toPADIBusBlockOnDLS().toHemisphereOnDLS() == hemisphere) {
+				CrossbarNodeOnDLS coord(padi_bus.toCrossbarOutputOnDLS(), crossbar_input);
+				add_crossbar_node(graph, resources, coord, connection_result, instance);
+			}
+		}
+	}
+	// add PADI busses
+	for (auto const padi_bus : used_padi_bus) {
+		add_padi_bus(graph, resources, padi_bus, instance);
+	}
+	// add synapse drivers
+	for (auto const synapse_driver : used_synapse_drivers) {
+		add_synapse_driver(graph, resources, synapse_driver, connection_result, instance);
+	}
+	// add synapse array views
+	add_synapse_array_view_sparse(graph, resources, descriptor, connection_result, instance);
+	// add population
+	std::map<HemisphereOnDLS, Input> inputs(
+	    resources.projections.at(descriptor).synapses.begin(),
+	    resources.projections.at(descriptor).synapses.end());
+	add_population(
+	    graph, resources, inputs, m_network.projections.at(descriptor).population_post,
+	    connection_result, instance);
+	LOG4CXX_TRACE(
+	    m_logger, "add_projection_from_background_spike_source(): Added projection("
+	                  << descriptor << ") in " << timer.print() << ".");
+}
+
 void NetworkGraphBuilder::add_projection_from_internal_input(
     Graph& graph,
     Resources& resources,
@@ -828,7 +975,7 @@ void NetworkGraphBuilder::add_populations(
 {
 	// place all populations without input
 	for (auto const& [descriptor, population] : m_network.populations) {
-		if (std::holds_alternative<ExternalPopulation>(population)) {
+		if (!std::holds_alternative<Population>(population)) {
 			continue;
 		}
 		add_population(graph, resources, {}, descriptor, connection_result, instance);

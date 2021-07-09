@@ -17,7 +17,10 @@ namespace network {
  */
 struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Network>")) Network
 {
-	std::map<PopulationDescriptor, std::variant<Population, ExternalPopulation>> const populations;
+	std::map<
+	    PopulationDescriptor,
+	    std::variant<Population, ExternalPopulation, BackgroundSpikeSourcePopulation>> const
+	    populations;
 	std::map<ProjectionDescriptor, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;
 

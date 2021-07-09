@@ -439,6 +439,13 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 		}
 	}
 
+	// check that we don't have background spike sources to route
+	for (auto const& [_, population] : network->populations) {
+		if (std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+			throw std::runtime_error("Routing of background spike sources unimplemented.");
+		}
+	}
+
 	// then from-off-chip connections are placed
 	// get_synapse_driver needs all post-synaptic neurons of one receptor type, therefore we order
 	// by it here

@@ -118,6 +118,9 @@ struct ConnectionBuilder
 	    halco::hicann_dls::vx::v2::SynapseDriverOnDLS,
 	    haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask>
 	    m_synapse_driver_compare_mask;
+
+	static haldls::vx::v2::BackgroundSpikeSource get_background_spike_source_config(
+	    BackgroundSpikeSourcePopulation const& pop);
 };
 
 } // namespace network

@@ -47,6 +47,16 @@ struct GENPYBIND(visible) RoutingResult
 	ExternalSpikeLabels external_spike_labels;
 
 	/**
+	 * Background spike source configuration for each population.
+	 */
+	typedef std::map<
+	    PopulationDescriptor,
+	    std::
+	        map<halco::hicann_dls::vx::v2::HemisphereOnDLS, halco::hicann_dls::vx::v2::NeuronLabel>>
+	    BackgroundSpikeSourceLabels;
+	BackgroundSpikeSourceLabels background_spike_source_labels;
+
+	/**
 	 * Neuron event output address corresponding to each neuron in a on-chip population.
 	 */
 	typedef std::

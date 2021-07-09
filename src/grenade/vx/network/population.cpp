@@ -29,4 +29,32 @@ bool ExternalPopulation::operator!=(ExternalPopulation const& other) const
 	return !(*this == other);
 }
 
+BackgroundSpikeSourcePopulation::BackgroundSpikeSourcePopulation(
+    size_t const size, Coordinate const& coordinate, Config const& config) :
+    size(size), coordinate(coordinate), config(config)
+{}
+
+bool BackgroundSpikeSourcePopulation::Config::operator==(
+    BackgroundSpikeSourcePopulation::Config const& other) const
+{
+	return period == other.period && rate == other.rate && seed == other.seed && enable_random &&
+	       other.enable_random;
+}
+
+bool BackgroundSpikeSourcePopulation::Config::operator!=(
+    BackgroundSpikeSourcePopulation::Config const& other) const
+{
+	return !(*this == other);
+}
+
+bool BackgroundSpikeSourcePopulation::operator==(BackgroundSpikeSourcePopulation const& other) const
+{
+	return size == other.size && coordinate == other.coordinate && config == other.config;
+}
+
+bool BackgroundSpikeSourcePopulation::operator!=(BackgroundSpikeSourcePopulation const& other) const
+{
+	return !(*this == other);
+}
+
 } // namespace grenade::vx::network

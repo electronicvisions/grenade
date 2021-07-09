@@ -7,6 +7,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_result.h"
+#include "halco/hicann-dls/vx/v2/background.h"
 #include "halco/hicann-dls/vx/v2/neuron.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
@@ -64,6 +65,10 @@ public:
 		};
 
 		std::optional<Graph::vertex_descriptor> external_input;
+		std::map<
+		    PopulationDescriptor,
+		    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Graph::vertex_descriptor>>
+		    background_spike_sources;
 		std::optional<Graph::vertex_descriptor> crossbar_l2_input;
 		std::map<halco::hicann_dls::vx::v2::CrossbarNodeOnDLS, Graph::vertex_descriptor>
 		    crossbar_nodes;
@@ -82,6 +87,12 @@ public:
 
 	void add_external_input(
 	    Graph& graph, Resources& resources, coordinate::ExecutionInstance const& instance) const;
+
+	void add_background_spike_sources(
+	    Graph& graph,
+	    Resources& resources,
+	    coordinate::ExecutionInstance const& instance,
+	    RoutingResult const& routing_result) const;
 
 	void add_padi_bus(
 	    Graph& graph,
@@ -125,6 +136,13 @@ public:
 	    coordinate::ExecutionInstance const& instance) const;
 
 	void add_projection_from_external_input(
+	    Graph& graph,
+	    Resources& resources,
+	    ProjectionDescriptor const& descriptor,
+	    RoutingResult const& connection_result,
+	    coordinate::ExecutionInstance const& instance) const;
+
+	void add_projection_from_background_spike_source(
 	    Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
