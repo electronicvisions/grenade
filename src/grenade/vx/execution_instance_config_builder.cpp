@@ -185,6 +185,13 @@ void ExecutionInstanceConfigBuilder::process(
 
 template <>
 void ExecutionInstanceConfigBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::BackgroundSpikeSource const& data)
+{
+	m_config.background_spike_sources[data.get_coordinate()] = data.get_config();
+}
+
+template <>
+void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx::v2;
@@ -253,6 +260,9 @@ ExecutionInstanceConfigBuilder::generate()
 	}
 	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
 		builder.write(coord, m_config.crossbar_nodes[coord]);
+	}
+	for (auto const coord : iter_all<BackgroundSpikeSourceOnDLS>()) {
+		builder.write(coord, m_config.background_spike_sources[coord]);
 	}
 	for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
 		builder.write(coord, m_config.neuron_backend[coord]);

@@ -1,9 +1,11 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_array.h"
+#include "halco/hicann-dls/vx/v2/background.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "haldls/vx/v2/background.h"
 #include "haldls/vx/v2/madc.h"
 #include "haldls/vx/v2/padi.h"
 #include "haldls/vx/v2/readout.h"
@@ -74,6 +76,14 @@ public:
 	/** Crossbar node configuration. */
 	_crossbar_nodes_type crossbar_nodes;
 
+	typedef halco::common::typed_array<
+	    haldls::vx::v2::BackgroundSpikeSource,
+	    haldls::vx::v2::BackgroundSpikeSource::coordinate_type>
+	    _background_spike_sources_type GENPYBIND(opaque);
+
+	/** Background spike source configuration. */
+	_background_spike_sources_type background_spike_sources;
+
 	/** Readout source selection configuration */
 	haldls::vx::ReadoutSourceSelection readout_source_selection;
 
@@ -114,6 +124,7 @@ BOOST_HANA_ADAPT_STRUCT(
     grenade::vx::ChipConfig,
     hemispheres,
     crossbar_nodes,
+    background_spike_sources,
     readout_source_selection,
     madc_config,
     neuron_backend);

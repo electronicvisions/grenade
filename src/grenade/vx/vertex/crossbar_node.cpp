@@ -1,6 +1,7 @@
 #include "grenade/vx/vertex/crossbar_node.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/vertex/background_spike_source.h"
 #include "halco/common/cerealization_geometry.h"
 #include <ostream>
 
@@ -18,6 +19,12 @@ CrossbarNode::Coordinate const& CrossbarNode::get_coordinate() const
 CrossbarNode::Config const& CrossbarNode::get_config() const
 {
 	return m_config;
+}
+
+bool CrossbarNode::supports_input_from(
+    BackgroundSpikeSource const& input, std::optional<PortRestriction> const&) const
+{
+	return m_coordinate.toCrossbarInputOnDLS() == input.get_coordinate().toCrossbarInputOnDLS();
 }
 
 std::ostream& operator<<(std::ostream& os, CrossbarNode const& config)

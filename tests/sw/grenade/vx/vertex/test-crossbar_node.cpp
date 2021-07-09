@@ -2,6 +2,8 @@
 
 #include "grenade/vx/vertex/crossbar_node.h"
 
+#include "grenade/vx/vertex/background_spike_source.h"
+
 using namespace grenade::vx;
 using namespace grenade::vx::vertex;
 
@@ -21,4 +23,18 @@ TEST(CrossbarNode, General)
 
 	EXPECT_EQ(config.get_coordinate(), coord);
 	EXPECT_EQ(config.get_config(), cfg);
+
+	{
+		BackgroundSpikeSource source({}, BackgroundSpikeSource::Coordinate(2));
+		EXPECT_FALSE(config.supports_input_from(source, std::nullopt));
+	}
+	{
+		CrossbarNode::Coordinate coord(
+		    halco::hicann_dls::vx::v2::CrossbarOutputOnDLS(2),
+		    halco::hicann_dls::vx::v2::CrossbarInputOnDLS(14));
+		CrossbarNode::Config cfg;
+		CrossbarNode config(coord, cfg);
+		BackgroundSpikeSource source({}, BackgroundSpikeSource::Coordinate(2));
+		EXPECT_TRUE(config.supports_input_from(source, std::nullopt));
+	}
 }

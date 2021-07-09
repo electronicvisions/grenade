@@ -3,6 +3,7 @@
 
 #include "grenade/vx/vertex/addition.h"
 #include "grenade/vx/vertex/argmax.h"
+#include "grenade/vx/vertex/background_spike_source.h"
 #include "grenade/vx/vertex/cadc_membrane_readout_view.h"
 #include "grenade/vx/vertex/converting_relu.h"
 #include "grenade/vx/vertex/crossbar_l2_input.h"
@@ -26,6 +27,7 @@ namespace grenade::vx {
 
 /** Vertex configuration as variant over possible types. */
 typedef std::variant<
+    vertex::BackgroundSpikeSource,
     vertex::ArgMax,
     vertex::CrossbarL2Input,
     vertex::CrossbarL2Output,

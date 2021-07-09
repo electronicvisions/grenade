@@ -43,6 +43,8 @@ ChipConfig convert_to_chip(
 			chip.neuron_backend[coord] = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::CrossbarNode>) {
 			chip.crossbar_nodes[coord] = config;
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::BackgroundSpikeSource>) {
+			chip.background_spike_sources[coord] = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::ReadoutSourceSelection>) {
 			chip.readout_source_selection = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::MADCConfig>) {

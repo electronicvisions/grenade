@@ -1,18 +1,22 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
+#include "grenade/vx/port_restriction.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
 #include "haldls/vx/v2/routing_crossbar.h"
 #include "hate/visibility.h"
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
+#include <optional>
 
 namespace cereal {
 class access;
 } // namespace cereal
 
 namespace grenade::vx::vertex {
+
+struct BackgroundSpikeSource;
 
 /**
  * Crossbar node.
@@ -51,6 +55,10 @@ struct CrossbarNode
 
 	bool operator==(CrossbarNode const& other) const SYMBOL_VISIBLE;
 	bool operator!=(CrossbarNode const& other) const SYMBOL_VISIBLE;
+
+	bool supports_input_from(
+	    BackgroundSpikeSource const& input,
+	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
 private:
 	Coordinate m_coordinate{};
