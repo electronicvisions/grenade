@@ -121,7 +121,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	if (ppu_symbols) {
 		using namespace haldls::vx::v3;
 		// stop PPUs
-		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		auto const ppu_status_coord =
+		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate).toMin();
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
 			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::stop)));
 			schedule_out_replacement_builder.write(
@@ -211,7 +212,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			ctrl.set_inhibit_reset(true);
 			trigger_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 		}
-		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		auto const ppu_status_coord =
+		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate).toMin();
 		// wait for PPUs to be ready
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
 			using namespace haldls::vx::v3;

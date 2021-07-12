@@ -259,6 +259,11 @@ void ExecutionInstanceBuilder::process(
 		m_cadc_readout_mode = data.get_mode();
 	}
 
+	if (data.get_mode() == vertex::CADCMembraneReadoutView::Mode::periodic) {
+		throw std::runtime_error(
+		    "Periodic CADC readout not possible until data placement in extmem is implemented.");
+	}
+
 	// get source NeuronView
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
@@ -885,15 +890,19 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
 	if (enable_ppu) {
 		assert(m_ppu_symbols);
-		ppu_status_coord = m_ppu_symbols->at("status").coordinate.toMin();
-		ppu_result_coord = m_ppu_symbols->at("cadc_result").coordinate;
-		ppu_runtime_coord = m_ppu_symbols->at("runtime").coordinate.toMin();
+		ppu_status_coord =
+		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("status").coordinate).toMin();
+		ppu_result_coord =
+		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("cadc_result").coordinate);
+		ppu_runtime_coord =
+		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("runtime").coordinate).toMin();
 		if (m_ppu_symbols->contains("scheduler_event_drop_count")) {
-			ppu_scheduler_event_drop_count_coord.emplace(
-			    m_ppu_symbols->at("scheduler_event_drop_count").coordinate);
+			ppu_scheduler_event_drop_count_coord.emplace(std::get<PPUMemoryBlockOnPPU>(
+			    m_ppu_symbols->at("scheduler_event_drop_count").coordinate));
 			for (auto const& [name, symbol] : *m_ppu_symbols) {
 				if (name.starts_with("timer") && name.ends_with("event_drop_count")) {
-					ppu_timer_event_drop_count_coord.push_back(symbol.coordinate);
+					ppu_timer_event_drop_count_coord.push_back(
+					    std::get<PPUMemoryBlockOnPPU>(symbol.coordinate));
 				}
 			}
 		}

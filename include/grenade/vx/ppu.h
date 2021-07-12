@@ -120,7 +120,7 @@ struct Compiler
 	/**
 	 * Compile sources into target program.
 	 */
-	std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock> compile(
+	std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory> compile(
 	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 };
 
@@ -141,7 +141,7 @@ struct CachingCompiler : public Compiler
 		/**
 		 * Program information comprised of the symbols and memory image.
 		 */
-		typedef std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock>
+		typedef std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory>
 		    Program;
 
 		/**
@@ -172,7 +172,7 @@ struct CachingCompiler : public Compiler
 	/**
 	 * Compile sources into target program or return from cache if already compiled.
 	 */
-	std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock> compile(
+	std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory> compile(
 	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 
 private:

@@ -295,8 +295,8 @@ TemporaryDirectory::~TemporaryDirectory()
 
 Compiler::Compiler() {}
 
-std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock> Compiler::compile(
-    std::vector<std::string> sources)
+std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory>
+Compiler::compile(std::vector<std::string> sources)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
 	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
@@ -392,7 +392,7 @@ CachingCompiler::ProgramCache& CachingCompiler::get_program_cache()
 	return data;
 }
 
-std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock>
+std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory>
 CachingCompiler::compile(std::vector<std::string> sources)
 {
 	auto& program_cache = get_program_cache();

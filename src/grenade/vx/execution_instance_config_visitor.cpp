@@ -9,6 +9,7 @@
 #include "hate/timer.h"
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
+#include "hate/variant.h"
 #include "lola/vx/ppu.h"
 #include <filesystem>
 #include <vector>
@@ -343,7 +344,7 @@ ExecutionInstanceConfigVisitor::operator()()
 	hate::Timer ppu_timer;
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
 	if (m_requires_ppu) {
-		PPUMemoryBlock ppu_program;
+		PPUElfFile::Memory ppu_program;
 		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
 		PPUMemoryWordOnPPU ppu_location_coord;
 		PPUMemoryBlockOnPPU ppu_status_coord;
@@ -356,9 +357,11 @@ ExecutionInstanceConfigVisitor::operator()()
 			auto const program = compiler.compile(ppu_program_generator.done());
 			ppu_program = program.second;
 			ppu_symbols = program.first;
-			ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
-			ppu_location_coord = ppu_symbols->at("ppu").coordinate.toMin();
-			ppu_status_coord = ppu_symbols->at("status").coordinate;
+			ppu_neuron_reset_mask_coord =
+			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("neuron_reset_mask").coordinate);
+			ppu_location_coord =
+			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("ppu").coordinate).toMin();
+			ppu_status_coord = std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate);
 		}
 		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
 
@@ -366,15 +369,33 @@ ExecutionInstanceConfigVisitor::operator()()
 			// zero-initialize all symbols (esp. bss)
 			assert(ppu_symbols);
 			for (auto const& [_, symbol] : *ppu_symbols) {
-				PPUMemoryBlock config(symbol.coordinate.toPPUMemoryBlockSize());
-				m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(symbol.coordinate, config);
+				std::visit(
+				    hate::overloaded{
+				        [&](PPUMemoryBlockOnPPU const& coordinate) {
+					        PPUMemoryBlock config(coordinate.toPPUMemoryBlockSize());
+					        m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
+					            coordinate, config);
+				        },
+				        [&](ExternalPPUMemoryBlockOnFPGA const& coordinate) {
+					        ExternalPPUMemoryBlock config(
+					            coordinate.toExternalPPUMemoryBlockSize());
+					        m_config.external_ppu_memory.set_subblock(
+					            coordinate.toMin().value(), config);
+				        }},
+				    symbol.coordinate);
 			}
 
-			// set PPU program
+			// set internal PPU program
 			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
 			    PPUMemoryBlockOnPPU(
-			        PPUMemoryWordOnPPU(), PPUMemoryWordOnPPU(ppu_program.get_words().size() - 1)),
-			    ppu_program);
+			        PPUMemoryWordOnPPU(),
+			        PPUMemoryWordOnPPU(ppu_program.internal.get_words().size() - 1)),
+			    ppu_program.internal);
+
+			// set external PPU program
+			if (ppu_program.external) {
+				m_config.external_ppu_memory.set_subblock(0, ppu_program.external.value());
+			}
 
 			// set neuron reset mask
 			halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;
