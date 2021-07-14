@@ -1,6 +1,7 @@
 #include "grenade/vx/network/connection_builder.h"
 
 #include "grenade/vx/network/exception.h"
+#include "grenade/vx/network/routing_constraints.h"
 #include "halco/hicann-dls/vx/v2/event.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
@@ -407,6 +408,9 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 			    "Projection features same single connection than other projection.");
 		}
 	}
+
+	RoutingConstraints constraints(*network);
+	constraints.check();
 
 	RoutingResult result;
 
