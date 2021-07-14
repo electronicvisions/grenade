@@ -536,7 +536,7 @@ void NetworkGraphBuilder::add_projection_from_external_input(
 	auto const& external_spike_labels = connection_result.external_spike_labels.at(population_pre);
 	if (!connection_result.connections.contains(descriptor)) {
 		throw std::runtime_error(
-		    "Connection builder result does not contain connections the projection(" +
+		    "Connection builder result does not contain connections for the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
 	auto const num_connections_result = connection_result.connections.at(descriptor).size();
@@ -613,7 +613,7 @@ void NetworkGraphBuilder::add_projection_from_internal_input(
 	}
 	if (!connection_result.connections.contains(descriptor)) {
 		throw std::runtime_error(
-		    "Connection builder result does not contain connections the projection(" +
+		    "Connection builder result does not contain connections for the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
 	// get possibly used neuron event outputs
