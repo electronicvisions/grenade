@@ -92,6 +92,7 @@ def build(bld):
         test_main = 'tests/common/grenade/vx/main.cpp',
         use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc'],
         linkflags = ['-lboost_program_options-mt'],
+        test_timeout=120,
         install_path = '${PREFIX}/bin',
     )
 
