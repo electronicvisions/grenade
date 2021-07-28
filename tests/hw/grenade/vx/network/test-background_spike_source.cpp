@@ -8,7 +8,6 @@
 #include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
-#include "grenade/vx/network/connection_builder.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -16,6 +15,7 @@
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
+#include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/neuron.h"
@@ -161,7 +161,7 @@ void test_background_spike_source_regular(
 /**
  * Enable background sources and generate regular spike-trains.
  */
-TEST(NetworkGraphBuilder, DISABLED_BackgroundSpikeSourceRegular)
+TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
@@ -279,7 +279,7 @@ void test_background_spike_source_poisson(
 /**
  * Enable background sources and generate regular spike-trains.
  */
-TEST(NetworkGraphBuilder, DISABLED_BackgroundSpikeSourcePoisson)
+TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();

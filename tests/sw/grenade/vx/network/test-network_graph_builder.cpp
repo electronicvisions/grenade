@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/connection_builder.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
+#include "grenade/vx/network/routing_builder.h"
 
 using namespace grenade::vx::network;
 using namespace halco::hicann_dls::vx::v2;
