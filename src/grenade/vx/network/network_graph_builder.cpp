@@ -1,7 +1,7 @@
 #include "grenade/vx/network/network_graph_builder.h"
 
-#include "grenade/vx/network/connection_builder.h"
 #include "grenade/vx/network/exception.h"
+#include "grenade/vx/network/routing_builder.h"
 #include "halco/hicann-dls/vx/v2/event.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
