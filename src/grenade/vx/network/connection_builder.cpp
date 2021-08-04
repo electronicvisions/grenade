@@ -14,6 +14,16 @@
 
 namespace grenade::vx::network {
 
+bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<Network> const& old)
+{
+	assert(current);
+	assert(old);
+	// currently we require new routing if the network changed, this can be improved once we know
+	// which parts in the RoutingResult we require to change if the placement does not change, but
+	// only weight values.
+	return *current == *old;
+}
+
 using namespace halco::hicann_dls::vx::v2;
 using namespace halco::common;
 
