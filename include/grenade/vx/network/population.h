@@ -23,6 +23,9 @@ struct GENPYBIND(visible) Population
 	Population() = default;
 	Population(Neurons const& neurons, EnableRecordSpikes const& enable_record_spikes)
 	    SYMBOL_VISIBLE;
+
+	bool operator==(Population const& other) const SYMBOL_VISIBLE;
+	bool operator!=(Population const& other) const SYMBOL_VISIBLE;
 };
 
 /** External spike source population. */
@@ -33,6 +36,9 @@ struct GENPYBIND(visible) ExternalPopulation
 
 	ExternalPopulation() = default;
 	ExternalPopulation(size_t size) SYMBOL_VISIBLE;
+
+	bool operator==(ExternalPopulation const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ExternalPopulation const& other) const SYMBOL_VISIBLE;
 };
 
 /** Descriptor to be used to identify a population. */

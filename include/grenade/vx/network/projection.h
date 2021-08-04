@@ -46,6 +46,9 @@ struct GENPYBIND(visible) Projection
 
 		Connection() = default;
 		Connection(size_t index_pre, size_t index_post, Weight weight) SYMBOL_VISIBLE;
+
+		bool operator==(Connection const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Connection const& other) const SYMBOL_VISIBLE;
 	};
 	/** Point-to-point neuron connections type. */
 	typedef std::vector<Connection> Connections;
@@ -68,6 +71,9 @@ struct GENPYBIND(visible) Projection
 	    Connections&& connections,
 	    PopulationDescriptor population_pre,
 	    PopulationDescriptor population_post) SYMBOL_VISIBLE;
+
+	bool operator==(Projection const& other) const SYMBOL_VISIBLE;
+	bool operator!=(Projection const& other) const SYMBOL_VISIBLE;
 };
 
 /** Descriptor to be used to identify a projection. */

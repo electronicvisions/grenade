@@ -10,7 +10,27 @@ Population::Population(Neurons const& neurons, EnableRecordSpikes const& enable_
 	}
 }
 
+bool Population::operator==(Population const& other) const
+{
+	return neurons == other.neurons && enable_record_spikes == other.enable_record_spikes;
+}
+
+bool Population::operator!=(Population const& other) const
+{
+	return !(*this == other);
+}
+
 
 ExternalPopulation::ExternalPopulation(size_t const size) : size(size) {}
+
+bool ExternalPopulation::operator==(ExternalPopulation const& other) const
+{
+	return size == other.size;
+}
+
+bool ExternalPopulation::operator!=(ExternalPopulation const& other) const
+{
+	return !(*this == other);
+}
 
 } // namespace grenade::vx::network

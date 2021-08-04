@@ -7,6 +7,17 @@ Projection::Connection::Connection(
     index_pre(index_pre), index_post(index_post), weight(weight)
 {}
 
+bool Projection::Connection::operator==(Connection const& other) const
+{
+	return index_pre == other.index_pre && index_post == other.index_post && weight == other.weight;
+}
+
+bool Projection::Connection::operator!=(Connection const& other) const
+{
+	return !(*this == other);
+}
+
+
 Projection::Projection(
     ReceptorType const receptor_type,
     Connections const& connections,
@@ -28,5 +39,16 @@ Projection::Projection(
     population_pre(population_pre),
     population_post(population_post)
 {}
+
+bool Projection::operator==(Projection const& other) const
+{
+	return receptor_type == other.receptor_type && connections == other.connections &&
+	       population_pre == other.population_pre && population_post == other.population_post;
+}
+
+bool Projection::operator!=(Projection const& other) const
+{
+	return !(*this == other);
+}
 
 } // namespace grenade::vx::network
