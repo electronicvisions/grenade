@@ -94,20 +94,21 @@ def build(bld):
         skip_run = not bld.env.DLSvx_HARDWARE_AVAILABLE
     )
 
-    bld(
-        target = 'doxygen_grenade',
-        features = 'doxygen',
-        doxyfile = bld.root.make_node('%s/code-format/doxyfile' % get_toplevel_path()),
-        install_path = 'doc/grenade',
-        pars = {
-            "PROJECT_NAME": "\"GRENADE\"",
-            "INPUT": "%s/grenade/include/grenade" % get_toplevel_path(),
-            "OUTPUT_DIRECTORY": "%s/build/grenade/doc" % get_toplevel_path(),
-            "PREDEFINED": "GENPYBIND()= GENPYBIND_MANUAL()= GENPYBIND_TAG_GRENADE_VX=",
-            "WARN_LOGFILE": join(get_toplevel_path(), "build/grenade/grenade_doxygen_warnings.log"),
-            "INCLUDE_PATH": join(get_toplevel_path(), "grenade", "include")
-        },
-    )
+    if bld.env.DOXYGEN:
+        bld(
+            target = 'doxygen_grenade',
+            features = 'doxygen',
+            doxyfile = bld.root.make_node('%s/code-format/doxyfile' % get_toplevel_path()),
+            install_path = 'doc/grenade',
+            pars = {
+                "PROJECT_NAME": "\"GRENADE\"",
+                "INPUT": "%s/grenade/include/grenade" % get_toplevel_path(),
+                "OUTPUT_DIRECTORY": "%s/build/grenade/doc" % get_toplevel_path(),
+                "PREDEFINED": "GENPYBIND()= GENPYBIND_MANUAL()= GENPYBIND_TAG_GRENADE_VX=",
+                "WARN_LOGFILE": join(get_toplevel_path(), "build/grenade/grenade_doxygen_warnings.log"),
+                "INCLUDE_PATH": join(get_toplevel_path(), "grenade", "include")
+            },
+        )
 
 # for grenade_vx's runtime dependency on grenade_ppu_base_vx
 from waflib.TaskGen import feature, after_method
