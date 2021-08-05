@@ -28,14 +28,7 @@ struct GENPYBIND(visible) Projection
 	/** Single neuron connection. */
 	struct Connection
 	{
-		/** (Possibly virtualized) weight of a connection. */
-		struct GENPYBIND(inline_base("*")) Weight
-		    : public halco::common::detail::BaseType<Weight, size_t>
-		{
-			constexpr explicit Weight(value_type const value = 0) GENPYBIND(implicit_conversion) :
-			    base_t(value)
-			{}
-		};
+		typedef lola::vx::v2::SynapseMatrix::Weight Weight GENPYBIND(visible);
 
 		/** Index of neuron in pre-synaptic population. */
 		size_t index_pre;
