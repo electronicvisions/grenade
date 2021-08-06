@@ -16,6 +16,8 @@ struct NetworkGraph;
 NetworkGraph build_network_graph(
     std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
 
+void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
+
 /**
  * Hardware graph representation of a placed and routed network.
  */
@@ -59,10 +61,20 @@ private:
 	std::optional<Graph::vertex_descriptor> m_event_input_vertex;
 	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
 	std::optional<Graph::vertex_descriptor> m_madc_sample_output_vertex;
+	std::map<
+	    ProjectionDescriptor,
+	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
+	    m_synapse_vertices;
+	std::map<
+	    PopulationDescriptor,
+	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
+	    m_neuron_vertices;
 	SpikeLabels m_spike_labels;
 
 	friend NetworkGraph build_network_graph(
 	    std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
+	friend void update_network_graph(
+	    NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
 };
 
 } // namespace network

@@ -644,6 +644,102 @@ void Graph::check_inputs(
 	std::visit(checker, vertex);
 }
 
+void Graph::update(vertex_descriptor const vertex_reference, Vertex&& vertex)
+{
+	// check inputs work for updated vertex property
+	auto const& execution_instance =
+	    m_execution_instance_map.left.at(m_vertex_descriptor_map.left.at(vertex_reference));
+	assert(m_graph);
+	auto in_edges = boost::in_edges(vertex_reference, *m_graph);
+	std::vector<Input> inputs;
+	for (auto const& in_edge : boost::make_iterator_range(in_edges)) {
+		auto const source = boost::source(in_edge, *m_graph);
+		auto const port_restriction = m_edge_property_map.at(in_edge);
+		if (port_restriction) {
+			inputs.emplace_back(source, *port_restriction);
+		} else {
+			inputs.emplace_back(source);
+		}
+	}
+	check_inputs(vertex, execution_instance, inputs);
+	// update vertex property
+	auto old_vertex = std::move(*(m_vertex_property_map.at(vertex_reference)));
+	*(m_vertex_property_map.at(vertex_reference)) = std::move(vertex);
+	// check inputs for all targets of vertex support updated vertex proprety
+	try {
+		auto out_edges = boost::out_edges(vertex_reference, *m_graph);
+		for (auto const& out_edge : boost::make_iterator_range(out_edges)) {
+			auto const target = boost::target(out_edge, *m_graph);
+			auto const& execution_instance =
+			    m_execution_instance_map.left.at(m_vertex_descriptor_map.left.at(target));
+			auto in_edges = boost::in_edges(target, *m_graph);
+			std::vector<Input> inputs;
+			for (auto const& in_edge : boost::make_iterator_range(in_edges)) {
+				auto const source = boost::source(in_edge, *m_graph);
+				auto const port_restriction = m_edge_property_map.at(in_edge);
+				if (port_restriction) {
+					inputs.emplace_back(source, *port_restriction);
+				} else {
+					inputs.emplace_back(source);
+				}
+			}
+			check_inputs(get_vertex_property(target), execution_instance, inputs);
+		}
+	} catch (std::runtime_error const& error) {
+		// restore old property
+		*(m_vertex_property_map.at(vertex_reference)) = std::move(old_vertex);
+		throw error;
+	}
+}
+
+void Graph::update_and_relocate(
+    vertex_descriptor const vertex_reference, Vertex&& vertex, std::vector<Input> inputs)
+{
+	// check inputs work for vertex property
+	auto const& execution_instance =
+	    m_execution_instance_map.left.at(m_vertex_descriptor_map.left.at(vertex_reference));
+	check_inputs(vertex, execution_instance, inputs);
+	assert(m_graph);
+	// update vertex property
+	auto old_vertex = std::move(*(m_vertex_property_map.at(vertex_reference)));
+	*(m_vertex_property_map.at(vertex_reference)) = std::move(vertex);
+	// remove old edge properties
+	auto in_edges = boost::in_edges(vertex_reference, *m_graph);
+	for (auto const& in_edge : boost::make_iterator_range(in_edges)) {
+		m_edge_property_map.erase(in_edge);
+	}
+	// check inputs for all targets of vertex support updated vertex proprety
+	try {
+		auto out_edges = boost::out_edges(vertex_reference, *m_graph);
+		for (auto const& out_edge : boost::make_iterator_range(out_edges)) {
+			auto const target = boost::target(out_edge, *m_graph);
+			auto const& execution_instance =
+			    m_execution_instance_map.left.at(m_vertex_descriptor_map.left.at(target));
+			auto in_edges = boost::in_edges(target, *m_graph);
+			std::vector<Input> inputs;
+			for (auto const& in_edge : boost::make_iterator_range(in_edges)) {
+				auto const source = boost::source(in_edge, *m_graph);
+				auto const port_restriction = m_edge_property_map.at(in_edge);
+				if (port_restriction) {
+					inputs.emplace_back(source, *port_restriction);
+				} else {
+					inputs.emplace_back(source);
+				}
+			}
+			check_inputs(get_vertex_property(target), execution_instance, inputs);
+		}
+	} catch (std::runtime_error const& error) {
+		// restore old property
+		*(m_vertex_property_map.at(vertex_reference)) = std::move(old_vertex);
+		throw error;
+	}
+	// remove old edges
+	boost::remove_in_edge_if(
+	    vertex_reference, [](auto const&) { return true; }, *m_graph);
+	// add new edges
+	add_edges(vertex_reference, execution_instance, inputs);
+}
+
 template <typename Archive>
 void Graph::save(Archive& ar, std::uint32_t const) const
 {

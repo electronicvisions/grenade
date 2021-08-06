@@ -14,18 +14,46 @@
 
 namespace grenade::vx::network {
 
+using namespace halco::hicann_dls::vx::v2;
+using namespace halco::common;
+
 bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<Network> const& old)
 {
 	assert(current);
 	assert(old);
-	// currently we require new routing if the network changed, this can be improved once we know
-	// which parts in the RoutingResult we require to change if the placement does not change, but
-	// only weight values.
-	return *current == *old;
-}
 
-using namespace halco::hicann_dls::vx::v2;
-using namespace halco::common;
+	// check if populations changed
+	if (current->populations != old->populations) {
+		return true;
+	}
+	// check if projection count changed
+	if (current->projections.size() != old->projections.size()) {
+		return true;
+	}
+	// check if projection topology changed
+	for (auto const& [descriptor, projection] : current->projections) {
+		auto const& old_projection = old->projections.at(descriptor);
+		if ((projection.population_pre != old_projection.population_pre) ||
+		    (projection.population_post != old_projection.population_post) ||
+		    (projection.receptor_type != old_projection.receptor_type) ||
+		    (projection.connections.size() != old_projection.connections.size())) {
+			return true;
+		}
+		for (size_t i = 0; i < projection.connections.size(); ++i) {
+			auto const& connection = projection.connections.at(i);
+			auto const& old_connection = projection.connections.at(i);
+			if ((connection.index_pre != old_connection.index_pre) ||
+			    (connection.index_post != old_connection.index_post)) {
+				return true;
+			}
+		}
+	}
+	// check if MADC recording was added or removed
+	if (static_cast<bool>(current->madc_recording) != static_cast<bool>(old->madc_recording)) {
+		return true;
+	}
+	return false;
+}
 
 ConnectionBuilder::ConnectionBuilder()
 {

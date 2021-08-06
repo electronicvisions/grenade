@@ -33,6 +33,15 @@ namespace network {
 NetworkGraph GENPYBIND(visible) build_network_graph(
     std::shared_ptr<Network> const& network, RoutingResult const& routing_result) SYMBOL_VISIBLE;
 
+/**
+ * Update an exisiting hardware graph representation.
+ * For this to work, no new routing has to have been required.
+ * @param network_graph Existing hardware graph representation to update or fill with newly built
+ * instance
+ * @param network New network for which to update or build
+ */
+void GENPYBIND(visible) update_network_graph(
+    NetworkGraph& network_graph, std::shared_ptr<Network> const& network) SYMBOL_VISIBLE;
 
 /**
  * Network graph builder wrapper for network.

@@ -126,6 +126,30 @@ public:
 	    std::vector<Input> inputs) GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
+	 * Update value of vertex.
+	 * Ensures, that no value is updated, which would make graph illegal, i.e. the new vertex
+	 * property has to be compatible with its inputs and all outgoing vertices have to be compatible
+	 * with the new property.
+	 * @param vertex_reference Reference to vertex to update value for
+	 * @param vertex Value to set
+	 */
+	template <typename VertexT>
+	void update(vertex_descriptor vertex_reference, VertexT&& vertex) GENPYBIND(hidden);
+
+	/**
+	 * Update value of vertex and relocate vertex with new inputs.
+	 * Ensures, that no value is updated, which would make graph illegal, i.e. the new vertex
+	 * property has to be compatible with its new inputs and all outgoing vertices have to be
+	 * compatible with the new property.
+	 * @param vertex_reference Vertex to relocate
+	 * @param inputs New inputs to use
+	 */
+	template <typename VertexT>
+	void update_and_relocate(
+	    vertex_descriptor vertex_reference, VertexT&& vertex, std::vector<Input> inputs)
+	    GENPYBIND(hidden);
+
+	/**
 	 * Get constant reference to underlying graph.
 	 * @return Constant reference to underlying graph
 	 */
@@ -228,6 +252,12 @@ private:
 	    Vertex const& vertex,
 	    coordinate::ExecutionInstance const& execution_instance,
 	    std::vector<Input> const& inputs) SYMBOL_VISIBLE;
+
+	void update(vertex_descriptor vertex_reference, Vertex&& vertex) SYMBOL_VISIBLE;
+	void update_and_relocate(
+	    vertex_descriptor vertex_reference,
+	    Vertex&& vertex,
+	    std::vector<Input> inputs) SYMBOL_VISIBLE;
 
 	friend class cereal::access;
 	template <typename Archive>

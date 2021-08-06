@@ -40,4 +40,19 @@ Graph::vertex_descriptor Graph::add(
 	return descriptor;
 }
 
+template <typename VertexT>
+void Graph::update(vertex_descriptor const vertex_reference, VertexT&& vertex)
+{
+	Vertex vertex_variant(std::forward<VertexT>(vertex));
+	update(vertex_reference, std::move(vertex_variant));
+}
+
+template <typename VertexT>
+void Graph::update_and_relocate(
+    vertex_descriptor const vertex_reference, VertexT&& vertex, std::vector<Input> inputs)
+{
+	Vertex vertex_variant(std::forward<VertexT>(vertex));
+	update_and_relocate(vertex_reference, std::move(vertex_variant), inputs);
+}
+
 } // namespace grenade::vx

@@ -375,3 +375,106 @@ TEST(Graph, CerealizeCoverage)
 	}
 	ASSERT_EQ(graph, graph2);
 }
+
+TEST(Graph, update)
+{
+	Graph graph;
+
+	// Graph: v0
+	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+
+	// Graph: v0 -> v1
+	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	// Graph: v0 -> v1 -> v2
+	CrossbarL2Input vertex3;
+	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+
+	// connect loopback via crossbar
+	CrossbarNode vertex4(
+	    CrossbarNodeOnDLS(
+	        SPL1Address().toCrossbarInputOnDLS(),
+	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
+	    haldls::vx::v2::CrossbarNode());
+
+	// Graph: v0 -> v1 -> v2 -> v3
+	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
+
+	// Graph: v0 -> v1 -> v2 -> v3 -> v4
+	CrossbarL2Output vertex5;
+	auto const v4 = graph.add(vertex5, ExecutionInstance(), {v3});
+
+	DataOutput vertex6(ConnectionType::TimedSpikeFromChipSequence, 1);
+	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstance(), {v4}));
+
+	// crossbar node not connecting loopback
+	CrossbarNode vertex7(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
+	    haldls::vx::v2::CrossbarNode());
+
+	// Graph: v0 -> v1 -> X -> v3 -> v4
+	EXPECT_THROW(graph.update(v3, vertex7), std::runtime_error);
+
+	// other crossbar node connecting loopback
+	CrossbarNode vertex8(
+	    CrossbarNodeOnDLS(
+	        SPL1Address(1).toCrossbarInputOnDLS(),
+	        SPL1Address(1).toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
+	    haldls::vx::v2::CrossbarNode());
+
+	// Graph: v0 -> v1 -> X -> v3 -> v4
+	EXPECT_NO_THROW(graph.update(v3, vertex8));
+}
+
+TEST(Graph, update_and_relocate)
+{
+	Graph graph;
+
+	// Graph: v0
+	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+
+	// Graph: v0 -> v1
+	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+
+	// Graph: v1 -> v2
+	CrossbarL2Input vertex3;
+	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+
+	CrossbarNode crossbar_in(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
+	    haldls::vx::v2::CrossbarNode());
+	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
+
+	CrossbarNode other_crossbar_in(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(9), CrossbarOutputOnDLS(0)),
+	    haldls::vx::v2::CrossbarNode());
+	auto const other_v3 = graph.add(other_crossbar_in, ExecutionInstance(), {v2});
+
+	CrossbarNode other_crossbar_in_different_padi_bus(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(1)),
+	    haldls::vx::v2::CrossbarNode());
+	auto const other_v3_different_padi_bus =
+	    graph.add(other_crossbar_in_different_padi_bus, ExecutionInstance(), {v2});
+
+	PADIBus::Coordinate c;
+	PADIBus padi_bus(c);
+	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
+
+	// working other node
+	EXPECT_NO_THROW(graph.update_and_relocate(v4, PADIBus(PADIBus::Coordinate()), {other_v3}));
+
+	// non-working config to node
+	EXPECT_THROW(
+	    graph.update_and_relocate(v4, PADIBus(PADIBus::Coordinate(halco::common::Enum(1))), {v3}),
+	    std::runtime_error);
+
+	// non-working inputs to node
+	EXPECT_THROW(
+	    graph.update_and_relocate(
+	        v4, PADIBus(PADIBus::Coordinate()), {other_v3_different_padi_bus}),
+	    std::runtime_error);
+}

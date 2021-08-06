@@ -1,5 +1,6 @@
 #include "grenade/vx/network/network_graph_builder.h"
 
+#include "grenade/vx/network/connection_builder.h"
 #include "halco/hicann-dls/vx/v2/event.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
@@ -16,6 +17,104 @@ namespace grenade::vx::network {
 
 using namespace halco::hicann_dls::vx::v2;
 using namespace halco::common;
+
+void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network)
+{
+	if (requires_routing(network, network_graph.m_network)) {
+		throw std::runtime_error(
+		    "Network graph can only be updated if no new routing is required.");
+	}
+
+	// get whether projection requires weight changes
+	auto const requires_change = [](Projection const& projection,
+	                                Projection const& old_projection) {
+		for (size_t i = 0; i < projection.connections.size(); ++i) {
+			auto const& connection = projection.connections.at(i);
+			auto const& old_connection = old_projection.connections.at(i);
+			if (connection.weight != old_connection.weight) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	// update synapse array view in hardware graph corresponding to projection
+	auto const update_weights = [](Graph::vertex_descriptor const& placed_connection,
+	                               NetworkGraph& network_graph, Projection const& projection,
+	                               Projection const& old_projection) {
+		auto const& old_synapse_array_view = std::get<vertex::SynapseArrayViewSparse>(
+		    network_graph.m_graph.get_vertex_property(placed_connection));
+		auto const old_synapses = old_synapse_array_view.get_synapses();
+		auto synapses =
+		    vertex::SynapseArrayViewSparse::Synapses{old_synapses.begin(), old_synapses.end()};
+		for (size_t i = 0; i < projection.connections.size(); ++i) {
+			auto const& connection = projection.connections.at(i);
+			auto const& old_connection = old_projection.connections.at(i);
+			if (connection.weight != old_connection.weight) {
+				synapses.at(i).weight = connection.weight;
+			}
+		}
+		auto const old_rows = old_synapse_array_view.get_rows();
+		auto rows = vertex::SynapseArrayViewSparse::Rows{old_rows.begin(), old_rows.end()};
+		auto const old_columns = old_synapse_array_view.get_columns();
+		auto columns =
+		    vertex::SynapseArrayViewSparse::Columns{old_columns.begin(), old_columns.end()};
+		vertex::SynapseArrayViewSparse synapse_array_view(
+		    old_synapse_array_view.get_synram(), std::move(rows), std::move(columns),
+		    std::move(synapses));
+		network_graph.m_graph.update(placed_connection, std::move(synapse_array_view));
+	};
+
+	// update MADC in graph such that it resembles the configuration from network to update towards
+	auto const update_madc = [](NetworkGraph& network_graph, Network const& network) {
+		if (!network.madc_recording || !network_graph.m_network->madc_recording) {
+			throw std::runtime_error("Updating network graph only possible, if MADC recording is "
+			                         "neither added nor removed.");
+		}
+		auto const& population =
+		    std::get<Population>(network.populations.at(network.madc_recording->population));
+		auto const neuron = population.neurons.at(network.madc_recording->index);
+		vertex::MADCReadoutView madc_readout(neuron, network.madc_recording->source);
+		auto const neuron_vertex_descriptor =
+		    network_graph.m_neuron_vertices.at(network.madc_recording->population)
+		        .at(neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
+		auto const& neuron_vertex = std::get<vertex::NeuronView>(
+		    network_graph.m_graph.get_vertex_property(neuron_vertex_descriptor));
+		auto const& columns = neuron_vertex.get_columns();
+		auto const in_view_location = static_cast<size_t>(std::distance(
+		    columns.begin(),
+		    std::find(columns.begin(), columns.end(), neuron.toNeuronColumnOnDLS())));
+		assert(in_view_location < columns.size());
+		std::vector<Input> inputs{{neuron_vertex_descriptor, {in_view_location, in_view_location}}};
+		assert(network_graph.m_madc_sample_output_vertex);
+		assert(
+		    boost::in_degree(
+		        *(network_graph.m_madc_sample_output_vertex), network_graph.m_graph.get_graph()) ==
+		    1);
+		auto const edges = boost::in_edges(
+		    *(network_graph.m_madc_sample_output_vertex), network_graph.m_graph.get_graph());
+		auto const madc_vertex = boost::source(*(edges.first), network_graph.m_graph.get_graph());
+		network_graph.m_graph.update_and_relocate(madc_vertex, std::move(madc_readout), inputs);
+	};
+
+	assert(network);
+	assert(network_graph.m_network);
+
+	for (auto const& [descriptor, projection] : network->projections) {
+		auto const& old_projection = network_graph.m_network->projections.at(descriptor);
+		auto const& placed_projections = network_graph.m_synapse_vertices.at(descriptor);
+		if (!requires_change(projection, old_projection)) {
+			continue;
+		}
+		for (auto const& [_, placed_connection] : placed_projections) {
+			update_weights(placed_connection, network_graph, projection, old_projection);
+		}
+	}
+	if (network_graph.m_network->madc_recording != network->madc_recording) {
+		update_madc(network_graph, *network);
+	}
+	network_graph.m_network = network;
+}
 
 NetworkGraph build_network_graph(
     std::shared_ptr<Network> const& network, RoutingResult const& routing_result)
@@ -90,6 +189,12 @@ NetworkGraph build_network_graph(
 	result.m_event_input_vertex = resources.external_input;
 	result.m_event_output_vertex = resources.external_output;
 	result.m_madc_sample_output_vertex = resources.madc_output;
+	for (auto const& [d, p] : resources.projections) {
+		result.m_synapse_vertices[d] = p.synapses;
+	}
+	for (auto const& [d, p] : resources.populations) {
+		result.m_neuron_vertices[d] = p.neurons;
+	}
 
 	LOG4CXX_TRACE(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
