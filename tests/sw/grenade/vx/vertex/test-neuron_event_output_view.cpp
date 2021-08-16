@@ -26,6 +26,11 @@ TEST(NeuronEventOutputView, General)
 	EXPECT_THROW(NeuronEventOutputView view(neurons), std::runtime_error);
 	neurons.at(row).at(0).at(1) = NeuronColumnOnDLS(1);
 
+	// produce duplicate neuron in different groups
+	neurons.at(row).push_back(columns);
+	EXPECT_THROW(NeuronEventOutputView view(neurons), std::runtime_error);
+	neurons.at(row).pop_back();
+
 	NeuronEventOutputView config(neurons);
 	EXPECT_EQ(config.get_neurons(), neurons);
 	EXPECT_EQ(config.inputs().size(), 1);

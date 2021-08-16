@@ -16,12 +16,15 @@ namespace grenade::vx::vertex {
 NeuronEventOutputView::NeuronEventOutputView(Neurons const& neurons) : m_neurons()
 {
 	for (auto const& [_, columns_of_inputs] : neurons) {
+		std::set<Columns::value_type> unique;
+		size_t size = 0;
 		for (auto const& columns : columns_of_inputs) {
-			std::set<Columns::value_type> unique(columns.begin(), columns.end());
-			if (unique.size() != columns.size()) {
-				throw std::runtime_error(
-				    "Neuron locations provided to NeuronEventOutputView are not unique.");
-			}
+			unique.insert(columns.begin(), columns.end());
+			size += columns.size();
+		}
+		if (unique.size() != size) {
+			throw std::runtime_error(
+			    "Neuron locations provided to NeuronEventOutputView are not unique.");
 		}
 	}
 	m_neurons = neurons;
