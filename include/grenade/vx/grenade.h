@@ -16,3 +16,12 @@
 #include "grenade/vx/network/routing_options.h"
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/network/run.h"
+
+#include "grenade/vx/logical_network/generate_input.h"
+#include "grenade/vx/logical_network/network.h"
+#include "grenade/vx/logical_network/network_builder.h"
+#include "grenade/vx/logical_network/network_graph.h"
+#include "grenade/vx/logical_network/network_graph_builder.h"
+#include "grenade/vx/logical_network/plasticity_rule.h"
+#include "grenade/vx/logical_network/population.h"
+#include "grenade/vx/logical_network/projection.h"
