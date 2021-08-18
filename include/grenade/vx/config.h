@@ -105,7 +105,11 @@ ChipConfig GENPYBIND(visible) convert_to_chip(
 } // namespace grenade::vx
 
 BOOST_HANA_ADAPT_STRUCT(
-    grenade::vx::HemisphereConfig, synapse_matrix, synapse_driver_block, neuron_block);
+    grenade::vx::HemisphereConfig,
+    synapse_matrix,
+    synapse_driver_block,
+    common_padi_bus_config,
+    neuron_block);
 BOOST_HANA_ADAPT_STRUCT(
     grenade::vx::ChipConfig,
     hemispheres,
