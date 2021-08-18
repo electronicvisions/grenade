@@ -17,9 +17,9 @@
 #include <log4cxx/logger.h>
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/connection_restriction.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/input.h"
+#include "grenade/vx/supports_input_from.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
 #include "hate/type_traits.h"

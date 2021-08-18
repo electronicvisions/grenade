@@ -1,6 +1,6 @@
 #pragma once
-#include <optional>
 #include "hate/type_traits.h"
+#include <optional>
 
 namespace grenade::vx {
 
