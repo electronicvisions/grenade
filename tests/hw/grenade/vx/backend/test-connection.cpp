@@ -1,0 +1,40 @@
+#include <gtest/gtest.h>
+
+#include "grenade/vx/backend/connection.h"
+#include "hxcomm/vx/connection_from_env.h"
+#include "stadls/vx/v2/init_generator.h"
+
+TEST(Connection, General)
+{
+	std::string hxcomm_unique_identifier;
+	{
+		auto hxcomm_connection = hxcomm::vx::get_connection_from_env();
+		hxcomm_unique_identifier =
+		    std::visit([](auto const& c) { return c.get_unique_identifier(); }, hxcomm_connection);
+
+		grenade::vx::backend::Connection connection(std::move(hxcomm_connection));
+		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
+
+		auto released_hxcomm_connection = std::move(connection.release());
+		auto const released_hxcomm_unique_identifier = std::visit(
+		    [](auto const& c) { return c.get_unique_identifier(); }, released_hxcomm_connection);
+		EXPECT_EQ(released_hxcomm_unique_identifier, hxcomm_unique_identifier);
+	}
+
+	{
+		grenade::vx::backend::Connection connection;
+		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
+
+		auto const time_info_first = connection.get_time_info();
+		auto const time_info_second = connection.get_time_info();
+		EXPECT_GE(time_info_second.encode_duration, time_info_first.encode_duration);
+		EXPECT_GE(time_info_second.decode_duration, time_info_first.decode_duration);
+		EXPECT_GE(time_info_second.commit_duration, time_info_first.commit_duration);
+		EXPECT_GE(time_info_second.execution_duration, time_info_first.execution_duration);
+	}
+	{
+		grenade::vx::backend::Connection connection(
+		    hxcomm::vx::get_connection_from_env(), stadls::vx::v2::DigitalInit());
+		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
+	}
+}
