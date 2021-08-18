@@ -271,7 +271,7 @@ void ExecutionInstanceBuilder::process(
 			// get samples via neuron mapping from incoming NeuronView
 			size_t i = 0;
 			for (auto const& column : columns) {
-				samples.at(i) = Int8(values[column]);
+				samples.at(i) = Int8(values[column.toNeuronColumnOnDLS()]);
 				i++;
 			}
 		}

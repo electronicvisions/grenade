@@ -8,15 +8,12 @@
 
 namespace grenade::vx {
 
-haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(std::vector<int8_t> const& values)
+haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(
+    halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS> const& values)
 {
 	using namespace haldls::vx::v2;
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
-
-	if (values.size() != NeuronColumnOnDLS::size) {
-		throw std::runtime_error("Trying to convert values to vector-unit row of wrong size.");
-	}
 
 	PPUMemoryBlock block(
 	    PPUMemoryBlockSize(NeuronColumnOnDLS::size / sizeof(PPUMemoryWord::raw_type)));
@@ -26,13 +23,14 @@ haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(std::vector<int8_t> const& val
 		auto const entry = coord.toEntryOnQuad();
 		PPUMemoryWord::raw_type word = block.at(quad).get_value();
 		int8_t* byte = reinterpret_cast<int8_t*>(&word);
-		*(byte + entry) = values.at(coord.toEnum());
+		*(byte + entry) = values.at(coord.toNeuronColumnOnDLS());
 		block.at(quad) = PPUMemoryWord(PPUMemoryWord::Value(word));
 	}
 	return block;
 }
 
-std::vector<int8_t> from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& values)
+halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS>
+from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& values)
 {
 	using namespace haldls::vx::v2;
 	using namespace halco::common;
@@ -42,7 +40,7 @@ std::vector<int8_t> from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& v
 		throw std::runtime_error("Trying to convert values to vector-unit row of wrong size.");
 	}
 
-	std::vector<int8_t> bytes(NeuronColumnOnDLS::size);
+	halco::common::typed_array<int8_t, NeuronColumnOnDLS> bytes;
 
 	for (auto quad : iter_all<SynapseQuadColumnOnDLS>()) {
 		PPUMemoryWord::raw_type word = values.at(quad).get_value();

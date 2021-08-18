@@ -1,4 +1,6 @@
 #pragma once
+#include "halco/common/typed_array.h"
+#include "haldls/vx/v2/neuron.h"
 #include "haldls/vx/v2/ppu.h"
 #include "hate/visibility.h"
 #include <cstdint>
@@ -8,15 +10,17 @@
 namespace grenade::vx {
 
 /**
- * Convert byte values indexed via NeuronColumnOnDLS to PPUMemoryBlock.
+ * Convert column byte values to PPUMemoryBlock.
  */
-haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(std::vector<int8_t> const& values) SYMBOL_VISIBLE;
+haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(
+    halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS> const& values)
+    SYMBOL_VISIBLE;
 
 /**
- * Convert PPUMemoryBlock to byte values indexed via SynapseOnSynapseRow.
+ * Convert PPUMemoryBlock to column byte values.
  */
-std::vector<int8_t> from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& values)
-    SYMBOL_VISIBLE;
+halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS>
+from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& values) SYMBOL_VISIBLE;
 
 inline static std::string const ppu_program_name = "grenade_ppu_base_vx";
 

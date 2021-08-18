@@ -325,7 +325,7 @@ ExecutionInstanceConfigBuilder::generate()
 			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 
 			// write neuron reset mask
-			std::vector<int8_t> values(NeuronColumnOnDLS::size);
+			halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;
 			for (auto const col : iter_all<NeuronColumnOnDLS>()) {
 				values[col] = m_enabled_neuron_resets[AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS())
 				                                          .toNeuronResetOnDLS()];
