@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/logical_network/population.h"
-#include "grenade/vx/network/projection.h"
+#include "grenade/vx/logical_network/receptor.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include <vector>
@@ -20,8 +20,7 @@ namespace logical_network GENPYBIND_MODULE {
 struct GENPYBIND(visible) Projection
 {
 	/** Receptor type. */
-	typedef network::Projection::ReceptorType ReceptorType;
-	ReceptorType receptor_type;
+	Receptor receptor;
 
 	/** Single neuron connection. */
 	struct Connection
@@ -61,12 +60,12 @@ struct GENPYBIND(visible) Projection
 
 	Projection() = default;
 	Projection(
-	    ReceptorType receptor_type,
+	    Receptor const& receptor,
 	    Connections const& connections,
 	    PopulationDescriptor population_pre,
 	    PopulationDescriptor population_post) SYMBOL_VISIBLE;
 	Projection(
-	    ReceptorType receptor_type,
+	    Receptor const& receptor,
 	    Connections&& connections,
 	    PopulationDescriptor population_pre,
 	    PopulationDescriptor population_post) SYMBOL_VISIBLE;
@@ -74,8 +73,7 @@ struct GENPYBIND(visible) Projection
 	GENPYBIND_MANUAL({
 		using namespace grenade::vx::logical_network;
 
-		auto const from_numpy = [](GENPYBIND_PARENT_TYPE& self,
-		                           Projection::ReceptorType const receptor_type,
+		auto const from_numpy = [](GENPYBIND_PARENT_TYPE& self, Receptor const& receptor,
 		                           pybind11::array_t<size_t> const& pyconnections,
 		                           PopulationDescriptor const population_pre,
 		                           PopulationDescriptor const population_post) {
@@ -96,7 +94,7 @@ struct GENPYBIND(visible) Projection
 				lconn.index_post = data(i, 1);
 				lconn.weight = Projection::Connection::Weight(data(i, 2));
 			}
-			self.receptor_type = receptor_type;
+			self.receptor = receptor;
 			self.population_pre = population_pre;
 			self.population_post = population_post;
 		};
@@ -119,11 +117,6 @@ struct GENPYBIND(inline_base("*")) ProjectionDescriptor
 };
 
 } // namespace logical_network
-
-GENPYBIND_MANUAL({
-	parent.attr("logical_network").attr("Projection").attr("ReceptorType") =
-	    parent.attr("Projection").attr("ReceptorType");
-})
 
 } // namespace grenade::vx
 

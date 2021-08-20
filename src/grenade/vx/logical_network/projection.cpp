@@ -28,22 +28,22 @@ std::ostream& operator<<(std::ostream& os, Projection::Connection const& connect
 
 
 Projection::Projection(
-    ReceptorType const receptor_type,
+    Receptor const& receptor,
     Connections const& connections,
     PopulationDescriptor const population_pre,
     PopulationDescriptor const population_post) :
-    receptor_type(receptor_type),
+    receptor(receptor),
     connections(connections),
     population_pre(population_pre),
     population_post(population_post)
 {}
 
 Projection::Projection(
-    ReceptorType const receptor_type,
+    Receptor const& receptor,
     Connections&& connections,
     PopulationDescriptor const population_pre,
     PopulationDescriptor const population_post) :
-    receptor_type(receptor_type),
+    receptor(receptor),
     connections(std::move(connections)),
     population_pre(population_pre),
     population_post(population_post)
@@ -51,7 +51,7 @@ Projection::Projection(
 
 bool Projection::operator==(Projection const& other) const
 {
-	return receptor_type == other.receptor_type && connections == other.connections &&
+	return receptor == other.receptor && connections == other.connections &&
 	       population_pre == other.population_pre && population_post == other.population_post;
 }
 
@@ -63,7 +63,7 @@ bool Projection::operator!=(Projection const& other) const
 std::ostream& operator<<(std::ostream& os, Projection const& projection)
 {
 	os << "Projection(\n";
-	os << "\treceptor_type: " << projection.receptor_type << "\n";
+	os << "\treceptor: " << projection.receptor << "\n";
 	os << "\tpopulation_pre: " << projection.population_pre << "\n";
 	os << "\tpopulation_post: " << projection.population_post << "\n";
 	os << "\tconnections:\n";

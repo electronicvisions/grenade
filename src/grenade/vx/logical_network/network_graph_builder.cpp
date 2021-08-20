@@ -47,7 +47,7 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 		auto const max_num_synapses = *std::max_element(num_synapses.begin(), num_synapses.end());
 		for (size_t p = 0; p < max_num_synapses; ++p) {
 			network::Projection hardware_projection;
-			hardware_projection.receptor_type = projection.receptor_type;
+			hardware_projection.receptor_type = projection.receptor.type;
 			hardware_projection.population_pre =
 			    population_translation.at(projection.population_pre);
 			hardware_projection.population_post =

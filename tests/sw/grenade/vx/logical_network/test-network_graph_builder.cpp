@@ -26,7 +26,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	            grenade::vx::network::Projection::Connection::Weight::max * max_weight_multiplier)),
 	};
 	Projection projection(
-	    Projection::ReceptorType::excitatory, connections, descriptor, descriptor);
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), connections, descriptor, descriptor);
 
 	auto const projection_descriptor = builder.add(projection);
 
