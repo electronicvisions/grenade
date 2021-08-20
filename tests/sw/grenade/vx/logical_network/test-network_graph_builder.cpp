@@ -11,7 +11,11 @@ TEST(logical_network_build_network_graph, Multapses)
 {
 	NetworkBuilder builder;
 
-	Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true, true});
+	Population population(
+	    {AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))},
+	    {{Receptor(Receptor::ID(), Receptor::Type::excitatory)},
+	     {Receptor(Receptor::ID(), Receptor::Type::excitatory)}},
+	    {true, true});
 
 	auto descriptor = builder.add(population);
 

@@ -2,6 +2,7 @@
 
 #include "grenade/vx/network/network_builder.h"
 #include "hate/math.h"
+#include "hate/variant.h"
 #include <map>
 
 namespace grenade::vx::logical_network {
@@ -16,8 +17,14 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 	// add populations, currently direct translation
 	NetworkGraph::PopulationTranslation population_translation;
 	for (auto const& [descriptor, population] : network->populations) {
-		population_translation[descriptor] =
-		    std::visit([&builder](auto const& pop) { return builder.add(pop); }, population);
+		population_translation[descriptor] = std::visit(
+		    hate::overloaded{
+		        [&builder](Population const& pop) {
+			        network::Population hardware_pop(pop.neurons, pop.enable_record_spikes);
+			        return builder.add(hardware_pop);
+		        },
+		        [&builder](auto const& pop /* BackgroundSpikeSoucePopulation, ExternalPopulation stay the same */) { return builder.add(pop); }},
+		    population);
 	}
 
 	// add MADC recording if present
@@ -52,10 +59,17 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 			    population_translation.at(projection.population_pre);
 			hardware_projection.population_post =
 			    population_translation.at(projection.population_post);
+			auto const& population_post =
+			    std::get<Population>(network->populations.at(projection.population_post));
 			std::vector<size_t> indices;
 			for (size_t i = 0; i < projection.connections.size(); ++i) {
+				auto const& local_connection = projection.connections.at(i);
+				auto const& receptors = population_post.receptors.at(local_connection.index_post);
+				if (!receptors.contains(projection.receptor)) {
+					throw std::runtime_error(
+					    "Neuron does not feature receptor requested by projection.");
+				}
 				if (num_synapses.at(i) > p) {
-					auto const& local_connection = projection.connections.at(i);
 					network::Projection::Connection hardware_connection{
 					    local_connection.index_pre, local_connection.index_post,
 					    network::Projection::Connection::Weight(std::min<size_t>(

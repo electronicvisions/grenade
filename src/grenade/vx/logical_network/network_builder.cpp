@@ -21,6 +21,10 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 	if (population.neurons.size() != population.enable_record_spikes.size()) {
 		throw std::runtime_error("Spike recorder enable mask not same size as neuron count.");
 	}
+	// check that neuron and receptor count are equal
+	if (population.neurons.size() != population.receptors.size()) {
+		throw std::runtime_error("Receptors don't have the same size as neurons.");
+	}
 
 	// check that supplied neurons are unique
 	std::set<Population::Neurons::value_type> unique(
@@ -111,6 +115,15 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	// check that target population is not external
 	if (!std::holds_alternative<Population>(population_post)) {
 		throw std::runtime_error("Only projections with on-chip neuron population are supported.");
+	}
+
+	// check that receptor is available for all post neurons
+	auto const& pop_post = std::get<Population>(m_populations.at(projection.population_post));
+	for (auto const& connection : projection.connections) {
+		auto const& receptors = pop_post.receptors.at(connection.index_post);
+		if (!receptors.contains(projection.receptor)) {
+			throw std::runtime_error("Neuron does not feature receptor requested by projection.");
+		}
 	}
 
 	// check that no single connection index is out of range of its population
