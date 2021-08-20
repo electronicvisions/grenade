@@ -32,6 +32,15 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(population_translation))
 	PopulationTranslation const& get_population_translation() const SYMBOL_VISIBLE;
 
+	/** Translation between logical and hardware neurons in populations. */
+	typedef std::map<
+	    PopulationDescriptor,
+	    std::vector<
+	        std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<size_t>>>>
+	    NeuronTranslation;
+	GENPYBIND(getter_for(neuron_translation))
+	NeuronTranslation const& get_neuron_translation() const SYMBOL_VISIBLE;
+
 	/** Translation between logical and hardware projections. */
 	typedef std::multimap<
 	    std::pair<ProjectionDescriptor, size_t>,
@@ -44,6 +53,7 @@ private:
 	std::shared_ptr<Network> m_network;
 	std::shared_ptr<network::Network> m_hardware_network;
 	PopulationTranslation m_population_translation;
+	NeuronTranslation m_neuron_translation;
 	ProjectionTranslation m_projection_translation;
 
 	friend NetworkGraph build_network_graph(std::shared_ptr<Network> const& network);

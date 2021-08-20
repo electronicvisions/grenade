@@ -3,6 +3,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/logical_network/network_graph.h"
+#include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network_graph.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -63,9 +64,8 @@ public:
 	IODataMap done() SYMBOL_VISIBLE;
 
 private:
-	IODataMap m_data{};
+	network::InputGenerator m_input_generator;
 	NetworkGraph const& m_network_graph;
-	network::NetworkGraph const& m_hardware_network_graph;
 };
 
 } // namespace logical_network

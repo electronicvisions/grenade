@@ -31,15 +31,16 @@ struct GENPYBIND(visible) Projection
 			constexpr explicit Weight(value_type const value = 0) : base_t(value) {}
 		};
 
+		typedef std::pair<size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron> Index;
 		/** Index of neuron in pre-synaptic population. */
-		size_t index_pre;
+		Index index_pre;
 		/** Index of neuron in post-synaptic population. */
-		size_t index_post;
+		Index index_post;
 		/** Weight of connection. */
 		Weight weight;
 
 		Connection() = default;
-		Connection(size_t index_pre, size_t index_post, Weight weight) SYMBOL_VISIBLE;
+		Connection(Index const& index_pre, Index const& index_post, Weight weight) SYMBOL_VISIBLE;
 
 		bool operator==(Connection const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Connection const& other) const SYMBOL_VISIBLE;
@@ -82,17 +83,22 @@ struct GENPYBIND(visible) Projection
 			}
 			auto const shape = std::vector<size_t>{
 			    pyconnections.shape(), pyconnections.shape() + pyconnections.ndim()};
-			if (shape.at(1) != 3) {
+			if (shape.at(1) != 5) {
 				throw std::runtime_error("Expected connections array second dimension to be of "
-				                         "size 3 (index_pre, index_post, weight).");
+				                         "size 5 (index_pre.first, index_pre.second, "
+				                         "index_post.first, index_post.second, weight).");
 			}
 			self.connections.resize(shape.at(0));
-			auto const data = pyconnections.unchecked();
+			auto const data = pyconnections.unchecked<2>();
 			for (size_t i = 0; i < self.connections.size(); ++i) {
 				auto& lconn = self.connections.at(i);
-				lconn.index_pre = data(i, 0);
-				lconn.index_post = data(i, 1);
-				lconn.weight = Projection::Connection::Weight(data(i, 2));
+				lconn.index_pre.first = data(i, 0);
+				lconn.index_pre.second =
+				    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(data(i, 1));
+				lconn.index_post.first = data(i, 2);
+				lconn.index_post.second =
+				    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(data(i, 3));
+				lconn.weight = Projection::Connection::Weight(data(i, 4));
 			}
 			self.receptor = receptor;
 			self.population_pre = population_pre;
@@ -108,6 +114,10 @@ struct GENPYBIND(visible) Projection
 	GENPYBIND(stringstream)
 	friend std::ostream& operator<<(std::ostream& os, Projection const& projection) SYMBOL_VISIBLE;
 };
+
+std::ostream& operator<<(std::ostream& os, Projection::Connection::Index const& index)
+    SYMBOL_VISIBLE;
+
 
 /** Descriptor to be used to identify a projection. */
 struct GENPYBIND(inline_base("*")) ProjectionDescriptor

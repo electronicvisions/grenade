@@ -4,8 +4,14 @@
 
 namespace grenade::vx::logical_network {
 
+std::ostream& operator<<(std::ostream& os, Projection::Connection::Index const& index)
+{
+	os << "Index(" << index.first << ", " << index.second << ")";
+	return os;
+}
+
 Projection::Connection::Connection(
-    size_t const index_pre, size_t const index_post, Weight const weight) :
+    Index const& index_pre, Index const& index_post, Weight const weight) :
     index_pre(index_pre), index_post(index_post), weight(weight)
 {}
 

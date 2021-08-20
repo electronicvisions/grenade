@@ -11,21 +11,43 @@ TEST(logical_network_build_network_graph, Multapses)
 {
 	NetworkBuilder builder;
 
-	Population population(
-	    {AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))},
-	    {{Receptor(Receptor::ID(), Receptor::Type::excitatory)},
-	     {Receptor(Receptor::ID(), Receptor::Type::excitatory)}},
-	    {true, true});
+	auto const get_logical_neuron = [](AtomicNeuronOnDLS const& an) {
+		return LogicalNeuronOnDLS(
+		    LogicalNeuronCompartments(
+		        {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+		    an);
+	};
+
+	Population population({
+	    Population::Neuron(
+	        get_logical_neuron(AtomicNeuronOnDLS(Enum(0))),
+	        {{CompartmentOnLogicalNeuron(),
+	          Population::Neuron::Compartment(
+	              Population::Neuron::Compartment::SpikeMaster(0, true),
+	              {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}})}}),
+	    Population::Neuron(
+	        get_logical_neuron(AtomicNeuronOnDLS(Enum(1))),
+	        {{CompartmentOnLogicalNeuron(),
+	          Population::Neuron::Compartment(
+	              Population::Neuron::Compartment::SpikeMaster(0, true),
+	              {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}})}}),
+	});
 
 	auto descriptor = builder.add(population);
 
 	constexpr size_t max_weight_multiplier = 4;
 	Projection::Connections connections{
-	    Projection::Connection(0, 0, Projection::Connection::Weight(12)),
-	    Projection::Connection(0, 1, Projection::Connection::Weight(100)),
-	    Projection::Connection(1, 0, Projection::Connection::Weight(54)),
 	    Projection::Connection(
-	        1, 1,
+	        {0, CompartmentOnLogicalNeuron()}, {0, CompartmentOnLogicalNeuron()},
+	        Projection::Connection::Weight(12)),
+	    Projection::Connection(
+	        {0, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
+	        Projection::Connection::Weight(100)),
+	    Projection::Connection(
+	        {1, CompartmentOnLogicalNeuron()}, {0, CompartmentOnLogicalNeuron()},
+	        Projection::Connection::Weight(54)),
+	    Projection::Connection(
+	        {1, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
 	        Projection::Connection::Weight(
 	            grenade::vx::network::Projection::Connection::Weight::max * max_weight_multiplier)),
 	};

@@ -5,6 +5,7 @@
 #include "hate/variant.h"
 #include <set>
 #include <log4cxx/logger.h>
+#include <sys/socket.h>
 
 namespace grenade::vx::logical_network {
 
@@ -17,30 +18,21 @@ NetworkBuilder::NetworkBuilder() :
 PopulationDescriptor NetworkBuilder::add(Population const& population)
 {
 	hate::Timer timer;
-	// check that neuron and recording enable information count are equal
-	if (population.neurons.size() != population.enable_record_spikes.size()) {
-		throw std::runtime_error("Spike recorder enable mask not same size as neuron count.");
-	}
-	// check that neuron and receptor count are equal
-	if (population.neurons.size() != population.receptors.size()) {
-		throw std::runtime_error("Receptors don't have the same size as neurons.");
-	}
-
-	// check that supplied neurons are unique
-	std::set<Population::Neurons::value_type> unique(
-	    population.neurons.begin(), population.neurons.end());
-	if (unique.size() != population.neurons.size()) {
-		throw std::runtime_error("Neuron locations provided by Population are not unique.");
+	// check population is valid
+	if (!population.valid()) {
+		throw std::runtime_error("Population is not valid.");
 	}
 
 	// check that supplied neurons don't overlap with already added populations
+	auto const atomic_neurons = population.get_atomic_neurons();
 	for (auto const& [descriptor, other] : m_populations) {
 		if (!std::holds_alternative<Population>(other)) {
 			continue;
 		}
 		auto const& o = std::get<Population>(other);
-		for (auto const& n : population.neurons) {
-			if (std::find(o.neurons.begin(), o.neurons.end(), n) != o.neurons.end()) {
+		for (auto const& n : atomic_neurons) {
+			auto const o_neurons = o.get_atomic_neurons();
+			if (std::find(o_neurons.begin(), o_neurons.end(), n) != o_neurons.end()) {
 				std::stringstream ss;
 				ss << "Neuron location(" << n
 				   << ") provided by Population already present in other population(" << descriptor
@@ -49,7 +41,6 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 			}
 		}
 	}
-
 	PopulationDescriptor descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
@@ -110,37 +101,66 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 {
 	hate::Timer timer;
 	auto const& population_pre = m_populations.at(projection.population_pre);
-	auto const& population_post = m_populations.at(projection.population_post);
 
 	// check that target population is not external
-	if (!std::holds_alternative<Population>(population_post)) {
+	if (!std::holds_alternative<Population>(m_populations.at(projection.population_post))) {
 		throw std::runtime_error("Only projections with on-chip neuron population are supported.");
 	}
 
-	// check that receptor is available for all post neurons
-	auto const& pop_post = std::get<Population>(m_populations.at(projection.population_post));
-	for (auto const& connection : projection.connections) {
-		auto const& receptors = pop_post.receptors.at(connection.index_post);
-		if (!receptors.contains(projection.receptor)) {
-			throw std::runtime_error("Neuron does not feature receptor requested by projection.");
-		}
-	}
+	auto const& population_post =
+	    std::get<Population>(m_populations.at(projection.population_post));
 
 	// check that no single connection index is out of range of its population
 	auto const get_size = hate::overloaded(
 	    [](Population const& p) { return p.neurons.size(); }, [](auto const& p) { return p.size; });
 	auto const size_pre = std::visit(get_size, population_pre);
-	auto const size_post = std::visit(get_size, population_post);
+	auto const size_post = get_size(population_post);
+
+	auto const contains =
+	    [](Population const& population,
+	       std::pair<size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron> index) {
+		    return population.neurons.at(index.first)
+		        .coordinate.get_placed_compartments()
+		        .contains(index.second);
+	    };
 
 	for (auto const& connection : projection.connections) {
-		if ((connection.index_pre > size_pre) || (connection.index_post > size_post)) {
+		if ((connection.index_pre.first > size_pre) || (connection.index_post.first > size_post)) {
 			throw std::runtime_error("Connection index out of range of population(s).");
+		}
+		if (std::holds_alternative<Population>(population_pre)) {
+			auto const& population = std::get<Population>(population_pre);
+			if (!contains(population, connection.index_pre)) {
+				throw std::runtime_error("Connection index compartment out of range of neuron.");
+			}
+		} else {
+			if (connection.index_pre.second !=
+			    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(0)) {
+				throw std::runtime_error(
+				    "Only on-chip population supports multiple compartments per neuron.");
+			}
+		}
+		if (!contains(population_post, connection.index_post)) {
+			throw std::runtime_error("Connection index compartment out of range of neuron.");
+		}
+	}
+
+	// check that receptor is available for all post neurons
+	for (auto const& connection : projection.connections) {
+		auto const& receptors = population_post.neurons.at(connection.index_post.first)
+		                            .compartments.at(connection.index_post.second)
+		                            .receptors;
+		if (!std::any_of(
+		        receptors.begin(), receptors.end(),
+		        [receptor = projection.receptor](auto const& r) { return r.contains(receptor); })) {
+			throw std::runtime_error("Neuron does not feature receptor requested by projection.");
 		}
 	}
 
 	// check that single connections connect unique pairs
 	auto const get_unique_connections = [](auto const& connections) {
-		std::set<std::pair<size_t, size_t>> unique_connections;
+		std::set<std::pair<Projection::Connection::Index, Projection::Connection::Index>>
+		    unique_connections;
 		for (auto const& c : connections) {
 			unique_connections.insert({c.index_pre, c.index_post});
 		}
@@ -156,11 +176,25 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	if (std::holds_alternative<BackgroundSpikeSourcePopulation>(
 	        m_populations.at(projection.population_pre))) {
 		auto const& pre = std::get<BackgroundSpikeSourcePopulation>(population_pre);
-		auto const& post = std::get<Population>(population_post);
 		for (auto const& connection : projection.connections) {
-			if (!pre.coordinate.contains(post.neurons.at(connection.index_post)
-			                                 .toNeuronRowOnDLS()
-			                                 .toHemisphereOnDLS())) {
+			auto const& receptors = population_post.neurons.at(connection.index_post.first)
+			                            .compartments.at(connection.index_post.second)
+			                            .receptors;
+			auto const& placed_compartments =
+			    population_post.neurons.at(connection.index_post.first)
+			        .coordinate.get_placed_compartments();
+			auto const& placed_compartment_neurons =
+			    placed_compartments.at(connection.index_post.second);
+			bool found_target_neuron = false;
+			for (size_t i = 0; i < placed_compartment_neurons.size(); ++i) {
+				if (pre.coordinate.contains(
+				        placed_compartment_neurons.at(i).toNeuronRowOnDLS().toHemisphereOnDLS()) &&
+				    receptors.at(i).contains(projection.receptor)) {
+					found_target_neuron = true;
+					break;
+				}
+			}
+			if (!found_target_neuron) {
 				throw std::runtime_error(
 				    "Source population of projection to be added can't reach target neuron(s).");
 			}
@@ -188,10 +222,25 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 	if (!std::holds_alternative<Population>(m_populations.at(madc_recording.population))) {
 		throw std::runtime_error("MADC recording does not reference internal population.");
 	}
-	if (madc_recording.index >=
+	if (madc_recording.neuron_on_population >=
 	    std::get<Population>(m_populations.at(madc_recording.population)).neurons.size()) {
 		throw std::runtime_error(
 		    "MADC recording references neuron index out of range of population.");
+	}
+	if (!std::get<Population>(m_populations.at(madc_recording.population))
+	         .neurons.at(madc_recording.neuron_on_population)
+	         .coordinate.get_placed_compartments()
+	         .contains(madc_recording.compartment_on_neuron)) {
+		throw std::runtime_error("MADC recording references non-existent neuron compartment.");
+	}
+	if (madc_recording.atomic_neuron_on_compartment >=
+	    std::get<Population>(m_populations.at(madc_recording.population))
+	        .neurons.at(madc_recording.neuron_on_population)
+	        .coordinate.get_placed_compartments()
+	        .at(madc_recording.compartment_on_neuron)
+	        .size()) {
+		throw std::runtime_error(
+		    "MADC recording references atomic neuron index out of range of neuron.");
 	}
 	m_madc_recording = madc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
