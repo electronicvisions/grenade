@@ -13,7 +13,7 @@ TEST(NetworkBuilder, General)
 
 	// pop size and spike record information have to have same size
 	EXPECT_THROW(
-	    Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true}),
+	    builder.add(Population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true})),
 	    std::runtime_error);
 
 	Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true, false});

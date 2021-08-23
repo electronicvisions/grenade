@@ -15,6 +15,11 @@ NetworkBuilder::NetworkBuilder() :
 PopulationDescriptor NetworkBuilder::add(Population const& population)
 {
 	hate::Timer timer;
+	// check that neuron and recording enable information count are equal
+	if (population.neurons.size() != population.enable_record_spikes.size()) {
+		throw std::runtime_error("Spike recorder enable mask not same size as neuron count.");
+	}
+
 	// check that supplied neurons are unique
 	std::set<Population::Neurons::value_type> unique(
 	    population.neurons.begin(), population.neurons.end());
