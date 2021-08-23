@@ -15,10 +15,11 @@ struct GENPYBIND(visible) MADCRecording
 {
 	PopulationDescriptor population{};
 	size_t index{0};
-	lola::vx::v2::AtomicNeuron::Readout::Source source{
-	    lola::vx::v2::AtomicNeuron::Readout::Source::membrane};
+	typedef lola::vx::v2::AtomicNeuron::Readout::Source Source;
+	Source source{Source::membrane};
 
 	MADCRecording() = default;
+	MADCRecording(PopulationDescriptor population, size_t index, Source source) SYMBOL_VISIBLE;
 
 	bool operator==(MADCRecording const& other) const SYMBOL_VISIBLE;
 	bool operator!=(MADCRecording const& other) const SYMBOL_VISIBLE;
