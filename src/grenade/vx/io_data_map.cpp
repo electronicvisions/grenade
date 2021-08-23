@@ -23,7 +23,9 @@ void IODataMap::merge(IODataMap&& other)
 {
 	std::unique_lock<std::mutex> lock(*mutex);
 	data.merge(other.data);
-	runtime = std::move(other.runtime);
+	if (runtime.empty()) {
+		runtime = std::move(other.runtime);
+	}
 }
 
 void IODataMap::merge(IODataMap& other)
