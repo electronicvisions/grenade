@@ -17,12 +17,12 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 {
 	os << "Connections:\n";
 	for (auto const& [descriptor, projections] : result.connections) {
-		os << descriptor << '\n';
+		os << '\t' << descriptor << '\n';
 		size_t i = 0;
 		for (auto const& projection : projections) {
-			os << '\t' << i << '\n';
+			os << "\t\t" << i << '\n';
 			for (auto const& connection : projection) {
-				os << "\t\t" << connection << '\n';
+				os << "\t\t\t" << connection << '\n';
 			}
 			i++;
 		}
@@ -30,40 +30,40 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 
 	os << "External spike labels:\n";
 	for (auto const& [descriptor, neurons] : result.external_spike_labels) {
-		os << descriptor << '\n';
+		os << '\t' << descriptor << '\n';
 		size_t neuron_index = 0;
 		for (auto const& neuron : neurons) {
-			os << '\t' << neuron_index << '\n';
+			os << "\t\t" << neuron_index << '\n';
 			neuron_index++;
 			for (auto const& label : neuron) {
-				os << "\t\t" << label << '\n';
+				os << "\t\t\t" << label << '\n';
 			}
 		}
 	}
 
 	os << "Internal neuron labels:\n";
 	for (auto const& [descriptor, labels] : result.internal_neuron_labels) {
-		os << descriptor << '\n';
+		os << '\t' << descriptor << '\n';
 		for (auto const& label : labels) {
-			os << '\t' << label << '\n';
+			os << "\t\t" << label << '\n';
 		}
 	}
 
 	os << "SynapseDriver row address compare masks:\n";
 	for (auto const& [driver, mask] : result.synapse_driver_compare_masks) {
-		os << driver << " " << mask << '\n';
+		os << '\t' << driver << " " << mask << '\n';
 	}
 
 	os << "SynapseRow modes (not disabled):\n";
 	for (auto const& [row, mode] : result.synapse_row_modes) {
 		if (mode != haldls::vx::v2::SynapseDriverConfig::RowMode::disabled) {
-			os << row << " " << mode << '\n';
+			os << '\t' << row << " " << mode << '\n';
 		}
 	}
 
 	os << "CrossbarNodes:\n";
 	for (auto const& [node_coordinate, node] : result.crossbar_nodes) {
-		os << node_coordinate << " " << node << '\n';
+		os << '\t' << node_coordinate << " " << node << '\n';
 	}
 
 	return os;
