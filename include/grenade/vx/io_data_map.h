@@ -40,7 +40,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Data is connected to specified vertex descriptors.
 	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
 	 */
-	std::map<detail::vertex_descriptor, Entry> data GENPYBIND(hidden);
+	std::map<detail::vertex_descriptor, Entry> data;
 
 	/**
 	 * Runtime time-interval data.
