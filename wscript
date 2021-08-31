@@ -77,7 +77,9 @@ def build(bld):
         target = 'grenade_swtest_vx',
         features = 'gtest cxx cxxprogram pyembed',
         source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp'),
+        test_main = 'tests/common/grenade/vx/main.cpp',
         use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc'],
+        linkflags = ['-lboost_program_options-mt'],
         install_path = '${PREFIX}/bin',
     )
 
@@ -85,7 +87,7 @@ def build(bld):
         target = 'grenade_hwtest_vx',
         features = 'gtest cxx cxxprogram pyembed',
         source = bld.path.ant_glob('tests/hw/grenade/vx/**/test-*.cpp'),
-        test_main = 'tests/hw/grenade/vx/main.cpp',
+        test_main = 'tests/common/grenade/vx/main.cpp',
         use = ['grenade_vx', 'stadls_vx_v2', 'GTEST', 'haldls_vx_v2', 'lola_vx_v2'],
         install_path = '${PREFIX}/bin',
         linkflags = ['-lboost_program_options-mt'],
