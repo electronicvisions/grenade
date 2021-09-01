@@ -21,6 +21,7 @@
 #include <set>
 #include <vector>
 #include <boost/range/combine.hpp>
+#include <boost/sort/spinsort/spinsort.hpp>
 #include <boost/type_index.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
@@ -479,7 +480,7 @@ void ExecutionInstanceBuilder::filter_events(
 		return;
 	}
 	// sort events by chip time
-	std::sort(data.begin(), data.end(), [](auto const& a, auto const& b) {
+	boost::sort::spinsort(data.begin(), data.end(), [](auto const& a, auto const& b) {
 		return a.get_chip_time() < b.get_chip_time();
 	});
 	// iterate over batch entries and extract associated events
