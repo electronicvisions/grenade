@@ -451,4 +451,60 @@ bool NetworkGraph::valid() const
 	return true;
 }
 
+std::ostream& operator<<(std::ostream& os, NetworkGraph::PlacedConnection const& placed_connection)
+{
+	os << "PlacedConnection(\n\t" << placed_connection.weight << "\n\t"
+	   << placed_connection.synapse_row << "\n\t" << placed_connection.synapse_on_row << "\n)";
+	return os;
+}
+
+NetworkGraph::PlacedConnection NetworkGraph::get_placed_connection(
+    ProjectionDescriptor const descriptor, size_t const index) const
+{
+	assert(m_network);
+	auto const& projection = m_network->projections.at(descriptor);
+	auto const index_post = projection.connections.at(index).index_post;
+	auto const& neurons =
+	    std::get<Population>(m_network->populations.at(projection.population_post)).neurons;
+
+	auto const hemisphere = neurons.at(index_post).toNeuronRowOnDLS().toHemisphereOnDLS();
+	size_t index_on_hemisphere = 0;
+	for (size_t i = 0; i < index; ++i) {
+		auto const i_post = projection.connections.at(i).index_post;
+		index_on_hemisphere +=
+		    (neurons.at(i_post).toNeuronRowOnDLS().toHemisphereOnDLS() == hemisphere);
+	}
+
+	auto const vertex_descriptor = m_synapse_vertices.at(descriptor).at(hemisphere);
+	auto const& synapse_array_view_sparse =
+	    std::get<vertex::SynapseArrayViewSparse>(m_graph.get_vertex_property(vertex_descriptor));
+	assert(synapse_array_view_sparse.get_synram().toHemisphereOnDLS() == hemisphere);
+
+	auto const rows = synapse_array_view_sparse.get_rows();
+	auto const columns = synapse_array_view_sparse.get_columns();
+	auto const synapses = synapse_array_view_sparse.get_synapses();
+
+	assert(index_on_hemisphere < synapses.size());
+	auto const& synapse = synapses[index_on_hemisphere];
+	assert(synapse.index_row < rows.size());
+	assert(synapse.index_column < columns.size());
+	PlacedConnection placed_connection{
+	    synapse.weight,
+	    halco::hicann_dls::vx::v2::SynapseRowOnDLS(
+	        rows[synapse.index_row], synapse_array_view_sparse.get_synram()),
+	    columns[synapse.index_column]};
+	return placed_connection;
+}
+
+NetworkGraph::PlacedConnections NetworkGraph::get_placed_connections(
+    ProjectionDescriptor const descriptor) const
+{
+	PlacedConnections placed_connections;
+	assert(m_network);
+	for (size_t i = 0; i < m_network->projections.at(descriptor).connections.size(); ++i) {
+		placed_connections.push_back(get_placed_connection(descriptor, i));
+	}
+	return placed_connections;
+}
+
 } // namespace grenade::vx::network

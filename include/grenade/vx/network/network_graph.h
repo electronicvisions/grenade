@@ -64,6 +64,28 @@ struct GENPYBIND(visible) NetworkGraph
 	 */
 	bool valid() const SYMBOL_VISIBLE;
 
+	/*
+	 * Placed connection in synapse matrix.
+	 */
+	struct PlacedConnection
+	{
+		/** Weight of connection. */
+		lola::vx::v2::SynapseMatrix::Weight weight;
+		/** Vertical location. */
+		halco::hicann_dls::vx::v2::SynapseRowOnDLS synapse_row;
+		/** Horizontal location. */
+		halco::hicann_dls::vx::v2::SynapseOnSynapseRow synapse_on_row;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
+	};
+
+	typedef std::vector<PlacedConnection> PlacedConnections;
+
+	PlacedConnection get_placed_connection(ProjectionDescriptor descriptor, size_t index) const
+	    SYMBOL_VISIBLE;
+	PlacedConnections get_placed_connections(ProjectionDescriptor descriptor) const SYMBOL_VISIBLE;
+
 private:
 	std::shared_ptr<Network> m_network;
 	Graph m_graph;
