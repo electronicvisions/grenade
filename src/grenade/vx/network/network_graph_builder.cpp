@@ -47,11 +47,19 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		auto const old_synapses = old_synapse_array_view.get_synapses();
 		auto synapses =
 		    vertex::SynapseArrayViewSparse::Synapses{old_synapses.begin(), old_synapses.end()};
+		auto const& neurons_post = std::get<Population>(network_graph.get_network()->populations.at(
+		                                                    projection.population_post))
+		                               .neurons;
+		auto const neuron_row = old_synapse_array_view.get_synram().toNeuronRowOnDLS();
+		size_t index_on_hemisphere = 0;
 		for (size_t i = 0; i < projection.connections.size(); ++i) {
 			auto const& connection = projection.connections.at(i);
 			auto const& old_connection = old_projection.connections.at(i);
-			if (connection.weight != old_connection.weight) {
-				synapses.at(i).weight = connection.weight;
+			if (neurons_post.at(connection.index_post).toNeuronRowOnDLS() == neuron_row) {
+				if (connection.weight != old_connection.weight) {
+					synapses.at(index_on_hemisphere).weight = connection.weight;
+				}
+				index_on_hemisphere++;
 			}
 		}
 		auto const old_rows = old_synapse_array_view.get_rows();

@@ -28,3 +28,40 @@ TEST(build_network_graph, EmptyProjection)
 
 	[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
 }
+
+TEST(update_network_graph, ProjectionOnBothHemispheres)
+{
+	NetworkBuilder builder;
+
+	Population population(
+	    {AtomicNeuronOnDLS(NeuronColumnOnDLS(0), NeuronRowOnDLS::top),
+	     AtomicNeuronOnDLS(NeuronColumnOnDLS(0), NeuronRowOnDLS::bottom)},
+	    {true, true});
+
+	auto const descriptor = builder.add(population);
+
+	Projection projection(
+	    Projection::ReceptorType::excitatory,
+	    {{0, 0, grenade::vx::network::Projection::Connection::Weight(63)},
+	     {0, 1, grenade::vx::network::Projection::Connection::Weight(63)},
+	     {1, 0, grenade::vx::network::Projection::Connection::Weight(63)},
+	     {1, 1, grenade::vx::network::Projection::Connection::Weight(63)}},
+	    descriptor, descriptor);
+
+	builder.add(projection);
+	auto const network = builder.done();
+
+	auto const routing_result = grenade::vx::network::build_routing(network);
+
+	auto network_graph = build_network_graph(network, routing_result);
+
+	// alter weights
+	for (auto& connection : projection.connections) {
+		connection.weight = grenade::vx::network::Projection::Connection::Weight(0);
+	}
+	builder.add(population);
+	builder.add(projection);
+	auto const new_network = builder.done();
+
+	EXPECT_NO_THROW(grenade::vx::network::update_network_graph(network_graph, new_network));
+}
