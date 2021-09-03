@@ -727,8 +727,7 @@ void RoutingBuilder::apply_routed_connections(
 	// routing result.
 	for (auto const& [descriptor, projection] : network.projections) {
 		auto& local_placed_connections = result.connections[descriptor];
-		local_placed_connections.resize(projection.connections.size());
-		for (size_t i = 0; i < local_placed_connections.size(); ++i) {
+		for (size_t i = 0; i < projection.connections.size(); ++i) {
 			auto const& placed_connection = placed_connections.at(std::pair{descriptor, i});
 			RoutingResult::PlacedConnection local_placed_connection;
 			auto const synapse_row = placed_connection.synapse_row;
@@ -757,7 +756,7 @@ void RoutingBuilder::apply_routed_connections(
 			} else {
 				throw std::logic_error("Source label not found.");
 			}
-			local_placed_connections.at(i).push_back(
+			local_placed_connections.push_back(
 			    RoutingResult::PlacedConnection{weight, label, synapse_row, synapse_on_row});
 		}
 	}

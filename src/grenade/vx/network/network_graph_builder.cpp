@@ -644,16 +644,13 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 		    "Connection builder result does not contain connections for the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
-		for (auto const& placed_connection : placed_connections) {
-			auto const hemisphere =
-			    placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
-			used_synapse_drivers[hemisphere].insert(SynapseDriverOnDLS(
-			    placed_connection.synapse_row.toSynapseRowOnSynram()
-			        .toSynapseDriverOnSynapseDriverBlock(),
-			    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
-			used_synapse_rows[hemisphere].insert(placed_connection.synapse_row);
-		}
+	for (auto const& placed_connection : connection_result.connections.at(descriptor)) {
+		auto const hemisphere = placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
+		used_synapse_drivers[hemisphere].insert(SynapseDriverOnDLS(
+		    placed_connection.synapse_row.toSynapseRowOnSynram()
+		        .toSynapseDriverOnSynapseDriverBlock(),
+		    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
+		used_synapse_rows[hemisphere].insert(placed_connection.synapse_row);
 	}
 	// get rows
 	std::map<HemisphereOnDLS, vertex::SynapseArrayViewSparse::Rows> rows;
@@ -681,23 +678,20 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	}
 	// get synapses
 	std::map<HemisphereOnDLS, vertex::SynapseArrayViewSparse::Synapses> synapses;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
-		for (auto const& placed_connection : placed_connections) {
-			auto const hemisphere =
-			    placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
-			if (!lookup_columns.contains(hemisphere) ||
-			    !lookup_columns.at(hemisphere).contains(placed_connection.synapse_on_row)) {
-				std::stringstream ss;
-				ss << "Placed connection post-neuron(" << hemisphere << ", "
-				   << placed_connection.synapse_on_row << ") not present in post-population.";
-				throw std::runtime_error(ss.str());
-			}
-			vertex::SynapseArrayViewSparse::Synapse synapse{
-			    placed_connection.label, placed_connection.weight,
-			    lookup_rows.at(hemisphere).at(placed_connection.synapse_row.toSynapseRowOnSynram()),
-			    lookup_columns.at(hemisphere).at(placed_connection.synapse_on_row)};
-			synapses[hemisphere].push_back(synapse);
+	for (auto const& placed_connection : connection_result.connections.at(descriptor)) {
+		auto const hemisphere = placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
+		if (!lookup_columns.contains(hemisphere) ||
+		    !lookup_columns.at(hemisphere).contains(placed_connection.synapse_on_row)) {
+			std::stringstream ss;
+			ss << "Placed connection post-neuron(" << hemisphere << ", "
+			   << placed_connection.synapse_on_row << ") not present in post-population.";
+			throw std::runtime_error(ss.str());
 		}
+		vertex::SynapseArrayViewSparse::Synapse synapse{
+		    placed_connection.label, placed_connection.weight,
+		    lookup_rows.at(hemisphere).at(placed_connection.synapse_row.toSynapseRowOnSynram()),
+		    lookup_columns.at(hemisphere).at(placed_connection.synapse_on_row)};
+		synapses[hemisphere].push_back(synapse);
 	}
 	// get inputs
 	std::map<HemisphereOnDLS, std::vector<Input>> inputs;
@@ -776,23 +770,21 @@ std::map<HemisphereOnDLS, Input> NetworkGraphBuilder::add_projection_from_extern
 		    std::to_string(num_connections_projection) + ").");
 	}
 	size_t i = 0;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
-		for (auto const& placed_connection : placed_connections) {
-			auto const padi_bus_block =
-			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
-			auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
-			                                   .toSynapseDriverOnSynapseDriverBlock()
-			                                   .toPADIBusOnPADIBusBlock();
-			PADIBusOnDLS padi_bus(padi_bus_on_block, padi_bus_block);
-			used_padi_bus.insert(padi_bus);
-			used_synapse_drivers.insert(SynapseDriverOnDLS(
-			    placed_connection.synapse_row.toSynapseRowOnSynram()
-			        .toSynapseDriverOnSynapseDriverBlock(),
-			    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
-			auto const index_pre = m_network.projections.at(descriptor).connections.at(i).index_pre;
-			for (auto label : external_spike_labels.at(index_pre)) {
-				used_spl1_addresses[padi_bus].insert(label.get_spl1_address());
-			}
+	for (auto const& placed_connection : connection_result.connections.at(descriptor)) {
+		auto const padi_bus_block =
+		    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
+		auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
+		                                   .toSynapseDriverOnSynapseDriverBlock()
+		                                   .toPADIBusOnPADIBusBlock();
+		PADIBusOnDLS padi_bus(padi_bus_on_block, padi_bus_block);
+		used_padi_bus.insert(padi_bus);
+		used_synapse_drivers.insert(SynapseDriverOnDLS(
+		    placed_connection.synapse_row.toSynapseRowOnSynram()
+		        .toSynapseDriverOnSynapseDriverBlock(),
+		    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
+		auto const index_pre = m_network.projections.at(descriptor).connections.at(i).index_pre;
+		for (auto label : external_spike_labels.at(index_pre)) {
+			used_spl1_addresses[padi_bus].insert(label.get_spl1_address());
 		}
 		i++;
 	}
@@ -856,20 +848,18 @@ std::map<HemisphereOnDLS, Input> NetworkGraphBuilder::add_projection_from_backgr
 		    std::to_string(num_connections_projection) + ").");
 	}
 	size_t i = 0;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
-		for (auto const& placed_connection : placed_connections) {
-			auto const padi_bus_block =
-			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
-			auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
-			                                   .toSynapseDriverOnSynapseDriverBlock()
-			                                   .toPADIBusOnPADIBusBlock();
-			PADIBusOnDLS padi_bus(padi_bus_on_block, padi_bus_block);
-			used_padi_bus.insert(padi_bus);
-			used_synapse_drivers.insert(SynapseDriverOnDLS(
-			    placed_connection.synapse_row.toSynapseRowOnSynram()
-			        .toSynapseDriverOnSynapseDriverBlock(),
-			    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
-		}
+	for (auto const& placed_connection : connection_result.connections.at(descriptor)) {
+		auto const padi_bus_block =
+		    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
+		auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
+		                                   .toSynapseDriverOnSynapseDriverBlock()
+		                                   .toPADIBusOnPADIBusBlock();
+		PADIBusOnDLS padi_bus(padi_bus_on_block, padi_bus_block);
+		used_padi_bus.insert(padi_bus);
+		used_synapse_drivers.insert(SynapseDriverOnDLS(
+		    placed_connection.synapse_row.toSynapseRowOnSynram()
+		        .toSynapseDriverOnSynapseDriverBlock(),
+		    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
 		i++;
 	}
 	// add crossbar nodes from source to PADI busses
@@ -934,19 +924,17 @@ std::map<HemisphereOnDLS, Input> NetworkGraphBuilder::add_projection_from_intern
 	// get used PADI busses and synapse drivers
 	std::set<PADIBusOnDLS> used_padi_bus;
 	std::set<SynapseDriverOnDLS> used_synapse_drivers;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
-		for (auto const& placed_connection : placed_connections) {
-			auto const padi_bus_block =
-			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
-			auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
-			                                   .toSynapseDriverOnSynapseDriverBlock()
-			                                   .toPADIBusOnPADIBusBlock();
-			used_padi_bus.insert(PADIBusOnDLS(padi_bus_on_block, padi_bus_block));
-			used_synapse_drivers.insert(SynapseDriverOnDLS(
-			    placed_connection.synapse_row.toSynapseRowOnSynram()
-			        .toSynapseDriverOnSynapseDriverBlock(),
-			    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
-		}
+	for (auto const& placed_connection : connection_result.connections.at(descriptor)) {
+		auto const padi_bus_block =
+		    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
+		auto const padi_bus_on_block = placed_connection.synapse_row.toSynapseRowOnSynram()
+		                                   .toSynapseDriverOnSynapseDriverBlock()
+		                                   .toPADIBusOnPADIBusBlock();
+		used_padi_bus.insert(PADIBusOnDLS(padi_bus_on_block, padi_bus_block));
+		used_synapse_drivers.insert(SynapseDriverOnDLS(
+		    placed_connection.synapse_row.toSynapseRowOnSynram()
+		        .toSynapseDriverOnSynapseDriverBlock(),
+		    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
 	}
 	// add crossbar nodes from neuron event outputs to PADI busses
 	for (auto const& padi_bus : used_padi_bus) {

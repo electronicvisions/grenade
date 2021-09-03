@@ -36,7 +36,7 @@ struct GENPYBIND(visible) RoutingResult
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
 	};
-	typedef std::map<ProjectionDescriptor, std::vector<std::vector<PlacedConnection>>> Connections;
+	typedef std::map<ProjectionDescriptor, std::vector<PlacedConnection>> Connections;
 	Connections connections;
 
 	/**
