@@ -18,7 +18,7 @@ namespace network {
  * @return Time-series neuron spike data per batch entry
  */
 std::vector<
-    std::vector<std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
+    std::map<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, std::vector<haldls::vx::v2::ChipTime>>>
 extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
 
 
@@ -48,19 +48,19 @@ GENPYBIND_MANUAL({
 	        grenade::vx::IODataMap const& data,
 	        grenade::vx::network::NetworkGraph const& network_graph) {
 		    auto const spikes = grenade::vx::network::extract_neuron_spikes(data, network_graph);
+		    std::map<int, pybind11::array_t<double>> ret;
 		    if (spikes.empty()) {
-			    return std::tuple{pybind11::array_t<float>(0), pybind11::array_t<int>(0)};
+			    return ret;
 		    }
 		    assert(spikes.size() == 1);
-		    auto const neuron_spikes = spikes.at(0);
-		    pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(neuron_spikes.size())});
-		    pybind11::array_t<int> neurons({static_cast<pybind11::ssize_t>(neuron_spikes.size())});
-		    for (size_t i = 0; i < neuron_spikes.size(); ++i) {
-			    auto const& spike = neuron_spikes.at(i);
-			    times.mutable_at(i) = convert_ms(spike.first);
-			    neurons.mutable_at(i) = spike.second.toEnum().value();
+		    for (auto const& [neuron, times] : spikes.at(0)) {
+			    pybind11::array_t<double> pytimes({static_cast<pybind11::ssize_t>(times.size())});
+			    for (size_t i = 0; i < times.size(); ++i) {
+				    pytimes.mutable_at(i) = convert_ms(times.at(i));
+			    }
+			    ret[neuron.toEnum().value()] = pytimes;
 		    }
-		    return std::tuple{times, neurons};
+		    return ret;
 	    };
 	auto const extract_madc_samples = [convert_ms](
 	                                      grenade::vx::IODataMap const& data,

@@ -3,14 +3,13 @@
 namespace grenade::vx::network {
 
 std::vector<
-    std::vector<std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
+    std::map<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, std::vector<haldls::vx::v2::ChipTime>>>
 extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 {
 	if (!network_graph.get_event_output_vertex()) {
-		std::vector<std::vector<
-		    std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
-		    ret(data.batch_size());
-		return ret;
+		return std::vector<std::map<
+		    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, std::vector<haldls::vx::v2::ChipTime>>>(
+		    data.batch_size());
 	}
 	// generate reverse lookup table from spike label to neuron coordinate
 	std::map<haldls::vx::v2::SpikeLabel, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> label_lookup;
@@ -33,15 +32,15 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 	// convert spikes
 	auto const& spikes = std::get<std::vector<TimedSpikeFromChipSequence>>(
 	    data.data.at(*network_graph.get_event_output_vertex()));
-	std::vector<std::vector<
-	    std::pair<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>>
+	std::vector<std::map<
+	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, std::vector<haldls::vx::v2::ChipTime>>>
 	    ret(spikes.size());
 	for (size_t b = 0; b < spikes.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		for (auto const& spike : spikes.at(b)) {
 			auto const label = spike.get_label();
 			if (label_lookup.contains(label)) {
-				local_ret.push_back({spike.get_chip_time(), label_lookup.at(label)});
+				local_ret[label_lookup.at(label)].push_back(spike.get_chip_time());
 			}
 		}
 	}
