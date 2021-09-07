@@ -159,15 +159,15 @@ void ExecutionInstanceBuilder::process(
 	} else {
 		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
-		stadls::vx::PlaybackProgram::spikes_type spikes;
+		std::vector<stadls::vx::PlaybackProgram::spikes_type> spikes(m_batch_entries.size());
 		for (auto const& program : m_chunked_program) {
-			auto const local_spikes = program.get_spikes();
+			auto local_spikes = program.get_spikes();
 
 			LOG4CXX_INFO(logger, "process(): " << local_spikes.size() << " spikes");
 
-			spikes.insert(spikes.end(), local_spikes.begin(), local_spikes.end());
+			filter_events(spikes, std::move(local_spikes));
 		}
-		m_local_data.data[vertex] = filter_events(spikes);
+		m_local_data.data[vertex] = std::move(spikes);
 	}
 }
 
@@ -471,19 +471,18 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <typename T>
-std::vector<std::vector<T>> ExecutionInstanceBuilder::filter_events(std::vector<T>& data) const
+void ExecutionInstanceBuilder::filter_events(
+    std::vector<std::vector<T>>& filtered_data, std::vector<T>&& data) const
 {
 	// early return if no events are recorded
 	if (data.empty()) {
-		std::vector<std::vector<T>> data_batches(m_batch_entries.size());
-		return data_batches;
+		return;
 	}
 	// sort events by chip time
 	std::sort(data.begin(), data.end(), [](auto const& a, auto const& b) {
 		return a.get_chip_time() < b.get_chip_time();
 	});
 	// iterate over batch entries and extract associated events
-	std::vector<std::vector<T>> data_batches;
 	auto begin = data.begin();
 	for (size_t i = 0; auto const& e : m_batch_entries) {
 		// Extract all events in-between the interval from the event begin FPGATime value to the
@@ -499,10 +498,9 @@ std::vector<std::vector<T>> ExecutionInstanceBuilder::filter_events(std::vector<
 		begin = std::find_if(begin, data.end(), [&](auto const& event) {
 			return event.get_chip_time().value() >= interval_begin_time;
 		});
-		// add empty events and continue if no spikes are recorded for this batch entry
+		// if no spikes are recorded for this data return
 		if (begin == data.end()) {
-			data_batches.push_back({});
-			continue;
+			return;
 		}
 		// find end of interval
 		assert(e.m_ticket_events_end);
@@ -525,11 +523,12 @@ std::vector<std::vector<T>> ExecutionInstanceBuilder::filter_events(std::vector<
 			event.set_chip_time(
 			    haldls::vx::v2::ChipTime(event.get_chip_time() - interval_begin_time));
 		}
-		data_batches.push_back(std::move(data_batch));
+		if (!data_batch.empty()) {
+			filtered_data.at(i) = std::move(data_batch);
+		}
 		begin = end;
 		i++;
 	}
-	return data_batches;
 }
 
 template <>
@@ -545,16 +544,16 @@ void ExecutionInstanceBuilder::process(
 	} else {
 		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
-		stadls::vx::PlaybackProgram::madc_samples_type madc_samples;
+		std::vector<stadls::vx::PlaybackProgram::madc_samples_type> madc_samples(
+		    m_batch_entries.size());
 		for (auto const& program : m_chunked_program) {
-			auto const local_madc_samples = program.get_madc_samples();
+			auto local_madc_samples = program.get_madc_samples();
 
 			LOG4CXX_INFO(logger, "process(): " << local_madc_samples.size() << " MADC samples");
 
-			madc_samples.insert(
-			    madc_samples.end(), local_madc_samples.begin(), local_madc_samples.end());
+			filter_events(madc_samples, std::move(local_madc_samples));
 		}
-		m_local_data.data[vertex] = filter_events(madc_samples);
+		m_local_data.data[vertex] = std::move(madc_samples);
 	}
 }
 
