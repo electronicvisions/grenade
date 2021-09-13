@@ -8,6 +8,7 @@
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
+#include <algorithm>
 #include <map>
 #include <set>
 #include <unordered_set>
@@ -286,6 +287,10 @@ void NetworkGraphBuilder::add_population(
 		for (auto const n : population.neurons) {
 			neurons[n.toNeuronRowOnDLS()].push_back(n.toNeuronColumnOnDLS());
 		}
+		// NeuronEventOutputView requires sorted locations
+		for (auto& [row, col] : neurons) {
+			std::sort(col.begin(), col.end());
+		}
 		// add a neuron view per hemisphere
 		for (auto&& [row, nrn] : neurons) {
 			vertex::NeuronView::Configs configs;
@@ -539,7 +544,11 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 		}
 	} else { // post population not present yet
 		auto const& population = std::get<Population>(m_network.populations.at(post_descriptor));
-		for (auto const n : population.neurons) {
+		// NeuronEventOutputView requires sorted locations
+		std::vector<AtomicNeuronOnDLS> neurons(
+		    population.neurons.begin(), population.neurons.end());
+		std::sort(neurons.begin(), neurons.end());
+		for (auto const n : neurons) {
 			columns[n.toNeuronRowOnDLS().toHemisphereOnDLS()].push_back(
 			    n.toNeuronColumnOnDLS().toSynapseOnSynapseRow());
 		}
@@ -610,6 +619,12 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	}
 	// add vertices
 	for (auto&& [hemisphere, cs] : columns) {
+		// The population might be spread over more hemispheres than the projection is.
+		// If this is the case no used rows and synapses will be present, therefore we skip here.
+		if (!rows.contains(hemisphere)) {
+			assert(!synapses.contains(hemisphere));
+			continue;
+		}
 		auto&& rs = rows.at(hemisphere);
 		auto&& syns = synapses.at(hemisphere);
 		auto const synram = hemisphere.toSynramOnDLS();
