@@ -130,26 +130,27 @@ public:
 	void add_population(
 	    Graph& graph,
 	    Resources& resources,
-	    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input> const& input,
+	    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, std::vector<Input>> const& input,
 	    PopulationDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
-	void add_projection_from_external_input(
+	std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input> add_projection_from_external_input(
 	    Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
-	void add_projection_from_background_spike_source(
+	std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input>
+	add_projection_from_background_spike_source(
 	    Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
-	void add_projection_from_internal_input(
+	std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input> add_projection_from_internal_input(
 	    Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,

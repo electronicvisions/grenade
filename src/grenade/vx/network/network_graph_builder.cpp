@@ -172,6 +172,7 @@ NetworkGraph build_network_graph(
 	}
 	for (size_t iteration = 0; iteration < network->projections.size(); ++iteration) {
 		std::set<ProjectionDescriptor> newly_placed_projections;
+		std::map<PopulationDescriptor, std::map<HemisphereOnDLS, std::vector<Input>>> inputs;
 		for (auto const descriptor : unplaced_projections) {
 			auto const descriptor_pre = network->projections.at(descriptor).population_pre;
 			// skip projection if presynaptic population is not yet present
@@ -179,22 +180,33 @@ NetworkGraph build_network_graph(
 			    std::holds_alternative<Population>(network->populations.at(descriptor_pre))) {
 				continue;
 			}
-			std::visit(
+			auto const population_inputs = std::visit(
 			    hate::overloaded(
 			        [&](ExternalPopulation const&) {
-				        builder.add_projection_from_external_input(
+				        return builder.add_projection_from_external_input(
 				            result.m_graph, resources, descriptor, routing_result, instance);
 			        },
 			        [&](BackgroundSpikeSourcePopulation const&) {
-				        builder.add_projection_from_background_spike_source(
+				        return builder.add_projection_from_background_spike_source(
 				            result.m_graph, resources, descriptor, routing_result, instance);
 			        },
 			        [&](Population const&) {
-				        builder.add_projection_from_internal_input(
+				        return builder.add_projection_from_internal_input(
 				            result.m_graph, resources, descriptor, routing_result, instance);
 			        }),
 			    network->populations.at(descriptor_pre));
 			newly_placed_projections.insert(descriptor);
+			auto& local_population_inputs =
+			    inputs[network->projections.at(descriptor).population_post];
+			for (auto const& [hemisphere, input] : population_inputs) {
+				local_population_inputs[hemisphere].push_back(input);
+			}
+		}
+		// update post-populations
+		for (auto const& [population_post, population_inputs] : inputs) {
+			builder.add_population(
+			    result.m_graph, resources, population_inputs, population_post, routing_result,
+			    instance);
 		}
 		for (auto const descriptor : newly_placed_projections) {
 			unplaced_projections.erase(descriptor);
@@ -323,7 +335,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 void NetworkGraphBuilder::add_population(
     Graph& graph,
     Resources& resources,
-    std::map<HemisphereOnDLS, Input> const& input,
+    std::map<HemisphereOnDLS, std::vector<Input>> const& input,
     PopulationDescriptor const& descriptor,
     RoutingResult const& connection_result,
     coordinate::ExecutionInstance const& instance) const
@@ -336,7 +348,7 @@ void NetworkGraphBuilder::add_population(
 			// use all former inputs
 			auto inputs = get_inputs(graph, neuron_view_vertex);
 			// append new input
-			inputs.push_back(new_input);
+			inputs.insert(inputs.end(), new_input.begin(), new_input.end());
 			// add by using present data from former vertex with new inputs
 			neuron_view_vertex = graph.add(neuron_view_vertex, instance, inputs);
 		}
@@ -378,7 +390,8 @@ void NetworkGraphBuilder::add_population(
 			// use input for specific hemisphere
 			std::vector<Input> inputs;
 			if (input.contains(hemisphere)) {
-				inputs.push_back(input.at(hemisphere));
+				inputs.insert(
+				    inputs.end(), input.at(hemisphere).begin(), input.at(hemisphere).end());
 			}
 			// add neuron view to graph and vertex descriptor to resources
 			auto const neuron_view_vertex = graph.add(neuron_view, instance, inputs);
@@ -726,7 +739,7 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	                  << descriptor << ") in " << timer.print() << ".");
 }
 
-void NetworkGraphBuilder::add_projection_from_external_input(
+std::map<HemisphereOnDLS, Input> NetworkGraphBuilder::add_projection_from_external_input(
     Graph& graph,
     Resources& resources,
     ProjectionDescriptor const& descriptor,
@@ -805,15 +818,13 @@ void NetworkGraphBuilder::add_projection_from_external_input(
 	std::map<HemisphereOnDLS, Input> inputs(
 	    resources.projections.at(descriptor).synapses.begin(),
 	    resources.projections.at(descriptor).synapses.end());
-	add_population(
-	    graph, resources, inputs, m_network.projections.at(descriptor).population_post,
-	    connection_result, instance);
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_external(): Added projection(" << descriptor << ") in "
 	                                                                  << timer.print() << ".");
+	return inputs;
 }
 
-void NetworkGraphBuilder::add_projection_from_background_spike_source(
+std::map<HemisphereOnDLS, Input> NetworkGraphBuilder::add_projection_from_background_spike_source(
     Graph& graph,
     Resources& resources,
     ProjectionDescriptor const& descriptor,
@@ -890,15 +901,13 @@ void NetworkGraphBuilder::add_projection_from_background_spike_source(
 	std::map<HemisphereOnDLS, Input> inputs(
 	    resources.projections.at(descriptor).synapses.begin(),
 	    resources.projections.at(descriptor).synapses.end());
-	add_population(
-	    graph, resources, inputs, m_network.projections.at(descriptor).population_post,
-	    connection_result, instance);
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_background_spike_source(): Added projection("
 	                  << descriptor << ") in " << timer.print() << ".");
+	return inputs;
 }
 
-void NetworkGraphBuilder::add_projection_from_internal_input(
+std::map<HemisphereOnDLS, Input> NetworkGraphBuilder::add_projection_from_internal_input(
     Graph& graph,
     Resources& resources,
     ProjectionDescriptor const& descriptor,
@@ -967,12 +976,10 @@ void NetworkGraphBuilder::add_projection_from_internal_input(
 	std::map<HemisphereOnDLS, Input> inputs(
 	    resources.projections.at(descriptor).synapses.begin(),
 	    resources.projections.at(descriptor).synapses.end());
-	add_population(
-	    graph, resources, inputs, m_network.projections.at(descriptor).population_post,
-	    connection_result, instance);
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_internal(): Added projection(" << descriptor << ") in "
 	                                                                  << timer.print() << ".");
+	return inputs;
 }
 
 void NetworkGraphBuilder::add_populations(
