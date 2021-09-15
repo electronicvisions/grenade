@@ -169,11 +169,16 @@ ConnectionBuilder::Result::PlacedConnection ConnectionBuilder::get_placed_connec
     Projection::Connection const& connection) const
 {
 	// neurons per crossbar input channel
-	constexpr auto neurons = NeuronColumnOnDLS::size / NeuronEventOutputOnDLS::size;
+	constexpr size_t neuron_columns_per_channel =
+	    NeuronColumnOnDLS::size / NeuronEventOutputOnDLS::size;
+	// uniquely identify a neuron column on a event output channel
+	size_t const neuron_on_channel = pre.toNeuronColumnOnDLS() % neuron_columns_per_channel;
+	// uniquely identify a neuron on a event output channel block
+	size_t const neuron_channel_block =
+	    pre.toNeuronColumnOnDLS() / (NeuronColumnOnDLS::size / NeuronBackendConfigBlockOnDLS::size);
 	// add placed weight and label data
 	lola::vx::v2::SynapseMatrix::Label const label(
-	    (pre.toNeuronColumnOnDLS().toEnum() % neurons) +
-	    (pre.toNeuronRowOnDLS().toEnum() * neurons));
+	    neuron_on_channel + (neuron_channel_block * neuron_columns_per_channel));
 	SynapseRowOnDLS const row(
 	    synapse_row.synapse_driver.toSynapseDriverOnSynapseDriverBlock().toSynapseRowOnSynram().at(
 	        synapse_row.synapse_row),
@@ -220,11 +225,11 @@ void ConnectionBuilder::calculate_free_for_external_synapse_drivers()
 	size_t free_drivers = 0;
 	for (auto const padibus : iter_all<PADIBusOnDLS>()) {
 		auto used = std::max(m_used_padi_rows_odd.at(padibus), m_used_padi_rows_even.at(padibus));
-		// Higher PADI bus on block is given for non-zero NeuronEventOutputOnNeuronBackendBlock.
-		// This results in bits [8,9] being filled with its value and therefore restriction on the
-		// allowed mask.
-		// Example:
-		// - NeuronColumnOnDLS(32) is located on NeuronEventOutputOnNeuronBackendBlock(1)
+		// Higher PADI bus on block is given for non-zero NeuronEventOutputOnDLS.
+		// This results in bits [8,9,10] being filled with its value and therefore restriction on
+		// the allowed mask. Since if any NeuronBackendBlockOnDLS(1) source is present, bit 10 needs
+		// to match, it is always disabled. Example:
+		// - NeuronColumnOnDLS(32) is located on NeuronEventOutputOnDLS(1)
 		// -> bit 8 is set in 14-bit crossbar label and 11-bit PADI-label (crossbar: 00000100000000)
 		// -> equals bit 2 in 5-bit RowAddressCompareMask, therefore until this bit the mask is to
 		//    be zero (synapse driver: 00100xxxxxx, x is forwarded to synapses)
@@ -246,14 +251,14 @@ void ConnectionBuilder::calculate_free_for_external_synapse_drivers()
 			free_drivers = SynapseDriverOnPADIBus::size;
 			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11111);
 		} else if (used <= 4) {
-			free_drivers = 28;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11101);
+			free_drivers = 12;
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b01101);
 		} else if (used <= 8) {
-			free_drivers = 24;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b11001);
+			free_drivers = 8;
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b01001);
 		} else if (used <= 16) {
-			free_drivers = 16;
-			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b10001);
+			free_drivers = 0;
+			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b00001);
 		} else {
 			free_drivers = 0;
 			config = haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask(0b00001);
