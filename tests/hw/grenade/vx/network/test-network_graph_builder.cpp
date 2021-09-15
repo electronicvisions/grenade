@@ -20,6 +20,7 @@
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/run.h"
+#include <random>
 #include <gtest/gtest.h>
 #include <log4cxx/logger.h>
 
@@ -105,6 +106,8 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
 		enable_record_spikes.push_back(true);
 	}
+	std::mt19937 rng{std::random_device{}()};
+	std::shuffle(neurons.begin(), neurons.end(), rng);
 	grenade::vx::network::Population population_internal{std::move(neurons), enable_record_spikes};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
@@ -201,6 +204,8 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
 		enable_record_spikes.push_back(true);
 	}
+	std::mt19937 rng{std::random_device{}()};
+	std::shuffle(neurons.begin(), neurons.end(), rng);
 	grenade::vx::network::Population population_internal{std::move(neurons), enable_record_spikes};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
@@ -310,6 +315,9 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		grenade::vx::network::Population population_internal{std::move(neurons), {true}};
 		population_internal_descriptors.push_back(network_builder.add(population_internal));
 	}
+	std::mt19937 rng{std::random_device{}()};
+	std::shuffle(
+	    population_internal_descriptors.begin(), population_internal_descriptors.end(), rng);
 
 	for (size_t i = 0; i < population_internal_descriptors.size(); ++i) {
 		grenade::vx::network::Projection::Connections projection_connections{
