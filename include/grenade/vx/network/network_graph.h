@@ -55,6 +55,13 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(spike_labels))
 	SpikeLabels const& get_spike_labels() const SYMBOL_VISIBLE;
 
+	/**
+	 * Checks validity of hardware graph representation in relation to the abstract network.
+	 * This ensures all required elements and information being present as well as a functionally
+	 * correct mapping and routing.
+	 */
+	bool valid() const SYMBOL_VISIBLE;
+
 private:
 	std::shared_ptr<Network> m_network;
 	Graph m_graph;
@@ -69,6 +76,10 @@ private:
 	    PopulationDescriptor,
 	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
 	    m_neuron_vertices;
+	std::map<
+	    PopulationDescriptor,
+	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
+	    m_background_spike_source_vertices;
 	SpikeLabels m_spike_labels;
 
 	friend NetworkGraph build_network_graph(

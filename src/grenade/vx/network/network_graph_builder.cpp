@@ -210,9 +210,16 @@ NetworkGraph build_network_graph(
 	for (auto const& [d, p] : resources.populations) {
 		result.m_neuron_vertices[d] = p.neurons;
 	}
+	for (auto const& [d, p] : resources.background_spike_sources) {
+		result.m_background_spike_source_vertices[d] = p;
+	}
 
 	LOG4CXX_TRACE(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
+
+	if (!result.valid()) {
+		throw std::runtime_error("Built network graph is not valid.");
+	}
 
 	return result;
 }
