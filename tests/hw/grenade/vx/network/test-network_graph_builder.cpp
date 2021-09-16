@@ -34,51 +34,49 @@ std::pair<grenade::vx::ChipConfig, grenade::vx::backend::Connection> initialize_
 {
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 	// Initialize chip
-		ExperimentInit init;
-		for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-			chip->neuron_backend[c].set_enable_clocks(true);
+	ExperimentInit init;
+	for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
+		chip->neuron_backend[c].set_enable_clocks(true);
+	}
+	for (auto const c : iter_all<ColumnCurrentQuadOnDLS>()) {
+		for (auto const e : iter_all<EntryOnQuad>()) {
+			auto s = init.column_current_quad_config[c].get_switch(e);
+			s.set_enable_synaptic_current_excitatory(true);
+			s.set_enable_synaptic_current_inhibitory(true);
+			init.column_current_quad_config[c].set_switch(e, s);
 		}
-		for (auto const c : iter_all<ColumnCurrentQuadOnDLS>()) {
-			for (auto const e : iter_all<EntryOnQuad>()) {
-				auto s = init.column_current_quad_config[c].get_switch(e);
-				s.set_enable_synaptic_current_excitatory(true);
-				s.set_enable_synaptic_current_inhibitory(true);
-				init.column_current_quad_config[c].set_switch(e, s);
-			}
+	}
+	grenade::vx::backend::Connection connection(hxcomm::vx::get_connection_from_env(), init);
+	stadls::vx::v2::PlaybackProgramBuilder builder;
+	// enable excitatory bypass mode
+	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
+		auto& config = chip->hemispheres[neuron.toNeuronRowOnDLS().toHemisphereOnDLS()]
+		                   .neuron_block[neuron.toNeuronColumnOnDLS()];
+		config.refractory_period.refractory_time =
+		    lola::vx::v2::AtomicNeuron::RefractoryPeriod::RefractoryTime(10);
+		config.event_routing.enable_digital = true;
+		config.event_routing.analog_output =
+		    lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
+		config.event_routing.enable_bypass_excitatory = true;
+		config.threshold.enable = false;
+	}
+	for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
+		auto& padi_config = chip->hemispheres[block.toHemisphereOnDLS()].common_padi_bus_config;
+		auto dacen = padi_config.get_dacen_pulse_extension();
+		for (auto const block : iter_all<PADIBusOnPADIBusBlock>()) {
+			dacen[block] = CommonPADIBusConfig::DacenPulseExtension(
+			    CommonPADIBusConfig::DacenPulseExtension::max);
 		}
-	    grenade::vx::backend::Connection connection(hxcomm::vx::get_connection_from_env(), init);
-	    stadls::vx::v2::PlaybackProgramBuilder builder;
-	    // enable excitatory bypass mode
-	    for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
-		    auto& config = chip->hemispheres[neuron.toNeuronRowOnDLS().toHemisphereOnDLS()]
-		                       .neuron_block[neuron.toNeuronColumnOnDLS()];
-		    config.event_routing.enable_digital = true;
-		    config.event_routing.analog_output =
-		        lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
-		    config.event_routing.enable_bypass_excitatory = true;
-		    config.threshold.enable = false;
-	    }
-	    for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
-		    auto& padi_config = chip->hemispheres[block.toHemisphereOnDLS()].common_padi_bus_config;
-		    auto dacen = padi_config.get_dacen_pulse_extension();
-		    for (auto const block : iter_all<PADIBusOnPADIBusBlock>()) {
-			    dacen[block] = CommonPADIBusConfig::DacenPulseExtension(15);
-		    }
-		    padi_config.set_dacen_pulse_extension(dacen);
-	    }
-	    for (auto const drv : iter_all<SynapseDriverOnDLS>()) {
-		    auto& config = chip->hemispheres[drv.toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
-		                       .synapse_driver_block[drv.toSynapseDriverOnSynapseDriverBlock()];
-		    config.set_enable_receiver(true);
-		    config.set_enable_address_out(true);
-	    }
-	    for (auto const block : iter_all<CapMemBlockOnDLS>()) {
-		    CapMemCell cell(CapMemCell::Value(1022));
-		    builder.write(CapMemCellOnDLS(CapMemCellOnCapMemBlock::syn_i_bias_dac, block), cell);
-	    }
-	    auto program = builder.done();
-	    grenade::vx::backend::run(connection, program);
-	    return std::make_pair(*chip, std::move(connection));
+		padi_config.set_dacen_pulse_extension(dacen);
+	}
+	for (auto const block : iter_all<CapMemBlockOnDLS>()) {
+		builder.write(
+		    CapMemCellOnDLS(CapMemCellOnCapMemBlock::syn_i_bias_dac, block),
+		    CapMemCell(CapMemCell::Value(1022)));
+	}
+	auto program = builder.done();
+	grenade::vx::backend::run(connection, program);
+	return std::make_pair(*chip, std::move(connection));
 }
 
 TEST(NetworkGraphBuilder, FeedForwardOneToOne)
@@ -298,89 +296,99 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[DLSGlobal()] = chip_config;
 
+	// construct shuffled list of neurons
+	std::vector<AtomicNeuronOnDLS> all_neurons;
+	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
+		all_neurons.push_back(neuron);
+	}
+	auto const seed = std::random_device{}();
+	std::mt19937 rng{seed};
+	std::shuffle(all_neurons.begin(), all_neurons.end(), rng);
+
 	// build network
-	grenade::vx::network::NetworkBuilder network_builder;
+	// all synfire-chain lengths are tested
+	for (size_t length = 1; length < all_neurons.size(); ++length) {
+		grenade::vx::network::NetworkBuilder network_builder;
 
-	grenade::vx::network::ExternalPopulation population_external{1};
-	auto const population_external_descriptor = network_builder.add(population_external);
+		grenade::vx::network::ExternalPopulation population_external{1};
+		auto const population_external_descriptor = network_builder.add(population_external);
 
-	std::vector<grenade::vx::network::PopulationDescriptor> population_internal_descriptors;
-	for (auto const column : iter_all<NeuronColumnOnDLS>()) {
-		// skip parts of the columns to allow placement of the synapse driver for external input
-		if (column >= NeuronColumnOnDLS::max - (128 + 48)) {
-			continue;
+		std::vector<grenade::vx::network::PopulationDescriptor> population_internal_descriptors;
+		for (size_t n = 0; n < length; ++n) {
+			grenade::vx::network::Population::Neurons neurons{all_neurons.at(n)};
+			grenade::vx::network::Population population_internal{std::move(neurons),
+			                                                     {n == length - 1}};
+			population_internal_descriptors.push_back(network_builder.add(population_internal));
 		}
-		grenade::vx::network::Population::Neurons neurons{
-		    AtomicNeuronOnDLS(column, NeuronRowOnDLS::top)};
-		grenade::vx::network::Population population_internal{std::move(neurons), {true}};
-		population_internal_descriptors.push_back(network_builder.add(population_internal));
-	}
-	std::mt19937 rng{std::random_device{}()};
-	std::shuffle(
-	    population_internal_descriptors.begin(), population_internal_descriptors.end(), rng);
 
-	for (size_t i = 0; i < population_internal_descriptors.size(); ++i) {
-		grenade::vx::network::Projection::Connections projection_connections{
-		    {0, 0, grenade::vx::network::Projection::Connection::Weight(63)}};
-		if (i == 0) {
-			grenade::vx::network::Projection projection{
-			    grenade::vx::network::Projection::ReceptorType::excitatory,
-			    std::move(projection_connections), population_external_descriptor,
-			    population_internal_descriptors.at(0)};
-			network_builder.add(projection);
-		} else {
-			grenade::vx::network::Projection projection{
-			    grenade::vx::network::Projection::ReceptorType::excitatory,
-			    std::move(projection_connections), population_internal_descriptors.at(i - 1),
-			    population_internal_descriptors.at(i)};
-			network_builder.add(projection);
+		for (size_t i = 0; i < population_internal_descriptors.size(); ++i) {
+			grenade::vx::network::Projection::Connections projection_connections{
+			    {0, 0,
+			     grenade::vx::network::Projection::Connection::Weight(
+			         grenade::vx::network::Projection::Connection::Weight::max)}};
+			if (i == 0) {
+				grenade::vx::network::Projection projection{
+				    grenade::vx::network::Projection::ReceptorType::excitatory,
+				    std::move(projection_connections), population_external_descriptor,
+				    population_internal_descriptors.at(0)};
+				network_builder.add(projection);
+			} else {
+				grenade::vx::network::Projection projection{
+				    grenade::vx::network::Projection::ReceptorType::excitatory,
+				    std::move(projection_connections), population_internal_descriptors.at(i - 1),
+				    population_internal_descriptors.at(i)};
+				network_builder.add(projection);
+			}
 		}
-	}
 
-	auto const network = network_builder.done();
+		auto const network = network_builder.done();
 
-	// build network graph
-	auto const routing_result = grenade::vx::network::build_routing(network);
-	auto const network_graph = grenade::vx::network::build_network_graph(network, routing_result);
+		// build network graph
+		auto const routing_result = grenade::vx::network::build_routing(network);
+		auto const network_graph =
+		    grenade::vx::network::build_network_graph(network, routing_result);
 
-	// generate input
-	grenade::vx::IODataMap inputs;
-	constexpr size_t num = 100;
-	constexpr size_t isi = 1000;
-	std::vector<grenade::vx::TimedSpikeSequence> input_spikes(1);
-	for (size_t j = 0; j < num; ++j) {
-		grenade::vx::TimedSpike spike{
-		    Timer::Value(j * isi),
-		    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-		        network_graph.get_spike_labels().at(population_external_descriptor).at(0).at(0)})};
-		input_spikes.at(0).push_back(spike);
-	}
-	inputs.runtime.push_back(Timer::Value(num * isi));
-	assert(network_graph.get_event_input_vertex());
-	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
-
-	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::JITGraphExecutor::run(
-	    network_graph.get_graph(), inputs, connections, chip_configs);
-
-	assert(network_graph.get_event_output_vertex());
-	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
-	    result_map.data.at(*network_graph.get_event_output_vertex()));
-
-	EXPECT_EQ(
-	    result.size(), std::get<std::vector<grenade::vx::TimedSpikeSequence>>(
-	                       inputs.data.at(*network_graph.get_event_input_vertex()))
-	                       .size());
-	auto const& spikes = result.at(0);
-	// count correct spikes
-	size_t matching = 0;
-	auto const expected_label =
-	    network_graph.get_spike_labels().at(population_internal_descriptors.back()).at(0).at(0);
-	for (auto const& spike : spikes) {
-		if (spike.get_label() == expected_label) {
-			matching++;
+		// generate input
+		grenade::vx::IODataMap inputs;
+		constexpr size_t num = 100;
+		constexpr size_t isi = 125000;
+		std::vector<grenade::vx::TimedSpikeSequence> input_spikes(1);
+		for (size_t j = 0; j < num; ++j) {
+			grenade::vx::TimedSpike spike{Timer::Value(j * isi),
+			                              SpikePack1ToChip(SpikePack1ToChip::labels_type{
+			                                  network_graph.get_spike_labels()
+			                                      .at(population_external_descriptor)
+			                                      .at(0)
+			                                      .at(0)})};
+			input_spikes.at(0).push_back(spike);
 		}
+		inputs.runtime.push_back(Timer::Value(num * isi));
+		assert(network_graph.get_event_input_vertex());
+		inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
+
+		// run graph with given inputs and return results
+		auto const result_map = grenade::vx::JITGraphExecutor::run(
+		    network_graph.get_graph(), inputs, connections, chip_configs);
+
+		assert(network_graph.get_event_output_vertex());
+		auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
+		    result_map.data.at(*network_graph.get_event_output_vertex()));
+
+		EXPECT_EQ(
+		    result.size(), std::get<std::vector<grenade::vx::TimedSpikeSequence>>(
+		                       inputs.data.at(*network_graph.get_event_input_vertex()))
+		                       .size());
+		auto const& spikes = result.at(0);
+		// count correct spikes
+		size_t matching = 0;
+		auto const expected_label =
+		    network_graph.get_spike_labels().at(population_internal_descriptors.back()).at(0).at(0);
+		for (auto const& spike : spikes) {
+			if (spike.get_label() == expected_label) {
+				matching++;
+			}
+		}
+		EXPECT_GE(matching, num * 0.8) << "length: " << length << " for seed: " << seed;
+		EXPECT_LE(matching, num * 1.2) << "length: " << length << " for seed: " << seed;
 	}
-	EXPECT_GE(matching, num * 0.8);
-	EXPECT_LE(matching, num * 1.2);
 }
