@@ -1,5 +1,7 @@
 #include "grenade/vx/network/network_graph.h"
 
+#include "grenade/vx/network/connectum.h"
+#include "grenade/vx/network/exception.h"
 #include "hate/indent.h"
 #include "hate/join.h"
 #include "hate/math.h"
@@ -367,6 +369,60 @@ bool NetworkGraph::valid() const
 				}
 			}
 		}
+	}
+
+	// TODO: check recorded neurons can be recorded via crossbar and event outputs
+
+	// check that connectum of hardware network matches expected connectum of abstract network
+	try {
+		auto const connectum_from_abstract_network =
+		    generate_connectum_from_abstract_network(*this);
+		auto const connectum_from_hardware_network =
+		    generate_connectum_from_hardware_network(*this);
+		if ((connectum_from_abstract_network.size() != connectum_from_hardware_network.size()) ||
+		    !std::is_permutation(
+		        connectum_from_abstract_network.begin(), connectum_from_abstract_network.end(),
+		        connectum_from_hardware_network.begin())) {
+			std::vector<ConnectumConnection> missing_in_hardware_network;
+			for (auto const& connection : connectum_from_abstract_network) {
+				if (std::find(
+				        connectum_from_hardware_network.begin(),
+				        connectum_from_hardware_network.end(),
+				        connection) == connectum_from_hardware_network.end()) {
+					missing_in_hardware_network.push_back(connection);
+				}
+			}
+			std::vector<ConnectumConnection> missing_in_abstract_network;
+			for (auto const& connection : connectum_from_hardware_network) {
+				if (std::find(
+				        connectum_from_abstract_network.begin(),
+				        connectum_from_abstract_network.end(),
+				        connection) == connectum_from_abstract_network.end()) {
+					missing_in_abstract_network.push_back(connection);
+				}
+			}
+			LOG4CXX_ERROR(
+			    logger, "Abstract network connectum (size: "
+			                << connectum_from_abstract_network.size()
+			                << ") does not match hardware "
+			                   "network connectum (size: "
+			                << connectum_from_hardware_network.size() << "):\n\tabstract network:\n"
+			                << hate::indent(
+			                       hate::join_string(
+			                           connectum_from_abstract_network.begin(),
+			                           connectum_from_abstract_network.end(), "\n"),
+			                       "\t\t")
+			                << "\n\thardware network:\n"
+			                << hate::indent(
+			                       hate::join_string(
+			                           connectum_from_hardware_network.begin(),
+			                           connectum_from_hardware_network.end(), "\n"),
+			                       "\t\t"));
+			return false;
+		}
+	} catch (InvalidNetworkGraph const& error) {
+		LOG4CXX_ERROR(logger, "Error during generation of connectum to validate: " << error.what());
+		return false;
 	}
 
 	return true;
