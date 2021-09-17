@@ -105,6 +105,9 @@ struct GENPYBIND(visible) Projection
 	bool operator!=(Projection const& other) const SYMBOL_VISIBLE;
 };
 
+std::ostream& operator<<(std::ostream& os, Projection::ReceptorType const& receptor_type)
+    SYMBOL_VISIBLE;
+
 /** Descriptor to be used to identify a projection. */
 struct GENPYBIND(inline_base("*")) ProjectionDescriptor
     : public halco::common::detail::BaseType<ProjectionDescriptor, size_t>

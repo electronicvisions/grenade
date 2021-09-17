@@ -17,6 +17,12 @@ bool Projection::Connection::operator!=(Connection const& other) const
 	return !(*this == other);
 }
 
+std::ostream& operator<<(std::ostream& os, Projection::ReceptorType const& receptor_type)
+{
+	return os
+	       << (receptor_type == Projection::ReceptorType::excitatory ? "excitatory" : "inhibitory");
+}
+
 
 Projection::Projection(
     ReceptorType const receptor_type,
