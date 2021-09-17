@@ -1042,36 +1042,52 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 	hate::Timer timer;
 	NetworkGraph::SpikeLabels spike_labels = connection_result.external_spike_labels;
 	for (auto const& [descriptor, pop] : m_network.populations) {
-		if (std::holds_alternative<ExternalPopulation>(pop) && !spike_labels.contains(descriptor)) {
-			throw std::runtime_error(
-			    "Connection builder result does not contain spike labels for the population(" +
-			    std::to_string(descriptor) + ") from external input.");
-		}
-		if (!std::holds_alternative<Population>(pop)) {
-			continue;
-		}
-		auto const& population = std::get<Population>(pop);
-		if (!std::any_of(
-		        population.enable_record_spikes.begin(), population.enable_record_spikes.end(),
-		        [](auto const c) { return c; })) {
-			continue;
-		}
-		auto& local_spike_labels = spike_labels[descriptor];
-		if (!connection_result.internal_neuron_labels.contains(descriptor)) {
-			throw std::runtime_error(
-			    "Connection builder result does not contain neuron labels for the population(" +
-			    std::to_string(descriptor) + ").");
-		}
-		auto const& local_neuron_labels = connection_result.internal_neuron_labels.at(descriptor);
-		for (size_t i = 0; i < population.neurons.size(); ++i) {
-			haldls::vx::v2::SpikeLabel spike_label;
-			spike_label.set_neuron_event_output(
-			    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
-			spike_label.set_spl1_address(SPL1Address(
-			    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS() %
-			    SPL1Address::size));
-			spike_label.set_neuron_backend_address_out(local_neuron_labels.at(i));
-			local_spike_labels.push_back({spike_label});
+		if (std::holds_alternative<Population>(pop)) {
+			auto const& population = std::get<Population>(pop);
+			auto& local_spike_labels = spike_labels[descriptor];
+			if (!connection_result.internal_neuron_labels.contains(descriptor)) {
+				throw std::runtime_error(
+				    "Connection builder result does not contain neuron labels for the population(" +
+				    std::to_string(descriptor) + ").");
+			}
+			auto const& local_neuron_labels =
+			    connection_result.internal_neuron_labels.at(descriptor);
+			for (size_t i = 0; i < population.neurons.size(); ++i) {
+				haldls::vx::v2::SpikeLabel spike_label;
+				spike_label.set_neuron_event_output(
+				    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
+				spike_label.set_spl1_address(SPL1Address(
+				    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS() %
+				    SPL1Address::size));
+				spike_label.set_neuron_backend_address_out(local_neuron_labels.at(i));
+				local_spike_labels.push_back({spike_label});
+			}
+		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(pop)) {
+			auto const& population = std::get<BackgroundSpikeSourcePopulation>(pop);
+			auto& local_spike_labels = spike_labels[descriptor];
+			if (!connection_result.background_spike_source_labels.contains(descriptor)) {
+				throw std::runtime_error(
+				    "Connection builder result does not contain neuron labels for the population(" +
+				    std::to_string(descriptor) + ").");
+			}
+			local_spike_labels.resize(population.size);
+			auto const& local_labels =
+			    connection_result.background_spike_source_labels.at(descriptor);
+			for (auto const& [hemisphere, base_label] : local_labels) {
+				for (size_t k = 0; k < population.size; ++k) {
+					haldls::vx::v2::SpikeLabel label;
+					label.set_neuron_label(NeuronLabel(base_label + k));
+					local_spike_labels.at(k).push_back(label);
+				}
+			}
+		} else if (std::holds_alternative<ExternalPopulation>(pop)) {
+			if (!spike_labels.contains(descriptor)) {
+				throw std::runtime_error(
+				    "Connection builder result does not contain spike labels for the population(" +
+				    std::to_string(descriptor) + ").");
+			}
+		} else {
+			throw std::logic_error("Population type not supported.");
 		}
 	}
 	LOG4CXX_TRACE(
