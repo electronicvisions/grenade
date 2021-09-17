@@ -1,6 +1,7 @@
 #include "grenade/vx/network/network_graph_builder.h"
 
 #include "grenade/vx/network/connection_builder.h"
+#include "grenade/vx/network/exception.h"
 #include "halco/hicann-dls/vx/v2/event.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
@@ -218,7 +219,7 @@ NetworkGraph build_network_graph(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
 
 	if (!result.valid()) {
-		throw std::runtime_error("Built network graph is not valid.");
+		throw InvalidNetworkGraph("Built network graph is not valid.");
 	}
 
 	return result;
