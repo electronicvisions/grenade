@@ -1,5 +1,6 @@
 #include "grenade/vx/network/connection_builder.h"
 
+#include "grenade/vx/network/exception.h"
 #include "halco/hicann-dls/vx/v2/event.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
@@ -132,7 +133,7 @@ ConnectionBuilder::UsedSynapseRow const& ConnectionBuilder::get_synapse_row(
 	    (get_parity(pre) ? m_used_padi_rows_odd : m_used_padi_rows_even).at(padi_bus);
 	if (padi_row_index >=
 	    SynapseDriverOnPADIBus::size * SynapseRowOnSynapseDriver::size / NeuronRowOnDLS::size) {
-		throw std::runtime_error(
+		throw UnsuccessfulRouting(
 		    "Too many connections. Try decreasing the weight values in a way they do not exceed "
 		    "large multiples of the maximum synaptic weight (63) or reduce the number of "
 		    "projections with the same presynaptic population, but different receptor types.");
@@ -361,7 +362,7 @@ halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock ConnectionBuilder::
 	}
 	// add new synapse driver
 	if (m_free_for_external_synapse_drivers.at(hemisphere).empty()) {
-		throw std::runtime_error("No more synapse drivers free for external event input.");
+		throw UnsuccessfulRouting("No more synapse drivers free for external event input.");
 	}
 	auto const synapse_driver = m_free_for_external_synapse_drivers.at(hemisphere).front();
 	m_free_for_external_synapse_drivers.at(hemisphere).pop_front();
@@ -402,7 +403,7 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 			           get_unique_connections(other.second.connections));
 		};
 		if (std::any_of(network->projections.begin(), network->projections.end(), has_same_edge)) {
-			throw std::runtime_error(
+			throw UnsuccessfulRouting(
 			    "Projection features same single connection than other projection.");
 		}
 	}
@@ -442,7 +443,7 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 	// check that we don't have background spike sources to route
 	for (auto const& [_, population] : network->populations) {
 		if (std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
-			throw std::runtime_error("Routing of background spike sources unimplemented.");
+			throw UnsuccessfulRouting("Routing of background spike sources unimplemented.");
 		}
 	}
 

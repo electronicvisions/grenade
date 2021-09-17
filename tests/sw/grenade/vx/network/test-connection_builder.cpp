@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/network/connection_builder.h"
+#include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/network_builder.h"
 
 using namespace grenade::vx::network;
@@ -41,7 +42,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_3);
 
 	network = builder.done();
-	EXPECT_THROW(grenade::vx::network::build_routing(network), std::runtime_error);
+	EXPECT_THROW(grenade::vx::network::build_routing(network), UnsuccessfulRouting);
 
 	// overlap
 	descriptor = builder.add(population);
@@ -58,7 +59,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_5);
 
 	network = builder.done();
-	EXPECT_THROW(grenade::vx::network::build_routing(network), std::runtime_error);
+	EXPECT_THROW(grenade::vx::network::build_routing(network), UnsuccessfulRouting);
 
 	// from external no overlap
 	auto input_descriptor = builder.add(external_population);
@@ -89,7 +90,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_3);
 
 	network = builder.done();
-	EXPECT_THROW(grenade::vx::network::build_routing(network), std::runtime_error);
+	EXPECT_THROW(grenade::vx::network::build_routing(network), UnsuccessfulRouting);
 
 	// from external overlap
 	input_descriptor = builder.add(external_population);
@@ -107,7 +108,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_5);
 
 	network = builder.done();
-	EXPECT_THROW(grenade::vx::network::build_routing(network), std::runtime_error);
+	EXPECT_THROW(grenade::vx::network::build_routing(network), UnsuccessfulRouting);
 }
 
 TEST(build_routing, EmptyProjection)

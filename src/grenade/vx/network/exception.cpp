@@ -9,4 +9,12 @@ const char* InvalidNetworkGraph::what() const noexcept
 	return m_message.c_str();
 }
 
+
+UnsuccessfulRouting::UnsuccessfulRouting(std::string const& message) : m_message(message) {}
+
+const char* UnsuccessfulRouting::what() const noexcept
+{
+	return m_message.c_str();
+}
+
 } // namespace grenade::vx::network
