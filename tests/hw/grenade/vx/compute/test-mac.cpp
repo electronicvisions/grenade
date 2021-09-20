@@ -19,6 +19,7 @@ using namespace halco::hicann_dls::vx::v2;
 using namespace stadls::vx::v2;
 using namespace lola::vx::v2;
 
+#ifdef WITH_GRENADE_PPU_SUPPORT
 TEST(MAC, Single)
 {
 	// Construct connection to HW
@@ -44,3 +45,4 @@ TEST(MAC, Single)
 	EXPECT_EQ(res.size(), 1);
 	EXPECT_EQ(res.at(0).size(), 1);
 }
+#endif
