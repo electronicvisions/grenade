@@ -602,6 +602,13 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 		for (auto const& placed_connection : placed_connections) {
 			auto const hemisphere =
 			    placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
+			if (!lookup_columns.contains(hemisphere) ||
+			    !lookup_columns.at(hemisphere).contains(placed_connection.synapse_on_row)) {
+				std::stringstream ss;
+				ss << "Placed connection post-neuron(" << hemisphere << ", "
+				   << placed_connection.synapse_on_row << ") not present in post-population.";
+				throw std::runtime_error(ss.str());
+			}
 			vertex::SynapseArrayViewSparse::Synapse synapse{
 			    placed_connection.label, placed_connection.weight,
 			    lookup_rows.at(hemisphere).at(placed_connection.synapse_row.toSynapseRowOnSynram()),
@@ -614,6 +621,13 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	for (auto const& [hemisphere, synapse_drivers] : used_synapse_drivers) {
 		auto& local_inputs = inputs[hemisphere];
 		for (auto const& synapse_driver : synapse_drivers) {
+			if (!resources.synapse_drivers.contains(synapse_driver)) {
+				std::stringstream ss;
+				ss << synapse_driver
+				   << " required by synapse array view not present in network graph builder "
+				      "resources.";
+				throw std::runtime_error(ss.str());
+			}
 			local_inputs.push_back(resources.synapse_drivers.at(synapse_driver));
 		}
 	}
