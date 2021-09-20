@@ -11,10 +11,12 @@ def depends(ctx):
     ctx('halco')
     ctx('haldls')
     ctx('hate')
-    ctx('libnux')
 
     if getattr(ctx.options, 'with_grenade_python_bindings', True):
         ctx('grenade', 'pygrenade')
+
+    if getattr(ctx.options, 'with_grenade_ppu_support', True):
+        ctx('libnux')
 
 
 def options(opt):
@@ -25,9 +27,13 @@ def options(opt):
     hopts = opt.add_option_group('grenade options')
     hopts.add_withoption('grenade-python-bindings', default=True,
                          help='Toggle the generation and build of grenade python bindings')
+    hopts.add_withoption('grenade-ppu-support', default=True,
+                       help='Toggle support for the PPU')
 
 
 def configure(cfg):
+    cfg.env.build_with_grenade_ppu_support = cfg.options.with_grenade_ppu_support
+
     cfg.load('compiler_cxx')
     cfg.load('gtest')
 
@@ -61,22 +67,26 @@ def build(bld):
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
         use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
-        depends_on = ['grenade_ppu_base_vx'],
+        depends_on = ['grenade_ppu_base_vx'] if bld.env.build_with_grenade_ppu_support else [],
         uselib = 'GRENADE_LIBRARIES',
     )
 
-    bld.program(
-        target = 'grenade_ppu_base_vx',
-        features = 'cxx',
-        source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp'),
-        use = ['grenade_inc', 'nux_vx_v2', 'nux_runtime_vx_v2'],
-        env = bld.all_envs['nux_vx_v2'],
-    )
+    if bld.env.build_with_grenade_ppu_support:
+        bld.program(
+            target = 'grenade_ppu_base_vx',
+            features = 'cxx',
+            source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp'),
+            use = ['grenade_inc', 'nux_vx_v2', 'nux_runtime_vx_v2'],
+            env = bld.all_envs['nux_vx_v2'],
+        )
 
     bld(
         target = 'grenade_swtest_vx',
         features = 'gtest cxx cxxprogram pyembed',
-        source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp'),
+        source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp',
+                                   excl=['tests/sw/grenade/vx/test-get_program_path.cpp']
+                                   if bld.env.build_with_grenade_ppu_support
+                                   else []),
         use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc'],
         install_path = '${PREFIX}/bin',
     )
