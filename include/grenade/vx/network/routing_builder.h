@@ -4,6 +4,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_constraints.h"
+#include "grenade/vx/network/routing_options.h"
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/network/source_on_padi_bus_manager.h"
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
@@ -47,8 +48,9 @@ bool GENPYBIND(visible) requires_routing(
  * @param network Placed but not routed network to use
  * @return Routing result containing placement and label information for given network
  */
-RoutingResult GENPYBIND(visible)
-    build_routing(std::shared_ptr<Network> const& network) SYMBOL_VISIBLE;
+RoutingResult GENPYBIND(visible) build_routing(
+    std::shared_ptr<Network> const& network,
+    std::optional<RoutingOptions> const& options = std::nullopt) SYMBOL_VISIBLE;
 
 struct RoutingBuilder
 {
@@ -56,7 +58,9 @@ struct RoutingBuilder
 
 	typedef RoutingResult Result;
 
-	Result route(Network const& network) const SYMBOL_VISIBLE;
+	Result route(
+	    Network const& network,
+	    std::optional<RoutingOptions> const& options = std::nullopt) const SYMBOL_VISIBLE;
 
 private:
 	void route_internal_crossbar(

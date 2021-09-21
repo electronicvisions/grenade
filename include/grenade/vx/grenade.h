@@ -12,5 +12,6 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/network/routing_options.h"
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/network/run.h"
