@@ -616,11 +616,11 @@ void test_routing(std::shared_ptr<Network> const& network)
 	try {
 		// constructs routing
 		using namespace std::literals::chrono_literals;
-		//		RoutingOptions options;
-		//		options.synapse_driver_allocation_policy =
-		//		    SynapseDriverOnDLSManager::AllocationPolicyGreedy();
-		//		options.synapse_driver_allocation_timeout = 100ms;
-		auto const routing_result = grenade::vx::network::build_routing(network); //, options);
+		RoutingOptions options;
+		options.synapse_driver_allocation_policy =
+		    SynapseDriverOnDLSManager::AllocationPolicyGreedy();
+		options.synapse_driver_allocation_timeout = 100ms;
+		auto const routing_result = grenade::vx::network::build_routing(network, options);
 		// check if network is valid
 		[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
 		std::cout << "y" << std::endl;

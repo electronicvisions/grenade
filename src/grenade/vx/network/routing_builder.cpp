@@ -848,9 +848,14 @@ void RoutingBuilder::apply_crossbar_nodes_from_internal_to_l2(Result& result) co
 	}
 }
 
-RoutingResult RoutingBuilder::route(Network const& network) const
+RoutingResult RoutingBuilder::route(
+    Network const& network, std::optional<RoutingOptions> const& options) const
 {
 	LOG4CXX_DEBUG(m_logger, "route(): Starting routing.");
+
+	if (options) {
+		LOG4CXX_INFO(m_logger, "route(): Using " << *options << ".");
+	}
 
 	Result result;
 	RoutingConstraints const constraints(network);
@@ -895,7 +900,10 @@ RoutingResult RoutingBuilder::route(Network const& network) const
 	// allocate synapse drivers on PADI-bus(ses)
 	SynapseDriverOnDLSManager synapse_driver_manager;
 	auto const synapse_driver_allocations =
-	    synapse_driver_manager.solve(synapse_driver_allocation_requests);
+	    options ? synapse_driver_manager.solve(
+	                  synapse_driver_allocation_requests, options->synapse_driver_allocation_policy,
+	                  options->synapse_driver_allocation_timeout)
+	            : synapse_driver_manager.solve(synapse_driver_allocation_requests);
 
 	if (!synapse_driver_allocations) {
 		throw UnsuccessfulRouting("Synapse driver allocations not successful.");
@@ -933,11 +941,12 @@ RoutingResult RoutingBuilder::route(Network const& network) const
 	return result;
 }
 
-RoutingResult build_routing(std::shared_ptr<Network> const& network)
+RoutingResult build_routing(
+    std::shared_ptr<Network> const& network, std::optional<RoutingOptions> const& options)
 {
 	assert(network);
 	RoutingBuilder builder;
-	return builder.route(*network);
+	return builder.route(*network, options);
 }
 
 } // namespace grenade::vx::network
