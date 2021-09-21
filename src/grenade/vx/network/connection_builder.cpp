@@ -410,7 +410,11 @@ RoutingResult build_routing(std::shared_ptr<Network> const& network)
 	}
 
 	RoutingConstraints constraints(*network);
-	constraints.check();
+	try {
+		constraints.check();
+	} catch (std::runtime_error const& error) {
+		throw UnsuccessfulRouting(error.what());
+	}
 
 	RoutingResult result;
 
