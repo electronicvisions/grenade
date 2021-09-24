@@ -45,6 +45,10 @@ struct GENPYBIND(visible) Projection
 
 		bool operator==(Connection const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Connection const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, Connection const& connection)
+		    SYMBOL_VISIBLE;
 	};
 	/** Point-to-point neuron connections type. */
 	typedef std::vector<Connection> Connections;
@@ -103,6 +107,9 @@ struct GENPYBIND(visible) Projection
 
 	bool operator==(Projection const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Projection const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, Projection const& projection) SYMBOL_VISIBLE;
 };
 
 std::ostream& operator<<(std::ostream& os, Projection::ReceptorType const& receptor_type)

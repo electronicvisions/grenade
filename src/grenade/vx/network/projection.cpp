@@ -1,5 +1,7 @@
 #include "grenade/vx/network/projection.h"
 
+#include <ostream>
+
 namespace grenade::vx::network {
 
 Projection::Connection::Connection(
@@ -21,6 +23,13 @@ std::ostream& operator<<(std::ostream& os, Projection::ReceptorType const& recep
 {
 	return os
 	       << (receptor_type == Projection::ReceptorType::excitatory ? "excitatory" : "inhibitory");
+}
+
+std::ostream& operator<<(std::ostream& os, Projection::Connection const& connection)
+{
+	os << "Connection(" << connection.index_pre << " -> " << connection.index_post
+	   << ", weight: " << connection.weight << ")";
+	return os;
 }
 
 
@@ -55,6 +64,20 @@ bool Projection::operator==(Projection const& other) const
 bool Projection::operator!=(Projection const& other) const
 {
 	return !(*this == other);
+}
+
+std::ostream& operator<<(std::ostream& os, Projection const& projection)
+{
+	os << "Projection(\n";
+	os << "\treceptor_type: " << projection.receptor_type << "\n";
+	os << "\tpopulation_pre: " << projection.population_pre << "\n";
+	os << "\tpopulation_post: " << projection.population_post << "\n";
+	os << "\tconnections:\n";
+	for (auto const& connection : projection.connections) {
+		os << "\t\t" << connection << "\n";
+	}
+	os << ")";
+	return os;
 }
 
 } // namespace grenade::vx::network
