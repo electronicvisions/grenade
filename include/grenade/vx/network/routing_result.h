@@ -59,9 +59,10 @@ struct GENPYBIND(visible) RoutingResult
 	/**
 	 * Neuron event output address corresponding to each neuron in a on-chip population.
 	 */
-	typedef std::
-	    map<PopulationDescriptor, std::vector<haldls::vx::v2::NeuronBackendConfig::AddressOut>>
-	        InternalNeuronLabels;
+	typedef std::map<
+	    PopulationDescriptor,
+	    std::vector<std::optional<haldls::vx::v2::NeuronBackendConfig::AddressOut>>>
+	    InternalNeuronLabels;
 	InternalNeuronLabels internal_neuron_labels;
 
 	/**

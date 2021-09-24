@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <ostream>
 #include <stdexcept>
+#include <cereal/types/optional.hpp>
 #include <cereal/types/vector.hpp>
 
 namespace grenade::vx::vertex {
@@ -123,4 +124,4 @@ void NeuronView::serialize(Archive& ar, std::uint32_t const)
 } // namespace grenade::vx::vertex
 
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::NeuronView)
-CEREAL_CLASS_VERSION(grenade::vx::vertex::NeuronView, 1)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::NeuronView, 2)

@@ -37,9 +37,10 @@ void InputGenerator::add(
 	for (auto const time : times) {
 		for (auto const neuron : neurons) {
 			for (auto const label : neuron) {
+				assert(label);
 				data_spikes.push_back(grenade::vx::TimedSpike{
 				    time, haldls::vx::v2::SpikePack1ToChip(
-				              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
+				              haldls::vx::v2::SpikePack1ToChip::labels_type{*label})});
 			}
 		}
 	}
@@ -100,9 +101,10 @@ void InputGenerator::add(
 		auto const labels = neurons.at(i);
 		for (auto const time : times.at(i)) {
 			for (auto const label : labels) {
+				assert(label);
 				data_spikes.push_back(grenade::vx::TimedSpike{
 				    time, haldls::vx::v2::SpikePack1ToChip(
-				              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
+				              haldls::vx::v2::SpikePack1ToChip::labels_type{*label})});
 			}
 		}
 	}

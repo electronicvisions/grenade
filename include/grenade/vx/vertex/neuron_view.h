@@ -37,7 +37,7 @@ struct NeuronView
 	struct Config
 	{
 		typedef lola::vx::v2::AtomicNeuron::EventRouting::Address Label;
-		Label label;
+		std::optional<Label> label;
 		bool enable_reset;
 
 		bool operator==(Config const& other) const SYMBOL_VISIBLE;

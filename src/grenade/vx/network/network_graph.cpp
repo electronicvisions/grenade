@@ -84,12 +84,15 @@ bool NetworkGraph::valid() const
 				if (!pop.enable_record_spikes.at(i)) {
 					continue;
 				}
-				auto const& [_, success] = unique.insert(m_spike_labels.at(descriptor).at(i).at(0));
-				if (!success) {
-					LOG4CXX_ERROR(
-					    logger, "Label of to be recorded neuron at(" << descriptor << ", " << i
-					                                                 << ") is unique.");
-					return false;
+				auto const& label = m_spike_labels.at(descriptor).at(i).at(0);
+				if (label) {
+					auto const& [_, success] = unique.insert(*label);
+					if (!success) {
+						LOG4CXX_ERROR(
+						    logger, "Label of to be recorded neuron at(" << descriptor << ", " << i
+						                                                 << ") is unique.");
+						return false;
+					}
 				}
 			}
 		}
@@ -150,23 +153,36 @@ bool NetworkGraph::valid() const
 				auto const index = std::distance(
 				    pop.neurons.begin(), std::find(pop.neurons.begin(), pop.neurons.end(), neuron));
 				auto const& expected_label = m_spike_labels.at(descriptor).at(index).at(0);
-				SpikeLabel actual_label;
-				actual_label.set_neuron_backend_address_out(configs.at(i).label);
-				actual_label.set_neuron_event_output(
-				    neuron.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
-				actual_label.set_spl1_address(
-				    SPL1Address(neuron.toNeuronColumnOnDLS()
-				                    .toNeuronEventOutputOnDLS()
-				                    .toNeuronEventOutputOnNeuronBackendBlock()));
-				if (actual_label != expected_label) {
+				if (static_cast<bool>(expected_label) != static_cast<bool>(configs.at(i).label)) {
 					LOG4CXX_ERROR(
 					    logger, "Abstract network on-chip neuron("
-					                << descriptor << ", " << i << ") event label ("
-					                << expected_label
-					                << ") does not match event label in hardware "
+					                << std::boolalpha << descriptor << ", " << i
+					                << ") event label (" << static_cast<bool>(expected_label)
+					                << ") does not match event output status (enabled/disabled) in "
+					                   "hardware "
 					                   "network NeuronView's config("
-					                << actual_label << ").");
+					                << static_cast<bool>(configs.at(i).label) << ").");
 					return false;
+				}
+				if (expected_label) {
+					SpikeLabel actual_label;
+					actual_label.set_neuron_backend_address_out(*(configs.at(i).label));
+					actual_label.set_neuron_event_output(
+					    neuron.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
+					actual_label.set_spl1_address(
+					    SPL1Address(neuron.toNeuronColumnOnDLS()
+					                    .toNeuronEventOutputOnDLS()
+					                    .toNeuronEventOutputOnNeuronBackendBlock()));
+					if (actual_label != *expected_label) {
+						LOG4CXX_ERROR(
+						    logger, "Abstract network on-chip neuron("
+						                << descriptor << ", " << i << ") event label ("
+						                << *expected_label
+						                << ") does not match event label in hardware "
+						                   "network NeuronView's config("
+						                << actual_label << ").");
+						return false;
+					}
 				}
 			}
 		}
@@ -259,16 +275,23 @@ bool NetworkGraph::valid() const
 			        m_background_spike_source_vertices.at(descriptor).at(hemisphere)));
 			for (size_t i = 0; i < pop.size; ++i) {
 				auto expected_label = m_spike_labels.at(descriptor).at(i).at(label_entry);
-				expected_label.set_neuron_label(NeuronLabel(
-				    expected_label.get_neuron_label() & ~vertex.get_config().get_mask()));
+				if (!expected_label) {
+					LOG4CXX_ERROR(
+					    logger, "Abstract network on-chip background source("
+					                << descriptor << ", " << i
+					                << ") event label can't be disabled.");
+					return false;
+				}
+				expected_label->set_neuron_label(NeuronLabel(
+				    expected_label->get_neuron_label() & ~vertex.get_config().get_mask()));
 				SpikeLabel actual_label;
 				actual_label.set_neuron_label(NeuronLabel(
 				    vertex.get_config().get_neuron_label() & ~vertex.get_config().get_mask()));
-				if (actual_label != expected_label) {
+				if (actual_label != *expected_label) {
 					LOG4CXX_ERROR(
 					    logger, "Abstract network on-chip background source("
 					                << descriptor << ", " << i << ") event label ("
-					                << expected_label
+					                << *expected_label
 					                << ") does not match event label in hardware "
 					                   "network BackgroundSpikeSource's config("
 					                << actual_label << ").");

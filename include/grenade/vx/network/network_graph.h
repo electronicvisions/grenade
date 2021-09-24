@@ -50,7 +50,9 @@ struct GENPYBIND(visible) NetworkGraph
 	 * For external populations these are the input spike labels, for internal population this is
 	 * only given for populations with enabled recording.
 	 */
-	typedef std::map<PopulationDescriptor, std::vector<std::vector<haldls::vx::v2::SpikeLabel>>>
+	typedef std::map<
+	    PopulationDescriptor,
+	    std::vector<std::vector<std::optional<haldls::vx::v2::SpikeLabel>>>>
 	    SpikeLabels;
 	GENPYBIND(getter_for(spike_labels))
 	SpikeLabels const& get_spike_labels() const SYMBOL_VISIBLE;
