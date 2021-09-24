@@ -4,6 +4,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "hate/visibility.h"
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <variant>
@@ -26,6 +27,9 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 
 	bool operator==(Network const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Network const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, Network const& network) SYMBOL_VISIBLE;
 };
 
 } // namespace network

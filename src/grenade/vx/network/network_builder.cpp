@@ -191,6 +191,8 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	auto const ret = std::make_shared<Network>(
 	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording));
 	m_madc_recording.reset();
+	assert(ret);
+	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);
 	return ret;
 }
 
