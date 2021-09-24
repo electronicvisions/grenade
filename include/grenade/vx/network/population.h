@@ -6,6 +6,7 @@
 #include "hate/visibility.h"
 #include "lola/vx/v2/neuron.h"
 #include <cstddef>
+#include <iosfwd>
 #include <vector>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -28,6 +29,9 @@ struct GENPYBIND(visible) Population
 
 	bool operator==(Population const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Population const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, Population const& population) SYMBOL_VISIBLE;
 };
 
 /** External spike source population. */
@@ -41,6 +45,10 @@ struct GENPYBIND(visible) ExternalPopulation
 
 	bool operator==(ExternalPopulation const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ExternalPopulation const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, ExternalPopulation const& population)
+	    SYMBOL_VISIBLE;
 };
 
 /** BackgroundSpikeSource spike source population. */
@@ -66,6 +74,9 @@ struct GENPYBIND(visible) BackgroundSpikeSourcePopulation
 
 		bool operator==(Config const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, Config const& config) SYMBOL_VISIBLE;
 	} config;
 
 	BackgroundSpikeSourcePopulation() = default;
@@ -74,6 +85,10 @@ struct GENPYBIND(visible) BackgroundSpikeSourcePopulation
 
 	bool operator==(BackgroundSpikeSourcePopulation const& other) const SYMBOL_VISIBLE;
 	bool operator!=(BackgroundSpikeSourcePopulation const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(
+	    std::ostream& os, BackgroundSpikeSourcePopulation const& population) SYMBOL_VISIBLE;
 };
 
 /** Descriptor to be used to identify a population. */
