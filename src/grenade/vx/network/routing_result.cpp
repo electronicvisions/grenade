@@ -53,7 +53,11 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 	for (auto const& [descriptor, labels] : result.internal_neuron_labels) {
 		os << '\t' << descriptor << '\n';
 		for (auto const& label : labels) {
-			os << "\t\t" << label << '\n';
+			if (label) {
+				os << "\t\t" << *label << '\n';
+			} else {
+				os << "\t\tdisabled\n";
+			}
 		}
 	}
 

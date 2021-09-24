@@ -203,7 +203,12 @@ void ExecutionInstanceConfigBuilder::process(
 		auto const& config = configs.at(i);
 		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
 		m_enabled_neuron_resets[neuron_reset] = config.enable_reset;
-		hemisphere.neuron_block[column].event_routing.address = config.label;
+		if (config.label) {
+			hemisphere.neuron_block[column].event_routing.address = *(config.label);
+			hemisphere.neuron_block[column].event_routing.enable_digital = true;
+		} else {
+			hemisphere.neuron_block[column].event_routing.enable_digital = false;
+		}
 		i++;
 	}
 }

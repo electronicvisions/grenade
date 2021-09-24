@@ -346,12 +346,14 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				    network_graph.get_spike_labels().at(external_population_descriptor);
 				for (size_t index_pre = 0; index_pre < spike_labels.size(); ++index_pre) {
 					for (auto const& spike_label : spike_labels.at(index_pre)) {
-						if (*spl1_address != spike_label.get_spl1_address()) { // wrong spl1 channel
+						assert(spike_label);
+						if (*spl1_address !=
+						    spike_label->get_spl1_address()) { // wrong spl1 channel
 							continue;
 						}
 						process_path(
 						    hardware_connection_path,
-						    std::pair{external_population_descriptor, index_pre}, spike_label);
+						    std::pair{external_population_descriptor, index_pre}, *spike_label);
 					}
 				}
 			}
@@ -363,16 +365,19 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				auto const& spike_labels =
 				    network_graph.get_spike_labels().at(internal_population_descriptor);
 				for (size_t index_pre = 0; index_pre < spike_labels.size(); ++index_pre) {
+					if (!spike_labels.at(index_pre).at(0)) { // disabled output
+						continue;
+					}
 					if (*neuron_event_output !=
 					    spike_labels.at(index_pre)
 					        .at(0)
-					        .get_neuron_event_output()) { // wrong neuron event output
+					        ->get_neuron_event_output()) { // wrong neuron event output
 						continue;
 					}
 					process_path(
 					    hardware_connection_path,
 					    std::pair{internal_population_descriptor, index_pre},
-					    spike_labels.at(index_pre).at(0));
+					    *(spike_labels.at(index_pre).at(0)));
 				}
 			}
 		} else { // crossbar node from background spike source
@@ -396,10 +401,11 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 						    PADIBusOnDLS(padi_bus, hemisphere.toPADIBusBlockOnDLS())) {
 							for (size_t index_pre = 0; index_pre < spike_labels.size();
 							     ++index_pre) {
+								assert(spike_labels.at(index_pre).at(i));
 								process_path(
 								    hardware_connection_path,
 								    std::pair{background_population_descriptor, index_pre},
-								    spike_labels.at(index_pre).at(i));
+								    *(spike_labels.at(index_pre).at(i)));
 							}
 						}
 						i++;

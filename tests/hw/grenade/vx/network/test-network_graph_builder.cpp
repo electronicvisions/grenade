@@ -133,12 +133,13 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	std::vector<grenade::vx::TimedSpikeSequence> input_spikes(256);
 	for (size_t i = 0; i < population_external.size; ++i) {
 		for (size_t j = 0; j < num; ++j) {
+			assert(network_graph.get_spike_labels().at(population_external_descriptor).at(i).at(0));
 			grenade::vx::TimedSpike spike{Timer::Value(j * isi),
 			                              SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			                                  network_graph.get_spike_labels()
-			                                      .at(population_external_descriptor)
-			                                      .at(i)
-			                                      .at(0)})};
+			                                  *(network_graph.get_spike_labels()
+			                                        .at(population_external_descriptor)
+			                                        .at(i)
+			                                        .at(0))})};
 			input_spikes.at(i).push_back(spike);
 		}
 		inputs.runtime.push_back(Timer::Value(num * isi));
@@ -166,8 +167,9 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 		size_t not_matching = 0;
 		auto const expected_label =
 		    network_graph.get_spike_labels().at(population_internal_descriptor).at(i).at(0);
+		assert(expected_label);
 		for (auto const spike : spikes) {
-			if (spike.get_label() != expected_label) {
+			if (spike.get_label() != *expected_label) {
 				not_matching++;
 			}
 		}
@@ -236,12 +238,13 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	std::vector<grenade::vx::TimedSpikeSequence> input_spikes(256);
 	for (size_t i = 0; i < population_external.size; ++i) {
 		for (size_t j = 0; j < num; ++j) {
+			assert(network_graph.get_spike_labels().at(population_external_descriptor).at(i).at(0));
 			grenade::vx::TimedSpike spike{Timer::Value(j * isi),
 			                              SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			                                  network_graph.get_spike_labels()
-			                                      .at(population_external_descriptor)
-			                                      .at(i)
-			                                      .at(0)})};
+			                                  *(network_graph.get_spike_labels()
+			                                        .at(population_external_descriptor)
+			                                        .at(i)
+			                                        .at(0))})};
 			input_spikes.at(i).push_back(spike);
 		}
 		inputs.runtime.push_back(Timer::Value(num * isi));
@@ -268,8 +271,9 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			size_t matching = 0;
 			auto const expected_label =
 			    network_graph.get_spike_labels().at(population_internal_descriptor).at(i).at(0);
+			assert(expected_label);
 			for (auto const& spike : spikes) {
-				if (spike.get_label() == expected_label) {
+				if (spike.get_label() == *expected_label) {
 					matching++;
 				} else {
 					LOG4CXX_INFO(
@@ -354,12 +358,13 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		constexpr size_t isi = 125000;
 		std::vector<grenade::vx::TimedSpikeSequence> input_spikes(1);
 		for (size_t j = 0; j < num; ++j) {
+			assert(network_graph.get_spike_labels().at(population_external_descriptor).at(0).at(0));
 			grenade::vx::TimedSpike spike{Timer::Value(j * isi),
 			                              SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			                                  network_graph.get_spike_labels()
-			                                      .at(population_external_descriptor)
-			                                      .at(0)
-			                                      .at(0)})};
+			                                  *(network_graph.get_spike_labels()
+			                                        .at(population_external_descriptor)
+			                                        .at(0)
+			                                        .at(0))})};
 			input_spikes.at(0).push_back(spike);
 		}
 		inputs.runtime.push_back(Timer::Value(num * isi));
@@ -383,8 +388,9 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		size_t matching = 0;
 		auto const expected_label =
 		    network_graph.get_spike_labels().at(population_internal_descriptors.back()).at(0).at(0);
+		assert(expected_label);
 		for (auto const& spike : spikes) {
-			if (spike.get_label() == expected_label) {
+			if (spike.get_label() == *expected_label) {
 				matching++;
 			}
 		}

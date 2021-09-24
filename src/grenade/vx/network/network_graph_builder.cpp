@@ -1048,7 +1048,18 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
     RoutingResult const& connection_result)
 {
 	hate::Timer timer;
-	NetworkGraph::SpikeLabels spike_labels = connection_result.external_spike_labels;
+	NetworkGraph::SpikeLabels spike_labels;
+	for (auto const& [descriptor, labels] : connection_result.external_spike_labels) {
+		auto& local = spike_labels[descriptor];
+		size_t i = 0;
+		for (auto const& ll : labels) {
+			local.push_back({});
+			for (auto const& label : ll) {
+				local.at(i).push_back(label);
+			}
+			i++;
+		}
+	}
 	for (auto const& [descriptor, pop] : m_network.populations) {
 		if (std::holds_alternative<Population>(pop)) {
 			auto const& population = std::get<Population>(pop);
@@ -1061,14 +1072,18 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			auto const& local_neuron_labels =
 			    connection_result.internal_neuron_labels.at(descriptor);
 			for (size_t i = 0; i < population.neurons.size(); ++i) {
-				haldls::vx::v2::SpikeLabel spike_label;
-				spike_label.set_neuron_event_output(
-				    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
-				spike_label.set_spl1_address(SPL1Address(
-				    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS() %
-				    SPL1Address::size));
-				spike_label.set_neuron_backend_address_out(local_neuron_labels.at(i));
-				local_spike_labels.push_back({spike_label});
+				if (local_neuron_labels.at(i)) {
+					haldls::vx::v2::SpikeLabel spike_label;
+					spike_label.set_neuron_event_output(
+					    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
+					spike_label.set_spl1_address(SPL1Address(
+					    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS() %
+					    SPL1Address::size));
+					spike_label.set_neuron_backend_address_out(*(local_neuron_labels.at(i)));
+					local_spike_labels.push_back({spike_label});
+				} else {
+					local_spike_labels.push_back({std::nullopt});
+				}
 			}
 		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(pop)) {
 			auto const& population = std::get<BackgroundSpikeSourcePopulation>(pop);

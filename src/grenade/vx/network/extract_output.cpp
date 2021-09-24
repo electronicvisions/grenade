@@ -25,7 +25,8 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 			if (population.enable_record_spikes.at(i)) {
 				// internal neurons only have one label assigned
 				assert(neurons.at(i).size() == 1);
-				label_lookup[neurons.at(i).at(0)] = population.neurons.at(i);
+				assert(neurons.at(i).at(0));
+				label_lookup[*(neurons.at(i).at(0))] = population.neurons.at(i);
 			}
 		}
 	}

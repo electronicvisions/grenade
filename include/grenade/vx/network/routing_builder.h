@@ -120,6 +120,7 @@ private:
 	    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const;
 
 	std::vector<std::pair<PopulationDescriptor, size_t>> apply_source_labels(
+	    RoutingConstraints const& constraints,
 	    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v2::SpikeLabel> const&
 	        internal,
 	    std::map<

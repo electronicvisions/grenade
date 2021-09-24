@@ -387,6 +387,7 @@ std::
 }
 
 std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_source_labels(
+    RoutingConstraints const& constraints,
     std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v2::SpikeLabel> const& internal,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
@@ -397,17 +398,22 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
     Network const& network,
     Result& result) const
 {
+	auto const neither_recorded_nor_source_neurons =
+	    constraints.get_neither_recorded_nor_source_neurons();
 	std::vector<std::pair<PopulationDescriptor, size_t>> unset_labels;
 	for (auto const& [descriptor, population] : network.populations) {
 		if (std::holds_alternative<Population>(population)) {
 			auto& local_labels = result.internal_neuron_labels[descriptor];
-			local_labels.resize(std::get<Population>(population).neurons.size());
+			auto const& neurons = std::get<Population>(population).neurons;
+			local_labels.resize(neurons.size());
 			for (size_t i = 0; i < local_labels.size(); ++i) {
 				if (!internal.contains(std::pair{descriptor, i})) {
-					unset_labels.push_back(std::pair{descriptor, i});
+					if (!neither_recorded_nor_source_neurons.contains(neurons.at(i))) {
+						unset_labels.push_back(std::pair{descriptor, i});
+					}
 				} else {
-					local_labels.at(i) =
-					    internal.at(std::pair{descriptor, i}).get_neuron_backend_address_out();
+					local_labels.at(i).emplace(
+					    internal.at(std::pair{descriptor, i}).get_neuron_backend_address_out());
 				}
 			}
 		} else if (std::holds_alternative<ExternalPopulation>(population)) {
@@ -472,6 +478,7 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 		    std::get<Population>(network.populations.at(descriptor)).neurons.at(index);
 		haldls::vx::v2::SpikeLabel label;
 		label.set_neuron_event_output(neuron.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
+		bool success = false;
 		for (auto const neuron_backend_address_out :
 		     iter_all<haldls::vx::NeuronBackendAddressOut>()) {
 			label.set_neuron_backend_address_out(neuron_backend_address_out);
@@ -479,8 +486,14 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 				auto& local_labels = result.internal_neuron_labels[descriptor];
 				local_labels.at(index) = label.get_neuron_backend_address_out();
 				set_labels.insert(label);
+				success = true;
 				break;
 			}
+		}
+		if (!success) {
+			std::stringstream ss;
+			ss << "No label for (" << descriptor << ", " << index << ") was found.";
+			throw std::logic_error(ss.str());
 		}
 	}
 	return unset_labels;
@@ -900,7 +913,8 @@ RoutingResult RoutingBuilder::route(Network const& network) const
 	    get_external_labels(external_descriptors, source_partition, *synapse_driver_allocations);
 
 	// add source labels to result
-	apply_source_labels(internal_labels, background_labels, external_labels, network, result);
+	apply_source_labels(
+	    constraints, internal_labels, background_labels, external_labels, network, result);
 
 	// place routed connections onto synapse matrix
 	auto const placed_connections = place_routed_connections(
