@@ -55,11 +55,17 @@ public:
 	 */
 	void pre_process() SYMBOL_VISIBLE;
 
+	struct PlaybackPrograms
+	{
+		stadls::vx::v2::PlaybackProgram static_config;
+		std::vector<stadls::vx::v2::PlaybackProgram> realtime;
+	};
+
 	/**
 	 * Generate playback sequence.
 	 * @return PlaybackPrograms generated via local graph traversal
 	 */
-	std::vector<stadls::vx::v2::PlaybackProgram> generate() SYMBOL_VISIBLE;
+	PlaybackPrograms generate() SYMBOL_VISIBLE;
 
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
