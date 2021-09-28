@@ -43,11 +43,13 @@ namespace grenade::vx::backend {
 
 Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& init) :
     m_connection(std::move(connection)),
-    m_expected_link_notification_count(halco::hicann_dls::vx::v2::PhyConfigFPGAOnDLS::size)
+    m_expected_link_notification_count(halco::hicann_dls::vx::v2::PhyConfigFPGAOnDLS::size),
+    m_init(m_connection)
 {
 	using namespace stadls::vx;
-	std::visit(
-	    [&](auto const& i) { backend::run(*this, stadls::vx::generate(i).builder.done()); }, init);
+	m_init.set(
+	    std::visit([](auto const& i) { return stadls::vx::generate(i).builder.done(); }, init),
+	    true);
 
 	m_expected_link_notification_count = 0;
 
