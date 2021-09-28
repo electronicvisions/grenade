@@ -41,6 +41,7 @@ struct Connection
 private:
 	hxcomm::vx::ConnectionVariant m_connection;
 	size_t m_expected_link_notification_count;
+	stadls::vx::v2::ReinitStackEntry m_init;
 
 	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&);
 	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&&);
