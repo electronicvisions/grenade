@@ -601,7 +601,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		builder.merge_back(m_playback_hooks.pre_realtime);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
-		return {{}, m_chunked_program};
+		return {{}, m_chunked_program, false};
 	}
 
 	// playback builder sequence to be concatenated in the end
@@ -641,6 +641,10 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		    stadls::vx::generate(generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::read))
 		        .builder;
 	}
+
+	// get whether any of {pre,post}_realtime hooks are present
+	bool const has_hook_around_realtime =
+	    !m_playback_hooks.pre_realtime.empty() || !m_playback_hooks.post_realtime.empty();
 
 	// add pre realtime playback hook
 	builders.push_back(std::move(m_playback_hooks.pre_realtime));
@@ -736,7 +740,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	if (!builder.empty()) {
 		m_chunked_program.push_back(builder.done());
 	}
-	return {config_builder.done(), m_chunked_program};
+	return {config_builder.done(), m_chunked_program, has_hook_around_realtime};
 }
 
 } // namespace grenade::vx

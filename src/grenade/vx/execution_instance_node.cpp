@@ -46,6 +46,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	auto program = builder.generate();
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 
+	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
+	    program.has_hook_around_realtime) {
+		LOG4CXX_WARN(
+		    logger, "operator(): Connection uses quiggeldy and more than one playback programs "
+		            "shall be executed back-to-back with a pre or post realtime hook. Their "
+		            "contiguity can't be guaranteed.");
+	}
+
 	// execute
 	hate::Timer const exec_timer;
 	if (!program.realtime.empty() || !program.static_config.empty()) {

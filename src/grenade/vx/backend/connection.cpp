@@ -83,4 +83,9 @@ stadls::vx::v2::ReinitStackEntry Connection::create_reinit_stack_entry()
 	return std::visit([](auto& c) { return stadls::vx::ReinitStackEntry(c); }, m_connection);
 }
 
+bool Connection::is_quiggeldy() const
+{
+	return std::holds_alternative<hxcomm::vx::QuiggeldyConnection>(m_connection);
+}
+
 } // namespace grenade::vx
