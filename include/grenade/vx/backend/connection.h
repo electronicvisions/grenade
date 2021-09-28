@@ -5,6 +5,7 @@
 #include "stadls/vx/run_time_info.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_program.h"
+#include "stadls/vx/v2/reinit_stack_entry.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -34,6 +35,8 @@ struct Connection
 	    SYMBOL_VISIBLE;
 
 	hxcomm::vx::ConnectionVariant&& release() SYMBOL_VISIBLE;
+
+	stadls::vx::v2::ReinitStackEntry create_reinit_stack_entry() SYMBOL_VISIBLE;
 
 private:
 	hxcomm::vx::ConnectionVariant m_connection;

@@ -76,4 +76,9 @@ hxcomm::vx::ConnectionVariant&& Connection::release()
 	return std::move(m_connection);
 }
 
+stadls::vx::v2::ReinitStackEntry Connection::create_reinit_stack_entry()
+{
+	return std::visit([](auto& c) { return stadls::vx::ReinitStackEntry(c); }, m_connection);
+}
+
 } // namespace grenade::vx
