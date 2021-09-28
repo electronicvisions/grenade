@@ -59,6 +59,7 @@ public:
 	{
 		stadls::vx::v2::PlaybackProgram static_config;
 		std::vector<stadls::vx::v2::PlaybackProgram> realtime;
+		bool has_hook_around_realtime;
 	};
 
 	/**

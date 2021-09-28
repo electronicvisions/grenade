@@ -38,6 +38,8 @@ struct Connection
 
 	stadls::vx::v2::ReinitStackEntry create_reinit_stack_entry() SYMBOL_VISIBLE;
 
+	bool is_quiggeldy() const SYMBOL_VISIBLE;
+
 private:
 	hxcomm::vx::ConnectionVariant m_connection;
 	size_t m_expected_link_notification_count;
