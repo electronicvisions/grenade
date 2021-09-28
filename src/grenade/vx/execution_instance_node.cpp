@@ -48,9 +48,11 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// execute
 	hate::Timer const exec_timer;
-	if (!program.empty()) {
+	if (!program.realtime.empty() || !program.static_config.empty()) {
 		std::lock_guard lock(continuous_chunked_program_execution_mutex);
-		for (auto& p : program) {
+		auto static_config_reinit = connection.create_reinit_stack_entry();
+		static_config_reinit.set(program.static_config, true);
+		for (auto& p : program.realtime) {
 			backend::run(connection, p);
 		}
 	}

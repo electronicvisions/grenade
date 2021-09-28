@@ -581,7 +581,7 @@ IODataMap ExecutionInstanceBuilder::post_process()
 	return std::move(m_local_data_output);
 }
 
-std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate()
+ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
@@ -601,20 +601,18 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 		builder.merge_back(m_playback_hooks.pre_realtime);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
-		return m_chunked_program;
+		return {{}, m_chunked_program};
 	}
 
 	// playback builder sequence to be concatenated in the end
 	std::vector<PlaybackProgramBuilder> builders;
 
 	// add pre static config playback hook
-	builders.push_back(std::move(m_playback_hooks.pre_static_config));
+	auto config_builder = std::move(m_playback_hooks.pre_static_config);
 
 	// generate static configuration
-	auto [config_builder, ppu_symbols] = m_config_builder.generate();
-
-	// add static config
-	builders.push_back(std::move(config_builder));
+	auto [static_config_builder, ppu_symbols] = m_config_builder.generate();
+	config_builder.merge_back(static_config_builder);
 
 	// generate playback snippet for neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
@@ -738,7 +736,7 @@ std::vector<stadls::vx::v2::PlaybackProgram> ExecutionInstanceBuilder::generate(
 	if (!builder.empty()) {
 		m_chunked_program.push_back(builder.done());
 	}
-	return m_chunked_program;
+	return {config_builder.done(), m_chunked_program};
 }
 
 } // namespace grenade::vx
