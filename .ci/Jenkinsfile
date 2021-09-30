@@ -4,7 +4,8 @@ Map<String, Object> pipelineOptions = [
 		projects: ["grenade"],
 		container: [app: "dls-core"],
 		moduleOptions: [modules: ["ppu-toolchain"]],
-		notificationChannel: "#dls-software"
+		notificationChannel: "#dls-software",
+		configureInstallOptions: "--build-profile=ci"
 ]
 
 if (!isTriggeredByGerrit()) {
