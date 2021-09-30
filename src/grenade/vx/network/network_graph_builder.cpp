@@ -219,7 +219,7 @@ NetworkGraph build_network_graph(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
 
 	if (!result.valid()) {
-		throw InvalidNetworkGraph("Built network graph is not valid.");
+		LOG4CXX_ERROR(logger, "Built network graph is not valid.");
 	}
 
 	return result;
