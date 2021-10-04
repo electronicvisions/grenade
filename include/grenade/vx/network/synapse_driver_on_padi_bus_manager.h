@@ -18,7 +18,7 @@ namespace grenade::vx::network {
  * Given requested allocations and a policy to use, places these requests onto the available
  * synapse drivers.
  */
-struct SynapseDriverOnPADIBusManager
+struct GENPYBIND(visible) SynapseDriverOnPADIBusManager
 {
 	/**
 	 * Label to identify events at synapse driver(s).
@@ -105,8 +105,12 @@ struct SynapseDriverOnPADIBusManager
 	 * Construct manager with unavailable synapse driver locations, which will be excluded for
 	 * placing allocation(s).
 	 * @param unavailable_synapse_drivers Synapse drivers excluded from allocation(s).
+	 *
+	 * @note Default value adjusted for genpybind wrapping.
 	 */
-	SynapseDriverOnPADIBusManager(std::set<SynapseDriver> const& unavailable_synapse_drivers = {})
+	SynapseDriverOnPADIBusManager(
+	    std::set<SynapseDriver> const& unavailable_synapse_drivers =
+	        std::set<grenade::vx::network::SynapseDriverOnPADIBusManager::SynapseDriver>())
 	    SYMBOL_VISIBLE;
 
 	struct AllocationPolicyGreedy
