@@ -60,7 +60,7 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection) :
     Connection(std::move(connection), stadls::vx::v2::ExperimentInit())
 {}
 
-Connection::Connection() : Connection(hxcomm::vx::get_connection_from_env()) {}
+Connection::Connection() : Connection(hxcomm::vx::get_connection_from_env(), stadls::vx::v2::ExperimentInit()) {}
 
 hxcomm::ConnectionTimeInfo Connection::get_time_info() const
 {
