@@ -161,7 +161,7 @@ void test_background_spike_source_regular(
 /**
  * Enable background sources and generate regular spike-trains.
  */
-TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular_DISABLED)
+TEST(NetworkGraphBuilder, DISABLED_BackgroundSpikeSourceRegular)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
@@ -279,7 +279,7 @@ void test_background_spike_source_poisson(
 /**
  * Enable background sources and generate regular spike-trains.
  */
-TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson_DISABLED)
+TEST(NetworkGraphBuilder, DISABLED_BackgroundSpikeSourcePoisson)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
