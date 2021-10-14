@@ -317,6 +317,66 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::Subtraction const& data)
+{
+	std::vector<std::vector<Int8>> values;
+	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	std::vector<intmax_t> tmps(data.output().size, 0);
+	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+	for (size_t j = 0; j < values.size(); ++j) {
+		// we perform the subtraction input[0] - sum(input[1:])
+		if (boost::in_degree(vertex, m_graph.get_graph())) {
+			{
+				auto const in_edge = *in_edges.first;
+				auto const& local_data =
+				    std::get<std::vector<std::vector<Int8>>>(
+				        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
+				        .at(j);
+				auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
+				if (port_restriction) { // only a ranged part of the input is used [min, max]
+					assert(tmps.size() == port_restriction->size());
+					for (size_t i = 0; i < data.output().size; ++i) {
+						tmps[i] += static_cast<int64_t>(local_data[port_restriction->min() + i]);
+					}
+				} else {
+					assert(tmps.size() == local_data.size());
+					for (size_t i = 0; i < data.output().size; ++i) {
+						tmps[i] += static_cast<int64_t>(local_data[i]);
+					}
+				}
+			}
+			// subtract all remaining inputs from temporary
+			for (auto const in_edge :
+			     boost::make_iterator_range(in_edges.first + 1, in_edges.second)) {
+				auto const& local_data =
+				    std::get<std::vector<std::vector<Int8>>>(
+				        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
+				        .at(j);
+				auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
+				if (port_restriction) { // only a ranged part of the input is used [min, max]
+					assert(tmps.size() == port_restriction->size());
+					for (size_t i = 0; i < data.output().size; ++i) {
+						tmps[i] -= local_data[port_restriction->min() + i];
+					}
+				} else {
+					assert(tmps.size() == local_data.size());
+					for (size_t i = 0; i < data.output().size; ++i) {
+						tmps[i] -= local_data[i];
+					}
+				}
+			}
+		}
+		// restrict to range [-128,127]
+		std::transform(tmps.begin(), tmps.end(), values.at(j).begin(), [](auto const tmp) {
+			return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+		});
+		std::fill(tmps.begin(), tmps.end(), 0);
+	}
+	m_local_data.data[vertex] = values;
+}
+
+template <>
+void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ArgMax const& data)
 {
 	// get in edge

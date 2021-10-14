@@ -17,6 +17,7 @@
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/padi_bus.h"
 #include "grenade/vx/vertex/relu.h"
+#include "grenade/vx/vertex/subtraction.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
 #include "grenade/vx/vertex/synapse_array_view_sparse.h"
 #include "grenade/vx/vertex/synapse_driver.h"
@@ -27,6 +28,7 @@ namespace grenade::vx {
 
 /** Vertex configuration as variant over possible types. */
 typedef std::variant<
+    vertex::Subtraction,
     vertex::BackgroundSpikeSource,
     vertex::ArgMax,
     vertex::CrossbarL2Input,
