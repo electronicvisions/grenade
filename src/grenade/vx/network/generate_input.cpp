@@ -35,8 +35,8 @@ void InputGenerator::add(
 
 	data_spikes.reserve(times.size() * neurons.size());
 	for (auto const time : times) {
-		for (auto const neuron : neurons) {
-			for (auto const label : neuron) {
+		for (auto const& neuron : neurons) {
+			for (auto const& label : neuron) {
 				data_spikes.push_back(grenade::vx::TimedSpike{
 				    time, haldls::vx::v2::SpikePack1ToChip(
 				              haldls::vx::v2::SpikePack1ToChip::labels_type{label})});
