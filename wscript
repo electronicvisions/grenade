@@ -60,24 +60,28 @@ def build(bld):
         export_includes = 'include',
     )
 
+    bld.install_files(
+        dest = '${PREFIX}/',
+        files = bld.path.ant_glob('include/grenade/vx/ppu/*.(h)'),
+        name = 'grenade_vx_ppu_header',
+        relative_trick = True
+    )
+
+    bld.install_as(
+        '${PREFIX}/share/grenade/base.cpp',
+        'src/grenade/vx/ppu/start.cpp',
+        name = 'grenade_ppu_base_vx'
+    )
+
     bld(
         target = 'grenade_vx',
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
         use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
-        depends_on = ['grenade_ppu_base_vx'] if bld.env.have_ppu_toolchain else [],
+        depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'nux_vx_v2', 'nux_runtime_vx_v2.o'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
-
-    if bld.env.have_ppu_toolchain:
-        bld.program(
-            target = 'grenade_ppu_base_vx',
-            features = 'cxx',
-            source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp'),
-            use = ['grenade_inc', 'nux_vx_v2', 'nux_runtime_vx_v2'],
-            env = bld.all_envs['nux_vx_v2'],
-        )
 
     bld(
         target = 'grenade_swtest_vx',

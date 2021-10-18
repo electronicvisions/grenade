@@ -8,6 +8,8 @@
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
 #include "lola/vx/ppu.h"
+#include <filesystem>
+#include <iostream>
 #include <vector>
 #include <boost/range/combine.hpp>
 #include <log4cxx/logger.h>
@@ -306,9 +308,15 @@ ExecutionInstanceConfigBuilder::generate()
 		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
 		PPUMemoryWordOnPPU ppu_location_coord;
 		{
-			PPUElfFile ppu_elf_file(get_program_path(ppu_program_name));
-			ppu_program = ppu_elf_file.read_program();
-			ppu_symbols = ppu_elf_file.read_symbols();
+			TemporaryDirectory temporary("grenade-ppu-XXXXXX");
+			Compiler compiler;
+			// FIXME: should come from somewhere
+			compiler.compile({get_program_base_source()}, temporary.get_path() / "program");
+			{
+				PPUElfFile ppu_elf_file(temporary.get_path() / "program");
+				ppu_program = ppu_elf_file.read_program();
+				ppu_symbols = ppu_elf_file.read_symbols();
+			}
 			ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
 			ppu_location_coord = ppu_symbols->at("ppu").coordinate.toMin();
 		}

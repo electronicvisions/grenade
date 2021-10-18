@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include "grenade/build-config.h"
 #include "grenade/vx/ppu.h"
 #include "halco/hicann-dls/vx/v2/ppu.h"
 #include "haldls/vx/v2/ppu.h"
@@ -25,10 +24,3 @@ TEST(from_vector_unit_row, PPUProgram)
 		EXPECT_THROW(grenade::vx::from_vector_unit_row(values), std::runtime_error);
 	}
 }
-
-#ifdef WITH_GRENADE_PPU_SUPPORT
-TEST(get_program_path, PPUProgram)
-{
-	EXPECT_NO_THROW(grenade::vx::get_program_path(grenade::vx::ppu_program_name));
-}
-#endif
