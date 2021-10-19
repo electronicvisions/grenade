@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
+#include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
 #include <array>
@@ -76,6 +77,11 @@ struct SynapseArrayViewSparse
 	boost::iterator_range<Synapses::const_iterator> get_synapses() const SYMBOL_VISIBLE;
 
 	Synram const& get_synram() const SYMBOL_VISIBLE;
+
+	/**
+	 * Convert to synapse array view handle for PPU programs.
+	 */
+	ppu::SynapseArrayViewHandle toSynapseArrayViewHandle() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	std::vector<Port> inputs() const SYMBOL_VISIBLE;

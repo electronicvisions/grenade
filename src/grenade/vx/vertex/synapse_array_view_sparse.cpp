@@ -89,6 +89,22 @@ SynapseArrayViewSparse::Synram const& SynapseArrayViewSparse::get_synram() const
 	return m_synram;
 }
 
+ppu::SynapseArrayViewHandle SynapseArrayViewSparse::toSynapseArrayViewHandle() const
+{
+	if (m_synapses.size() != m_rows.size() * m_columns.size()) {
+		throw std::runtime_error(
+		    "Conversion to SynapseArrayViewHandle only supported for dense connectivity.");
+	}
+	ppu::SynapseArrayViewHandle result;
+	for (auto const& column : m_columns) {
+		result.columns.set(column.value());
+	}
+	for (auto const& row : m_rows) {
+		result.rows.set(row.value());
+	}
+	return result;
+}
+
 std::vector<Port> SynapseArrayViewSparse::inputs() const
 {
 	Port const port(1, ConnectionType::SynapseInputLabel);
