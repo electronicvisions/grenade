@@ -1,13 +1,17 @@
 #pragma once
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/ppu/synapse_array_view_handle.h"
+#include "grenade/vx/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "halco/hicann-dls/vx/v2/neuron.h"
+#include "halco/hicann-dls/vx/v2/synapse.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/chip.h"
 #include "stadls/vx/v2/playback_program_builder.h"
 #include <optional>
 #include <tuple>
+#include <vector>
 
 namespace grenade::vx {
 
@@ -52,6 +56,12 @@ private:
 	    m_enabled_neuron_resets;
 	bool m_requires_ppu;
 	bool m_used_madc;
+
+	std::vector<std::tuple<
+	    vertex::PlasticityRule,
+	    std::vector<
+	        std::pair<halco::hicann_dls::vx::v2::SynramOnDLS, ppu::SynapseArrayViewHandle>>>>
+	    m_plasticity_rules;
 
 	/**
 	 * Process single vertex.

@@ -177,6 +177,21 @@ void ExecutionInstanceConfigBuilder::process(
 
 template <>
 void ExecutionInstanceConfigBuilder::process(
+    Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
+{
+	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+	std::vector<std::pair<halco::hicann_dls::vx::v2::SynramOnDLS, ppu::SynapseArrayViewHandle>>
+	    synapses;
+	for (auto const in_edge : boost::make_iterator_range(in_edges)) {
+		auto const& view = std::get<vertex::SynapseArrayViewSparse>(
+		    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph())));
+		synapses.push_back({view.get_synram(), view.toSynapseArrayViewHandle()});
+	}
+	m_plasticity_rules.push_back({data, std::move(synapses)});
+}
+
+template <>
+void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
 {
 	auto& synapse_driver_config =
