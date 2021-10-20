@@ -709,6 +709,13 @@ void ExecutionInstanceBuilder::process(
 	m_local_data.data[vertex] = value_output;
 }
 
+template <>
+void ExecutionInstanceBuilder::process(
+    Graph::vertex_descriptor const /* vertex */, vertex::PlasticityRule const& /* data */)
+{
+	m_has_plasticity_rule = true;
+}
+
 void ExecutionInstanceBuilder::pre_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
@@ -741,6 +748,41 @@ void ExecutionInstanceBuilder::pre_process()
 IODataMap ExecutionInstanceBuilder::post_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+
+	for (auto const& batch_entry : m_batch_entries) {
+		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v2::PPUOnDLS>()) {
+			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
+			if (scheduler_finished) {
+				auto const value = ppu::Status(scheduler_finished->get().at(0).get_value().value());
+				if (value != ppu::Status::idle) {
+					LOG4CXX_ERROR(
+					    logger, "On-PPU scheduler didn't finish operation (" << ppu << ").");
+				}
+			}
+			auto const& scheduler_event_drop_count =
+			    batch_entry.m_ppu_scheduler_event_drop_count[ppu];
+			if (scheduler_event_drop_count) {
+				auto const value = scheduler_event_drop_count->get().at(0).get_value().value();
+				if (value != 0) {
+					LOG4CXX_ERROR(
+					    logger, "On-PPU scheduler could not execute all tasks ("
+					                << ppu << ", dropped: " << value << ").");
+				}
+			}
+			for (auto const& timer_event_drop_counts : batch_entry.m_ppu_timer_event_drop_count) {
+				if (timer_event_drop_counts[ppu]) {
+					auto const value =
+					    timer_event_drop_counts[ppu]->get().at(0).get_value().value();
+					if (value != 0) {
+						LOG4CXX_ERROR(
+						    logger, "On-PPU timer could not insert all requested tasks into "
+						            "execution queue ("
+						                << ppu << ", skipped: " << value << ").");
+					}
+				}
+			}
+		}
+	}
 
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
@@ -806,21 +848,54 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			config_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 		}
 	}
+	// wait for PPUs to be ready
+	config_builder.write(TimerOnDLS(), Timer());
+	config_builder.block_until(
+	    TimerOnDLS(), Timer::Value(1000000 * Timer::Value::fpga_clock_cycles_per_us));
+	config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 
 	// generate playback snippet for neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 
+	bool const has_cadc_readout = std::any_of(
+	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
+	assert(has_cadc_readout ? enable_ppu : true);
+
+	if (has_cadc_readout) {
+		assert(m_cadc_readout_mode);
+		if ((*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) &&
+		    m_has_plasticity_rule) {
+			throw std::runtime_error(
+			    "Periodic CADC readout and plasticity rule execution are mutually exclusive.");
+		}
+	}
+
 	// look-up PPU-program symbols
 	PPUMemoryBlockOnPPU ppu_result_coord;
+	PPUMemoryWordOnPPU ppu_runtime_coord;
+	PPUMemoryWordOnPPU ppu_status_coord;
 	PlaybackProgramBuilder blocking_ppu_command_baseline_read;
 	PlaybackProgramBuilder blocking_ppu_command_reset_neurons;
 	PlaybackProgramBuilder blocking_ppu_command_read;
 	PlaybackProgramBuilder blocking_ppu_command_stop_periodic_read;
-	PPUMemoryWordOnPPU ppu_status_coord;
+	PlaybackProgramBuilder ppu_command_scheduler;
+	PlaybackProgramBuilder wait_for_ppu_command_idle;
+	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
+	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
 	if (enable_ppu) {
 		assert(ppu_symbols);
 		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
 		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
+		ppu_runtime_coord = ppu_symbols->at("runtime").coordinate.toMin();
+		if (ppu_symbols->contains("scheduler_event_drop_count")) {
+			ppu_scheduler_event_drop_count_coord.emplace(
+			    ppu_symbols->at("scheduler_event_drop_count").coordinate);
+			for (auto const& [name, symbol] : *ppu_symbols) {
+				if (name.starts_with("timer") && name.ends_with("event_drop_count")) {
+					ppu_timer_event_drop_count_coord.push_back(symbol.coordinate);
+				}
+			}
+		}
 
 		// generate playback snippets for PPU command polling
 		blocking_ppu_command_baseline_read =
@@ -838,6 +913,23 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		    stadls::vx::generate(
 		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::stop_periodic_read))
 		        .builder;
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			ppu_command_scheduler.write(
+			    PPUMemoryWordOnDLS(ppu_status_coord, ppu),
+			    PPUMemoryWord(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::scheduler))));
+
+			PollingOmnibusBlockConfig config;
+			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
+			                       .at(0));
+			config.set_target(
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+			wait_for_ppu_command_idle.write(PollingOmnibusBlockConfigOnFPGA(), config);
+			wait_for_ppu_command_idle.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			wait_for_ppu_command_idle.block_until(
+			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
 	}
 
 	// get whether any of {pre,post}_realtime hooks are present
@@ -847,10 +939,6 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	// add pre realtime playback hook
 	builders.push_back(std::move(m_playback_hooks.pre_realtime));
 
-	bool const has_cadc_readout = std::any_of(
-	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
-	assert(has_cadc_readout ? enable_ppu : true);
-
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		PlaybackProgramBuilder builder;
 		auto& batch_entry = m_batch_entries.at(b);
@@ -859,6 +947,20 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			EventRecordingConfig config;
 			config.set_enable_event_recording(true);
 			builder.write(EventRecordingConfigOnFPGA(), config);
+		}
+		// set runtime on PPU
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			if (!m_local_external_data.runtime.empty()) {
+				// TODO (Issue #3993): Implement calculation of PPU clock freuqency vs. FPGA
+				// frequency
+				builder.write(
+				    PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
+				    PPUMemoryWord(PPUMemoryWord::Value(m_local_external_data.runtime.at(b) * 2)));
+			} else {
+				builder.write(
+				    PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
+				    PPUMemoryWord(PPUMemoryWord::Value(0)));
+			}
 		}
 		// start MADC
 		if (m_madc_readout_vertex) {
@@ -912,6 +1014,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// send input
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_begin = builder.read(NullPayloadReadableOnFPGA());
+		}
+		// trigger PPU scheduler
+		if (enable_ppu && m_has_plasticity_rule) {
+			builder.copy_back(ppu_command_scheduler);
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			builder.write(TimerOnDLS(), Timer());
 		}
 		if (m_event_input_vertex) {
 			generator::TimedSpikeSequence event_generator(
@@ -984,6 +1092,34 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					                                   : ppu::cadc_recording_storage_base_top) +
 					        ppu::cadc_recording_storage_size - 1)));
 				}
+			}
+		}
+		// wait until scheduler finished, readout stats
+		if (enable_ppu && m_has_plasticity_rule) {
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
+			builder.block_until(
+			    halco::hicann_dls::vx::TimerOnDLS(),
+			    haldls::vx::v2::Timer::Value(
+			        100000.0 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				batch_entry.m_ppu_scheduler_finished[ppu] = builder.read(PPUMemoryBlockOnDLS(
+				    PPUMemoryBlockOnPPU(ppu_status_coord, ppu_status_coord), ppu));
+			}
+			if (ppu_scheduler_event_drop_count_coord) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_ppu_scheduler_event_drop_count[ppu] = builder.read(
+					    PPUMemoryBlockOnDLS(*ppu_scheduler_event_drop_count_coord, ppu));
+				}
+			}
+			batch_entry.m_ppu_timer_event_drop_count.resize(
+			    ppu_timer_event_drop_count_coord.size());
+			size_t i = 0;
+			for (auto const& coord : ppu_timer_event_drop_count_coord) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_ppu_timer_event_drop_count.at(i)[ppu] =
+					    builder.read(PPUMemoryBlockOnDLS(coord, ppu));
+				}
+				i++;
 			}
 		}
 		// wait for response data

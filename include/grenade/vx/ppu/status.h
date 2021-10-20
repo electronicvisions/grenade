@@ -12,7 +12,8 @@ enum class Status : uint32_t
 	periodic_read,
 	inside_periodic_read,
 	stop_periodic_read,
-	stop
+	stop,
+	scheduler
 };
 
 } // namespace grenade::vx::ppu

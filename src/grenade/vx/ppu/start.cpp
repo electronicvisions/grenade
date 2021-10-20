@@ -2,6 +2,7 @@
 #include "grenade/vx/ppu/status.h"
 #include "libnux/vx/v2/correlation.h"
 #include "libnux/vx/v2/dls.h"
+#include "libnux/vx/v2/mailbox.h"
 #include "libnux/vx/v2/reset_neurons.h"
 #include "libnux/vx/v2/time.h"
 #include "libnux/vx/v2/vector.h"
@@ -21,8 +22,11 @@ volatile Status status = Status::idle;
 // input: PPU location
 volatile PPUOnDLS ppu;
 
+void scheduling();
+
 int start()
 {
+	mailbox_write_string("inside start\n");
 	__vector int8_t baseline_read[dls_num_vectors_per_row];
 	for (size_t i = 0; i < dls_num_vectors_per_row; ++i) {
 		// set so that when baseline reads are never used, the value subtracted is correct
@@ -34,10 +38,12 @@ int start()
 		// set arbitrarily to mitigate use without initialize warnings, {} wants to invoke memset
 		read[i] = vec_splat_u8(0);
 	}
+	mailbox_write_string("after init\n");
 
 	while (status != Status::stop) {
 		switch (status) {
 			case Status::reset_neurons: {
+				mailbox_write_string("reset\n");
 				reset_neurons(neuron_reset_mask[0], neuron_reset_mask[1]);
 				status = Status::idle;
 				break;
@@ -115,6 +121,11 @@ int start()
 				             : [d0] "=qv"(read[0])
 				             : [b0] "b"(storage_base_vector), [i] "r"(uint32_t(0))
 				             : "memory");
+				break;
+			}
+			case Status::scheduler: {
+				mailbox_write_string("bef\n");
+				scheduling();
 				status = Status::idle;
 				break;
 			}

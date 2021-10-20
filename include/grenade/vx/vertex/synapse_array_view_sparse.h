@@ -1,7 +1,6 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
 #include <array>
@@ -13,6 +12,10 @@
 namespace cereal {
 class access;
 } // namespace cereal
+
+namespace grenade::vx::ppu {
+struct SynapseArrayViewHandle;
+} // namespace grenade::vx::ppu
 
 namespace grenade::vx::vertex {
 

@@ -1,6 +1,7 @@
 #include "grenade/vx/vertex/synapse_array_view_sparse.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "halco/common/cerealization_geometry.h"
 #include "halco/hicann-dls/vx/v2/synapse.h"
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"

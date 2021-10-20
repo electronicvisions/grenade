@@ -133,6 +133,10 @@ private:
 		    ticket_extmem_type;
 
 		ticket_extmem_type m_extmem_result;
+
+		ticket_ppu_type m_ppu_scheduler_event_drop_count;
+		std::vector<ticket_ppu_type> m_ppu_timer_event_drop_count;
+		ticket_ppu_type m_ppu_scheduler_finished;
 	};
 
 	std::vector<BatchEntry> m_batch_entries;
@@ -142,6 +146,8 @@ private:
 	std::optional<Graph::vertex_descriptor> m_madc_readout_vertex;
 
 	std::optional<vertex::CADCMembraneReadoutView::Mode> m_cadc_readout_mode;
+
+	bool m_has_plasticity_rule{false};
 
 	/**
 	 * Check if any incoming vertex requires post processing.

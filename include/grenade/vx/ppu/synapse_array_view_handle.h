@@ -1,5 +1,10 @@
 #pragma once
 #include "hate/bitset.h"
+#ifdef __ppu__
+#include "libnux/vx/dls.h"
+#include "libnux/vx/vector.h"
+#endif
+
 
 namespace grenade::vx::ppu {
 
@@ -15,16 +20,38 @@ struct SynapseArrayViewHandle
 	 */
 	hate::bitset<256, uint32_t> rows;
 
-	typedef std::array<uint8_t, 256> Row;
+#ifdef __ppu__
+	/**
+	 * Row values with even values in [0,128), odd values in [128,256).
+	 */
+	typedef libnux::vx::vector_row_t Row;
 
 	/**
 	 * Get weight values of specified row.
 	 */
-	Row get_weights(size_t index_row);
+	inline Row get_weights(size_t index_row)
+	{
+		using namespace libnux::vx;
+		return get_row_via_vector(index_row, dls_weight_base);
+	}
+
 	/**
 	 * Set weight values of specified row.
 	 */
-	void set_weights(Row const& value, size_t index_row);
+	inline void set_weights(Row const& value, size_t index_row)
+	{
+		if (!rows.test(index_row)) {
+			return;
+		}
+		static_cast<void>(value);
+		using namespace libnux::vx;
+		vector_row_t mask;
+		for (size_t i = 0; i < columns.size; ++i) {
+			mask[i] = columns.test(i);
+		}
+		set_row_via_vector_masked(value, mask, index_row, dls_weight_base);
+	}
+#endif
 };
 
 } // namespace grenade::vx::ppu
