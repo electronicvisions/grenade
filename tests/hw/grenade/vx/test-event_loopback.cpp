@@ -101,13 +101,13 @@ TEST(JITGraphExecutor, EventLoopback)
 				    test_event_loopback_single_crossbar_node(output, connections, inputs);
 				if (output.toEnum() == address.toEnum()) {
 					// node matches input channel, events should be propagated
-					for (auto const spikes : spike_batches) {
+					for (auto const& spikes : spike_batches) {
 						EXPECT_LE(spikes.size(), 1100);
 						EXPECT_GE(spikes.size(), 900);
 					}
 				} else {
 					// node does not match input channel, events should not be propagated
-					for (auto const spikes : spike_batches) {
+					for (auto const& spikes : spike_batches) {
 						EXPECT_LE(spikes.size(), 100);
 					}
 				}

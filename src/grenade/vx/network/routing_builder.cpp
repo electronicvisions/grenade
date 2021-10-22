@@ -255,7 +255,7 @@ RoutingBuilder::get_external_sources(
 	std::vector<SourceOnPADIBusManager::ExternalSource> external_sources;
 	auto const external_connections = constraints.get_external_connections();
 	std::set<std::pair<PopulationDescriptor, size_t>> external_source_descriptors;
-	for (auto const connection : external_connections) {
+	for (auto const& connection : external_connections) {
 		auto const source_pop = network.projections.at(connection.descriptor.first).population_pre;
 		auto const source_index = network.projections.at(connection.descriptor.first)
 		                              .connections.at(connection.descriptor.second)
@@ -263,7 +263,7 @@ RoutingBuilder::get_external_sources(
 		external_source_descriptors.insert(std::pair{source_pop, source_index});
 	}
 	external_sources.resize(external_source_descriptors.size());
-	for (auto const connection : external_connections) {
+	for (auto const& connection : external_connections) {
 		auto const source_pop = network.projections.at(connection.descriptor.first).population_pre;
 		auto const source_pop_index = network.projections.at(connection.descriptor.first)
 		                                  .connections.at(connection.descriptor.second)
