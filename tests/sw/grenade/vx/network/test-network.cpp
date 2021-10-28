@@ -11,37 +11,41 @@ using namespace halco::common;
 
 TEST(network_Network, General)
 {
-	Network network_a{{{PopulationDescriptor(1), ExternalPopulation(2)}},
-	                  {{ProjectionDescriptor(3),
-	                    Projection(
-	                        Projection::ReceptorType::excitatory,
-	                        {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
-	                        PopulationDescriptor(1), PopulationDescriptor(1))}},
-	                  MADCRecording{}};
+	Network network_a{
+	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{ProjectionDescriptor(3),
+	      Projection(
+	          Projection::ReceptorType::excitatory,
+	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	    MADCRecording{}};
 
-	Network network_b{{{PopulationDescriptor(2), ExternalPopulation(3)}},
-	                  {{ProjectionDescriptor(3),
-	                    Projection(
-	                        Projection::ReceptorType::excitatory,
-	                        {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
-	                        PopulationDescriptor(1), PopulationDescriptor(1))}},
-	                  MADCRecording{}};
+	Network network_b{
+	    {{PopulationDescriptor(2), ExternalPopulation(3)}},
+	    {{ProjectionDescriptor(3),
+	      Projection(
+	          Projection::ReceptorType::excitatory,
+	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	    MADCRecording{}};
 
-	Network network_c{{{PopulationDescriptor(1), ExternalPopulation(2)}},
-	                  {{ProjectionDescriptor(4),
-	                    Projection(
-	                        Projection::ReceptorType::excitatory,
-	                        {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
-	                        PopulationDescriptor(1), PopulationDescriptor(1))}},
-	                  MADCRecording{}};
+	Network network_c{
+	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{ProjectionDescriptor(4),
+	      Projection(
+	          Projection::ReceptorType::excitatory,
+	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	    MADCRecording{}};
 
-	Network network_d{{{PopulationDescriptor(1), ExternalPopulation(2)}},
-	                  {{ProjectionDescriptor(3),
-	                    Projection(
-	                        Projection::ReceptorType::excitatory,
-	                        {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
-	                        PopulationDescriptor(1), PopulationDescriptor(1))}},
-	                  std::nullopt};
+	Network network_d{
+	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{ProjectionDescriptor(3),
+	      Projection(
+	          Projection::ReceptorType::excitatory,
+	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	    std::nullopt};
 
 	Network network_copy(network_a);
 	EXPECT_EQ(network_a, network_copy);
