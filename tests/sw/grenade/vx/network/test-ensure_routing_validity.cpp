@@ -614,7 +614,7 @@ void test_routing(std::shared_ptr<Network> const& network)
 }
 
 
-TEST(EnsureRoutingValidity, DISABLED_RandomNetwork)
+TEST(EnsureRoutingValidity, RandomNetwork)
 {
 	constexpr size_t num = 100;
 
