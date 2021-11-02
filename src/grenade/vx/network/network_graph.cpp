@@ -453,6 +453,34 @@ bool NetworkGraph::valid() const
 		return false;
 	}
 
+	// check that is required dense in order is fulfilled
+	for (auto const& [descriptor, projection] : m_network->projections) {
+		if (!projection.enable_is_required_dense_in_order) {
+			continue;
+		}
+		for (auto const& [hemisphere, vertex_descriptor] : m_synapse_vertices.at(descriptor)) {
+			auto const& synapse_array_view = std::get<vertex::SynapseArrayViewSparse>(
+			    m_graph.get_vertex_property(vertex_descriptor));
+			std::vector<std::pair<
+			    halco::hicann_dls::vx::v2::SynapseRowOnSynram,
+			    halco::hicann_dls::vx::v2::SynapseOnSynapseRow>>
+			    locations;
+			auto const rows = synapse_array_view.get_rows();
+			auto const columns = synapse_array_view.get_columns();
+			if (rows.size() * columns.size() != synapse_array_view.get_synapses().size()) {
+				LOG4CXX_ERROR(logger, "SynapseArrayView is not dense.");
+				return false;
+			}
+			for (auto const& synapse : synapse_array_view.get_synapses()) {
+				locations.push_back({rows[synapse.index_row], columns[synapse.index_column]});
+			}
+			if (!std::is_sorted(locations.begin(), locations.end())) {
+				LOG4CXX_ERROR(logger, "SynapseArrayView is not in order.");
+				return false;
+			}
+		}
+	}
+
 	return true;
 }
 

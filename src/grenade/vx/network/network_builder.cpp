@@ -166,6 +166,24 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 		}
 	}
 
+	// check that is required dense in order is fulfilled
+	if (projection.enable_is_required_dense_in_order) {
+		std::set<size_t> rows;
+		std::set<size_t> columns;
+		std::vector<std::pair<size_t, size_t>> indices;
+		for (auto const& connection : projection.connections) {
+			rows.insert(connection.index_pre);
+			columns.insert(connection.index_post);
+			indices.push_back({connection.index_pre, connection.index_post});
+		}
+		if (rows.size() * columns.size() != indices.size()) {
+			throw std::runtime_error("Projection not dense.");
+		}
+		if (!std::is_sorted(indices.begin(), indices.end())) {
+			throw std::runtime_error("Projection not in order.");
+		}
+	}
+
 	ProjectionDescriptor descriptor(m_projections.size());
 	m_projections.insert({descriptor, projection});
 	LOG4CXX_TRACE(

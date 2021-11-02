@@ -52,6 +52,14 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 			}
 		}
 	}
+	// check if dense and in order enable value changed
+	for (auto const& [descriptor, projection] : current->projections) {
+		auto const& old_projection = old->projections.at(descriptor);
+		if (projection.enable_is_required_dense_in_order !=
+		    old_projection.enable_is_required_dense_in_order) {
+			return true;
+		}
+	}
 	// check if MADC recording was added or removed
 	if (static_cast<bool>(current->madc_recording) != static_cast<bool>(old->madc_recording)) {
 		return true;

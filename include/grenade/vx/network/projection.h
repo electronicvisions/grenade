@@ -60,6 +60,12 @@ struct GENPYBIND(visible) Projection
 	/** Descriptor to post-synaptic population. */
 	PopulationDescriptor population_post{};
 
+	/**
+	 * Enable whether this projection is required to be placed densely and in order.
+	 * This is used for on-chip plasticity rules.
+	 */
+	bool enable_is_required_dense_in_order{false};
+
 	Projection() = default;
 	Projection(
 	    ReceptorType receptor_type,
