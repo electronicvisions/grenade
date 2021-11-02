@@ -2,6 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
+#include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "hate/visibility.h"
@@ -67,6 +68,13 @@ public:
 	 */
 	void add(CADCRecording const& cadc_recording) SYMBOL_VISIBLE;
 
+	/*
+	 * Add plasticity rule on already added projections.
+	 * The projections are expected to be dense and in order.
+	 * @param plasticity_rule PlasticityRule to add
+	 */
+	PlasticityRuleDescriptor add(PlasticityRule const& plasticity_rule) SYMBOL_VISIBLE;
+
 	NetworkBuilder() SYMBOL_VISIBLE;
 
 	std::shared_ptr<Network> done() SYMBOL_VISIBLE;
@@ -79,6 +87,7 @@ private:
 	std::map<ProjectionDescriptor, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
+	std::map<PlasticityRuleDescriptor, PlasticityRule> m_plasticity_rules{};
 	std::chrono::microseconds m_duration;
 	log4cxx::Logger* m_logger;
 };

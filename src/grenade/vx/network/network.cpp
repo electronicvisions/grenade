@@ -10,7 +10,8 @@ namespace grenade::vx::network {
 bool Network::operator==(Network const& other) const
 {
 	return populations == other.populations && projections == other.projections &&
-	       madc_recording == other.madc_recording && cadc_recording == other.cadc_recording;
+	       madc_recording == other.madc_recording && cadc_recording == other.cadc_recording &&
+	       plasticity_rules == other.plasticity_rules;
 }
 
 bool Network::operator!=(Network const& other) const
@@ -37,6 +38,14 @@ std::ostream& operator<<(std::ostream& os, Network const& network)
 		std::stringstream ss;
 		for (auto const& [descriptor, projection] : network.projections) {
 			ss << descriptor << ": " << projection << "\n";
+		}
+		os << hate::indent(ss.str(), "\t\t");
+		os << "\tplasticity rules:\n";
+	}
+	{
+		std::stringstream ss;
+		for (auto const& [descriptor, rule] : network.plasticity_rules) {
+			ss << descriptor << ": " << rule << "\n";
 		}
 		os << hate::indent(ss.str(), "\t\t");
 	}

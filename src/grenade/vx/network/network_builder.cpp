@@ -258,12 +258,38 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 	LOG4CXX_TRACE(m_logger, "add(): Added CADC recording in " << timer.print() << ".");
 }
 
+PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_rule)
+{
+	hate::Timer timer;
+
+	// check that target projections exist
+	for (auto const& d : plasticity_rule.projections) {
+		if (!m_projections.contains(d)) {
+			throw std::runtime_error(
+			    "PlasticityRule projection descriptor not present in network.");
+		}
+	}
+
+	// check that target projections are dense and in order
+	for (auto const& d : plasticity_rule.projections) {
+		if (!m_projections.at(d).enable_is_required_dense_in_order) {
+			throw std::runtime_error("PlasticityRule projection not dense and in order.");
+		}
+	}
+
+	PlasticityRuleDescriptor descriptor(m_plasticity_rules.size());
+	m_plasticity_rules.insert({descriptor, plasticity_rule});
+	LOG4CXX_TRACE(
+	    m_logger, "add(): Added plasticity_rule(" << descriptor << ") in " << timer.print() << ".");
+	return descriptor;
+}
+
 std::shared_ptr<Network> NetworkBuilder::done()
 {
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
 	auto const ret = std::make_shared<Network>(
 	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording),
-	    std::move(m_cadc_recording), m_duration);
+	    std::move(m_cadc_recording), std::move(m_plasticity_rules), m_duration);
 	m_madc_recording.reset();
 	m_cadc_recording.reset();
 	m_duration = std::chrono::microseconds(0);

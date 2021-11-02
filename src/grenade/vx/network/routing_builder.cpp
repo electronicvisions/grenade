@@ -69,6 +69,14 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 	if (current->cadc_recording != old->cadc_recording) {
 		return true;
 	}
+	// check if plasticity rule count changed.
+	// This is sufficient, because the only other thing which can change is the content of the
+	// kernel or the timer, which both doesn't require new routing. However when the count changes a
+	// new one exists (or an old one was dropped), in both cases the constraints to the routing
+	// might have changed or at least we need to regenerate the NetworkGraph later on.
+	if (current->plasticity_rules.size() != old->plasticity_rules.size()) {
+		return true;
+	}
 	return false;
 }
 

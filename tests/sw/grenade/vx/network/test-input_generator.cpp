@@ -32,6 +32,7 @@ TEST(network_InputGenerator, General)
 	          PopulationDescriptor(0), PopulationDescriptor(1))}},
 	    std::nullopt,
 	    std::nullopt,
+	    {},
 	    {}});
 
 	auto const routing = build_routing(network);

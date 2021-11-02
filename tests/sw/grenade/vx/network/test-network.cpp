@@ -22,6 +22,7 @@ TEST(network_Network, General)
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    {},
 	    {}};
 
 	Network network_b{
@@ -33,6 +34,7 @@ TEST(network_Network, General)
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    {},
 	    {}};
 
 	Network network_c{
@@ -44,6 +46,7 @@ TEST(network_Network, General)
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    {},
 	    {}};
 
 	Network network_d{
@@ -55,6 +58,7 @@ TEST(network_Network, General)
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    std::nullopt,
 	    CADCRecording{},
+	    {},
 	    {}};
 
 	Network network_e{
@@ -66,6 +70,21 @@ TEST(network_Network, General)
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    std::nullopt,
+	    {},
+	    {}};
+
+	PlasticityRule rule;
+	rule.kernel = "abc";
+	Network network_f{
+	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{ProjectionDescriptor(3),
+	      Projection(
+	          Projection::ReceptorType::excitatory,
+	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	    MADCRecording{},
+	    CADCRecording{},
+	    {{PlasticityRuleDescriptor(), rule}},
 	    {}};
 
 	Network network_copy(network_a);
@@ -74,4 +93,5 @@ TEST(network_Network, General)
 	EXPECT_NE(network_c, network_copy);
 	EXPECT_NE(network_d, network_copy);
 	EXPECT_NE(network_e, network_copy);
+	EXPECT_NE(network_f, network_copy);
 }
