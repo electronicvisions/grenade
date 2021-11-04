@@ -111,6 +111,39 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		network_graph.m_graph.update_and_relocate(madc_vertex, std::move(madc_readout), inputs);
 	};
 
+	// update plasticity rule in graph such that it resembles the configuration from network to
+	// update towards
+	auto const update_plasticity_rule = [](NetworkGraph& network_graph,
+	                                       PlasticityRule const& new_rule,
+	                                       PlasticityRuleDescriptor descriptor) {
+		if (!network_graph.m_network->plasticity_rules.contains(descriptor)) {
+			throw std::runtime_error("Updating network graph only possible, if plasticity rule is "
+			                         "neither added nor removed.");
+		}
+		// TODO (Issue #3991): merge impl. from here and add_plasticity_rule below, requires rework
+		// of resources in order to align interface to NetworkGraph.
+		auto const vertex_descriptor = network_graph.m_plasticity_rule_vertices.at(descriptor);
+		std::vector<Input> inputs;
+		std::vector<size_t> column_sizes;
+		for (auto const& d : new_rule.projections) {
+			for (auto const& [_, p] : network_graph.m_synapse_vertices.at(d)) {
+				inputs.push_back({p});
+				column_sizes.push_back(std::get<vertex::SynapseArrayViewSparse>(
+				                           network_graph.get_graph().get_vertex_property(p))
+				                           .output()
+				                           .size);
+			}
+		}
+		vertex::PlasticityRule vertex(
+		    new_rule.kernel,
+		    vertex::PlasticityRule::Timer{
+		        vertex::PlasticityRule::Timer::Value(new_rule.timer.start.value()),
+		        vertex::PlasticityRule::Timer::Value(new_rule.timer.period.value()),
+		        new_rule.timer.num_periods},
+		    std::move(column_sizes));
+		network_graph.m_graph.update_and_relocate(vertex_descriptor, std::move(vertex), inputs);
+	};
+
 	assert(network);
 	assert(network_graph.m_network);
 
@@ -126,6 +159,11 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	}
 	if (network_graph.m_network->madc_recording != network->madc_recording) {
 		update_madc(network_graph, *network);
+	}
+	if (network_graph.m_network->plasticity_rules != network->plasticity_rules) {
+		for (auto const& [descriptor, new_rule] : network->plasticity_rules) {
+			update_plasticity_rule(network_graph, new_rule, descriptor);
+		}
 	}
 	network_graph.m_network = network;
 
@@ -227,6 +265,9 @@ NetworkGraph build_network_graph(
 		}
 	}
 
+	// add plasticity rules
+	builder.add_plasticity_rules(result.m_graph, resources, instance);
+
 	result.m_spike_labels = builder.get_spike_labels(routing_result);
 	result.m_event_input_vertex = resources.external_input;
 	result.m_event_output_vertex = resources.external_output;
@@ -241,6 +282,7 @@ NetworkGraph build_network_graph(
 	for (auto const& [d, p] : resources.background_spike_sources) {
 		result.m_background_spike_source_vertices[d] = p;
 	}
+	result.m_plasticity_rule_vertices = resources.plasticity_rules;
 
 	LOG4CXX_TRACE(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
@@ -1055,6 +1097,35 @@ void NetworkGraphBuilder::add_external_output(
 	    {crossbar_l2_output});
 	LOG4CXX_TRACE(
 	    m_logger, "add_external_output(): Added external output in " << timer.print() << ".");
+}
+
+void NetworkGraphBuilder::add_plasticity_rules(
+    Graph& graph, Resources& resources, coordinate::ExecutionInstance const& instance) const
+{
+	hate::Timer timer;
+	for (auto const& [descriptor, plasticity_rule] : m_network.plasticity_rules) {
+		std::vector<Input> inputs;
+		std::vector<size_t> column_sizes;
+		for (auto const& d : plasticity_rule.projections) {
+			for (auto const& [_, p] : resources.projections.at(d).synapses) {
+				inputs.push_back({p});
+				column_sizes.push_back(
+				    std::get<vertex::SynapseArrayViewSparse>(graph.get_vertex_property(p))
+				        .output()
+				        .size);
+			}
+		}
+		vertex::PlasticityRule vertex(
+		    plasticity_rule.kernel,
+		    vertex::PlasticityRule::Timer{
+		        vertex::PlasticityRule::Timer::Value(plasticity_rule.timer.start.value()),
+		        vertex::PlasticityRule::Timer::Value(plasticity_rule.timer.period.value()),
+		        plasticity_rule.timer.num_periods},
+		    std::move(column_sizes));
+		resources.plasticity_rules[descriptor] = graph.add(std::move(vertex), instance, inputs);
+	}
+	LOG4CXX_TRACE(
+	    m_logger, "add_plasticity_rules(): Added plasticity rules in " << timer.print() << ".");
 }
 
 NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(

@@ -5,6 +5,7 @@
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_result.h"
@@ -83,6 +84,7 @@ public:
 		std::optional<Graph::vertex_descriptor> external_output;
 		std::optional<Graph::vertex_descriptor> madc_output;
 		std::vector<Graph::vertex_descriptor> cadc_output;
+		std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> plasticity_rules;
 	};
 
 	static std::vector<Input> get_inputs(Graph const& graph, Graph::vertex_descriptor descriptor);
@@ -185,6 +187,9 @@ public:
 	    Resources& resources,
 	    CADCRecording const& cadc_recording,
 	    coordinate::ExecutionInstance const& instance) const;
+
+	void add_plasticity_rules(
+	    Graph& graph, Resources& resources, coordinate::ExecutionInstance const& instance) const;
 
 	NetworkGraph::SpikeLabels get_spike_labels(RoutingResult const& connection_result);
 

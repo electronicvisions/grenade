@@ -112,6 +112,7 @@ private:
 	    PopulationDescriptor,
 	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
 	    m_background_spike_source_vertices;
+	std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> m_plasticity_rule_vertices;
 	SpikeLabels m_spike_labels;
 
 	std::chrono::microseconds m_construction_duration;
