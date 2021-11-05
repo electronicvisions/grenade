@@ -636,6 +636,7 @@ RoutingBuilder::place_routed_connections(
 					result.synapse_driver_compare_masks[global_synapse_driver] = mask;
 				}
 			}
+			std::sort(local_synapse_rows.begin(), local_synapse_rows.end());
 			size_t o = 0;
 			for (auto const& [receptor_type, num] : num_synapse_rows) {
 				for (size_t j = 0; j < num[padi_bus.toPADIBusBlockOnDLS()]; ++j) {

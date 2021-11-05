@@ -128,3 +128,24 @@ TEST(build_routing, EmptyProjection)
 
 	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
 }
+
+TEST(build_routing, DenseInOrder)
+{
+	NetworkBuilder builder;
+
+	Population population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {true, true});
+	auto const descriptor = builder.add(population);
+
+	Projection projection(
+	    Projection::ReceptorType::excitatory,
+	    {{0, 0, Projection::Connection::Weight()},
+	     {0, 1, Projection::Connection::Weight()},
+	     {1, 0, Projection::Connection::Weight()},
+	     {1, 1, Projection::Connection::Weight()}},
+	    descriptor, descriptor);
+	projection.enable_is_required_dense_in_order = true;
+	builder.add(projection);
+
+	auto network = builder.done();
+	EXPECT_NO_THROW(grenade::vx::network::build_routing(network));
+}
