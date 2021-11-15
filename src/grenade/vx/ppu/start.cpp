@@ -18,7 +18,7 @@ volatile __vector int8_t cadc_result[dls_num_vectors_per_row];
 // input: mask-selecting neurons to be reset
 volatile __vector uint8_t neuron_reset_mask[dls_num_vectors_per_row];
 // input and output: state in state machine
-volatile Status status = Status::idle;
+volatile Status status = Status::initial;
 // input: PPU location
 volatile PPUOnDLS ppu;
 
@@ -126,6 +126,10 @@ int start()
 			case Status::scheduler: {
 				mailbox_write_string("bef\n");
 				scheduling();
+				status = Status::idle;
+				break;
+			}
+			case Status::initial: {
 				status = Status::idle;
 				break;
 			}

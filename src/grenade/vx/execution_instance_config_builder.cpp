@@ -2,6 +2,7 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/ppu.h"
+#include "grenade/vx/ppu/status.h"
 #include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
@@ -322,6 +323,7 @@ ExecutionInstanceConfigBuilder::generate()
 		PPUMemoryBlock ppu_program;
 		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
 		PPUMemoryWordOnPPU ppu_location_coord;
+		PPUMemoryBlockOnPPU ppu_status_coord;
 		{
 			TemporaryDirectory temporary("grenade-ppu-XXXXXX");
 			Compiler compiler;
@@ -484,6 +486,7 @@ ExecutionInstanceConfigBuilder::generate()
 			}
 			ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
 			ppu_location_coord = ppu_symbols->at("ppu").coordinate.toMin();
+			ppu_status_coord = ppu_symbols->at("status").coordinate;
 		}
 
 		for (auto const ppu : iter_all<PPUOnDLS>()) {

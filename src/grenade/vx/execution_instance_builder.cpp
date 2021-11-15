@@ -848,12 +848,6 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			config_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 		}
 	}
-	// wait for PPUs to be ready
-	config_builder.write(TimerOnDLS(), Timer());
-	config_builder.block_until(
-	    TimerOnDLS(), Timer::Value(1000000 * Timer::Value::fpga_clock_cycles_per_us));
-	config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-
 	// generate playback snippet for neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 
@@ -929,6 +923,19 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			wait_for_ppu_command_idle.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			wait_for_ppu_command_idle.block_until(
 			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
+		// wait for PPUs to be ready
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PollingOmnibusBlockConfig config;
+			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
+			                       .at(0));
+			config.set_target(
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+			config_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
+			config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			config_builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
 		}
 	}
 

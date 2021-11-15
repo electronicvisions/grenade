@@ -5,6 +5,7 @@ namespace grenade::vx::ppu {
 
 enum class Status : uint32_t
 {
+	initial,
 	idle,
 	reset_neurons,
 	baseline_read,
