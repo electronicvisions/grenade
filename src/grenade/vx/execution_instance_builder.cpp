@@ -781,6 +781,12 @@ IODataMap ExecutionInstanceBuilder::post_process()
 					}
 				}
 			}
+			if (batch_entry.m_ppu_mailbox[ppu]) {
+				auto mailbox = batch_entry.m_ppu_mailbox[ppu]->get();
+				LOG4CXX_DEBUG(
+				    logger, "PPU(" << ppu.value() << ") mailbox:\n"
+				                   << mailbox.to_string());
+			}
 		}
 	}
 
@@ -1127,6 +1133,10 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					    builder.read(PPUMemoryBlockOnDLS(coord, ppu));
 				}
 				i++;
+			}
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				batch_entry.m_ppu_mailbox[ppu] =
+				    builder.read(PPUMemoryBlockOnDLS(PPUMemoryBlockOnPPU::mailbox, ppu));
 			}
 		}
 		// wait for response data

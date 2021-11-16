@@ -137,6 +137,7 @@ private:
 		ticket_ppu_type m_ppu_scheduler_event_drop_count;
 		std::vector<ticket_ppu_type> m_ppu_timer_event_drop_count;
 		ticket_ppu_type m_ppu_scheduler_finished;
+		ticket_ppu_type m_ppu_mailbox;
 	};
 
 	std::vector<BatchEntry> m_batch_entries;
