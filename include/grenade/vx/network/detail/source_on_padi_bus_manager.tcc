@@ -6,6 +6,7 @@
 #include "halco/hicann-dls/vx/v2/synapse.h"
 #include "hate/math.h"
 #include "lola/vx/v2/synapse.h"
+#include <numeric>
 
 namespace grenade::vx::network::detail {
 
