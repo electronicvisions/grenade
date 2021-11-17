@@ -27,15 +27,6 @@ def configure(cfg):
     cfg.load('pylint')
     cfg.load('pycodestyle')
 
-    if cfg.env.with_pybind:
-        cfg.check(
-            compiler='cxx',
-            features='cxx pyembed',
-            uselib_store='PYBIND11GRENADE',
-            mandatory=True,
-            header_name='pybind11/pybind11.h',
-        )
-
 def build(bld):
     bld.env.DLSvx_HARDWARE_AVAILABLE = "cube" == os.environ.get("SLURM_JOB_PARTITION")
 
@@ -47,7 +38,7 @@ def build(bld):
         source='../include/grenade/vx/pygrenade.h',
         genpybind_tags='grenade_vx',
         features='genpybind cxx cxxshlib pyext pyembed',
-        use=['grenade_vx', 'PYBIND11GRENADE', 'pyhaldls_vx_v2', 'pylola_vx_v2',
+        use=['grenade_vx', 'pyhaldls_vx_v2', 'pylola_vx_v2',
              'pyhalco_hicann_dls_vx_v2', 'pyhxcomm_vx'],
         install_path='${PREFIX}/lib',
         linkflags='-Wl,-z,defs',
