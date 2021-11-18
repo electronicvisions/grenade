@@ -2,6 +2,7 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/ppu.h"
+#include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
@@ -290,6 +291,7 @@ ExecutionInstanceConfigBuilder::generate()
 		builder.write(coord, config);
 	}
 	// wait for CapMem to settle
+	builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 	builder.write(TimerOnDLS(), Timer());
 	builder.block_until(
 	    TimerOnDLS(), Timer::Value(100000 * Timer::Value::fpga_clock_cycles_per_us));
