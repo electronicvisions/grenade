@@ -47,9 +47,21 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& i
     m_init(m_connection)
 {
 	using namespace stadls::vx;
-	m_init.set(
-	    std::visit([](auto const& i) { return stadls::vx::generate(i).builder.done(); }, init),
-	    true);
+	using namespace stadls::vx::v2;
+	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v2;
+
+	PlaybackProgramBuilder init_builder;
+	// disable event recording, it is enabled only for realtime sections with event recording
+	// request later
+	{
+		EventRecordingConfig config;
+		config.set_enable_event_recording(false);
+		init_builder.write(EventRecordingConfigOnFPGA(), config);
+	}
+	init_builder.merge_back(
+	    std::visit([](auto const& i) { return stadls::vx::generate(i).builder; }, init));
+	m_init.set(init_builder.done(), true);
 
 	m_expected_link_notification_count = 0;
 

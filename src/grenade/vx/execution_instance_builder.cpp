@@ -1,13 +1,5 @@
 #include "grenade/vx/execution_instance_builder.h"
 
-#include <algorithm>
-#include <map>
-#include <set>
-#include <vector>
-#include <boost/range/combine.hpp>
-#include <boost/type_index.hpp>
-#include <log4cxx/logger.h>
-#include <tbb/parallel_for_each.h>
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/generator/madc.h"
 #include "grenade/vx/generator/ppu.h"
@@ -18,11 +10,20 @@
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/block.h"
+#include "haldls/vx/v2/fpga.h"
 #include "haldls/vx/v2/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
 #include "lola/vx/ppu.h"
 #include "stadls/vx/constants.h"
+#include <algorithm>
+#include <map>
+#include <set>
+#include <vector>
+#include <boost/range/combine.hpp>
+#include <boost/type_index.hpp>
+#include <log4cxx/logger.h>
+#include <tbb/parallel_for_each.h>
 
 namespace grenade::vx {
 
@@ -714,6 +715,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		PlaybackProgramBuilder builder;
 		auto& batch_entry = m_batch_entries.at(b);
+		// enable event recording
+		if (m_event_output_vertex || m_madc_readout_vertex) {
+			EventRecordingConfig config;
+			config.set_enable_event_recording(true);
+			builder.write(EventRecordingConfigOnFPGA(), config);
+		}
 		// start MADC
 		if (m_madc_readout_vertex) {
 			builder.merge_back(stadls::vx::generate(generator::MADCArm()).builder);
@@ -774,6 +781,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// stop MADC
 		if (m_madc_readout_vertex) {
 			builder.merge_back(stadls::vx::generate(generator::MADCStop()).builder);
+		}
+		// disable event recording
+		if (m_event_output_vertex || m_madc_readout_vertex) {
+			EventRecordingConfig config;
+			config.set_enable_event_recording(false);
+			builder.write(EventRecordingConfigOnFPGA(), config);
 		}
 		// wait for response data
 		if (!builder.empty()) {
