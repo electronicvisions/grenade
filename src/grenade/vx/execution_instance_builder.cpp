@@ -504,14 +504,12 @@ std::vector<std::vector<T>> ExecutionInstanceBuilder::filter_events(std::vector<
 			continue;
 		}
 		// find end of interval
-		auto const offset_chip_time = begin->get_chip_time();
 		assert(e.m_ticket_events_end);
 		auto const interval_end_time = e.m_ticket_events_end->get_fpga_time().value();
 		uintmax_t end_time = 0;
 		if (!m_local_external_data.runtime.empty()) {
 			auto const absolute_end_chip_time =
-			    m_local_external_data.runtime.at(i).value() + offset_chip_time.value();
-			assert(e.m_ticket_events_end);
+			    m_local_external_data.runtime.at(i).value() + interval_begin_time;
 			end_time = std::min(interval_end_time, absolute_end_chip_time);
 		} else {
 			end_time = interval_end_time;
