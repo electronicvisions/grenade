@@ -4,6 +4,7 @@
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/population.h"
 #include "hate/visibility.h"
+#include <chrono>
 #include <optional>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -12,6 +13,7 @@ namespace network {
 
 struct RoutingResult;
 struct NetworkGraph;
+struct NetworkGraphStatistics;
 
 NetworkGraph build_network_graph(
     std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
@@ -106,10 +108,15 @@ private:
 	    m_background_spike_source_vertices;
 	SpikeLabels m_spike_labels;
 
+	std::chrono::microseconds m_construction_duration;
+	std::chrono::microseconds m_verification_duration;
+	std::chrono::microseconds m_routing_duration;
+
 	friend NetworkGraph build_network_graph(
 	    std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
 	friend void update_network_graph(
 	    NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
+	friend NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph);
 };
 
 } // namespace network

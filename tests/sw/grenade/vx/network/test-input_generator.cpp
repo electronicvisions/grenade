@@ -30,7 +30,8 @@ TEST(network_InputGenerator, General)
 	                                                            // expect events to be filtered
 	          },
 	          PopulationDescriptor(0), PopulationDescriptor(1))}},
-	    std::nullopt});
+	    std::nullopt,
+	    {}});
 
 	auto const routing = build_routing(network);
 

@@ -4,6 +4,7 @@
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
+#include <chrono>
 
 using namespace grenade::vx::network;
 using namespace halco::hicann_dls::vx::v2;
@@ -18,7 +19,8 @@ TEST(network_Network, General)
 	          Projection::ReceptorType::excitatory,
 	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
-	    MADCRecording{}};
+	    MADCRecording{},
+	    {}};
 
 	Network network_b{
 	    {{PopulationDescriptor(2), ExternalPopulation(3)}},
@@ -27,7 +29,8 @@ TEST(network_Network, General)
 	          Projection::ReceptorType::excitatory,
 	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
-	    MADCRecording{}};
+	    MADCRecording{},
+	    {}};
 
 	Network network_c{
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
@@ -36,7 +39,8 @@ TEST(network_Network, General)
 	          Projection::ReceptorType::excitatory,
 	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
-	    MADCRecording{}};
+	    MADCRecording{},
+	    {}};
 
 	Network network_d{
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
@@ -45,7 +49,8 @@ TEST(network_Network, General)
 	          Projection::ReceptorType::excitatory,
 	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
-	    std::nullopt};
+	    std::nullopt,
+	    {}};
 
 	Network network_copy(network_a);
 	EXPECT_EQ(network_a, network_copy);

@@ -130,6 +130,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 
 	LOG4CXX_TRACE(
 	    logger, "Updated hardware graph representation of network in " << timer.print() << ".");
+	network_graph.m_construction_duration += std::chrono::microseconds(timer.get_us());
 }
 
 NetworkGraph build_network_graph(
@@ -140,6 +141,7 @@ NetworkGraph build_network_graph(
 	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.build_network_graph");
 
 	NetworkGraph result;
+	result.m_routing_duration = routing_result.timing_statistics.routing;
 	result.m_network = network;
 
 	coordinate::ExecutionInstance const instance; // Only one instance used
@@ -235,10 +237,13 @@ NetworkGraph build_network_graph(
 
 	LOG4CXX_TRACE(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
+	result.m_construction_duration = std::chrono::microseconds(timer.get_us());
 
+	hate::Timer verification_timer;
 	if (!result.valid()) {
 		LOG4CXX_ERROR(logger, "Built network graph is not valid.");
 	}
+	result.m_verification_duration = std::chrono::microseconds(verification_timer.get_us());
 
 	return result;
 }

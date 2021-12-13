@@ -4,10 +4,15 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "hate/visibility.h"
+#include <chrono>
 #include <iosfwd>
 #include <map>
 #include <memory>
 #include <variant>
+
+#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
+#include <pybind11/chrono.h>
+#endif
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -24,6 +29,12 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 	    populations;
 	std::map<ProjectionDescriptor, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;
+
+	/**
+	 * Duration spent during construction of network.
+	 * This value is not compared in operator{==,!=}.
+	 */
+	std::chrono::microseconds const construction_duration;
 
 	bool operator==(Network const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Network const& other) const SYMBOL_VISIBLE;

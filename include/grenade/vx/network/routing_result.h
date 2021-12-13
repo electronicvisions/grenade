@@ -9,6 +9,7 @@
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/synapse.h"
+#include <chrono>
 #include <iosfwd>
 #include <map>
 #include <vector>
@@ -95,6 +96,11 @@ struct GENPYBIND(visible) RoutingResult
 	typedef std::map<halco::hicann_dls::vx::v2::CrossbarNodeOnDLS, haldls::vx::v2::CrossbarNode>
 	    CrossbarNodes;
 	CrossbarNodes crossbar_nodes;
+
+	struct TimingStatistics
+	{
+		std::chrono::microseconds routing;
+	} timing_statistics;
 
 	RoutingResult() = default;
 

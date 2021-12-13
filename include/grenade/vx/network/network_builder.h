@@ -5,6 +5,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "hate/visibility.h"
+#include <chrono>
 #include <map>
 #include <memory>
 #include <variant>
@@ -66,6 +67,7 @@ private:
 	    m_populations{};
 	std::map<ProjectionDescriptor, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
+	std::chrono::microseconds m_duration;
 	log4cxx::Logger* m_logger;
 };
 

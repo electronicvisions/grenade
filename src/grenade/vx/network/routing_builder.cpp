@@ -853,6 +853,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_internal_to_l2(Result& result) co
 RoutingResult RoutingBuilder::route(
     Network const& network, std::optional<RoutingOptions> const& options) const
 {
+	hate::Timer timer;
 	LOG4CXX_DEBUG(m_logger, "route(): Starting routing.");
 
 	if (options) {
@@ -940,6 +941,7 @@ RoutingResult RoutingBuilder::route(
 	apply_crossbar_nodes_from_background(result);
 
 	LOG4CXX_DEBUG(m_logger, "route(): Got result: " << result);
+	result.timing_statistics.routing = std::chrono::microseconds(timer.get_us());
 	return result;
 }
 

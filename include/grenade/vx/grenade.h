@@ -9,6 +9,7 @@
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/network/network_graph_builder.h"
+#include "grenade/vx/network/network_graph_statistics.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
