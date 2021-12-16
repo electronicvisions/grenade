@@ -476,7 +476,13 @@ TEST_P(SynapseDriverOnPADIBusManagerTestsFixture, random)
 		auto const seed = std::random_device{}();
 		RandomTestGenerator generator(seed);
 		auto [manager, allocation_requests] = generator();
-		EXPECT_NO_THROW(manager.solve(allocation_requests, GetParam())) << "Seed: " << seed;
+		auto options = GetParam();
+		if (std::holds_alternative<SynapseDriverOnPADIBusManager::AllocationPolicyBacktracking>(
+		        options)) {
+			std::get<SynapseDriverOnPADIBusManager::AllocationPolicyBacktracking>(options)
+			    .max_duration = std::chrono::milliseconds(100);
+		}
+		EXPECT_NO_THROW(manager.solve(allocation_requests, options)) << "Seed: " << seed;
 	}
 }
 

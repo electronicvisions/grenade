@@ -430,7 +430,9 @@ TEST_P(SynapseDriverOnDLSManagerTestsFixture, random)
 		auto const seed = std::random_device{}();
 		RandomTestGenerator generator(seed);
 		auto [manager, allocation_requests] = generator();
-		EXPECT_NO_THROW(manager.solve(allocation_requests, GetParam())) << "Seed: " << seed;
+		EXPECT_NO_THROW(
+		    manager.solve(allocation_requests, GetParam(), std::chrono::milliseconds(100)))
+		    << "Seed: " << seed;
 	}
 }
 
