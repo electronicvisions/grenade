@@ -37,6 +37,11 @@ std::optional<Graph::vertex_descriptor> NetworkGraph::get_madc_sample_output_ver
 	return m_madc_sample_output_vertex;
 }
 
+std::vector<Graph::vertex_descriptor> NetworkGraph::get_cadc_sample_output_vertex() const
+{
+	return m_cadc_sample_output_vertex;
+}
+
 NetworkGraph::SpikeLabels const& NetworkGraph::get_spike_labels() const
 {
 	return m_spike_labels;

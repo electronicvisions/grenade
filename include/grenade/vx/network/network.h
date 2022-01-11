@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
+#include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
@@ -29,6 +30,7 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 	    populations;
 	std::map<ProjectionDescriptor, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;
+	std::optional<CADCRecording> const cadc_recording;
 
 	/**
 	 * Duration spent during construction of network.

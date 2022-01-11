@@ -56,6 +56,11 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 	if (static_cast<bool>(current->madc_recording) != static_cast<bool>(old->madc_recording)) {
 		return true;
 	}
+	// check if CADC recording was changed
+	// TODO: Support updating in cases where at least as many neurons are recorded as before
+	if (current->cadc_recording != old->cadc_recording) {
+		return true;
+	}
 	return false;
 }
 

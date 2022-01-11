@@ -34,6 +34,16 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph) S
 
 
 /**
+ * Extract CADC samples to be recorded for a network.
+ * @param data Data containing CADC samples
+ * @param network_graph Network graph to use for vertex descriptor lookup of the CADC samples
+ * @return Time-series CADC sample data per batch entry
+ */
+std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>>
+extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
+
+
+/**
  * PyNN's format expects times in floating-point ms, neurons as integer representation of the
  * AtomicNeuron enum value and MADC sample values as integer values.
  * Currently, only batch-size one is supported, i.e. one time sequence.
@@ -80,11 +90,43 @@ GENPYBIND_MANUAL({
 		}
 		return ret;
 	};
+	auto const extract_cadc_samples = [convert_ms](
+	                                      grenade::vx::IODataMap const& data,
+	                                      grenade::vx::network::NetworkGraph const& network_graph) {
+		auto const samples = grenade::vx::network::extract_cadc_samples(data, network_graph);
+		if (samples.empty()) {
+			return std::tuple{pybind11::array_t<float>(0), pybind11::array_t<int>(0)};
+		}
+		assert(samples.size() == 1);
+		auto const cadc_samples = samples.at(0);
+		if (cadc_samples.empty()) {
+			return std::tuple{pybind11::array_t<float>(0), pybind11::array_t<int>(0)};
+		}
+		auto const num_samples_per_event = cadc_samples.at(0).second.size();
+		for (auto const& cadc_sample : cadc_samples) {
+			assert(cadc_sample.second.size() == num_samples_per_event);
+		}
+		pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(cadc_samples.size())});
+		pybind11::array_t<int> values(
+		    {static_cast<pybind11::ssize_t>(cadc_samples.size()),
+		     static_cast<pybind11::ssize_t>(num_samples_per_event)});
+		for (size_t i = 0; i < cadc_samples.size(); ++i) {
+			auto const& sample = cadc_samples.at(i);
+			times.mutable_at(i) = convert_ms(sample.first);
+			for (size_t j = 0; j < num_samples_per_event; ++j) {
+				values.mutable_at(i, j) = sample.second.at(j).value();
+			}
+		}
+		return std::tuple{times, values};
+	};
 	parent.def(
 	    "extract_neuron_spikes", extract_neuron_spikes, pybind11::arg("data"),
 	    pybind11::arg("network_graph"));
 	parent.def(
 	    "extract_madc_samples", extract_madc_samples, pybind11::arg("data"),
+	    pybind11::arg("network_graph"));
+	parent.def(
+	    "extract_cadc_samples", extract_cadc_samples, pybind11::arg("data"),
 	    pybind11::arg("network_graph"));
 })
 

@@ -193,9 +193,51 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 		throw std::runtime_error(
 		    "MADC recording references neuron index out of range of population.");
 	}
+	if (m_cadc_recording) {
+		for (auto const& neuron : m_cadc_recording->neurons) {
+			if (neuron.population == madc_recording.population &&
+			    neuron.index == madc_recording.index && neuron.source != madc_recording.source) {
+				throw std::runtime_error(
+				    "MADC recording source conflicts with CADC recording's source.");
+			}
+		}
+	}
 	m_madc_recording = madc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
+}
+
+void NetworkBuilder::add(CADCRecording const& cadc_recording)
+{
+	hate::Timer timer;
+	if (m_cadc_recording) {
+		throw std::runtime_error("Only one CADC recording per network possible.");
+	}
+	std::set<std::pair<PopulationDescriptor, size_t>> unique;
+	for (auto const& neuron : cadc_recording.neurons) {
+		if (!m_populations.contains(neuron.population)) {
+			throw std::runtime_error("CADC recording references unknown population.");
+		}
+		if (!std::holds_alternative<Population>(m_populations.at(neuron.population))) {
+			throw std::runtime_error("CADC recording does not reference internal population.");
+		}
+		if (neuron.index >=
+		    std::get<Population>(m_populations.at(neuron.population)).neurons.size()) {
+			throw std::runtime_error(
+			    "CADC recording references neuron index out of range of population.");
+		}
+		if (m_madc_recording && neuron.population == m_madc_recording->population &&
+		    neuron.index == m_madc_recording->index && neuron.source != m_madc_recording->source) {
+			throw std::runtime_error(
+			    "CADC recording source conflicts with MADC recording's source.");
+		}
+		unique.insert({neuron.population, neuron.index});
+	}
+	if (unique.size() != cadc_recording.neurons.size()) {
+		throw std::runtime_error("CADC recording neurons are not unique.");
+	}
+	m_cadc_recording = cadc_recording;
+	LOG4CXX_TRACE(m_logger, "add(): Added CADC recording in " << timer.print() << ".");
 }
 
 std::shared_ptr<Network> NetworkBuilder::done()
@@ -203,8 +245,9 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
 	auto const ret = std::make_shared<Network>(
 	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording),
-	    m_duration);
+	    std::move(m_cadc_recording), m_duration);
 	m_madc_recording.reset();
+	m_cadc_recording.reset();
 	m_duration = std::chrono::microseconds(0);
 	assert(ret);
 	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);

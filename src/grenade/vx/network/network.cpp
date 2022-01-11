@@ -10,7 +10,7 @@ namespace grenade::vx::network {
 bool Network::operator==(Network const& other) const
 {
 	return populations == other.populations && projections == other.projections &&
-	       madc_recording == other.madc_recording;
+	       madc_recording == other.madc_recording && cadc_recording == other.cadc_recording;
 }
 
 bool Network::operator!=(Network const& other) const

@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
@@ -81,6 +82,7 @@ public:
 		std::map<ProjectionDescriptor, PlacedProjection> projections;
 		std::optional<Graph::vertex_descriptor> external_output;
 		std::optional<Graph::vertex_descriptor> madc_output;
+		std::vector<Graph::vertex_descriptor> cadc_output;
 	};
 
 	static std::vector<Input> get_inputs(Graph const& graph, Graph::vertex_descriptor descriptor);
@@ -176,6 +178,12 @@ public:
 	    Graph& graph,
 	    Resources& resources,
 	    MADCRecording const& madc_recording,
+	    coordinate::ExecutionInstance const& instance) const;
+
+	void add_cadc_recording(
+	    Graph& graph,
+	    Resources& resources,
+	    CADCRecording const& cadc_recording,
 	    coordinate::ExecutionInstance const& instance) const;
 
 	NetworkGraph::SpikeLabels get_spike_labels(RoutingResult const& connection_result);

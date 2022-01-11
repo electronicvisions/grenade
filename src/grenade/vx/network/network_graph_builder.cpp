@@ -2,6 +2,7 @@
 
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/transformation/concatenation.h"
 #include "halco/hicann-dls/vx/v2/event.h"
 #include "halco/hicann-dls/vx/v2/padi.h"
 #include "halco/hicann-dls/vx/v2/routing_crossbar.h"
@@ -164,6 +165,11 @@ NetworkGraph build_network_graph(
 		builder.add_madc_recording(result.m_graph, resources, *(network->madc_recording), instance);
 	}
 
+	// add CADC recording
+	if (network->cadc_recording) {
+		builder.add_cadc_recording(result.m_graph, resources, *(network->cadc_recording), instance);
+	}
+
 	// add neuron event outputs
 	builder.add_neuron_event_outputs(result.m_graph, resources, instance);
 
@@ -225,6 +231,7 @@ NetworkGraph build_network_graph(
 	result.m_event_input_vertex = resources.external_input;
 	result.m_event_output_vertex = resources.external_output;
 	result.m_madc_sample_output_vertex = resources.madc_output;
+	result.m_cadc_sample_output_vertex = resources.cadc_output;
 	for (auto const& [d, p] : resources.projections) {
 		result.m_synapse_vertices[d] = p.synapses;
 	}
@@ -1151,6 +1158,44 @@ void NetworkGraphBuilder::add_madc_recording(
 	    {madc_vertex});
 	LOG4CXX_TRACE(
 	    m_logger, "add_madc_recording(): Added MADC recording in " << timer.print() << ".");
+}
+
+void NetworkGraphBuilder::add_cadc_recording(
+    Graph& graph,
+    Resources& resources,
+    CADCRecording const& cadc_recording,
+    coordinate::ExecutionInstance const& instance) const
+{
+	hate::Timer timer;
+	std::vector<Input> cadc_membrane_readout_views;
+	for (auto const& neuron : cadc_recording.neurons) {
+		auto const& population = std::get<Population>(m_network.populations.at(neuron.population));
+		auto const an = population.neurons.at(neuron.index);
+		// TODO (Issue #3986): support source selection in vertex
+		vertex::CADCMembraneReadoutView vertex(
+		    std::move(vertex::CADCMembraneReadoutView::Columns{
+		        an.toNeuronColumnOnDLS().toSynapseOnSynapseRow()}),
+		    an.toNeuronRowOnDLS().toSynramOnDLS());
+		std::vector<AtomicNeuronOnDLS> sorted_neurons(population.neurons);
+		std::sort(sorted_neurons.begin(), sorted_neurons.end());
+		size_t const sorted_index = std::distance(
+		    sorted_neurons.begin(), std::find(sorted_neurons.begin(), sorted_neurons.end(), an));
+		PortRestriction port_restriction(sorted_index, sorted_index);
+		cadc_membrane_readout_views.push_back(graph.add(
+		    std::move(vertex), instance,
+		    {{resources.populations.at(neuron.population)
+		          .neurons.at(an.toNeuronRowOnDLS().toHemisphereOnDLS()),
+		      port_restriction}}));
+	}
+	std::vector<size_t> concatenation_sizes(cadc_membrane_readout_views.size(), 1);
+	auto concatenation =
+	    std::make_unique<transformation::Concatenation>(ConnectionType::Int8, concatenation_sizes);
+	Vertex transformation(std::move(vertex::Transformation(std::move(concatenation))));
+	auto const vc = graph.add(std::move(transformation), instance, cadc_membrane_readout_views);
+	vertex::DataOutput data_output(ConnectionType::Int8, cadc_recording.neurons.size());
+	resources.cadc_output.push_back(graph.add(data_output, instance, {vc}));
+	LOG4CXX_TRACE(
+	    m_logger, "add_cadc_recording(): Added CADC recording in " << timer.print() << ".");
 }
 
 } // namespace grenade::vx::network

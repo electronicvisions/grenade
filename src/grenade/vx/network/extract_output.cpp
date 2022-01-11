@@ -75,4 +75,26 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 	return ret;
 }
 
+std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>>
+extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
+{
+	if (network_graph.get_cadc_sample_output_vertex().empty()) {
+		std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>> ret(
+		    data.batch_size());
+		return ret;
+	}
+	// convert samples
+	auto const& samples = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+	    data.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
+	std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>> ret(
+	    samples.size());
+	for (size_t b = 0; b < samples.size(); ++b) {
+		auto& local_ret = ret.at(b);
+		for (auto const& sample : samples.at(b)) {
+			local_ret.push_back({sample.chip_time, sample.data});
+		}
+	}
+	return ret;
+}
+
 } // namespace grenade::vx::network

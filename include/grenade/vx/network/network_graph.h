@@ -6,6 +6,7 @@
 #include "hate/visibility.h"
 #include <chrono>
 #include <optional>
+#include <vector>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -46,6 +47,10 @@ struct GENPYBIND(visible) NetworkGraph
 	/** Vertex descriptor from which to extract recorded madc sample data. */
 	GENPYBIND(getter_for(madc_sample_output_vertex))
 	std::optional<Graph::vertex_descriptor> get_madc_sample_output_vertex() const SYMBOL_VISIBLE;
+
+	/** Vertex descriptor from which to extract recorded cadc sample data. */
+	GENPYBIND(getter_for(cadc_sample_output_vertex))
+	std::vector<Graph::vertex_descriptor> get_cadc_sample_output_vertex() const SYMBOL_VISIBLE;
 
 	/**
 	 * Spike labels corresponding to each neuron in a population.
@@ -94,6 +99,7 @@ private:
 	std::optional<Graph::vertex_descriptor> m_event_input_vertex;
 	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
 	std::optional<Graph::vertex_descriptor> m_madc_sample_output_vertex;
+	std::vector<Graph::vertex_descriptor> m_cadc_sample_output_vertex;
 	std::map<
 	    ProjectionDescriptor,
 	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
