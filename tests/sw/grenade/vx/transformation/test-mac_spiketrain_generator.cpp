@@ -68,15 +68,17 @@ TEST(MACSpikeTrainGenerator, apply)
 {
 	size_t hemisphere_size_top = 10;
 	size_t hemisphere_size_bot = 13;
-	std::vector<std::vector<grenade::vx::UInt5>> activations_top(1);
-	std::vector<std::vector<grenade::vx::UInt5>> activations_bot(1);
-	activations_top.at(0).resize(hemisphere_size_top);
-	activations_bot.at(0).resize(hemisphere_size_bot);
-	for (size_t i = 0; i < activations_top.at(0).size(); ++i) {
-		activations_top.at(0).at(i) = grenade::vx::UInt5(i);
+	std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::UInt5>>> activations_top(1);
+	std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::UInt5>>> activations_bot(1);
+	activations_top.at(0).resize(1);
+	activations_bot.at(0).resize(1);
+	activations_top.at(0).at(0).data.resize(hemisphere_size_top);
+	activations_bot.at(0).at(0).data.resize(hemisphere_size_bot);
+	for (size_t i = 0; i < activations_top.at(0).at(0).data.size(); ++i) {
+		activations_top.at(0).at(0).data.at(i) = grenade::vx::UInt5(i);
 	}
-	for (size_t i = 0; i < activations_bot.at(0).size(); ++i) {
-		activations_bot.at(0).at(i) = grenade::vx::UInt5(i + hemisphere_size_top);
+	for (size_t i = 0; i < activations_bot.at(0).at(0).data.size(); ++i) {
+		activations_bot.at(0).at(0).data.at(i) = grenade::vx::UInt5(i + hemisphere_size_top);
 	}
 
 	size_t num_sends = 2;

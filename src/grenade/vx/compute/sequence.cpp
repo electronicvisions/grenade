@@ -28,16 +28,16 @@ using run_input_t = typename run_input<F>::type;
 
 } // namespace detail
 
-IODataList::Entry Sequence::run(
-    IODataList::Entry const& input, ChipConfig const& config, backend::Connection& connection)
+Sequence::IOData Sequence::run(
+    Sequence::IOData const& input, ChipConfig const& config, backend::Connection& connection)
 {
 	if (data.empty()) {
 		throw std::runtime_error("Empty compute sequence can't be run.");
 	}
 
-	IODataList::Entry tmp = input;
+	IOData tmp = input;
 
-	auto const visit_entry = [&](auto const& e) -> IODataList::Entry {
+	auto const visit_entry = [&](auto const& e) -> IOData {
 		typedef detail::run_input_t<&std::decay_t<decltype(e)>::run> Input;
 		return e.run(std::get<Input>(tmp), config, connection);
 	};

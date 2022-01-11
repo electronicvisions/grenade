@@ -28,15 +28,23 @@ namespace compute {
 struct Sequence
 {
 	typedef std::variant<Addition, ArgMax, Conv1d, MAC, ReLU, ConvertingReLU> Entry;
+	/**
+	 * Vectorized number data for input and output without timing information.
+	 * Outer dimension: batch-entries
+	 * Inner dimension: values per batch entry
+	 */
+	typedef std::variant<
+	    std::vector<std::vector<UInt5>>,
+	    std::vector<std::vector<Int8>>,
+	    std::vector<std::vector<UInt32>>>
+	    IOData;
 
 	std::list<Entry> data;
 
 	Sequence() = default;
 
-	IODataList::Entry run(
-	    IODataList::Entry const& input,
-	    ChipConfig const& config,
-	    backend::Connection& connection) SYMBOL_VISIBLE;
+	IOData run(IOData const& input, ChipConfig const& config, backend::Connection& connection)
+	    SYMBOL_VISIBLE;
 
 private:
 	friend class cereal::access;

@@ -175,16 +175,21 @@ void ExecutionInstanceBuilder::process(
 namespace {
 
 template <typename T>
-std::vector<std::vector<T>> apply_restriction(
-    std::vector<std::vector<T>> const& value, PortRestriction const& restriction)
+std::vector<TimedDataSequence<std::vector<T>>> apply_restriction(
+    std::vector<TimedDataSequence<std::vector<T>>> const& value, PortRestriction const& restriction)
 {
-	std::vector<std::vector<T>> ret(value.size());
+	std::vector<TimedDataSequence<std::vector<T>>> ret(value.size());
 	for (size_t b = 0; b < ret.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		auto const& local_value = value.at(b);
-		local_ret.insert(
-		    local_ret.end(), local_value.begin() + restriction.min(),
-		    local_value.begin() + restriction.max() + 1);
+		local_ret.resize(local_value.size());
+		for (size_t bb = 0; bb < local_value.size(); ++bb) {
+			local_ret.at(bb).data.insert(
+			    local_ret.at(bb).data.end(), local_value.at(bb).data.begin() + restriction.min(),
+			    local_value.at(bb).data.begin() + restriction.max() + 1);
+			local_ret.at(bb).fpga_time = local_value.at(bb).fpga_time;
+			local_ret.at(bb).chip_time = local_value.at(bb).chip_time;
+		}
 	}
 	return ret;
 }
@@ -211,8 +216,9 @@ void ExecutionInstanceBuilder::process(
 	auto const maybe_apply_restriction = [&](auto const& d) -> IODataMap::Entry {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<std::vector<UInt32>>, std::vector<std::vector<UInt5>>,
-		    std::vector<std::vector<Int8>>>
+		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
+		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
+		    std::vector<TimedDataSequence<std::vector<Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			auto const port_restriction = m_graph.get_edge_property_map().at(edge);
@@ -260,14 +266,18 @@ void ExecutionInstanceBuilder::process(
 		m_post_vertices.push_back(vertex);
 	} else { // post-hw-run processing
 		// extract Int8 values
-		std::vector<std::vector<Int8>> sample_batches;
-		resize_rectangular(sample_batches, m_batch_entries.size(), data.output().size);
+		std::vector<TimedDataSequence<std::vector<Int8>>> sample_batches(m_batch_entries.size());
+		for (auto& e : sample_batches) {
+			e.resize(1);
+			// TODO: Think about what to do with timing information
+			e.at(0).data.resize(data.output().size);
+		}
 		for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 			assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
 			auto const block =
 			    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
 			auto const values = from_vector_unit_row(block);
-			auto& samples = sample_batches.at(batch_index);
+			auto& samples = sample_batches.at(batch_index).at(0).data;
 
 			// get samples via neuron mapping from incoming NeuronView
 			size_t i = 0;
@@ -294,26 +304,32 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::Addition const& data)
 {
-	std::vector<std::vector<Int8>> values;
-	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+	for (auto& e : values) {
+		// TODO: Think about what shall happen with timing info and when multiple events are present
+		e.resize(1);
+		e.at(0).data.resize(data.output().size);
+	}
 
 	std::vector<intmax_t> tmps(data.output().size, 0);
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
 		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
 			auto const& local_data =
-			    std::get<std::vector<std::vector<Int8>>>(
+			    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
 			        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
 			        .at(j);
-			assert(tmps.size() == local_data.size());
+			assert(local_data.size() == 1);
+			assert(tmps.size() == local_data.at(0).data.size());
 			for (size_t i = 0; i < data.output().size; ++i) {
-				tmps[i] += local_data[i];
+				tmps[i] += local_data.at(0).data[i];
 			}
 		}
 		// restrict to range [-128,127]
-		std::transform(tmps.begin(), tmps.end(), values.at(j).begin(), [](auto const tmp) {
-			return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
-		});
+		std::transform(
+		    tmps.begin(), tmps.end(), values.at(j).at(0).data.begin(), [](auto const tmp) {
+			    return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+		    });
 		std::fill(tmps.begin(), tmps.end(), 0);
 	}
 	m_local_data.data[vertex] = values;
@@ -323,8 +339,12 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::Subtraction const& data)
 {
-	std::vector<std::vector<Int8>> values;
-	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+	for (auto& e : values) {
+		// TODO: Think about what shall happen with timing info and when multiple events are present
+		e.resize(1);
+		e.at(0).data.resize(data.output().size);
+	}
 	std::vector<intmax_t> tmps(data.output().size, 0);
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
@@ -333,19 +353,21 @@ void ExecutionInstanceBuilder::process(
 			{
 				auto const in_edge = *in_edges.first;
 				auto const& local_data =
-				    std::get<std::vector<std::vector<Int8>>>(
+				    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
 				        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
 				        .at(j);
+				assert(local_data.size() == 1);
 				auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
 				if (port_restriction) { // only a ranged part of the input is used [min, max]
 					assert(tmps.size() == port_restriction->size());
 					for (size_t i = 0; i < data.output().size; ++i) {
-						tmps[i] += static_cast<int64_t>(local_data[port_restriction->min() + i]);
+						tmps[i] += static_cast<int64_t>(
+						    local_data.at(0).data[port_restriction->min() + i]);
 					}
 				} else {
-					assert(tmps.size() == local_data.size());
+					assert(tmps.size() == local_data.at(0).data.size());
 					for (size_t i = 0; i < data.output().size; ++i) {
-						tmps[i] += static_cast<int64_t>(local_data[i]);
+						tmps[i] += static_cast<int64_t>(local_data.at(0).data[i]);
 					}
 				}
 			}
@@ -353,27 +375,29 @@ void ExecutionInstanceBuilder::process(
 			for (auto const in_edge :
 			     boost::make_iterator_range(in_edges.first + 1, in_edges.second)) {
 				auto const& local_data =
-				    std::get<std::vector<std::vector<Int8>>>(
+				    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
 				        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
 				        .at(j);
+				assert(local_data.size() == 1);
 				auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
 				if (port_restriction) { // only a ranged part of the input is used [min, max]
 					assert(tmps.size() == port_restriction->size());
 					for (size_t i = 0; i < data.output().size; ++i) {
-						tmps[i] -= local_data[port_restriction->min() + i];
+						tmps[i] -= local_data.at(0).data[port_restriction->min() + i];
 					}
 				} else {
-					assert(tmps.size() == local_data.size());
+					assert(tmps.size() == local_data.at(0).data.size());
 					for (size_t i = 0; i < data.output().size; ++i) {
-						tmps[i] -= local_data[i];
+						tmps[i] -= local_data.at(0).data[i];
 					}
 				}
 			}
 		}
 		// restrict to range [-128,127]
-		std::transform(tmps.begin(), tmps.end(), values.at(j).begin(), [](auto const tmp) {
-			return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
-		});
+		std::transform(
+		    tmps.begin(), tmps.end(), values.at(j).at(0).data.begin(), [](auto const tmp) {
+			    return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+		    });
 		std::fill(tmps.begin(), tmps.end(), 0);
 	}
 	m_local_data.data[vertex] = values;
@@ -389,16 +413,23 @@ void ExecutionInstanceBuilder::process(
 
 	auto const compute = [&](auto const& local_data) {
 		// check size match only for first because we know that the data map is valid
-		assert(!local_data.size() || data.inputs().front().size == local_data.front().size());
-		std::vector<std::vector<UInt32>> tmps(local_data.size());
+		assert(
+		    !local_data.size() ||
+		    (local_data.front().size() &&
+		     (data.inputs().front().size == local_data.front().at(0).data.size())));
+		std::vector<TimedDataSequence<std::vector<UInt32>>> tmps(local_data.size());
 		assert(data.output().size == 1);
 		for (auto& t : tmps) {
-			t.resize(1 /* data.output().size */);
+			// TODO: Think about what shall happen with timing info and when multiple events are
+			// present
+			t.resize(1);
+			t.at(0).data.resize(1 /* data.output().size */);
 		}
 		size_t i = 0;
 		for (auto const& entry : local_data) {
-			tmps.at(i).at(0) =
-			    UInt32(std::distance(entry.begin(), std::max_element(entry.begin(), entry.end())));
+			tmps.at(i).at(0).data.at(0) = UInt32(std::distance(
+			    entry.at(0).data.begin(),
+			    std::max_element(entry.at(0).data.begin(), entry.at(0).data.end())));
 			i++;
 		}
 		m_local_data.data[vertex] = tmps;
@@ -407,8 +438,9 @@ void ExecutionInstanceBuilder::process(
 	auto const visitor = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<std::vector<UInt32>>, std::vector<std::vector<UInt5>>,
-		    std::vector<std::vector<Int8>>>
+		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
+		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
+		    std::vector<TimedDataSequence<std::vector<Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			compute(d);
@@ -424,16 +456,22 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ReLU const& data)
 {
-	std::vector<std::vector<Int8>> values;
-	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+	for (auto& e : values) {
+		// TODO: Think about what shall happen with timing info and when multiple events are present
+		e.resize(1);
+		e.at(0).data.resize(data.output().size);
+	}
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
-		auto const& d =
-		    std::get<std::vector<std::vector<Int8>>>(m_local_data.data.at(source)).at(j);
+		auto const& d = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+		                    m_local_data.data.at(source))
+		                    .at(j);
+		assert(d.size() == 1);
 		for (size_t i = 0; i < data.output().size; ++i) {
-			values.at(j).at(i) = std::max(d.at(i), Int8(0));
+			values.at(j).at(0).data.at(i) = std::max(d.at(0).data.at(i), Int8(0));
 		}
 	}
 	m_local_data.data[vertex] = values;
@@ -444,17 +482,24 @@ void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::ConvertingReLU const& data)
 {
 	auto const shift = data.get_shift();
-	std::vector<std::vector<UInt5>> values;
-	resize_rectangular(values, m_input_list.batch_size(), data.output().size);
+	std::vector<TimedDataSequence<std::vector<UInt5>>> values(m_input_list.batch_size());
+	for (auto& e : values) {
+		// TODO: Think about what shall happen with timing info and when multiple events are present
+		e.resize(1);
+		e.at(0).data.resize(data.output().size);
+	}
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
-		auto const& d =
-		    std::get<std::vector<std::vector<Int8>>>(m_local_data.data.at(source)).at(j);
+		auto const& d = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+		                    m_local_data.data.at(source))
+		                    .at(j);
+		assert(d.size() == 1);
 		for (size_t i = 0; i < data.output().size; ++i) {
-			values.at(j).at(i) = UInt5(std::min(
-			    static_cast<UInt5::value_type>(std::max(d.at(i), Int8(0)) >> shift), UInt5::max));
+			values.at(j).at(0).data.at(i) = UInt5(std::min(
+			    static_cast<UInt5::value_type>(std::max(d.at(0).data.at(i), Int8(0)) >> shift),
+			    UInt5::max));
 		}
 	}
 	m_local_data.data[vertex] = values;

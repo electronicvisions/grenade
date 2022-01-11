@@ -20,9 +20,9 @@ namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 struct GENPYBIND(visible) IODataMap
 {
 	typedef std::variant<
-	    std::vector<std::vector<UInt32>>,
-	    std::vector<std::vector<UInt5>>,
-	    std::vector<std::vector<Int8>>,
+	    std::vector<TimedDataSequence<std::vector<UInt32>>>,
+	    std::vector<TimedDataSequence<std::vector<UInt5>>>,
+	    std::vector<TimedDataSequence<std::vector<Int8>>>,
 	    std::vector<TimedSpikeSequence>,
 	    std::vector<TimedSpikeFromChipSequence>,
 	    std::vector<TimedMADCSampleFromChipSequence>>

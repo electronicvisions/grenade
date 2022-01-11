@@ -86,13 +86,16 @@ bool IODataMap::is_match(Entry const& entry, Port const& port)
 	auto const check_shape = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<std::vector<UInt32>>, std::vector<std::vector<UInt5>>,
-		    std::vector<std::vector<Int8>>>
+		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
+		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
+		    std::vector<TimedDataSequence<std::vector<Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			if (!d.empty()) {
-				if (d.front().size() != port.size) {
-					return false;
+				if (!d.front().empty()) {
+					if (d.front().at(0).data.size() != port.size) {
+						return false;
+					}
 				}
 			}
 		}
@@ -103,15 +106,15 @@ bool IODataMap::is_match(Entry const& entry, Port const& port)
 	}
 
 	if ((port.type == ConnectionType::DataUInt32) &&
-	    !std::holds_alternative<std::vector<std::vector<UInt32>>>(entry)) {
+	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt32>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == ConnectionType::DataUInt5) &&
-	    !std::holds_alternative<std::vector<std::vector<UInt5>>>(entry)) {
+	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt5>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == ConnectionType::DataInt8) &&
-	    !std::holds_alternative<std::vector<std::vector<Int8>>>(entry)) {
+	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<Int8>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == ConnectionType::DataTimedSpikeSequence) &&
@@ -127,15 +130,15 @@ bool IODataMap::is_match(Entry const& entry, Port const& port)
 		return false;
 	} else if (
 	    (port.type == ConnectionType::UInt32) &&
-	    !std::holds_alternative<std::vector<std::vector<UInt32>>>(entry)) {
+	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt32>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == ConnectionType::UInt5) &&
-	    !std::holds_alternative<std::vector<std::vector<UInt5>>>(entry)) {
+	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt5>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == ConnectionType::Int8) &&
-	    !std::holds_alternative<std::vector<std::vector<Int8>>>(entry)) {
+	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<Int8>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == ConnectionType::TimedSpikeSequence) &&

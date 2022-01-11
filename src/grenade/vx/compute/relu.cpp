@@ -54,11 +54,24 @@ std::vector<std::vector<Int8>> ReLU::run(
 	}
 
 	IODataMap input_map;
-	input_map.data[m_input_vertex] = inputs;
+	std::vector<TimedDataSequence<std::vector<Int8>>> timed_inputs(inputs.size());
+	for (size_t i = 0; i < inputs.size(); ++i) {
+		timed_inputs.at(i).resize(1);
+		// TODO: Think about what to do with timing information
+		timed_inputs.at(i).at(0).data = inputs.at(i);
+	}
+	input_map.data[m_input_vertex] = timed_inputs;
 
 	auto const output_map = JITGraphExecutor::run(m_graph, input_map, connections, configs);
 
-	return std::get<std::vector<std::vector<Int8>>>(output_map.data.at(m_output_vertex));
+	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+	    output_map.data.at(m_output_vertex));
+	std::vector<std::vector<Int8>> outputs(timed_outputs.size());
+	for (size_t i = 0; i < outputs.size(); ++i) {
+		assert(timed_outputs.at(i).size() == 1);
+		outputs.at(i) = timed_outputs.at(i).at(0).data;
+	}
+	return outputs;
 }
 
 size_t ReLU::input_size() const

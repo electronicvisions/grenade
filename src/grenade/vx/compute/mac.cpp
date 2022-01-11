@@ -393,7 +393,13 @@ std::vector<std::vector<Int8>> MAC::run(
 
 	hate::Timer input_timer;
 	IODataMap input_list;
-	input_list.data[m_input_vertex] = inputs;
+	std::vector<TimedDataSequence<std::vector<UInt5>>> timed_inputs(inputs.size());
+	for (size_t i = 0; i < inputs.size(); ++i) {
+		timed_inputs.at(i).resize(1);
+		// TODO: Think about what to do with timing information
+		timed_inputs.at(i).at(0).data = inputs.at(i);
+	}
+	input_list.data[m_input_vertex] = timed_inputs;
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
 	JITGraphExecutor::ChipConfigs chip_configs(
@@ -404,8 +410,13 @@ std::vector<std::vector<Int8>> MAC::run(
 	    JITGraphExecutor::run(m_graph, input_list, connections, chip_configs);
 
 	hate::Timer output_timer;
-	auto const output =
-	    std::get<std::vector<std::vector<Int8>>>(output_activation_map.data.at(m_output_vertex));
+	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+	    output_activation_map.data.at(m_output_vertex));
+	std::vector<std::vector<Int8>> output(timed_outputs.size());
+	for (size_t i = 0; i < output.size(); ++i) {
+		assert(timed_outputs.at(i).size() == 1);
+		output.at(i) = timed_outputs.at(i).at(0).data;
+	}
 
 	if (m_enable_loopback) {
 		boost::accumulators::accumulator_set<

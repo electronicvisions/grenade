@@ -40,17 +40,23 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 	auto const output_size = output().size;
 
 	auto const copy = [&](auto& ret) {
-		for (auto& entry : ret) {
-			entry.resize(output_size);
-		}
 		for (size_t i = 0; i < ret.size(); ++i) {
 			size_t o_offset = 0;
 			for (auto const& svalue : value) {
 				auto const& v = std::get<std::remove_reference_t<decltype(ret)>>(svalue);
-				for (size_t k = 0; k < v.at(i).size(); ++k) {
-					ret.at(i).at(k + o_offset) = v.at(i).at(k);
+				ret.at(i).resize(v.at(i).size());
+				for (size_t j = 0; j < v.at(i).size(); ++j) {
+					ret.at(i).at(j).data.resize(output_size);
+					for (size_t k = 0; k < v.at(i).at(j).data.size(); ++k) {
+						// TODO: think about what to do with event time information, whether to
+						// check for equality or just drop, etc.
+						ret.at(i).at(j).data.at(k + o_offset) = v.at(i).at(j).data.at(k);
+						ret.at(i).at(j).data.at(k + o_offset) = v.at(i).at(j).data.at(k);
+					}
 				}
-				o_offset += v.at(i).size();
+				if (!v.at(i).empty()) {
+					o_offset += v.at(i).at(0).data.size();
+				}
 			}
 		}
 		return ret;
@@ -58,15 +64,15 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 
 	switch (m_type) {
 		case ConnectionType::UInt32: {
-			std::vector<std::vector<UInt32>> output(batch_size);
+			std::vector<TimedDataSequence<std::vector<UInt32>>> output(batch_size);
 			return copy(output);
 		}
 		case ConnectionType::Int8: {
-			std::vector<std::vector<Int8>> output(batch_size);
+			std::vector<TimedDataSequence<std::vector<Int8>>> output(batch_size);
 			return copy(output);
 		}
 		case ConnectionType::UInt5: {
-			std::vector<std::vector<UInt5>> output(batch_size);
+			std::vector<TimedDataSequence<std::vector<UInt5>>> output(batch_size);
 			return copy(output);
 		}
 		default: {

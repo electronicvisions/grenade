@@ -51,9 +51,10 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 
 	halco::common::typed_array<std::vector<SpikeLabel>, HemisphereOnDLS> labels;
 
-	std::vector<std::reference_wrapper<std::vector<std::vector<UInt5>> const>> uvalue;
+	std::vector<std::reference_wrapper<std::vector<TimedDataSequence<std::vector<UInt5>>> const>>
+	    uvalue;
 	for (auto const& v : value) {
-		uvalue.push_back(std::get<std::vector<std::vector<UInt5>>>(v));
+		uvalue.push_back(std::get<std::vector<TimedDataSequence<std::vector<UInt5>>>>(v));
 	}
 
 	std::vector<TimedSpikeSequence> events(batch_size);
@@ -69,7 +70,9 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 		size_t i = 0;
 		for (auto const& hvalue : uvalue) {
 			auto const& lvalue = hvalue.get().at(batch);
-			auto const input_size = lvalue.size();
+			// only one logical input event
+			assert(lvalue.size() == 1);
+			auto const input_size = lvalue.at(0).data.size();
 			auto const hemisphere = HemisphereOnDLS(i);
 			auto& local_labels = labels[hemisphere];
 
@@ -79,7 +82,7 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 				    SynapseDriverOnDLS(
 				        SynapseDriverOnSynapseDriverBlock(j),
 				        hemisphere.toSynapseDriverBlockOnDLS()),
-				    lvalue[j]);
+				    lvalue.at(0).data[j]);
 				if (label) {
 					local_labels.push_back(*label);
 				}

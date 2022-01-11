@@ -48,4 +48,26 @@ typedef std::vector<haldls::vx::v2::SpikeFromChip> TimedSpikeFromChipSequence;
 /** Sequence of time-annotated from-chip MADC events. */
 typedef std::vector<haldls::vx::v2::MADCSampleFromChip> TimedMADCSampleFromChipSequence;
 
+template <typename T>
+struct TimedData
+{
+	haldls::vx::v2::FPGATime fpga_time;
+	haldls::vx::v2::ChipTime chip_time;
+	T data;
+
+	TimedData() = default;
+	TimedData(
+	    haldls::vx::v2::FPGATime const& fpga_time,
+	    haldls::vx::v2::ChipTime const& chip_time,
+	    T const& data);
+
+	bool operator==(TimedData const& other) const;
+	bool operator!=(TimedData const& other) const;
+};
+
+template <typename T>
+using TimedDataSequence = std::vector<TimedData<T>>;
+
 } // namespace grenade::vx
+
+#include "grenade/vx/event.tcc"

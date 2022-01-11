@@ -36,12 +36,15 @@ struct ZerosLike : public vertex::Transformation::Function
 	Value apply(std::vector<Value> const& value) const
 	{
 		assert(value.size() == 1);
-		auto const& input = std::get<std::vector<std::vector<Int8>>>(value.at(0));
-		std::vector<std::vector<Int8>> ret(input.size());
+		auto const& input =
+		    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(value.at(0));
+		std::vector<TimedDataSequence<std::vector<Int8>>> ret(input.size());
 		size_t i = 0;
 		for (auto& r : ret) {
-			assert(input.at(i).size() == m_size);
-			r.resize(m_size);
+			r.resize(input.at(i).size());
+			for (auto& e : r) {
+				e.data.resize(m_size);
+			}
 			i++;
 		}
 		return ret;
@@ -75,6 +78,8 @@ TEST(Transformation, General)
 
 	std::vector<Int8> value(123, Int8(42));
 	EXPECT_EQ(
-	    transformation.apply({std::vector<std::vector<Int8>>{value}}),
-	    function_copy.apply({std::vector<std::vector<Int8>>{value}}));
+	    transformation.apply({std::vector<TimedDataSequence<std::vector<Int8>>>{
+	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), value}}}}),
+	    function_copy.apply({std::vector<TimedDataSequence<std::vector<Int8>>>{
+	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), value}}}}));
 }

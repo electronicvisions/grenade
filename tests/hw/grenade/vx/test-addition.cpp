@@ -55,7 +55,9 @@ TEST(Addition, Single)
 	for (intmax_t i = -128; i < 127; ++i) {
 		inputs.at(i + 128) = grenade::vx::Int8(i);
 	}
-	input_list.data[v1] = std::vector<std::vector<grenade::vx::Int8>>{inputs};
+	input_list.data[v1] =
+	    std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>{
+	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), inputs}}};
 
 	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
@@ -69,17 +71,33 @@ TEST(Addition, Single)
 
 	EXPECT_TRUE(result_map.data.find(v4) != result_map.data.end());
 	EXPECT_EQ(
-	    std::get<std::vector<std::vector<grenade::vx::Int8>>>(result_map.data.at(v4)).size(), 1);
+	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
+	        result_map.data.at(v4))
+	        .size(),
+	    1);
 	EXPECT_EQ(
-	    std::get<std::vector<std::vector<grenade::vx::Int8>>>(result_map.data.at(v4)).at(0).size(),
+	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
+	        result_map.data.at(v4))
+	        .at(0)
+	        .size(),
+	    1);
+	EXPECT_EQ(
+	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
+	        result_map.data.at(v4))
+	        .at(0)
+	        .at(0)
+	        .data.size(),
 	    size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		EXPECT_EQ(
 		    static_cast<uint8_t>(
 		        std::min(std::max(intmax_t(2 * i), intmax_t(-128)), intmax_t(127))),
 		    static_cast<uint8_t>(
-		        std::get<std::vector<std::vector<grenade::vx::Int8>>>(result_map.data.at(v4))
+		        std::get<
+		            std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
+		            result_map.data.at(v4))
 		            .at(0)
-		            .at(i + 128)));
+		            .at(0)
+		            .data.at(i + 128)));
 	}
 }

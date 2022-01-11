@@ -13,8 +13,9 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.empty());
 	EXPECT_TRUE(map.valid());
 
-	auto const data =
-	    IODataMap::Entry(std::vector<std::vector<Int8>>{{Int8(1), Int8(2)}, {Int8(3), Int8(4)}});
+	auto const data = IODataMap::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
+	    {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), {Int8(1), Int8(2)}}},
+	    {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), {Int8(3), Int8(4)}}}});
 	map.data[0] = data;
 
 	EXPECT_FALSE(map.empty());
@@ -42,8 +43,9 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map_move_2.empty());
 
 	IODataMap map_2;
-	auto const data_1 =
-	    IODataMap::Entry(std::vector<std::vector<Int8>>{{Int8(5), Int8(6)}, {Int8(7), Int8(8)}});
+	auto const data_1 = IODataMap::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
+	    {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), {Int8(5), Int8(6)}}},
+	    {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), {Int8(7), Int8(8)}}}});
 	map_2.data[1] = data_1;
 	map.runtime = runtime;
 	map.merge(map_2);
@@ -62,7 +64,9 @@ TEST(IODataMap, General)
 
 TEST(IODataMap, is_match)
 {
-	auto const data = std::vector<std::vector<Int8>>{{Int8(5), Int8(6)}, {Int8(7), Int8(8)}};
+	auto const data = std::vector<TimedDataSequence<std::vector<Int8>>>{
+	    {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), {Int8(5), Int8(6)}}},
+	    {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), {Int8(7), Int8(8)}}}};
 	{
 		Port port(2, ConnectionType::Int8);
 		EXPECT_TRUE(IODataMap::is_match(data, port));
