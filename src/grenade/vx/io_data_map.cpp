@@ -61,26 +61,35 @@ size_t unsafe_batch_size(IODataMap const& map)
 	return size;
 }
 
+/**
+ * Get validity of map given arbitrary batch size.
+ */
+bool unsafe_valid(IODataMap const& map, size_t const size)
+{
+	bool const runtime_value = std::all_of(
+	    map.runtime.cbegin(), map.runtime.cend(),
+	    [size](auto const& ei) { return (ei.second.size() == size) || (ei.second.size() == 0); });
+	bool const data_value =
+	    std::all_of(map.data.cbegin(), map.data.cend(), [size](auto const& list) {
+		    return std::visit([size](auto const& d) { return d.size() == size; }, list.second);
+	    });
+	return runtime_value && data_value;
+}
+
 } // namespace
 
 size_t IODataMap::batch_size() const
 {
-	if (!valid()) {
+	size_t const size = unsafe_batch_size(*this);
+	if (!unsafe_valid(*this, size)) {
 		throw std::runtime_error("DataMap not valid.");
 	}
-	return unsafe_batch_size(*this);
+	return size;
 }
 
 bool IODataMap::valid() const
 {
-	size_t size = unsafe_batch_size(*this);
-	bool const runtime_value = std::all_of(
-	    runtime.cbegin(), runtime.cend(),
-	    [size](auto const& ei) { return (ei.second.size() == size) || (ei.second.size() == 0); });
-	bool const data_value = std::all_of(data.cbegin(), data.cend(), [size](auto const& list) {
-		return std::visit([size](auto const& d) { return d.size() == size; }, list.second);
-	});
-	return runtime_value && data_value;
+	return unsafe_valid(*this, unsafe_batch_size(*this));
 }
 
 bool IODataMap::is_match(Entry const& entry, Port const& port)
