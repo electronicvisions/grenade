@@ -18,11 +18,9 @@ stadls::vx::v2::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSe
 	builder.write(TimerOnDLS(), Timer());
 	TimedSpike::Time current_time(0);
 	for (auto const& event : m_values) {
-		if (event.time == current_time + 1) {
+		if (event.time > current_time) {
 			current_time = event.time;
-		} else if (event.time > current_time) {
-			current_time = event.time;
-			builder.block_until(TimerOnDLS(), current_time);
+			builder.block_until(TimerOnDLS(), Timer::Value(current_time - 1));
 		}
 		std::visit(
 		    [&](auto const& p) {
@@ -30,6 +28,7 @@ stadls::vx::v2::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSe
 			    builder.write(typename container_type::coordinate_type(), p);
 		    },
 		    event.payload);
+		current_time = TimedSpike::Time(current_time + 1);
 	}
 
 	return {std::move(builder), hate::Nil{}};
