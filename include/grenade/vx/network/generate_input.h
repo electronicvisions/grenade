@@ -11,7 +11,7 @@ namespace network {
 class GENPYBIND(visible) InputGenerator
 {
 public:
-	InputGenerator(NetworkGraph const& network_graph) SYMBOL_VISIBLE;
+	InputGenerator(NetworkGraph const& network_graph, size_t batch_size = 1) SYMBOL_VISIBLE;
 
 	void add(std::vector<TimedSpike::Time> const& times, PopulationDescriptor population)
 	    SYMBOL_VISIBLE;
@@ -20,11 +20,39 @@ public:
 	    std::vector<std::vector<TimedSpike::Time>> const& times,
 	    PopulationDescriptor population) SYMBOL_VISIBLE;
 
+	void add(
+	    std::vector<std::vector<std::vector<TimedSpike::Time>>> const& times,
+	    PopulationDescriptor population) SYMBOL_VISIBLE;
+
 	GENPYBIND_MANUAL({
 		auto const convert_ms = [](float const t) {
 			return grenade::vx::TimedSpike::Time(
 			    std::llround(t * 1000. * grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us));
 		};
+		parent.def(
+		    "add",
+		    [convert_ms](
+		        GENPYBIND_PARENT_TYPE& self,
+		        std::vector<std::vector<std::vector<float>>> const& times,
+		        grenade::vx::network::PopulationDescriptor const population) {
+			    std::vector<std::vector<std::vector<grenade::vx::TimedSpike::Time>>> gtimes;
+			    gtimes.resize(times.size());
+			    for (size_t b = 0; auto& gt_b : gtimes) {
+				    gt_b.resize(times.at(b).size());
+				    for (size_t i = 0; auto& gt : gt_b) {
+					    gt.reserve(times.at(b).at(i).size());
+					    i++;
+				    }
+				    for (size_t i = 0; auto& t : times.at(b)) {
+					    std::transform(
+					        t.begin(), t.end(), std::back_inserter(gtimes.at(b).at(i)), convert_ms);
+					    i++;
+				    }
+				    b++;
+			    }
+			    self.add(gtimes, population);
+		    },
+		    parent->py::arg("times"), parent->py::arg("population"));
 		parent.def(
 		    "add",
 		    [convert_ms](
