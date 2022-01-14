@@ -20,15 +20,24 @@ IODataMap run(
 }
 
 IODataMap run(
-    hxcomm::vx::ConnectionVariant& connection,
+    backend::Connection& connection,
+    ChipConfig const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs)
+{
+	ExecutionInstancePlaybackHooks empty;
+	return run(connection, config, network_graph, inputs, empty);
+}
+
+IODataMap run(
+    backend::Connection& connection,
     ChipConfig const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	JITGraphExecutor::Connections connections;
-	backend::Connection backend_connection(std::move(connection));
-	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), backend_connection));
+	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<DLSGlobal, ChipConfig>(DLSGlobal(), config));
@@ -40,7 +49,20 @@ IODataMap run(
 
 	auto ret = JITGraphExecutor::run(
 	    network_graph.get_graph(), inputs, connections, configs, playback_hooks_map);
-	connection = connections.at(DLSGlobal()).release();
+	return ret;
+}
+
+IODataMap run(
+    hxcomm::vx::ConnectionVariant& connection,
+    ChipConfig const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs,
+    ExecutionInstancePlaybackHooks& playback_hooks)
+{
+	backend::Connection backend_connection(std::move(connection));
+
+	auto ret = run(backend_connection, config, network_graph, inputs, playback_hooks);
+	connection = backend_connection.release();
 	return ret;
 }
 

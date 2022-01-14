@@ -1,3 +1,4 @@
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/genpybind.h"
@@ -24,10 +25,42 @@ namespace network {
  * @return Run time information
  */
 IODataMap run(
+    backend::Connection& connection,
+    ChipConfig const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs) SYMBOL_VISIBLE;
+
+/**
+ * Execute the given network hardware graph and fetch results.
+ *
+ * @param connection Connection instance to be used for running the graph
+ * @param network_graph Network hardware graph to run
+ * @param config Static chip configuration to use
+ * @param inputs Inputs to use
+ * @return Run time information
+ */
+IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
     ChipConfig const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs) SYMBOL_VISIBLE;
+
+/**
+ * Execute the given network hardware graph and fetch results.
+ *
+ * @param connection Connection instance to be used for running the graph
+ * @param network_graph Network hardware graph to run
+ * @param config Static chip configuration to use
+ * @param inputs Inputs to use
+ * @param playback_hooks Optional playback sequences to inject
+ * @return Run time information
+ */
+IODataMap run(
+    backend::Connection& connection,
+    ChipConfig const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs,
+    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graph and fetch results.
