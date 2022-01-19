@@ -35,7 +35,8 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 	    data.data.at(*network_graph.get_event_output_vertex()));
 	std::vector<std::map<
 	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, std::vector<haldls::vx::v2::ChipTime>>>
-	    ret(spikes.size());
+	    ret(data.batch_size());
+	assert(!spikes.size() || spikes.size() == data.batch_size());
 	for (size_t b = 0; b < spikes.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		for (auto const& spike : spikes.at(b)) {

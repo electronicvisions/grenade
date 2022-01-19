@@ -48,17 +48,16 @@ GENPYBIND_MANUAL({
 	        grenade::vx::IODataMap const& data,
 	        grenade::vx::network::NetworkGraph const& network_graph) {
 		    auto const spikes = grenade::vx::network::extract_neuron_spikes(data, network_graph);
-		    std::map<int, pybind11::array_t<double>> ret;
-		    if (spikes.empty()) {
-			    return ret;
-		    }
-		    assert(spikes.size() == 1);
-		    for (auto const& [neuron, times] : spikes.at(0)) {
-			    pybind11::array_t<double> pytimes({static_cast<pybind11::ssize_t>(times.size())});
-			    for (size_t i = 0; i < times.size(); ++i) {
-				    pytimes.mutable_at(i) = convert_ms(times.at(i));
+		    std::vector<std::map<int, pybind11::array_t<double>>> ret(spikes.size());
+		    for (size_t b = 0; b < spikes.size(); ++b) {
+			    for (auto const& [neuron, times] : spikes.at(b)) {
+				    pybind11::array_t<double> pytimes(
+				        {static_cast<pybind11::ssize_t>(times.size())});
+				    for (size_t i = 0; i < times.size(); ++i) {
+					    pytimes.mutable_at(i) = convert_ms(times.at(i));
+				    }
+				    ret.at(b)[neuron.toEnum().value()] = pytimes;
 			    }
-			    ret[neuron.toEnum().value()] = pytimes;
 		    }
 		    return ret;
 	    };
