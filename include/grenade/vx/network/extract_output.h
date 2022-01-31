@@ -65,19 +65,20 @@ GENPYBIND_MANUAL({
 	                                      grenade::vx::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		auto const samples = grenade::vx::network::extract_madc_samples(data, network_graph);
-		if (samples.empty()) {
-			return std::tuple{pybind11::array_t<float>(0), pybind11::array_t<int>(0)};
+		std::vector<std::pair<pybind11::array_t<float>, pybind11::array_t<int>>> ret(
+		    samples.size());
+		for (size_t b = 0; b < samples.size(); ++b) {
+			auto const madc_samples = samples.at(b);
+			pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(madc_samples.size())});
+			pybind11::array_t<int> values({static_cast<pybind11::ssize_t>(madc_samples.size())});
+			for (size_t i = 0; i < madc_samples.size(); ++i) {
+				auto const& sample = madc_samples.at(i);
+				times.mutable_at(i) = convert_ms(sample.first);
+				values.mutable_at(i) = sample.second.toEnum().value();
+			}
+			ret.at(b) = std::make_pair(times, values);
 		}
-		assert(samples.size() == 1);
-		auto const madc_samples = samples.at(0);
-		pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(madc_samples.size())});
-		pybind11::array_t<int> values({static_cast<pybind11::ssize_t>(madc_samples.size())});
-		for (size_t i = 0; i < madc_samples.size(); ++i) {
-			auto const& sample = madc_samples.at(i);
-			times.mutable_at(i) = convert_ms(sample.first);
-			values.mutable_at(i) = sample.second.toEnum().value();
-		}
-		return std::tuple{times, values};
+		return ret;
 	};
 	parent.def(
 	    "extract_neuron_spikes", extract_neuron_spikes, pybind11::arg("data"),

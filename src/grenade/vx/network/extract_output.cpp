@@ -64,7 +64,8 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 	    data.data.at(*network_graph.get_madc_sample_output_vertex()));
 	std::vector<
 	    std::vector<std::pair<haldls::vx::v2::ChipTime, haldls::vx::v2::MADCSampleFromChip::Value>>>
-	    ret(samples.size());
+	    ret(data.batch_size());
+	assert(!samples.size() || samples.size() == data.batch_size());
 	for (size_t b = 0; b < samples.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		for (auto const& sample : samples.at(b)) {
