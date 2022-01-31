@@ -87,7 +87,8 @@ extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 	auto const& samples = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
 	    data.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
 	std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>> ret(
-	    samples.size());
+	    data.batch_size());
+	assert(!samples.size() || samples.size() == data.batch_size());
 	for (size_t b = 0; b < samples.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		for (auto const& sample : samples.at(b)) {

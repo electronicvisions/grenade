@@ -94,30 +94,32 @@ GENPYBIND_MANUAL({
 	                                      grenade::vx::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		auto const samples = grenade::vx::network::extract_cadc_samples(data, network_graph);
-		if (samples.empty()) {
-			return std::tuple{pybind11::array_t<float>(0), pybind11::array_t<int>(0)};
-		}
-		assert(samples.size() == 1);
-		auto const cadc_samples = samples.at(0);
-		if (cadc_samples.empty()) {
-			return std::tuple{pybind11::array_t<float>(0), pybind11::array_t<int>(0)};
-		}
-		auto const num_samples_per_event = cadc_samples.at(0).second.size();
-		for (auto const& cadc_sample : cadc_samples) {
-			assert(cadc_sample.second.size() == num_samples_per_event);
-		}
-		pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(cadc_samples.size())});
-		pybind11::array_t<int> values(
-		    {static_cast<pybind11::ssize_t>(cadc_samples.size()),
-		     static_cast<pybind11::ssize_t>(num_samples_per_event)});
-		for (size_t i = 0; i < cadc_samples.size(); ++i) {
-			auto const& sample = cadc_samples.at(i);
-			times.mutable_at(i) = convert_ms(sample.first);
-			for (size_t j = 0; j < num_samples_per_event; ++j) {
-				values.mutable_at(i, j) = sample.second.at(j).value();
+		std::vector<std::pair<pybind11::array_t<float>, pybind11::array_t<int>>> ret(
+		    samples.size());
+		for (size_t b = 0; b < samples.size(); ++b) {
+			auto const cadc_samples = samples.at(b);
+			if (cadc_samples.empty()) {
+				ret.at(b) = std::make_pair(pybind11::array_t<float>(0), pybind11::array_t<int>(0));
+				continue;
 			}
+			auto const num_samples_per_event = cadc_samples.at(0).second.size();
+			for (auto const& cadc_sample : cadc_samples) {
+				assert(cadc_sample.second.size() == num_samples_per_event);
+			}
+			pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(cadc_samples.size())});
+			pybind11::array_t<int> values(
+			    {static_cast<pybind11::ssize_t>(cadc_samples.size()),
+			     static_cast<pybind11::ssize_t>(num_samples_per_event)});
+			for (size_t i = 0; i < cadc_samples.size(); ++i) {
+				auto const& sample = cadc_samples.at(i);
+				times.mutable_at(i) = convert_ms(sample.first);
+				for (size_t j = 0; j < num_samples_per_event; ++j) {
+					values.mutable_at(i, j) = sample.second.at(j).value();
+				}
+			}
+			ret.at(b) = std::make_pair(times, values);
 		}
-		return std::tuple{times, values};
+		return ret;
 	};
 	parent.def(
 	    "extract_neuron_spikes", extract_neuron_spikes, pybind11::arg("data"),
