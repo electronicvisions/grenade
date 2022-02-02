@@ -5,6 +5,7 @@
 #include "haldls/vx/v2/event.h"
 #include "haldls/vx/v2/timer.h"
 #include "hate/visibility.h"
+#include <iosfwd>
 #include <variant>
 #include <vector>
 
@@ -33,6 +34,9 @@ struct GENPYBIND(visible) TimedSpike
 
 	bool operator==(TimedSpike const& other) const SYMBOL_VISIBLE;
 	bool operator!=(TimedSpike const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, TimedSpike const& spike) SYMBOL_VISIBLE;
 };
 
 /** Sequence of timed to-chip spike events. */

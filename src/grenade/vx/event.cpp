@@ -16,4 +16,12 @@ bool TimedSpike::operator!=(TimedSpike const& other) const
 	return !(*this == other);
 }
 
+std::ostream& operator<<(std::ostream& os, TimedSpike const& spike)
+{
+	os << "TimedSpike(" << spike.time << ", ";
+	std::visit([&os](auto const& p) { os << p; }, spike.payload);
+	os << ")";
+	return os;
+}
+
 } // namespace grenade::vx
