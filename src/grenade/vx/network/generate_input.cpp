@@ -191,11 +191,18 @@ IODataMap InputGenerator::done()
 {
 	assert(m_network_graph.get_event_input_vertex());
 	auto& spikes = std::get<std::vector<TimedSpikeSequence>>(
-	                   m_data.data.at(*m_network_graph.get_event_input_vertex()))
-	                   .at(0);
-	std::stable_sort(
-	    spikes.begin(), spikes.end(), [](auto const& a, auto const& b) { return a.time < b.time; });
-	return std::move(m_data);
+	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
+	for (auto& batch : spikes) {
+		std::stable_sort(batch.begin(), batch.end(), [](auto const& a, auto const& b) {
+			return a.time < b.time;
+		});
+	}
+	IODataMap ret;
+	std::vector<TimedSpikeSequence> spike_batch(m_data.batch_size());
+	assert(m_network_graph.get_event_input_vertex());
+	ret.data.insert({*m_network_graph.get_event_input_vertex(), spike_batch});
+	std::swap(ret, m_data);
+	return ret;
 }
 
 } // namespace grenade::vx::network
