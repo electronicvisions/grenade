@@ -44,7 +44,7 @@ void InputGenerator::add(
 	auto& spike_batch = std::get<std::vector<TimedSpikeSequence>>(
 	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
-		spike_batch.at(b) = batch_entry;
+		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
 	}
 }
 
@@ -107,11 +107,10 @@ void InputGenerator::add(
 			}
 		}
 	}
-
 	auto& spike_batch = std::get<std::vector<TimedSpikeSequence>>(
 	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
-		spike_batch.at(b) = batch_entry;
+		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
 	}
 }
 
