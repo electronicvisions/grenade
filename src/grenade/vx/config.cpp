@@ -41,8 +41,8 @@ ChipConfig convert_to_chip(
 		typedef std::decay_t<decltype(config)> config_t;
 		if constexpr (std::is_same_v<config_t, haldls::vx::v2::CommonNeuronBackendConfig>) {
 			chip.neuron_backend[coord] = config;
-		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::CrossbarNode>) {
-			chip.crossbar_nodes[coord] = config;
+		} else if constexpr (std::is_same_v<config_t, lola::vx::v2::Crossbar>) {
+			chip.crossbar = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::BackgroundSpikeSource>) {
 			chip.background_spike_sources[coord] = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::ReadoutSourceSelection>) {

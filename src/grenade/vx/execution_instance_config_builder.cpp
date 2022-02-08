@@ -25,7 +25,7 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 	m_requires_ppu = false;
 
 	/** Silence everything which is not set in the graph. */
-	for (auto& node : m_config.crossbar_nodes) {
+	for (auto& node : m_config.crossbar.nodes) {
 		node = haldls::vx::v2::CrossbarNode::drop_all;
 	}
 	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
@@ -181,7 +181,7 @@ template <>
 void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::CrossbarNode const& data)
 {
-	m_config.crossbar_nodes[data.get_coordinate()] = data.get_config();
+	m_config.crossbar.nodes[data.get_coordinate()] = data.get_config();
 }
 
 template <>
@@ -264,9 +264,7 @@ ExecutionInstanceConfigBuilder::generate()
 			    m_config.hemispheres[hemisphere].neuron_block[column]);
 		}
 	}
-	for (auto const coord : iter_all<CrossbarNodeOnDLS>()) {
-		builder.write(coord, m_config.crossbar_nodes[coord]);
-	}
+	builder.write(CrossbarOnDLS(), m_config.crossbar);
 	for (auto const coord : iter_all<BackgroundSpikeSourceOnDLS>()) {
 		builder.write(coord, m_config.background_spike_sources[coord]);
 	}

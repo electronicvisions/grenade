@@ -14,7 +14,7 @@ TEST(convert_to_chip, General)
 {
 	ChipConfig chip;
 
-	chip.crossbar_nodes[CrossbarNodeOnDLS(Enum(24))].set_mask(
+	chip.crossbar.nodes[CrossbarNodeOnDLS(Enum(24))].set_mask(
 	    CrossbarNode::neuron_label_type(0x1234));
 	auto enable_spl1 =
 	    chip.hemispheres[HemisphereOnDLS(0)].common_padi_bus_config.get_enable_spl1();
@@ -33,9 +33,7 @@ TEST(convert_to_chip, General)
 	chip.madc_config.set_enable_calibration(!chip.madc_config.get_enable_calibration());
 
 	PlaybackProgramBuilderDumper dumper;
-	for (auto const node : iter_all<CrossbarNodeOnDLS>()) {
-		dumper.write(node, chip.crossbar_nodes[node]);
-	}
+	dumper.write(CrossbarOnDLS(), chip.crossbar);
 	dumper.write(ReadoutSourceSelectionOnDLS(), chip.readout_source_selection);
 	dumper.write(MADCConfigOnDLS(), chip.madc_config);
 	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
@@ -66,9 +64,7 @@ TEST(convert_to_chip, General)
 	    !chip_previous.madc_config.get_enable_dummy_data());
 
 	dumper = PlaybackProgramBuilderDumper();
-	for (auto const node : iter_all<CrossbarNodeOnDLS>()) {
-		dumper.write(node, chip.crossbar_nodes[node]);
-	}
+	dumper.write(CrossbarOnDLS(), chip.crossbar);
 	dumper.write(ReadoutSourceSelectionOnDLS(), chip.readout_source_selection);
 	// leaving out madc_config here
 	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {

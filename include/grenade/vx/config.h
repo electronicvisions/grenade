@@ -3,16 +3,15 @@
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v2/background.h"
 #include "halco/hicann-dls/vx/v2/chip.h"
-#include "halco/hicann-dls/vx/v2/routing_crossbar.h"
 #include "halco/hicann-dls/vx/v2/synapse_driver.h"
 #include "haldls/vx/v2/background.h"
 #include "haldls/vx/v2/madc.h"
 #include "haldls/vx/v2/padi.h"
 #include "haldls/vx/v2/readout.h"
-#include "haldls/vx/v2/routing_crossbar.h"
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/neuron.h"
+#include "lola/vx/v2/routing_crossbar.h"
 #include "lola/vx/v2/synapse.h"
 #include "stadls/vx/v2/dumper.h"
 #include <optional>
@@ -69,12 +68,8 @@ public:
 	/** HemisphereConfig configuration. */
 	_hemispheres_type hemispheres;
 
-	typedef halco::common::
-	    typed_array<haldls::vx::v2::CrossbarNode, haldls::vx::v2::CrossbarNode::coordinate_type>
-	        _crossbar_nodes_type GENPYBIND(opaque);
-
-	/** Crossbar node configuration. */
-	_crossbar_nodes_type crossbar_nodes;
+	/** Crossbar configuration. */
+	lola::vx::v2::Crossbar crossbar;
 
 	typedef halco::common::typed_array<
 	    haldls::vx::v2::BackgroundSpikeSource,
@@ -123,7 +118,7 @@ BOOST_HANA_ADAPT_STRUCT(
 BOOST_HANA_ADAPT_STRUCT(
     grenade::vx::ChipConfig,
     hemispheres,
-    crossbar_nodes,
+    crossbar,
     background_spike_sources,
     readout_source_selection,
     madc_config,
