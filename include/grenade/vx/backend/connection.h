@@ -10,6 +10,10 @@
 #include <string>
 #include <variant>
 
+#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
+#include "pyhxcomm/common/managed_connection.h"
+#endif
+
 namespace grenade::vx::backend {
 
 struct Connection;
@@ -22,6 +26,8 @@ stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&&);
  */
 struct Connection
 {
+	static constexpr char name[] = "Connection";
+
 	/** Accepted initialization generators. */
 	typedef std::variant<stadls::vx::v2::ExperimentInit, stadls::vx::v2::DigitalInit> Init;
 
@@ -50,3 +56,8 @@ private:
 };
 
 } // namespace grenade::vx::backend
+
+GENPYBIND_MANUAL({
+	pyhxcomm::ManagedPyBind11Helper<grenade::vx::backend::Connection> helper(
+	    parent, BOOST_HANA_STRING("Connection"));
+})
