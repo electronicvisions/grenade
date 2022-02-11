@@ -6,9 +6,11 @@
 #include "halco/hicann-dls/vx/v2/jtag.h"
 #include "haldls/vx/v2/barrier.h"
 #include "haldls/vx/v2/jtag.h"
+#include "hate/timer.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "stadls/vx/playback_generator.h"
 #include "stadls/vx/v2/run.h"
+#include <log4cxx/logger.h>
 
 namespace {
 
@@ -46,10 +48,13 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& i
     m_expected_link_notification_count(halco::hicann_dls::vx::v2::PhyConfigFPGAOnDLS::size),
     m_init(m_connection)
 {
+	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.backend.Connection");
 	using namespace stadls::vx;
 	using namespace stadls::vx::v2;
 	using namespace haldls::vx::v2;
 	using namespace halco::hicann_dls::vx::v2;
+
+	hate::Timer timer;
 
 	PlaybackProgramBuilder init_builder;
 	// disable event recording, it is enabled only for realtime sections with event recording
@@ -66,6 +71,8 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& i
 	m_expected_link_notification_count = 0;
 
 	perform_hardware_check(m_connection);
+
+	LOG4CXX_TRACE(logger, "Connection(): Initialized in " << timer.print() << ".");
 }
 
 Connection::Connection(hxcomm::vx::ConnectionVariant&& connection) :
