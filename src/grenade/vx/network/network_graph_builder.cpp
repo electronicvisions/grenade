@@ -22,6 +22,9 @@ using namespace halco::common;
 
 void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network)
 {
+	hate::Timer timer;
+	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.update_network_graph");
+
 	if (requires_routing(network, network_graph.m_network)) {
 		throw std::runtime_error(
 		    "Network graph can only be updated if no new routing is required.");
@@ -124,6 +127,9 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		update_madc(network_graph, *network);
 	}
 	network_graph.m_network = network;
+
+	LOG4CXX_TRACE(
+	    logger, "Updated hardware graph representation of network in " << timer.print() << ".");
 }
 
 NetworkGraph build_network_graph(
