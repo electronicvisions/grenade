@@ -311,6 +311,14 @@ ExecutionInstanceConfigBuilder::generate()
 			ctrl.set_inhibit_reset(false);
 			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 
+			// zero-initialize all symbols (esp. bss)
+			assert(ppu_symbols);
+			for (auto const& [_, symbol] : *ppu_symbols) {
+				PPUMemoryBlock config(symbol.coordinate.toPPUMemoryBlockSize());
+				PPUMemoryBlockOnDLS coord(symbol.coordinate, ppu);
+				builder.write(coord, config);
+			}
+
 			// write PPU program
 			PPUMemoryBlockOnDLS coord(
 			    PPUMemoryBlockOnPPU(

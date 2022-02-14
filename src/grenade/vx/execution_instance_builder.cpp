@@ -681,9 +681,10 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	PlaybackProgramBuilder blocking_ppu_command_baseline_read;
 	PlaybackProgramBuilder blocking_ppu_command_reset_neurons;
 	PlaybackProgramBuilder blocking_ppu_command_read;
+	PPUMemoryWordOnPPU ppu_status_coord;
 	if (enable_ppu) {
 		assert(ppu_symbols);
-		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
 		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
 
 		// generate playback snippets for PPU command polling
@@ -796,6 +797,29 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 
 	// add post realtime playback hook
 	builders.push_back(std::move(m_playback_hooks.post_realtime));
+
+	// stop PPUs
+	if (enable_ppu) {
+		PlaybackProgramBuilder builder;
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::stop)));
+			builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+		}
+		// poll for completion by waiting until PPU is asleep
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PollingOmnibusBlockConfig config;
+			config.set_address(
+			    PPUStatusRegister::read_addresses<PollingOmnibusBlockConfig::Address>(
+			        ppu.toPPUStatusRegisterOnDLS())
+			        .at(0));
+			config.set_target(PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(true)));
+			config.set_mask(PollingOmnibusBlockConfig::Value(0x00000001));
+			builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
+			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
+		builders.push_back(std::move(builder));
+	}
 
 	// Merge builders sequentially into chunks smaller than the FPGA playback memory size.
 	// If a single builder is larger than the memory, it is placed isolated in a program.
