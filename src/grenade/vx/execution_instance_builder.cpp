@@ -514,11 +514,20 @@ void ExecutionInstanceBuilder::filter_events(
 		} else {
 			end_time = interval_end_time;
 		}
-		auto end = std::find_if(begin, data.end(), [&](auto const& event) {
-			return event.get_chip_time().value() >= end_time;
-		});
+		typename std::vector<T>::iterator end;
+		// find in reversed order if this entry is the last batch entry, leads to O(1) in this case.
+		if (i == m_batch_entries.size() - 1) {
+			end = std::find_if_not(
+			          data.rbegin(), typename std::vector<T>::reverse_iterator(begin),
+			          [&](auto const& event) { return event.get_chip_time().value() >= end_time; })
+			          .base();
+		} else {
+			end = std::find_if(begin, data.end(), [&](auto const& event) {
+				return event.get_chip_time().value() >= end_time;
+			});
+		}
 		// copy interval content
-		std::vector<T> data_batch = std::vector<T>(begin, end);
+		std::vector<T> data_batch(begin, end);
 		// subtract the interval begin time to get relative times
 		for (auto& event : data_batch) {
 			event.set_chip_time(
