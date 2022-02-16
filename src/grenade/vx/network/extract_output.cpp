@@ -40,9 +40,9 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 	for (size_t b = 0; b < spikes.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		for (auto const& spike : spikes.at(b)) {
-			auto const label = spike.get_label();
+			auto const label = spike.label;
 			if (label_lookup.contains(label)) {
-				local_ret[label_lookup.at(label)].push_back(spike.get_chip_time());
+				local_ret[label_lookup.at(label)].push_back(spike.chip_time);
 			}
 		}
 	}
@@ -69,7 +69,7 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 	for (size_t b = 0; b < samples.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		for (auto const& sample : samples.at(b)) {
-			local_ret.push_back({sample.get_chip_time(), sample.get_value()});
+			local_ret.push_back({sample.chip_time, sample.value});
 		}
 	}
 	return ret;

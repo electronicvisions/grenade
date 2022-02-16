@@ -419,8 +419,8 @@ std::vector<std::vector<Int8>> MAC::run(
 			for (auto const& b : std::get<std::vector<TimedSpikeFromChipSequence>>(l.second)) {
 				halco::common::typed_array<std::vector<haldls::vx::ChipTime>, HemisphereOnDLS> t;
 				for (auto const& s : b) {
-					t[HemisphereOnDLS(s.get_label().get_neuron_label() & (1 << 13) ? 1 : 0)]
-					    .push_back(s.get_chip_time());
+					t[HemisphereOnDLS(s.label.get_neuron_label() & (1 << 13) ? 1 : 0)].push_back(
+					    s.chip_time);
 				}
 				for (auto& ht : t) {
 					std::sort(ht.begin(), ht.end());

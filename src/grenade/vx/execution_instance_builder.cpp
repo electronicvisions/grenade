@@ -483,7 +483,7 @@ void ExecutionInstanceBuilder::filter_events(
 	}
 	// sort events by chip time
 	boost::sort::spinsort(data.begin(), data.end(), [](auto const& a, auto const& b) {
-		return a.get_chip_time() < b.get_chip_time();
+		return a.chip_time < b.chip_time;
 	});
 	// iterate over batch entries and extract associated events
 	auto begin = data.begin();
@@ -499,7 +499,7 @@ void ExecutionInstanceBuilder::filter_events(
 		assert(e.m_ticket_events_begin);
 		auto const interval_begin_time = e.m_ticket_events_begin->get_fpga_time().value();
 		begin = std::find_if(begin, data.end(), [&](auto const& event) {
-			return event.get_chip_time().value() >= interval_begin_time;
+			return event.chip_time.value() >= interval_begin_time;
 		});
 		// if no spikes are recorded for this data return
 		if (begin == data.end()) {
@@ -521,19 +521,18 @@ void ExecutionInstanceBuilder::filter_events(
 		if (i == m_batch_entries.size() - 1) {
 			end = std::find_if_not(
 			          data.rbegin(), typename std::vector<T>::reverse_iterator(begin),
-			          [&](auto const& event) { return event.get_chip_time().value() >= end_time; })
+			          [&](auto const& event) { return event.chip_time.value() >= end_time; })
 			          .base();
 		} else {
 			end = std::find_if(begin, data.end(), [&](auto const& event) {
-				return event.get_chip_time().value() >= end_time;
+				return event.chip_time.value() >= end_time;
 			});
 		}
 		// copy interval content
 		std::vector<T> data_batch(begin, end);
 		// subtract the interval begin time to get relative times
 		for (auto& event : data_batch) {
-			event.set_chip_time(
-			    haldls::vx::v2::ChipTime(event.get_chip_time() - interval_begin_time));
+			event.chip_time = haldls::vx::v2::ChipTime(event.chip_time - interval_begin_time);
 		}
 		if (!data_batch.empty()) {
 			filtered_data.at(i) = std::move(data_batch);

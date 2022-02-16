@@ -169,7 +169,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 		    network_graph.get_spike_labels().at(population_internal_descriptor).at(i).at(0);
 		assert(expected_label);
 		for (auto const spike : spikes) {
-			if (spike.get_label() != *expected_label) {
+			if (spike.label != *expected_label) {
 				not_matching++;
 			}
 		}
@@ -273,12 +273,12 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			    network_graph.get_spike_labels().at(population_internal_descriptor).at(i).at(0);
 			assert(expected_label);
 			for (auto const& spike : spikes) {
-				if (spike.get_label() == *expected_label) {
+				if (spike.label == *expected_label) {
 					matching++;
 				} else {
 					LOG4CXX_INFO(
-					    logger, spike << spike.get_label().get_neuron_backend_address_out()
-					                  << spike.get_label().get_neuron_event_output());
+					    logger, spike << spike.label.get_neuron_backend_address_out()
+					                  << spike.label.get_neuron_event_output());
 				}
 			}
 			EXPECT_GE(matching, num * 0.8);
@@ -390,7 +390,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		    network_graph.get_spike_labels().at(population_internal_descriptors.back()).at(0).at(0);
 		assert(expected_label);
 		for (auto const& spike : spikes) {
-			if (spike.get_label() == *expected_label) {
+			if (spike.label == *expected_label) {
 				matching++;
 			}
 		}
