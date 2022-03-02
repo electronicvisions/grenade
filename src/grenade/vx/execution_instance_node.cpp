@@ -12,7 +12,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     IODataMap const& input_data_map,
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
-    ChipConfig const& chip_config,
+    lola::vx::v2::Chip const& chip_config,
     backend::Connection& connection,
     std::mutex& continuous_chunked_program_execution_mutex,
     ExecutionInstancePlaybackHooks& playback_hooks) :

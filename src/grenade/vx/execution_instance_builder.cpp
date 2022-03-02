@@ -45,7 +45,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     coordinate::ExecutionInstance const& execution_instance,
     IODataMap const& input_list,
     IODataMap const& data_output,
-    ChipConfig const& chip_config,
+    lola::vx::v2::Chip const& chip_config,
     ExecutionInstancePlaybackHooks& playback_hooks) :
     m_graph(graph),
     m_execution_instance(execution_instance),

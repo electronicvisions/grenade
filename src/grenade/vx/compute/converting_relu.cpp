@@ -2,7 +2,6 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
@@ -28,7 +27,7 @@ ConvertingReLU::ConvertingReLU(size_t size, uint32_t shift) :
 
 std::vector<std::vector<UInt5>> ConvertingReLU::run(
     std::vector<std::vector<Int8>> const& inputs,
-    ChipConfig const& config,
+    lola::vx::v2::Chip const& config,
     backend::Connection& connection) const
 {
 	using namespace halco::hicann_dls::vx;
@@ -37,7 +36,7 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<DLSGlobal, ChipConfig>(DLSGlobal(), config));
+	configs.insert(std::pair<DLSGlobal, lola::vx::v2::Chip>(DLSGlobal(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

@@ -15,9 +15,11 @@ namespace cereal {
 class access;
 } // namespace cereal
 
-namespace grenade::vx {
+namespace lola::vx::v2 {
+class Chip;
+} // namespace lola::vx::v2
 
-struct ChipConfig;
+namespace grenade::vx {
 
 namespace backend {
 class Connection;
@@ -43,8 +45,10 @@ struct Sequence
 
 	Sequence() = default;
 
-	IOData run(IOData const& input, ChipConfig const& config, backend::Connection& connection)
-	    SYMBOL_VISIBLE;
+	IOData run(
+	    IOData const& input,
+	    lola::vx::v2::Chip const& config,
+	    backend::Connection& connection) SYMBOL_VISIBLE;
 
 private:
 	friend class cereal::access;

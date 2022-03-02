@@ -1,6 +1,5 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/jit_graph_executor.h"
@@ -31,14 +30,14 @@ using namespace stadls::vx::v2;
 using namespace lola::vx::v2;
 using namespace haldls::vx::v2;
 
-inline std::pair<grenade::vx::ChipConfig, grenade::vx::backend::Connection>
+inline std::pair<lola::vx::v2::Chip, grenade::vx::backend::Connection>
 initialize_excitatory_bypass()
 {
-	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
+	std::unique_ptr<lola::vx::v2::Chip> chip = std::make_unique<lola::vx::v2::Chip>();
 	// Initialize chip
 	ExperimentInit init;
 	for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-		chip->neuron_backend[c].set_enable_clocks(true);
+		chip->neuron_block.backends[c].set_enable_clocks(true);
 	}
 	for (auto const c : iter_all<ColumnCurrentQuadOnDLS>()) {
 		for (auto const e : iter_all<EntryOnQuad>()) {
@@ -52,10 +51,7 @@ initialize_excitatory_bypass()
 	stadls::vx::v2::PlaybackProgramBuilder builder;
 	// enable excitatory bypass mode
 	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
-		auto& config = chip->hemispheres[neuron.toNeuronRowOnDLS().toHemisphereOnDLS()]
-		                   .neuron_block[neuron.toNeuronColumnOnDLS()];
-		config.refractory_period.refractory_time =
-		    lola::vx::v2::AtomicNeuron::RefractoryPeriod::RefractoryTime(10);
+		auto& config = chip->neuron_block.atomic_neurons[neuron];
 		config.event_routing.enable_digital = true;
 		config.event_routing.analog_output =
 		    lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
@@ -63,18 +59,21 @@ initialize_excitatory_bypass()
 		config.threshold.enable = false;
 	}
 	for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
-		auto& padi_config = chip->hemispheres[block.toHemisphereOnDLS()].common_padi_bus_config;
+		auto& padi_config = chip->synapse_driver_blocks[block.toSynapseDriverBlockOnDLS()].padi_bus;
 		auto dacen = padi_config.get_dacen_pulse_extension();
 		for (auto const block : iter_all<PADIBusOnPADIBusBlock>()) {
-			dacen[block] = CommonPADIBusConfig::DacenPulseExtension(
-			    CommonPADIBusConfig::DacenPulseExtension::max);
+			dacen[block] = CommonPADIBusConfig::DacenPulseExtension(15);
 		}
 		padi_config.set_dacen_pulse_extension(dacen);
 	}
-	for (auto const block : iter_all<CapMemBlockOnDLS>()) {
-		builder.write(
-		    CapMemCellOnDLS(CapMemCellOnCapMemBlock::syn_i_bias_dac, block),
-		    CapMemCell(CapMemCell::Value(1022)));
+	for (auto const drv : iter_all<SynapseDriverOnDLS>()) {
+		auto& config = chip->synapse_driver_blocks[drv.toSynapseDriverBlockOnDLS()]
+		                   .synapse_drivers[drv.toSynapseDriverOnSynapseDriverBlock()];
+		config.set_enable_receiver(true);
+		config.set_enable_address_out(true);
+	}
+	for (auto const block : iter_all<SynapseBlockOnDLS>()) {
+		chip->synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
 	}
 	auto program = builder.done();
 	grenade::vx::backend::run(connection, program);

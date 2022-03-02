@@ -17,7 +17,7 @@ namespace grenade::vx {
 ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
-    ChipConfig const& chip_config) :
+    lola::vx::v2::Chip const& chip_config) :
     m_graph(graph), m_execution_instance(execution_instance), m_config(chip_config)
 {
 	using namespace halco::common;
@@ -29,22 +29,22 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 	for (auto& node : m_config.crossbar.nodes) {
 		node = haldls::vx::v2::CrossbarNode::drop_all;
 	}
-	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
+	for (auto const& block : iter_all<SynapseDriverBlockOnDLS>()) {
 		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
+			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_top(
 			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
-			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
+			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_bottom(
 			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
-			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_enable_receiver(false);
+			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_enable_receiver(false);
 		}
 	}
 	for (auto const backend : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-		m_config.neuron_backend[backend].set_enable_event_registers(false);
+		m_config.neuron_block.backends[backend].set_enable_event_registers(false);
 	}
 	{
 		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
-		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
-			m_config.hemispheres[hemisphere].synapse_matrix = *new_matrix;
+		for (auto const& block : iter_all<SynapseBlockOnDLS>()) {
+			m_config.synapse_blocks[block].matrix = *new_matrix;
 		}
 	}
 }
@@ -70,10 +70,10 @@ void ExecutionInstanceConfigBuilder::process(
 	for (auto const& [row, columns] : data.get_neurons()) {
 		for (auto const& cs : columns) {
 			for (auto const& column : cs) {
-				m_config
-				    .neuron_backend[column.toNeuronEventOutputOnDLS()
-				                        .toNeuronBackendConfigBlockOnDLS()
-				                        .toCommonNeuronBackendConfigOnDLS()]
+				m_config.neuron_block
+				    .backends[column.toNeuronEventOutputOnDLS()
+				                  .toNeuronBackendConfigBlockOnDLS()
+				                  .toCommonNeuronBackendConfigOnDLS()]
 				    .set_enable_event_registers(true);
 			}
 		}
@@ -91,8 +91,7 @@ void ExecutionInstanceConfigBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 
 	// Determine readout chain configuration
-	auto& readout_source_selection = m_config.readout_source_selection;
-	auto smux = readout_source_selection.get_buffer(SourceMultiplexerOnReadoutSourceSelection());
+	auto& smux = m_config.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection()];
 	bool const is_odd = data.get_coord().toNeuronColumnOnDLS() % 2;
 	auto neuron_even = smux.get_neuron_even();
 	neuron_even[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
@@ -100,14 +99,23 @@ void ExecutionInstanceConfigBuilder::process(
 	auto neuron_odd = smux.get_neuron_odd();
 	neuron_odd[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 	smux.set_neuron_odd(neuron_odd);
-	readout_source_selection.set_buffer(SourceMultiplexerOnReadoutSourceSelection(), smux);
-	auto buffer_to_pad = readout_source_selection.get_enable_buffer_to_pad();
-	buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()] = true;
-	readout_source_selection.set_enable_buffer_to_pad(buffer_to_pad);
+	m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()].enable = true;
 	// Set source configuration at neuron
-	m_config.hemispheres[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()]
-	    .neuron_block[data.get_coord().toNeuronColumnOnDLS()]
-	    .readout.source = data.get_config();
+	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.source = data.get_config();
+	// Configure analog parameters
+	// TODO: should come from calibration
+	for (auto const smux : halco::common::iter_all<SourceMultiplexerOnReadoutSourceSelection>()) {
+		m_config.readout_chain.buffer_to_pad[smux].amp_i_bias = CapMemCell::Value(0);
+	}
+	m_config.readout_chain.dynamic_mux.i_bias = CapMemCell::Value(500);
+	m_config.readout_chain.madc.in_500na = CapMemCell::Value(500);
+	m_config.readout_chain.madc_preamp.i_bias = CapMemCell::Value(500);
+	m_config.readout_chain.madc_preamp.v_ref = CapMemCell::Value(400);
+	m_config.readout_chain.pseudo_diff_converter.buffer_bias = CapMemCell::Value(0);
+	m_config.readout_chain.pseudo_diff_converter.v_ref = CapMemCell::Value(400);
+	m_config.readout_chain.source_measure_unit.amp_v_ref = CapMemCell::Value(400);
+	m_config.readout_chain.source_measure_unit.test_voltage = CapMemCell::Value(400);
+
 	m_used_madc = true;
 }
 
@@ -123,8 +131,10 @@ void ExecutionInstanceConfigBuilder::process(
 		auto const& weights = boost::get<0>(var);
 		auto const& labels = boost::get<1>(var);
 		auto const& row = boost::get<2>(var);
-		auto& weight_row = config.hemispheres[hemisphere].synapse_matrix.weights[row];
-		auto& label_row = config.hemispheres[hemisphere].synapse_matrix.labels[row];
+		auto& weight_row =
+		    config.synapse_blocks[hemisphere.toSynapseBlockOnDLS()].matrix.weights[row];
+		auto& label_row =
+		    config.synapse_blocks[hemisphere.toSynapseBlockOnDLS()].matrix.labels[row];
 		for (size_t index = 0; index < columns.size(); ++index) {
 			auto const syn_column = columns[index];
 			weight_row[syn_column] = weights[index];
@@ -142,7 +152,7 @@ void ExecutionInstanceConfigBuilder::process(
 	auto const& rows = data.get_rows();
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
-	auto& synapse_matrix = config.hemispheres[hemisphere].synapse_matrix;
+	auto& synapse_matrix = config.synapse_blocks[hemisphere.toSynapseBlockOnDLS()].matrix;
 	for (auto const& synapse : data.get_synapses()) {
 		auto const row = *(rows.begin() + synapse.index_row);
 		auto const column = *(columns.begin() + synapse.index_column);
@@ -156,8 +166,8 @@ void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
 {
 	auto& synapse_driver_config =
-	    m_config.hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
-	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
+	    m_config.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
+	        .synapse_drivers[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
 	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
@@ -173,7 +183,8 @@ void ExecutionInstanceConfigBuilder::process(
 {
 	auto const bus = data.get_coordinate();
 	auto& config =
-	    m_config.hemispheres[bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()].common_padi_bus_config;
+	    m_config.synapse_driver_blocks[bus.toPADIBusBlockOnDLS().toSynapseDriverBlockOnDLS()]
+	        .padi_bus;
 	auto enable_config = config.get_enable_spl1();
 	enable_config[bus.toPADIBusOnPADIBusBlock()] = true;
 	config.set_enable_spl1(enable_config);
@@ -201,16 +212,17 @@ void ExecutionInstanceConfigBuilder::process(
 	using namespace haldls::vx::v2;
 	size_t i = 0;
 	auto const& configs = data.get_configs();
-	auto& hemisphere = m_config.hemispheres[data.get_row().toHemisphereOnDLS()];
+	auto& neurons = m_config.neuron_block.atomic_neurons;
 	for (auto const column : data.get_columns()) {
 		auto const& config = configs.at(i);
-		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
+		auto const an = AtomicNeuronOnDLS(column, data.get_row());
+		auto const neuron_reset = an.toNeuronResetOnDLS();
 		m_enabled_neuron_resets[neuron_reset] = config.enable_reset;
 		if (config.label) {
-			hemisphere.neuron_block[column].event_routing.address = *(config.label);
-			hemisphere.neuron_block[column].event_routing.enable_digital = true;
+			neurons[an].event_routing.address = *(config.label);
+			neurons[an].event_routing.enable_digital = true;
 		} else {
-			hemisphere.neuron_block[column].event_routing.enable_digital = false;
+			neurons[an].event_routing.enable_digital = false;
 		}
 		i++;
 	}
@@ -250,48 +262,7 @@ ExecutionInstanceConfigBuilder::generate()
 
 	PlaybackProgramBuilder builder;
 	// write static configuration
-	for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
-		builder.write(SynramOnDLS(hemisphere), m_config.hemispheres[hemisphere].synapse_matrix);
-		for (auto const synapse_driver : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			builder.write(
-			    SynapseDriverOnDLS(synapse_driver, SynapseDriverBlockOnDLS(hemisphere)),
-			    m_config.hemispheres[hemisphere].synapse_driver_block[synapse_driver]);
-		}
-		builder.write(
-		    hemisphere.toCommonPADIBusConfigOnDLS(),
-		    m_config.hemispheres[hemisphere].common_padi_bus_config);
-		for (auto const column : iter_all<NeuronColumnOnDLS>()) {
-			builder.write(
-			    AtomicNeuronOnDLS(column, hemisphere.toNeuronRowOnDLS()),
-			    m_config.hemispheres[hemisphere].neuron_block[column]);
-		}
-	}
-	builder.write(CrossbarOnDLS(), m_config.crossbar);
-	for (auto const coord : iter_all<BackgroundSpikeSourceOnDLS>()) {
-		builder.write(coord, m_config.background_spike_sources[coord]);
-	}
-	for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-		builder.write(coord, m_config.neuron_backend[coord]);
-	}
-	if (m_used_madc) {
-		builder.write(ReadoutSourceSelectionOnDLS(), m_config.readout_source_selection);
-		builder.write(MADCConfigOnDLS(), m_config.madc_config);
-		// FIXME: should be properties of the lola MADC container in the chip object
-		std::map<CapMemCellOnDLS, CapMemCell> readout_cells = {
-		    {CapMemCellOnDLS::readout_out_amp_i_bias_0, CapMemCell(CapMemCell::Value(0))},
-		    {CapMemCellOnDLS::readout_out_amp_i_bias_1, CapMemCell(CapMemCell::Value(0))},
-		    {CapMemCellOnDLS::readout_pseudo_diff_buffer_bias, CapMemCell(CapMemCell::Value(0))},
-		    {CapMemCellOnDLS::readout_ac_mux_i_bias, CapMemCell(CapMemCell::Value(500))},
-		    {CapMemCellOnDLS::readout_madc_in_500na, CapMemCell(CapMemCell::Value(500))},
-		    {CapMemCellOnDLS::readout_sc_amp_i_bias, CapMemCell(CapMemCell::Value(500))},
-		    {CapMemCellOnDLS::readout_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))},
-		    {CapMemCellOnDLS::readout_pseudo_diff_v_ref, CapMemCell(CapMemCell::Value(400))},
-		    {CapMemCellOnDLS::readout_iconv_test_voltage, CapMemCell(CapMemCell::Value(400))},
-		    {CapMemCellOnDLS::readout_iconv_sc_amp_v_ref, CapMemCell(CapMemCell::Value(400))}};
-		for (auto const& [coord, config] : readout_cells) {
-			builder.write(coord, config);
-		}
-	}
+	builder.write(ChipOnDLS(), m_config);
 	// wait for CapMem to settle
 	builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 	builder.write(TimerOnDLS(), Timer());

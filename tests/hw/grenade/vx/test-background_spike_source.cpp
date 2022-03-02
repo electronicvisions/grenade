@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
@@ -11,6 +10,7 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/systime.h"
 #include "logging_ctrl.h"
+#include "lola/vx/v2/chip.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/run.h"
@@ -76,7 +76,7 @@ void test_background_spike_source_regular(
 	input_list.runtime.push_back(running_period);
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs.insert({DLSGlobal(), grenade::vx::ChipConfig()});
+	chip_configs.insert({DLSGlobal(), lola::vx::v2::Chip()});
 
 	// run Graph with given inputs and return results
 	auto const result_map =

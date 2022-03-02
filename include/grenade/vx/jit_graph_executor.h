@@ -7,6 +7,10 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "hate/visibility.h"
 
+namespace lola::vx::v2 {
+struct Chip;
+} // namespace lola::vx::v2
+
 namespace grenade::vx {
 
 namespace backend {
@@ -16,7 +20,6 @@ struct Connection;
 class Graph;
 class IODataMap;
 class IODataList;
-class ChipConfig;
 class ExecutionInstancePlaybackHooks;
 
 /**
@@ -31,7 +34,7 @@ public:
 	/** Map of connections. */
 	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, backend::Connection&> Connections;
 
-	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, ChipConfig> ChipConfigs;
+	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, lola::vx::v2::Chip> ChipConfigs;
 
 	typedef std::unordered_map<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>
 	    PlaybackHooks;

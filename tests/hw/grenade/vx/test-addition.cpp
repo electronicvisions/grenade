@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
@@ -13,6 +12,7 @@
 #include "haldls/vx/v2/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
+#include "lola/vx/v2/chip.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/run.h"
@@ -59,7 +59,7 @@ TEST(Addition, Single)
 	    std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>{
 	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), inputs}}};
 
-	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
+	std::unique_ptr<lola::vx::v2::Chip> chip = std::make_unique<lola::vx::v2::Chip>();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[DLSGlobal()] = *chip;
 

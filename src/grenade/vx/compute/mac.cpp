@@ -2,7 +2,6 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -365,7 +364,9 @@ size_t MAC::output_size() const
 }
 
 std::vector<std::vector<Int8>> MAC::run(
-    Activations const& inputs, ChipConfig const& config, backend::Connection& connection) const
+    Activations const& inputs,
+    lola::vx::v2::Chip const& config,
+    backend::Connection& connection) const
 {
 	using namespace halco::hicann_dls::vx::v2;
 	auto logger = log4cxx::Logger::getLogger("grenade.MAC");

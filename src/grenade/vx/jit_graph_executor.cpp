@@ -1,7 +1,6 @@
 #include "grenade/vx/jit_graph_executor.h"
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_node.h"
 #include "grenade/vx/graph.h"

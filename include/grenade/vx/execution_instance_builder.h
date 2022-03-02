@@ -4,7 +4,6 @@
 #include <set>
 #include <vector>
 
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_config_builder.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
@@ -48,7 +47,7 @@ public:
 	    coordinate::ExecutionInstance const& execution_instance,
 	    IODataMap const& input_list,
 	    IODataMap const& data_output,
-	    ChipConfig const& chip_config,
+	    lola::vx::v2::Chip const& chip_config,
 	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	/**

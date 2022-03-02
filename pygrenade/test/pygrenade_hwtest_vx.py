@@ -46,7 +46,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         network_graph = grenade.build_network_graph(network, routing_result)
 
-        config = grenade.ChipConfig()
+        config = lola.Chip()
 
         inputs = grenade.IODataMap()
         inputs.data = \
@@ -85,7 +85,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
             sta.run(connection, init.done())
             grenade.run(
                 connection,
-                grenade.ChipConfig(),
+                lola.Chip(),
                 network_graph,
                 inputs)
 

@@ -2,7 +2,6 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/compute/mac.h"
-#include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/jit_graph_executor.h"
@@ -10,6 +9,7 @@
 #include "halco/hicann-dls/vx/v2/chip.h"
 #include "haldls/vx/v2/systime.h"
 #include "logging_ctrl.h"
+#include "lola/vx/v2/chip.h"
 #include "stadls/vx/v2/init_generator.h"
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/run.h"
@@ -37,7 +37,7 @@ TEST(MAC, Single)
 	    {grenade::vx::compute::MAC::Weight(0)},
 	};
 
-	std::unique_ptr<grenade::vx::ChipConfig> chip = std::make_unique<grenade::vx::ChipConfig>();
+	std::unique_ptr<lola::vx::v2::Chip> chip = std::make_unique<lola::vx::v2::Chip>();
 
 	grenade::vx::compute::MAC mac(weights);
 
