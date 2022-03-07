@@ -5,6 +5,7 @@
 #include "grenade/vx/vertex/neuron_view.h"
 
 #include "halco/common/cerealization_geometry.h"
+#include <numeric>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -14,8 +15,13 @@ namespace grenade::vx::vertex {
 
 void CADCMembraneReadoutView::check(Columns const& columns)
 {
-	std::set<Columns::value_type> unique(columns.begin(), columns.end());
-	if (unique.size() != columns.size()) {
+	std::set<Columns::value_type::value_type> unique;
+	size_t size = 0;
+	for (auto const& column_collection : columns) {
+		unique.insert(column_collection.begin(), column_collection.end());
+		size += column_collection.size();
+	}
+	if (unique.size() != size) {
 		throw std::runtime_error("Column locations provided to CADCReadoutView are not unique.");
 	}
 }
@@ -30,19 +36,29 @@ CADCMembraneReadoutView::Synram const& CADCMembraneReadoutView::get_synram() con
 	return m_synram;
 }
 
-std::array<Port, 1> CADCMembraneReadoutView::inputs() const
+std::vector<Port> CADCMembraneReadoutView::inputs() const
 {
-	return {Port(m_columns.size(), ConnectionType::MembraneVoltage)};
+	std::vector<Port> ret;
+	for (auto const& column_collection : m_columns) {
+		ret.push_back(Port(column_collection.size(), ConnectionType::MembraneVoltage));
+	}
+	return ret;
 }
 
 Port CADCMembraneReadoutView::output() const
 {
-	return Port(m_columns.size(), ConnectionType::Int8);
+	size_t const size = std::accumulate(
+	    m_columns.begin(), m_columns.end(), static_cast<size_t>(0),
+	    [](auto const& s, auto const& column_collection) { return s + column_collection.size(); });
+	return Port(size, ConnectionType::Int8);
 }
 
 std::ostream& operator<<(std::ostream& os, CADCMembraneReadoutView const& config)
 {
-	os << "CADCMembraneReadoutView(size: " << config.m_columns.size() << ")";
+	size_t const size = std::accumulate(
+	    config.m_columns.begin(), config.m_columns.end(), static_cast<size_t>(0),
+	    [](auto const& s, auto const& column_collection) { return s + column_collection.size(); });
+	os << "CADCMembraneReadoutView(size: " << size << ")";
 	return os;
 }
 
@@ -54,24 +70,37 @@ bool CADCMembraneReadoutView::supports_input_from(
 	}
 	auto const input_columns = input.get_columns();
 	if (!restriction) {
-		if (input_columns.size() != m_columns.size()) {
-			return false;
+		// check if any column collection matches the input
+		for (auto const& column_collection : m_columns) {
+			if (input_columns.size() != column_collection.size()) {
+				continue;
+			}
+			if (std::equal(
+			        input_columns.begin(), input_columns.end(), column_collection.begin(),
+			        [](auto const& n, auto const& s) { return s == n.toSynapseOnSynapseRow(); })) {
+				return true;
+			}
 		}
-		return std::equal(
-		    input_columns.begin(), input_columns.end(), m_columns.begin(),
-		    [](auto const& n, auto const& s) { return s == n.toSynapseOnSynapseRow(); });
+		return false;
 	} else {
 		if (!restriction->is_restriction_of(input.output())) {
 			throw std::runtime_error(
 			    "Given restriction is not a restriction of input vertex output port.");
 		}
-		if (m_columns.size() != restriction->size()) {
-			return false;
+		// check if any column collection matches the input
+		for (auto const& column_collection : m_columns) {
+			if (column_collection.size() != restriction->size()) {
+				continue;
+			}
+			assert(restriction->max() < input_columns.size());
+			if (std::equal(
+			        input_columns.begin() + restriction->min(),
+			        input_columns.begin() + restriction->max() + 1, column_collection.begin(),
+			        [](auto const& n, auto const& s) { return s == n.toSynapseOnSynapseRow(); })) {
+				return true;
+			}
 		}
-		return std::equal(
-		    input_columns.begin() + restriction->min(),
-		    input_columns.begin() + restriction->max() + 1, m_columns.begin(),
-		    [](auto const& n, auto const& s) { return s == n.toSynapseOnSynapseRow(); });
+		return false;
 	}
 }
 
@@ -95,4 +124,4 @@ void CADCMembraneReadoutView::serialize(Archive& ar, std::uint32_t const)
 } // namespace grenade::vx::vertex
 
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::CADCMembraneReadoutView)
-CEREAL_CLASS_VERSION(grenade::vx::vertex::CADCMembraneReadoutView, 0)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::CADCMembraneReadoutView, 1)

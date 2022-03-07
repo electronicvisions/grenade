@@ -135,7 +135,9 @@ Graph::vertex_descriptor MAC::insert_synram(
 	    std::move(nrns), std::move(enable_resets), hemisphere.toNeuronRowOnDLS());
 	auto const v1 = graph.add(std::move(neurons), instance, {synapse_array_vertex});
 	// add readout
-	vertex::CADCMembraneReadoutView readout(std::move(columns), hemisphere.toSynramOnDLS());
+	vertex::CADCMembraneReadoutView readout(
+	    std::move(vertex::CADCMembraneReadoutView::Columns({std::move(columns)})),
+	    hemisphere.toSynramOnDLS());
 	auto const v2 = graph.add(readout, instance, {v1});
 	// add store
 	vertex::DataOutput data_output(ConnectionType::Int8, x_size);

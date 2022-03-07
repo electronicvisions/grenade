@@ -29,7 +29,12 @@ struct CADCMembraneReadoutView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow> Columns;
+	/**
+	 * Columns to record as collection of collections of columns.
+	 * Each inner collection corresponds to one input port of the vertex and thus allows recording
+	 * neurons from different non-contiguous input vertices.
+	 */
+	typedef std::vector<std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow>> Columns;
 	typedef halco::hicann_dls::vx::v2::SynramOnDLS Synram;
 
 	CADCMembraneReadoutView() = default;
@@ -45,7 +50,7 @@ struct CADCMembraneReadoutView
 	Synram const& get_synram() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
-	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
+	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 
 	Port output() const SYMBOL_VISIBLE;
 
