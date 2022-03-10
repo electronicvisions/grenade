@@ -34,7 +34,7 @@ public:
 	typedef halco::common::typed_array<
 	    haldls::vx::v2::SynapseDriverConfig,
 	    halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock>
-	    _synapse_driver_block_type GENPYBIND(opaque);
+	    _synapse_driver_block_type GENPYBIND(visible);
 	/** Synapse driver block. TODO: should be lola container. */
 	_synapse_driver_block_type synapse_driver_block;
 
