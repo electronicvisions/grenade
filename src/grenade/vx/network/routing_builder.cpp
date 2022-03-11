@@ -941,6 +941,7 @@ RoutingResult RoutingBuilder::route(
 	apply_crossbar_nodes_from_background(result);
 
 	LOG4CXX_DEBUG(m_logger, "route(): Got result: " << result);
+	LOG4CXX_TRACE(m_logger, "route(): Finished routing in " << timer.print());
 	result.timing_statistics.routing = std::chrono::microseconds(timer.get_us());
 	return result;
 }

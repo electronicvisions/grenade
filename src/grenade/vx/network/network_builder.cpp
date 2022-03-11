@@ -60,7 +60,9 @@ PopulationDescriptor NetworkBuilder::add(ExternalPopulation const& population)
 	hate::Timer timer;
 	PopulationDescriptor descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
-	LOG4CXX_TRACE(m_logger, "add(): Added external population(" << descriptor << ").");
+	LOG4CXX_TRACE(
+	    m_logger,
+	    "add(): Added external population(" << descriptor << ") in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
@@ -103,7 +105,8 @@ PopulationDescriptor NetworkBuilder::add(BackgroundSpikeSourcePopulation const& 
 	PopulationDescriptor descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
-	    m_logger, "add(): Added background spike source population(" << descriptor << ").");
+	    m_logger, "add(): Added background spike source population(" << descriptor << ") in "
+	                                                                 << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
