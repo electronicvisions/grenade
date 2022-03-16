@@ -11,12 +11,10 @@ def depends(ctx):
     ctx('halco')
     ctx('haldls')
     ctx('hate')
+    ctx('libnux')
 
     if getattr(ctx.options, 'with_grenade_python_bindings', True):
         ctx('grenade', 'pygrenade')
-
-    if getattr(ctx.options, 'with_grenade_ppu_support', True):
-        ctx('libnux')
 
 
 def options(opt):
@@ -27,15 +25,11 @@ def options(opt):
     hopts = opt.add_option_group('grenade options')
     hopts.add_withoption('grenade-python-bindings', default=True,
                          help='Toggle the generation and build of grenade python bindings')
-    hopts.add_withoption('grenade-ppu-support', default=True,
-                       help='Toggle support for the PPU')
 
 
 def configure(cfg):
-    cfg.env.build_with_grenade_ppu_support = cfg.options.with_grenade_ppu_support
-
     from waflib.Options import options as o
-    if cfg.env.build_with_grenade_ppu_support:
+    if cfg.env.have_ppu_toolchain:
         cfg.define('WITH_GRENADE_PPU_SUPPORT', 1)
     cfg.write_config_header('grenade-build-config.h')
 
@@ -72,11 +66,11 @@ def build(bld):
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
         use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
-        depends_on = ['grenade_ppu_base_vx'] if bld.env.build_with_grenade_ppu_support else [],
+        depends_on = ['grenade_ppu_base_vx'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
 
-    if bld.env.build_with_grenade_ppu_support:
+    if bld.env.have_ppu_toolchain:
         bld.program(
             target = 'grenade_ppu_base_vx',
             features = 'cxx',
