@@ -51,7 +51,7 @@ TEST(convert_to_chip, General)
 
 	auto const cocos = dumper.done();
 
-	auto const converted_chip = convert_to_chip(cocos);
+	auto const converted_chip = grenade::vx::convert_to_chip(cocos);
 
 	EXPECT_EQ(converted_chip, chip);
 
@@ -82,7 +82,8 @@ TEST(convert_to_chip, General)
 
 	auto const cocos_partial = dumper.done();
 
-	auto const converted_chip_with_previous = convert_to_chip(cocos_partial, chip_previous);
+	auto const converted_chip_with_previous =
+	    grenade::vx::convert_to_chip(cocos_partial, chip_previous);
 
 	EXPECT_EQ(converted_chip_with_previous, chip);
 }

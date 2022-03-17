@@ -74,7 +74,7 @@ public:
 	typedef halco::common::typed_array<
 	    haldls::vx::v2::BackgroundSpikeSource,
 	    haldls::vx::v2::BackgroundSpikeSource::coordinate_type>
-	    _background_spike_sources_type GENPYBIND(opaque);
+	    _background_spike_sources_type GENPYBIND(visible);
 
 	/** Background spike source configuration. */
 	_background_spike_sources_type background_spike_sources;
