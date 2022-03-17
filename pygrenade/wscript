@@ -39,7 +39,7 @@ def build(bld):
         genpybind_tags='grenade_vx',
         features='genpybind cxx cxxshlib pyext',
         use=['grenade_vx', 'pyhaldls_vx_v2', 'pylola_vx_v2',
-             'pyhalco_hicann_dls_vx_v2', 'pyhxcomm_vx'],
+             'pyhalco_hicann_dls_vx_v2', 'pyhxcomm_vx', 'pystadls_vx_v2'],
         install_path='${PREFIX}/lib',
     )
 
