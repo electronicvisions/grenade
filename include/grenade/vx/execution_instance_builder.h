@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "grenade/vx/execution_instance.h"
-#include "grenade/vx/execution_instance_config_builder.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/generator/neuron_reset_mask.h"
 #include "grenade/vx/graph.h"
@@ -90,7 +89,7 @@ private:
 
 	ConstantReferenceIODataMap m_local_external_data;
 
-	ExecutionInstanceConfigBuilder m_config_builder;
+	lola::vx::v2::Chip m_initial_config;
 
 	ExecutionInstancePlaybackHooks& m_playback_hooks;
 

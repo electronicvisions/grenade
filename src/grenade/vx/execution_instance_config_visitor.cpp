@@ -1,4 +1,4 @@
-#include "grenade/vx/execution_instance_config_builder.h"
+#include "grenade/vx/execution_instance_config_visitor.h"
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/ppu.h"
@@ -17,10 +17,10 @@
 
 namespace grenade::vx {
 
-ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
+ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
-    lola::vx::v2::Chip const& chip_config) :
+    lola::vx::v2::Chip& chip_config) :
     m_graph(graph), m_execution_instance(execution_instance), m_config(chip_config)
 {
 	using namespace halco::common;
@@ -67,21 +67,21 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 }
 
 template <typename T>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, T const& /* data */)
 {
 	// Spezialize for types which change static configuration
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::CADCMembraneReadoutView const& /* data */)
 {
 	m_requires_ppu = true;
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const, vertex::NeuronEventOutputView const& data)
 {
 	for (auto const& [row, columns] : data.get_neurons()) {
@@ -98,7 +98,7 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const& data)
 {
 	using namespace halco::hicann_dls::vx::v2;
@@ -139,7 +139,7 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayView const& data)
 {
 	auto& config = m_config;
@@ -163,7 +163,7 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayViewSparse const& data)
 {
 	auto& config = m_config;
@@ -181,7 +181,7 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
 {
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
@@ -197,7 +197,7 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
 {
 	auto& synapse_driver_config =
@@ -213,7 +213,7 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::PADIBus const& data)
 {
 	auto const bus = data.get_coordinate();
@@ -226,21 +226,21 @@ void ExecutionInstanceConfigBuilder::process(
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::CrossbarNode const& data)
 {
 	m_config.crossbar.nodes[data.get_coordinate()] = data.get_config();
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const /* vertex */, vertex::BackgroundSpikeSource const& data)
 {
 	m_config.background_spike_sources[data.get_coordinate()] = data.get_config();
 }
 
 template <>
-void ExecutionInstanceConfigBuilder::process(
+void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx::v2;
@@ -293,9 +293,9 @@ void ExecutionInstanceConfigBuilder::process(
 	}
 }
 
-void ExecutionInstanceConfigBuilder::pre_process()
+void ExecutionInstanceConfigVisitor::pre_process()
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigBuilder");
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigVisitor");
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
 	for (auto const p : boost::make_iterator_range(
@@ -314,8 +314,8 @@ void ExecutionInstanceConfigBuilder::pre_process()
 	}
 }
 
-std::tuple<lola::vx::v2::Chip, std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
-ExecutionInstanceConfigBuilder::generate()
+std::tuple<lola::vx::v2::Chip&, std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
+ExecutionInstanceConfigVisitor::operator()()
 {
 	static log4cxx::Logger* const logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigBuilder.generate()");
@@ -325,6 +325,8 @@ ExecutionInstanceConfigBuilder::generate()
 	using namespace haldls::vx::v2;
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
+
+	pre_process();
 
 	hate::Timer ppu_timer;
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;

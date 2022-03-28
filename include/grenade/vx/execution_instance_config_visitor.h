@@ -16,41 +16,37 @@
 namespace grenade::vx {
 
 /**
- * Builder for the static chip configuration of a single ExecutionInstance.
- * Vertices are processed resulting in a chip configuration.
+ * Visitor of graph vertices of a single execution instance for construction of the initial
+ * configuration.
+ * The result is applied to a given configuration object.
  */
-class ExecutionInstanceConfigBuilder
+class ExecutionInstanceConfigVisitor
 {
 public:
 	/**
-	 * Construct builder.
+	 * Construct visitor.
 	 * @param graph Graph to use for locality and property lookup
-	 * @param execution_instance Local execution instance to build for
-	 * @param chip_config Chip configuration to use
+	 * @param execution_instance Local execution instance to visit
+	 * @param config Configuration to alter
 	 */
-	ExecutionInstanceConfigBuilder(
+	ExecutionInstanceConfigVisitor(
 	    Graph const& graph,
 	    coordinate::ExecutionInstance const& execution_instance,
-	    lola::vx::v2::Chip const& chip_config) SYMBOL_VISIBLE;
+	    lola::vx::v2::Chip& config) SYMBOL_VISIBLE;
 
 	/**
-	 * Preprocess by single visit of all local vertices.
-	 */
-	void pre_process() SYMBOL_VISIBLE;
-
-	/**
-	 * Generate static configuration.
-	 * @return Chip object generated via local graph traversal and optional PPU program
+	 * Perform visit operation and generate initial configuration.
+	 * @return Reference to altered chip object and optional PPU program
 	 * symbols
 	 */
-	std::tuple<lola::vx::v2::Chip, std::optional<lola::vx::v2::PPUElfFile::symbols_type>> generate()
-	    SYMBOL_VISIBLE;
+	std::tuple<lola::vx::v2::Chip&, std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
+	operator()() SYMBOL_VISIBLE;
 
 private:
 	Graph const& m_graph;
 	coordinate::ExecutionInstance m_execution_instance;
 
-	lola::vx::v2::Chip m_config;
+	lola::vx::v2::Chip& m_config;
 
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
@@ -71,6 +67,11 @@ private:
 	 */
 	template <typename Vertex>
 	void process(Graph::vertex_descriptor const vertex, Vertex const& data);
+
+	/**
+	 * Preprocess by single visit of all local vertices.
+	 */
+	void pre_process() SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx

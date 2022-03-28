@@ -1,6 +1,7 @@
 #include "grenade/vx/execution_instance_builder.h"
 
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/execution_instance_config_visitor.h"
 #include "grenade/vx/generator/madc.h"
 #include "grenade/vx/generator/ppu.h"
 #include "grenade/vx/generator/timed_spike_sequence.h"
@@ -52,7 +53,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_input_list(input_list),
     m_data_output(data_output),
     m_local_external_data(),
-    m_config_builder(graph, execution_instance, chip_config),
+    m_initial_config(chip_config),
     m_playback_hooks(playback_hooks),
     m_post_vertices(),
     m_local_data(),
@@ -742,7 +743,6 @@ void ExecutionInstanceBuilder::pre_process()
 			m_post_vertices.push_back(vertex);
 		}
 	}
-	m_config_builder.pre_process();
 }
 
 IODataMap ExecutionInstanceBuilder::post_process()
@@ -837,7 +837,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	auto config_builder = std::move(m_playback_hooks.pre_static_config);
 
 	// generate static configuration
-	auto [static_config, ppu_symbols] = m_config_builder.generate();
+	auto [static_config, ppu_symbols] =
+	    ExecutionInstanceConfigVisitor(m_graph, m_execution_instance, m_initial_config)();
 	config_builder.write(ChipOnDLS(), static_config);
 	// wait for CapMem to settle
 	config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
