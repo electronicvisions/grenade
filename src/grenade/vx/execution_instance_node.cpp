@@ -2,6 +2,10 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
+#include "grenade/vx/execution_instance_config_visitor.h"
+#include "grenade/vx/ppu/status.h"
+#include "haldls/vx/v2/barrier.h"
+#include "haldls/vx/v2/timer.h"
 #include "hate/timer.h"
 #include <log4cxx/logger.h>
 
@@ -33,8 +37,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
 
+	hate::Timer const initial_config_timer;
+	lola::vx::v2::Chip initial_config = chip_config;
+	auto const ppu_symbols =
+	    std::get<1>(ExecutionInstanceConfigVisitor(graph, execution_instance, initial_config)());
+	LOG4CXX_TRACE(
+	    logger,
+	    "operator(): Constructed initial configuration in " << initial_config_timer.print() << ".");
+
 	ExecutionInstanceBuilder builder(
-	    graph, execution_instance, input_data_map, data_map, chip_config, playback_hooks);
+	    graph, execution_instance, input_data_map, data_map, ppu_symbols, playback_hooks);
 
 	hate::Timer const preprocess_timer;
 	builder.pre_process();
@@ -43,6 +55,46 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// build PlaybackProgram
 	hate::Timer const build_timer;
+
+	// add pre static config playback hook
+	auto config_builder = std::move(playback_hooks.pre_static_config);
+
+	// generate static configuration
+	config_builder.write(ChipOnDLS(), initial_config);
+
+	// wait for CapMem to settle
+	config_builder.block_until(BarrierOnFPGA(), haldls::vx::v2::Barrier::omnibus);
+	config_builder.write(TimerOnDLS(), haldls::vx::v2::Timer());
+	config_builder.block_until(
+	    TimerOnDLS(), haldls::vx::v2::Timer::Value(
+	                      100000 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+
+	// bring PPUs in running state
+	if (ppu_symbols) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			haldls::vx::v2::PPUControlRegister ctrl;
+			ctrl.set_inhibit_reset(true);
+			config_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
+		}
+		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		// wait for PPUs to be ready
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			using namespace haldls::vx::v2;
+			PollingOmnibusBlockConfig config;
+			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
+			                       .at(0));
+			config.set_target(
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+			config_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
+			config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			config_builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
+	}
+	auto initial_config_program = config_builder.done();
+
+	// build realtime programs
 	auto program = builder.generate();
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 
@@ -56,10 +108,10 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// execute
 	hate::Timer const exec_timer;
-	if (!program.realtime.empty() || !program.static_config.empty()) {
+	if (!program.realtime.empty() || !initial_config_program.empty()) {
 		std::lock_guard lock(continuous_chunked_program_execution_mutex);
-		auto static_config_reinit = connection.create_reinit_stack_entry();
-		static_config_reinit.set(program.static_config, true);
+		auto initial_config_reinit = connection.create_reinit_stack_entry();
+		initial_config_reinit.set(initial_config_program, true);
 		for (auto& p : program.realtime) {
 			backend::run(connection, p);
 		}

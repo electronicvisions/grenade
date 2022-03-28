@@ -46,14 +46,14 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     coordinate::ExecutionInstance const& execution_instance,
     IODataMap const& input_list,
     IODataMap const& data_output,
-    lola::vx::v2::Chip const& chip_config,
+    std::optional<lola::vx::v2::PPUElfFile::symbols_type> const& ppu_symbols,
     ExecutionInstancePlaybackHooks& playback_hooks) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_input_list(input_list),
     m_data_output(data_output),
     m_local_external_data(),
-    m_initial_config(chip_config),
+    m_ppu_symbols(ppu_symbols),
     m_playback_hooks(playback_hooks),
     m_post_vertices(),
     m_local_data(),
@@ -827,37 +827,16 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		builder.merge_back(m_playback_hooks.pre_realtime);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
-		return {{}, m_chunked_program, false};
+		return {m_chunked_program, false};
 	}
 
 	// playback builder sequence to be concatenated in the end
 	std::vector<PlaybackProgramBuilder> builders;
 
-	// add pre static config playback hook
-	auto config_builder = std::move(m_playback_hooks.pre_static_config);
-
-	// generate static configuration
-	auto [static_config, ppu_symbols] =
-	    ExecutionInstanceConfigVisitor(m_graph, m_execution_instance, m_initial_config)();
-	config_builder.write(ChipOnDLS(), static_config);
-	// wait for CapMem to settle
-	config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-	config_builder.write(TimerOnDLS(), Timer());
-	config_builder.block_until(
-	    TimerOnDLS(), Timer::Value(100000 * Timer::Value::fpga_clock_cycles_per_us));
-
-	// bring PPUs in running state
-	bool const enable_ppu = static_cast<bool>(ppu_symbols);
-	if (enable_ppu) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(true);
-			config_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-		}
-	}
 	// generate playback snippet for neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 
+	auto const enable_ppu = static_cast<bool>(m_ppu_symbols);
 	bool const has_cadc_readout = std::any_of(
 	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
 	assert(has_cadc_readout ? enable_ppu : true);
@@ -884,14 +863,14 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
 	if (enable_ppu) {
-		assert(ppu_symbols);
-		ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
-		ppu_result_coord = ppu_symbols->at("cadc_result").coordinate;
-		ppu_runtime_coord = ppu_symbols->at("runtime").coordinate.toMin();
-		if (ppu_symbols->contains("scheduler_event_drop_count")) {
+		assert(m_ppu_symbols);
+		ppu_status_coord = m_ppu_symbols->at("status").coordinate.toMin();
+		ppu_result_coord = m_ppu_symbols->at("cadc_result").coordinate;
+		ppu_runtime_coord = m_ppu_symbols->at("runtime").coordinate.toMin();
+		if (m_ppu_symbols->contains("scheduler_event_drop_count")) {
 			ppu_scheduler_event_drop_count_coord.emplace(
-			    ppu_symbols->at("scheduler_event_drop_count").coordinate);
-			for (auto const& [name, symbol] : *ppu_symbols) {
+			    m_ppu_symbols->at("scheduler_event_drop_count").coordinate);
+			for (auto const& [name, symbol] : *m_ppu_symbols) {
 				if (name.starts_with("timer") && name.ends_with("event_drop_count")) {
 					ppu_timer_event_drop_count_coord.push_back(symbol.coordinate);
 				}
@@ -930,19 +909,6 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			wait_for_ppu_command_idle.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			wait_for_ppu_command_idle.block_until(
 			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-		}
-		// wait for PPUs to be ready
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PollingOmnibusBlockConfig config;
-			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
-			                       .at(0));
-			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
-			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
-			config_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
-			config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			config_builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
 		}
 	}
 
@@ -1192,7 +1158,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	if (!builder.empty()) {
 		m_chunked_program.push_back(builder.done());
 	}
-	return {config_builder.done(), m_chunked_program, has_hook_around_realtime};
+	return {m_chunked_program, has_hook_around_realtime};
 }
 
 } // namespace grenade::vx

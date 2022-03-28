@@ -46,7 +46,7 @@ public:
 	    coordinate::ExecutionInstance const& execution_instance,
 	    IODataMap const& input_list,
 	    IODataMap const& data_output,
-	    lola::vx::v2::Chip const& chip_config,
+	    std::optional<lola::vx::v2::PPUElfFile::symbols_type> const& ppu_symbols,
 	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	/**
@@ -56,7 +56,6 @@ public:
 
 	struct PlaybackPrograms
 	{
-		stadls::vx::v2::PlaybackProgram static_config;
 		std::vector<stadls::vx::v2::PlaybackProgram> realtime;
 		bool has_hook_around_realtime;
 	};
@@ -89,7 +88,7 @@ private:
 
 	ConstantReferenceIODataMap m_local_external_data;
 
-	lola::vx::v2::Chip m_initial_config;
+	std::optional<lola::vx::v2::PPUElfFile::symbols_type> m_ppu_symbols;
 
 	ExecutionInstancePlaybackHooks& m_playback_hooks;
 
