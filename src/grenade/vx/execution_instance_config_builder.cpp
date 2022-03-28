@@ -291,9 +291,7 @@ void ExecutionInstanceConfigBuilder::pre_process()
 	}
 }
 
-std::tuple<
-    stadls::vx::v2::PlaybackProgramBuilder,
-    std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
+std::tuple<lola::vx::v2::Chip, std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
 ExecutionInstanceConfigBuilder::generate()
 {
 	using namespace halco::common;
@@ -301,15 +299,6 @@ ExecutionInstanceConfigBuilder::generate()
 	using namespace haldls::vx::v2;
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
-
-	PlaybackProgramBuilder builder;
-	// write static configuration
-	builder.write(ChipOnDLS(), m_config);
-	// wait for CapMem to settle
-	builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-	builder.write(TimerOnDLS(), Timer());
-	builder.block_until(
-	    TimerOnDLS(), Timer::Value(100000 * Timer::Value::fpga_clock_cycles_per_us));
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
 	if (m_requires_ppu) {
@@ -325,45 +314,34 @@ ExecutionInstanceConfigBuilder::generate()
 		}
 
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			// bring PPU in reset state
-			PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(false);
-			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-
 			// zero-initialize all symbols (esp. bss)
 			assert(ppu_symbols);
 			for (auto const& [_, symbol] : *ppu_symbols) {
 				PPUMemoryBlock config(symbol.coordinate.toPPUMemoryBlockSize());
-				PPUMemoryBlockOnDLS coord(symbol.coordinate, ppu);
-				builder.write(coord, config);
+				m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(symbol.coordinate, config);
 			}
 
-			// write PPU program
-			PPUMemoryBlockOnDLS coord(
+			// set PPU program
+			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
 			    PPUMemoryBlockOnPPU(
 			        PPUMemoryWordOnPPU(), PPUMemoryWordOnPPU(ppu_program.get_words().size() - 1)),
-			    ppu);
-			builder.write(coord, ppu_program);
+			    ppu_program);
 
-			// bring PPU in running state
-			ctrl.set_inhibit_reset(true);
-			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-
-			// write neuron reset mask
+			// set neuron reset mask
 			halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;
 			for (auto const col : iter_all<NeuronColumnOnDLS>()) {
 				values[col] = m_enabled_neuron_resets[AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS())
 				                                          .toNeuronResetOnDLS()];
 			}
 			auto const neuron_reset_mask = to_vector_unit_row(values);
-			builder.write(PPUMemoryBlockOnDLS(ppu_neuron_reset_mask_coord, ppu), neuron_reset_mask);
-			builder.write(
-			    PPUMemoryWordOnDLS(ppu_location_coord, ppu),
-			    PPUMemoryWord(PPUMemoryWord::Value(ppu.value())));
+			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
+			    ppu_neuron_reset_mask_coord, neuron_reset_mask);
+			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_word(
+			    ppu_location_coord, PPUMemoryWord::Value(ppu.value()));
 		}
 	}
 
-	return {std::move(builder), ppu_symbols};
+	return {m_config, ppu_symbols};
 }
 
 } // namespace grenade::vx

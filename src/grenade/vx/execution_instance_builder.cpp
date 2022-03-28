@@ -789,14 +789,28 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	auto config_builder = std::move(m_playback_hooks.pre_static_config);
 
 	// generate static configuration
-	auto [static_config_builder, ppu_symbols] = m_config_builder.generate();
-	config_builder.merge_back(static_config_builder);
+	auto [static_config, ppu_symbols] = m_config_builder.generate();
+	config_builder.write(ChipOnDLS(), static_config);
+	// wait for CapMem to settle
+	config_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+	config_builder.write(TimerOnDLS(), Timer());
+	config_builder.block_until(
+	    TimerOnDLS(), Timer::Value(100000 * Timer::Value::fpga_clock_cycles_per_us));
+
+	// bring PPUs in running state
+	bool const enable_ppu = static_cast<bool>(ppu_symbols);
+	if (enable_ppu) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PPUControlRegister ctrl;
+			ctrl.set_inhibit_reset(true);
+			config_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
+		}
+	}
 
 	// generate playback snippet for neuron resets
 	auto [builder_neuron_reset, _] = stadls::vx::generate(m_neuron_resets);
 
 	// look-up PPU-program symbols
-	bool const enable_ppu = static_cast<bool>(ppu_symbols);
 	PPUMemoryBlockOnPPU ppu_result_coord;
 	PlaybackProgramBuilder blocking_ppu_command_baseline_read;
 	PlaybackProgramBuilder blocking_ppu_command_reset_neurons;
@@ -1001,6 +1015,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
+		// disable inhibit reset
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PPUControlRegister ctrl;
+			ctrl.set_inhibit_reset(false);
+			builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 		}
 		builders.push_back(std::move(builder));
 	}

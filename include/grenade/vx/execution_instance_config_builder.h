@@ -13,7 +13,7 @@ namespace grenade::vx {
 
 /**
  * Builder for the static chip configuration of a single ExecutionInstance.
- * Vertices are processed resulting in a playback builder.
+ * Vertices are processed resulting in a chip configuration.
  */
 class ExecutionInstanceConfigBuilder
 {
@@ -35,14 +35,12 @@ public:
 	void pre_process() SYMBOL_VISIBLE;
 
 	/**
-	 * Generate playback program builder.
-	 * @return PlaybackProgramBuilder generated via local graph traversal and optional PPU program
+	 * Generate static configuration.
+	 * @return Chip object generated via local graph traversal and optional PPU program
 	 * symbols
 	 */
-	std::tuple<
-	    stadls::vx::v2::PlaybackProgramBuilder,
-	    std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
-	generate() SYMBOL_VISIBLE;
+	std::tuple<lola::vx::v2::Chip, std::optional<lola::vx::v2::PPUElfFile::symbols_type>> generate()
+	    SYMBOL_VISIBLE;
 
 private:
 	Graph const& m_graph;
