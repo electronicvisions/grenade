@@ -2,20 +2,14 @@
 #include <map>
 #include <unordered_map>
 
+#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
-
-namespace lola::vx::v3 {
-struct Chip;
-} // namespace lola::vx::v3
+#include "lola/vx/v3/chip.h"
 
 namespace grenade::vx {
-
-namespace backend {
-struct Connection;
-} // namespace backend
 
 class Graph;
 class IODataMap;
@@ -31,94 +25,111 @@ class ExecutionInstancePlaybackHooks;
 class JITGraphExecutor
 {
 public:
-	/** Map of connections. */
-	typedef std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection&> Connections;
-
 	typedef std::unordered_map<coordinate::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
 
 	typedef std::unordered_map<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>
 	    PlaybackHooks;
 
 	/**
-	 * Run the specified graph with specified inputs using the specified connection collection.
-	 * @param graph Graph to execute
-	 * @param input_list List of input values to use
-	 * @param connections Map of connections tied to a specific chip instance
-	 * @param chip_configs Map of static configuration tied to a specific chip instance
+	 * Construct executor without active connections.
 	 */
-	static IODataMap run(
-	    Graph const& graph,
-	    IODataMap const& input_list,
-	    Connections const& connections,
-	    ChipConfigs const& chip_configs) SYMBOL_VISIBLE;
+	JITGraphExecutor() SYMBOL_VISIBLE;
 
 	/**
-	 * Run the specified graph with specified inputs using the specified connection collection.
+	 * Acquire connection.
+	 * Acquisition requires ownership of the connection to ensure no intermediate access outside the
+	 * executor is possible.
+	 * @param identifier Identifier to use for to be acquired connection
+	 * @param connection Connection to acquire
+	 */
+	void acquire_connection(
+	    halco::hicann_dls::vx::v3::DLSGlobal const& identifier,
+	    backend::Connection&& connection) SYMBOL_VISIBLE;
+
+	/**
+	 * Get identifiers of connections contained in executor.
+	 * @return Set of connection identifiers
+	 */
+	std::set<halco::hicann_dls::vx::v3::DLSGlobal> contained_connections() const SYMBOL_VISIBLE;
+
+	/**
+	 * Release connection associated with identifier.
+	 * @param identifier Identifier for which to extract connection
+	 * @return Connection to the associated hardware
+	 */
+	backend::Connection release_connection(halco::hicann_dls::vx::v3::DLSGlobal const& identifier)
+	    SYMBOL_VISIBLE;
+
+	/**
+	 * Run the specified graph with specified inputs on the previously acquired connections.
 	 * @param graph Graph to execute
-	 * @param input_list List of input values to use
-	 * @param connections Map of connections tied to a specific chip instance
-	 * @param chip_configs Map of static configuration tied to a specific chip instance
+	 * @param input List of input values to use
+	 * @param initial_config Map of initial configuration
 	 * @param playback_hooks Map of playback sequence collections to be inserted at specified
 	 * execution instances
 	 */
-	static IODataMap run(
+	IODataMap run(
 	    Graph const& graph,
-	    IODataMap const& input_list,
-	    Connections const& connections,
-	    ChipConfigs const& chip_configs,
+	    IODataMap const& input,
+	    ChipConfigs const& initial_config,
 	    PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	/**
-	 * Run the specified graph with specified inputs using the specified connection collection.
+	 * Run the specified graph with specified inputs on the previously acquired connections.
 	 * @param graph Graph to execute
-	 * @param input_list List of input values to use
-	 * @param connections Map of connections tied to a specific chip instance
-	 * @param chip_configs Map of static configuration tied to a specific chip instance
-	 * @param only_unconnected_output Whether to return only values to output vertices without out
-	 * edges
+	 * @param input List of input values to use
+	 * @param initial_config Map of initial configuration
 	 */
-	static IODataList run(
-	    Graph const& graph,
-	    IODataList const& input_list,
-	    Connections const& connections,
-	    ChipConfigs const& chip_configs,
-	    bool only_unconnected_output = true) SYMBOL_VISIBLE;
+	IODataMap run(Graph const& graph, IODataMap const& input, ChipConfigs const& initial_config)
+	    SYMBOL_VISIBLE;
 
 	/**
-	 * Run the specified graph with specified inputs using the specified connection collection.
+	 * Run the specified graph with specified inputs on the previously acquired connections.
 	 * @param graph Graph to execute
-	 * @param input_list List of input values to use
-	 * @param connections Map of connections tied to a specific chip instance
-	 * @param chip_configs Map of static configuration tied to a specific chip instance
-	 * @param playback_hooks Map of playback sequence collections to be inserted at specified
+	 * @param input List of input values to use
+	 * @param initial_config Map of initial configuration
+	 * @param playback_hooks List of playback sequence collections to be inserted at specified
 	 * execution instances
 	 * @param only_unconnected_output Whether to return only values to output vertices without out
 	 * edges
 	 */
-	static IODataList run(
+	IODataList run(
 	    Graph const& graph,
-	    IODataList const& input_list,
-	    Connections const& connections,
-	    ChipConfigs const& chip_configs,
+	    IODataList const& input,
+	    ChipConfigs const& initial_config,
 	    PlaybackHooks& playback_hooks,
 	    bool only_unconnected_output = true) SYMBOL_VISIBLE;
 
-private:
 	/**
-	 * Check whether the given graph can be executed on the given map of connections.
-	 * @param graph Graph instance
-	 * @param connections Map of connections
+	 * Run the specified graph with specified inputs on the previously acquired connections.
+	 * @param graph Graph to execute
+	 * @param input List of input values to use
+	 * @param initial_config Map of initial configuration
+	 * @param only_unconnected_output Whether to return only values to output vertices without out
+	 * edges
 	 */
-	static bool is_executable_on(Graph const& graph, Connections const& connections);
+	IODataList run(
+	    Graph const& graph,
+	    IODataList const& input,
+	    ChipConfigs const& initial_config,
+	    bool only_unconnected_output = true) SYMBOL_VISIBLE;
+
+private:
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> m_connections;
 
 	/**
-	 * Check that graph can be executed given the input list and the map of connections.
+	 * Check whether the given graph can be executed.
+	 * @param graph Graph instance
+	 */
+	bool is_executable_on(Graph const& graph);
+
+	/**
+	 * Check that graph can be executed.
 	 * This function combines `is_executable_on` and
 	 * `has_dangling_inputs`.
 	 * @param graph Graph to check
-	 * @param connections Connections to check
 	 */
-	static void check(Graph const& graph, Connections const& connections);
+	void check(Graph const& graph);
 };
 
 } // namespace grenade::vx

@@ -20,27 +20,52 @@
 
 namespace grenade::vx {
 
+JITGraphExecutor::JITGraphExecutor() : m_connections() {}
+
+void JITGraphExecutor::acquire_connection(
+    halco::hicann_dls::vx::v3::DLSGlobal const& identifier, backend::Connection&& connection)
+{
+	if (m_connections.contains(identifier)) {
+		throw std::runtime_error("Trying to acquire connection with already present identifier.");
+	}
+	m_connections.emplace(identifier, std::move(connection));
+}
+
+std::set<halco::hicann_dls::vx::v3::DLSGlobal> JITGraphExecutor::contained_connections() const
+{
+	std::set<halco::hicann_dls::vx::v3::DLSGlobal> ret;
+	for (auto const& [identifier, _] : m_connections) {
+		ret.insert(identifier);
+	}
+	return ret;
+}
+
+backend::Connection JITGraphExecutor::release_connection(
+    halco::hicann_dls::vx::v3::DLSGlobal const& identifier)
+{
+	if (!m_connections.contains(identifier)) {
+		throw std::runtime_error("Trying to release connection with not present identifier.");
+	}
+	return std::move(m_connections.extract(identifier).mapped());
+}
+
 IODataMap JITGraphExecutor::run(
-    Graph const& graph,
-    IODataMap const& input_list,
-    Connections const& connections,
-    ChipConfigs const& chip_configs)
+    Graph const& graph, IODataMap const& input, ChipConfigs const& initial_config)
 {
 	PlaybackHooks empty;
-	return run(graph, input_list, connections, chip_configs, empty);
+	return run(graph, input, initial_config, empty);
 }
 
 IODataMap JITGraphExecutor::run(
     Graph const& graph,
-    IODataMap const& input_list,
-    Connections const& connections,
-    ChipConfigs const& chip_configs,
+    IODataMap const& input,
+    ChipConfigs const& initial_config,
     PlaybackHooks& playback_hooks)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	hate::Timer const timer;
 
-	check(graph, connections);
+	check(graph);
 
 	auto const& execution_instance_graph = graph.get_execution_instance_graph();
 	auto const& execution_instance_map = graph.get_execution_instance_map();
@@ -58,13 +83,13 @@ IODataMap JITGraphExecutor::run(
 	IODataMap output_activation_map;
 
 	std::map<DLSGlobal, hxcomm::ConnectionTimeInfo> connection_time_info_begin;
-	for (auto const [dls, connection] : connections) {
+	for (auto const& [dls, connection] : m_connections) {
 		connection_time_info_begin.emplace(dls, connection.get_time_info());
 	}
 
 	// connection mutex map
 	std::map<DLSGlobal, std::mutex> continuous_chunked_program_execution_mutexes;
-	for (auto const [dls, connection] : connections) {
+	for (auto const& [dls, _] : m_connections) {
 		continuous_chunked_program_execution_mutexes.emplace(
 		    std::piecewise_construct, std::make_tuple(dls), std::make_tuple());
 	}
@@ -75,8 +100,8 @@ IODataMap JITGraphExecutor::run(
 		auto const execution_instance = execution_instance_map.left.at(vertex);
 		auto const dls_global = execution_instance.toDLSGlobal();
 		ExecutionInstanceNode node_body(
-		    output_activation_map, input_list, graph, execution_instance,
-		    chip_configs.at(execution_instance), connections.at(dls_global),
+		    output_activation_map, input, graph, execution_instance,
+		    initial_config.at(execution_instance), m_connections.at(dls_global),
 		    continuous_chunked_program_execution_mutexes.at(dls_global),
 		    playback_hooks[execution_instance]);
 		nodes.insert(std::make_pair(
@@ -103,7 +128,7 @@ IODataMap JITGraphExecutor::run(
 	std::chrono::nanoseconds total_time(timer.get_ns());
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	LOG4CXX_INFO(logger, "run(): Executed graph in " << hate::to_string(total_time) << ".");
-	for (auto const& [dls, e] : connections) {
+	for (auto const& [dls, e] : m_connections) {
 		auto const connection_time_info_difference =
 		    e.get_time_info() - connection_time_info_begin.at(dls);
 		LOG4CXX_INFO(
@@ -122,33 +147,30 @@ IODataMap JITGraphExecutor::run(
 
 IODataList JITGraphExecutor::run(
     Graph const& graph,
-    IODataList const& input_list,
-    Connections const& connections,
-    ChipConfigs const& chip_configs,
+    IODataList const& input,
+    ChipConfigs const& initial_config,
     bool only_unconnected_output)
 {
 	PlaybackHooks empty;
-	return run(graph, input_list, connections, chip_configs, empty, only_unconnected_output);
+	return run(graph, input, initial_config, empty, only_unconnected_output);
 }
 
 IODataList JITGraphExecutor::run(
     Graph const& graph,
-    IODataList const& input_list,
-    Connections const& connections,
-    ChipConfigs const& chip_configs,
+    IODataList const& input,
+    ChipConfigs const& initial_config,
     PlaybackHooks& playback_hooks,
     bool only_unconnected_output)
 {
-	auto const output_map =
-	    run(graph, input_list.to_input_map(graph), connections, chip_configs, playback_hooks);
+	auto const output_map = run(graph, input.to_input_map(graph), initial_config, playback_hooks);
 	IODataList output;
 	output.from_output_map(output_map, graph, only_unconnected_output);
 	return output;
 }
 
-bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& connections)
+bool JITGraphExecutor::is_executable_on(Graph const& graph)
 {
-	auto const connection_dls_globals = boost::adaptors::keys(connections);
+	auto const connection_dls_globals = boost::adaptors::keys(m_connections);
 	auto const& execution_instance_map = graph.get_execution_instance_map();
 	auto const& vertex_descriptor_map = graph.get_vertex_descriptor_map();
 
@@ -161,7 +183,7 @@ bool JITGraphExecutor::is_executable_on(Graph const& graph, Connections const& c
 	});
 }
 
-void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
+void JITGraphExecutor::check(Graph const& graph)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	hate::Timer const timer;
@@ -172,7 +194,7 @@ void JITGraphExecutor::check(Graph const& graph, Connections const& connections)
 	}
 
 	// check all DLSGlobal physical chips used in the graph are present in the provided connections
-	if (!is_executable_on(graph, connections)) {
+	if (!is_executable_on(graph)) {
 		throw std::runtime_error("Graph requests connection not provided.");
 	}
 

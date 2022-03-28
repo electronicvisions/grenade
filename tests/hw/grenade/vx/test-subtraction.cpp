@@ -44,10 +44,9 @@ TEST(Subtraction, Single)
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	// Construct map of one connection and connect to HW
-	grenade::vx::JITGraphExecutor::Connections connections;
+	grenade::vx::JITGraphExecutor executor;
 	grenade::vx::backend::Connection connection;
-	connections.insert(
-	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	// fill graph inputs
 	grenade::vx::IODataMap input_list;
@@ -64,8 +63,7 @@ TEST(Subtraction, Single)
 	chip_configs[instance] = *chip;
 
 	// run Graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
+	auto const result_map = executor.run(g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 

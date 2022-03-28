@@ -32,12 +32,12 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 {
 	using namespace halco::hicann_dls::vx;
 
-	JITGraphExecutor::Connections connections;
-	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
-
 	JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
 	    coordinate::ExecutionInstance(), config));
+
+	JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -63,7 +63,9 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 	}
 	input_map.data[m_input_vertex] = timed_inputs;
 
-	auto const output_map = JITGraphExecutor::run(m_graph, input_map, connections, configs);
+	auto const output_map = executor.run(m_graph, input_map, configs);
+
+	connection = std::move(executor.release_connection(DLSGlobal()));
 
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<UInt5>>>>(
 	    output_map.data.at(m_output_vertex));

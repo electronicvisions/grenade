@@ -21,11 +21,11 @@ using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 
-void test_background_spike_source_regular(
+inline void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
     Timer::Value running_period,
     size_t spike_count_deviation,
-    grenade::vx::JITGraphExecutor::Connections const& connections)
+    grenade::vx::JITGraphExecutor& executor)
 {
 	size_t expected_count =
 	    running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ / period;
@@ -79,8 +79,7 @@ void test_background_spike_source_regular(
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
 
 	// run Graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
+	auto const result_map = executor.run(g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 
@@ -115,14 +114,13 @@ void test_background_spike_source_regular(
 TEST(BackgroundSpikeSource, Regular)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::JITGraphExecutor::Connections connections;
+	grenade::vx::JITGraphExecutor executor;
 	grenade::vx::backend::Connection connection;
-	connections.insert(
-	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(1000), Timer::Value(10000000), 1000, connections);
+	    BackgroundSpikeSource::Period(1000), Timer::Value(10000000), 1000, executor);
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(10000), Timer::Value(100000000), 1000, connections);
+	    BackgroundSpikeSource::Period(10000), Timer::Value(100000000), 1000, executor);
 }

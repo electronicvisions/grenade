@@ -90,7 +90,7 @@ void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
     Timer::Value running_period,
     size_t spike_count_deviation,
-    grenade::vx::JITGraphExecutor::Connections const& connections,
+    grenade::vx::JITGraphExecutor& executor,
     grenade::vx::JITGraphExecutor::ChipConfigs const& chip_configs)
 {
 	size_t expected_count =
@@ -139,8 +139,7 @@ void test_background_spike_source_regular(
 	inputs.runtime.push_back(running_period);
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::JITGraphExecutor::run(
-	    network_graph.get_graph(), inputs, connections, chip_configs);
+	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
 
 	auto const spikes = grenade::vx::network::extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
@@ -163,18 +162,16 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor::Connections connections;
-	connections.insert(
-	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	grenade::vx::JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(1000), Timer::Value(10000000), 1000, connections,
-	    chip_configs);
+	    BackgroundSpikeSource::Period(1000), Timer::Value(10000000), 1000, executor, chip_configs);
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(10000), Timer::Value(100000000), 1000, connections,
+	    BackgroundSpikeSource::Period(10000), Timer::Value(100000000), 1000, executor,
 	    chip_configs);
 }
 
@@ -183,7 +180,7 @@ void test_background_spike_source_poisson(
     BackgroundSpikeSource::Rate rate,
     Timer::Value running_period,
     intmax_t spike_count_deviation,
-    grenade::vx::JITGraphExecutor::Connections const& connections,
+    grenade::vx::JITGraphExecutor& executor,
     grenade::vx::JITGraphExecutor::ChipConfigs const& chip_configs)
 {
 	intmax_t expected_count = running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ /
@@ -239,8 +236,7 @@ void test_background_spike_source_poisson(
 		inputs.runtime.push_back(running_period);
 
 		// run graph with given inputs and return results
-		auto const result_map = grenade::vx::JITGraphExecutor::run(
-		    network_graph.get_graph(), inputs, connections, chip_configs);
+		auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
 
 		auto const spikes = grenade::vx::network::extract_neuron_spikes(result_map, network_graph);
 		EXPECT_EQ(spikes.size(), 1);
@@ -281,17 +277,16 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor::Connections connections;
-	connections.insert(
-	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	grenade::vx::JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(1000), BackgroundSpikeSource::Rate(255),
-	    Timer::Value(10000000), 1000, connections, chip_configs);
+	    Timer::Value(10000000), 1000, executor, chip_configs);
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(10000), BackgroundSpikeSource::Rate(255),
-	    Timer::Value(100000000), 1000, connections, chip_configs);
+	    Timer::Value(100000000), 1000, executor, chip_configs);
 }

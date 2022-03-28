@@ -372,8 +372,8 @@ std::vector<std::vector<Int8>> MAC::run(
 	auto logger = log4cxx::Logger::getLogger("grenade.MAC");
 
 	// Construct map of one connection to HW
-	JITGraphExecutor::Connections connections;
-	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
+	JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -409,8 +409,9 @@ std::vector<std::vector<Int8>> MAC::run(
 	}
 
 	// run Graph with given inputs and return results
-	auto const output_activation_map =
-	    JITGraphExecutor::run(m_graph, input_list, connections, chip_configs);
+	auto const output_activation_map = executor.run(m_graph, input_list, chip_configs);
+
+	connection = std::move(executor.release_connection(DLSGlobal()));
 
 	hate::Timer output_timer;
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(

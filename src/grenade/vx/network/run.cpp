@@ -36,20 +36,21 @@ IODataMap run(
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
-	JITGraphExecutor::Connections connections;
-	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
-
 	JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
 	    coordinate::ExecutionInstance(), config));
+
+	JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
 	    std::pair<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>(
 	        coordinate::ExecutionInstance(), std::move(playback_hooks)));
 
-	auto ret = JITGraphExecutor::run(
-	    network_graph.get_graph(), inputs, connections, configs, playback_hooks_map);
+	auto ret = executor.run(network_graph.get_graph(), inputs, configs, playback_hooks_map);
+
+	connection = std::move(executor.release_connection(DLSGlobal()));
 	return ret;
 }
 

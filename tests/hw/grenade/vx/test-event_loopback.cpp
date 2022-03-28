@@ -22,7 +22,7 @@ using namespace lola::vx::v3;
 
 std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
-    grenade::vx::JITGraphExecutor::Connections const& connections,
+    grenade::vx::JITGraphExecutor& executor,
     std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
 {
 	grenade::vx::vertex::ExternalInput external_input(
@@ -59,8 +59,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
 
 	// run Graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::JITGraphExecutor::run(g, input_list, connections, chip_configs);
+	auto const result_map = executor.run(g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 
@@ -75,10 +74,9 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 TEST(JITGraphExecutor, EventLoopback)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::JITGraphExecutor::Connections connections;
+	grenade::vx::JITGraphExecutor executor;
 	grenade::vx::backend::Connection connection;
-	connections.insert(
-	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	constexpr size_t max_batch_size = 5;
 
@@ -98,7 +96,7 @@ TEST(JITGraphExecutor, EventLoopback)
 				}
 
 				auto const spike_batches =
-				    test_event_loopback_single_crossbar_node(output, connections, inputs);
+				    test_event_loopback_single_crossbar_node(output, executor, inputs);
 				if (output.toEnum() == address.toEnum()) {
 					// node matches input channel, events should be propagated
 					for (auto const& spikes : spike_batches) {
