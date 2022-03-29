@@ -111,7 +111,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	if (!program.realtime.empty() || !initial_config_program.empty()) {
 		std::lock_guard lock(continuous_chunked_program_execution_mutex);
 		auto initial_config_reinit = connection.create_reinit_stack_entry();
-		initial_config_reinit.set(initial_config_program, true);
+		initial_config_reinit.set(initial_config_program, std::nullopt, true);
 		for (auto& p : program.realtime) {
 			backend::run(connection, p);
 		}

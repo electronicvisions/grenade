@@ -66,7 +66,7 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& i
 	}
 	init_builder.merge_back(
 	    std::visit([](auto const& i) { return stadls::vx::generate(i).builder; }, init));
-	m_init.set(init_builder.done(), true);
+	m_init.set(init_builder.done(), std::nullopt, true);
 
 	m_expected_link_notification_count = 0;
 
