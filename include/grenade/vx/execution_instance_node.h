@@ -2,19 +2,17 @@
 #include <mutex>
 #include <tbb/flow_graph.h>
 
+#include "grenade/vx/connection_state_storage.h"
 #include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
 #include "hate/visibility.h"
+#include "lola/vx/v3/chip.h"
 
 namespace log4cxx {
 class Logger;
 } // namespace log4cxx
-
-namespace lola::vx::v3 {
-class Chip;
-} // namespace lola::vx::v3
 
 namespace grenade::vx {
 
@@ -35,9 +33,10 @@ struct ExecutionInstanceNode
 	    IODataMap const& input_data_map,
 	    Graph const& graph,
 	    coordinate::ExecutionInstance const& execution_instance,
-	    lola::vx::v3::Chip const& chip_config,
+	    lola::vx::v3::Chip const& initial_config,
 	    backend::Connection& connection,
-	    std::mutex& continuous_chunked_program_execution_mutex,
+	    ConnectionStateStorage& connection_state_storage,
+	    std::mutex& connection_mutex,
 	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
@@ -47,9 +46,10 @@ private:
 	IODataMap const& input_data_map;
 	Graph const& graph;
 	coordinate::ExecutionInstance execution_instance;
-	lola::vx::v3::Chip const& chip_config;
+	lola::vx::v3::Chip const& initial_config;
 	backend::Connection& connection;
-	std::mutex& continuous_chunked_program_execution_mutex;
+	ConnectionStateStorage& connection_state_storage;
+	std::mutex& connection_mutex;
 	ExecutionInstancePlaybackHooks& playback_hooks;
 	log4cxx::Logger* logger;
 };

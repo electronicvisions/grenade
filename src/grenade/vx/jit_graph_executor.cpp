@@ -20,7 +20,11 @@
 
 namespace grenade::vx {
 
-JITGraphExecutor::JITGraphExecutor() : m_connections() {}
+JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
+    m_connections(),
+    m_connection_state_storages(),
+    m_enable_differential_config(enable_differential_config)
+{}
 
 void JITGraphExecutor::acquire_connection(
     halco::hicann_dls::vx::v3::DLSGlobal const& identifier, backend::Connection&& connection)
@@ -28,7 +32,17 @@ void JITGraphExecutor::acquire_connection(
 	if (m_connections.contains(identifier)) {
 		throw std::runtime_error("Trying to acquire connection with already present identifier.");
 	}
+	assert(!m_connection_state_storages.contains(identifier));
+
 	m_connections.emplace(identifier, std::move(connection));
+	m_connection_state_storages.emplace(
+	    identifier, std::move(ConnectionStateStorage{
+	                    m_enable_differential_config,
+	                    {},
+	                    {},
+	                    m_connections.at(identifier).create_reinit_stack_entry(),
+	                    m_connections.at(identifier).create_reinit_stack_entry(),
+	                    m_connections.at(identifier).create_reinit_stack_entry()}));
 }
 
 std::set<halco::hicann_dls::vx::v3::DLSGlobal> JITGraphExecutor::contained_connections() const
@@ -46,6 +60,8 @@ backend::Connection JITGraphExecutor::release_connection(
 	if (!m_connections.contains(identifier)) {
 		throw std::runtime_error("Trying to release connection with not present identifier.");
 	}
+	assert(m_connection_state_storages.contains(identifier));
+	m_connection_state_storages.erase(identifier);
 	return std::move(m_connections.extract(identifier).mapped());
 }
 
@@ -102,6 +118,7 @@ IODataMap JITGraphExecutor::run(
 		ExecutionInstanceNode node_body(
 		    output_activation_map, input, graph, execution_instance,
 		    initial_config.at(execution_instance), m_connections.at(dls_global),
+		    m_connection_state_storages.at(dls_global),
 		    continuous_chunked_program_execution_mutexes.at(dls_global),
 		    playback_hooks[execution_instance]);
 		nodes.insert(std::make_pair(
