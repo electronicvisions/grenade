@@ -91,7 +91,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = chip_config;
+	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -191,7 +191,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = chip_config;
+	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -299,7 +299,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = chip_config;
+	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
 
 	// construct shuffled list of neurons
 	std::vector<AtomicNeuronOnDLS> all_neurons;

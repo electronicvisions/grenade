@@ -76,7 +76,7 @@ IODataMap JITGraphExecutor::run(
 		auto const dls_global = execution_instance.toDLSGlobal();
 		ExecutionInstanceNode node_body(
 		    output_activation_map, input_list, graph, execution_instance,
-		    chip_configs.at(dls_global), connections.at(dls_global),
+		    chip_configs.at(execution_instance), connections.at(dls_global),
 		    continuous_chunked_program_execution_mutexes.at(dls_global),
 		    playback_hooks[execution_instance]);
 		nodes.insert(std::make_pair(

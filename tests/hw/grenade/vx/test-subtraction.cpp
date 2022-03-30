@@ -61,7 +61,7 @@ TEST(Subtraction, Single)
 
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = *chip;
+	chip_configs[instance] = *chip;
 
 	// run Graph with given inputs and return results
 	auto const result_map =

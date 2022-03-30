@@ -167,7 +167,7 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 	connections.insert(
 	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = chip_config;
+	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
@@ -285,7 +285,7 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 	connections.insert(
 	    std::pair<DLSGlobal, grenade::vx::backend::Connection&>(DLSGlobal(), connection));
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = chip_config;
+	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(

@@ -34,7 +34,7 @@ public:
 	/** Map of connections. */
 	typedef std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection&> Connections;
 
-	typedef std::map<halco::hicann_dls::vx::v3::DLSGlobal, lola::vx::v3::Chip> ChipConfigs;
+	typedef std::unordered_map<coordinate::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
 
 	typedef std::unordered_map<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>
 	    PlaybackHooks;

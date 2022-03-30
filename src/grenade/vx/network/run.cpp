@@ -40,7 +40,8 @@ IODataMap run(
 	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<DLSGlobal, lola::vx::v3::Chip>(DLSGlobal(), config));
+	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
+	    coordinate::ExecutionInstance(), config));
 
 	JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(

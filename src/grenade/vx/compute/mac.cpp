@@ -403,8 +403,10 @@ std::vector<std::vector<Int8>> MAC::run(
 	input_list.data[m_input_vertex] = timed_inputs;
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
-	JITGraphExecutor::ChipConfigs chip_configs(
-	    {std::make_pair(halco::hicann_dls::vx::DLSGlobal(), config)});
+	JITGraphExecutor::ChipConfigs chip_configs;
+	for (auto const& [_, execution_instance] : m_graph.get_execution_instance_map()) {
+		chip_configs.emplace(execution_instance, config);
+	}
 
 	// run Graph with given inputs and return results
 	auto const output_activation_map =

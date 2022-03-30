@@ -91,7 +91,7 @@ TEST(CADCRecording, General)
 	grenade::vx::coordinate::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[DLSGlobal()] = chip_config;
+	chip_configs[instance] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;

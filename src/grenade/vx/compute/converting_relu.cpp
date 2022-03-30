@@ -36,7 +36,8 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<DLSGlobal, lola::vx::v3::Chip>(DLSGlobal(), config));
+	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
+	    coordinate::ExecutionInstance(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

@@ -56,7 +56,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	input_list.data[v1] = inputs;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs.insert({DLSGlobal(), lola::vx::v3::Chip()});
+	chip_configs.insert({instance, lola::vx::v3::Chip()});
 
 	// run Graph with given inputs and return results
 	auto const result_map =
