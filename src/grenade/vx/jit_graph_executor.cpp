@@ -42,6 +42,8 @@ void JITGraphExecutor::acquire_connection(
 	                    {},
 	                    m_connections.at(identifier).create_reinit_stack_entry(),
 	                    m_connections.at(identifier).create_reinit_stack_entry(),
+	                    m_connections.at(identifier).create_reinit_stack_entry(),
+	                    m_connections.at(identifier).create_reinit_stack_entry(),
 	                    m_connections.at(identifier).create_reinit_stack_entry()}));
 }
 

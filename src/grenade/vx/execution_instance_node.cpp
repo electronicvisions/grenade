@@ -116,19 +116,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	auto base_builder = std::move(playback_hooks.pre_static_config);
 	PlaybackProgramBuilder differential_builder;
 
-	haldls::vx::v3::Timer::Value const capmem_settling_time(
-	    100000 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us);
-
 	bool enforce_base = true;
 	bool nothing_changed = false;
+	bool has_capmem_changes = false;
 	if (!connection_state_storage.enable_differential_config) {
 		// generate static configuration
 		base_builder.write(ChipOnDLS(), config);
-
-		// wait for CapMem to settle
-		base_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		base_builder.write(TimerOnDLS(), haldls::vx::v3::Timer());
-		base_builder.block_until(TimerOnDLS(), capmem_settling_time);
+		has_capmem_changes = true;
 	} else if (connection_state_storage.current_config_words.empty() /* first invokation */) {
 		typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
 		haldls::vx::visit_preorder(
@@ -141,13 +135,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			    fisch::vx::Omnibus(connection_state_storage.current_config_words.at(i)));
 		}
 		fisch_base_builder.write(chip_addresses, base_data);
-		// wait for CapMem to settle
-		PlaybackProgramBuilder capmem_wait_builder;
-		capmem_wait_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		capmem_wait_builder.write(TimerOnDLS(), haldls::vx::v3::Timer());
-		capmem_wait_builder.block_until(TimerOnDLS(), capmem_settling_time);
 		base_builder.merge_back(fisch_base_builder);
-		base_builder.merge_back(capmem_wait_builder);
+		has_capmem_changes = true;
 	} else {
 		enforce_base = false;
 
@@ -190,20 +179,48 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			base_builder.merge_back(fisch_base_builder);
 			differential_builder.merge_back(fisch_differential_builder);
 			LOG4CXX_TRACE(logger, "operator(): after fisch " << build_timer.print() << ".");
-
-			// wait for CapMem to settle
-			PlaybackProgramBuilder capmem_wait_builder;
-			capmem_wait_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-			capmem_wait_builder.write(TimerOnDLS(), haldls::vx::v3::Timer());
-			capmem_wait_builder.block_until(TimerOnDLS(), capmem_settling_time);
-			if (contains_capmem(differential_addresses)) {
-				differential_builder.merge_back(capmem_wait_builder);
-			} else {
-				base_builder.merge_back(capmem_wait_builder);
-			}
+			has_capmem_changes = contains_capmem(differential_addresses);
 		} else {
 			nothing_changed = true;
 		}
+	}
+
+	PlaybackProgramBuilder schedule_out_replacement_builder;
+	if (ppu_symbols) {
+		using namespace haldls::vx::v3;
+		// stop PPUs
+		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::stop)));
+			schedule_out_replacement_builder.write(
+			    PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
+		}
+		// poll for completion by waiting until PPU is asleep
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PollingOmnibusBlockConfig config;
+			config.set_address(
+			    PPUStatusRegister::read_addresses<PollingOmnibusBlockConfig::Address>(
+			        ppu.toPPUStatusRegisterOnDLS())
+			        .at(0));
+			config.set_target(PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(true)));
+			config.set_mask(PollingOmnibusBlockConfig::Value(0x00000001));
+			schedule_out_replacement_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
+			schedule_out_replacement_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+			schedule_out_replacement_builder.block_until(
+			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		}
+		// disable inhibit reset
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			PPUControlRegister ctrl;
+			ctrl.set_inhibit_reset(false);
+			schedule_out_replacement_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
+		}
+		// only PPU memory is volatile between batch entries and therefore read
+		for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
+			schedule_out_replacement_builder.read(ppu);
+		}
+		schedule_out_replacement_builder.block_until(
+		    BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 	}
 
 	PlaybackProgramBuilder read_builder;
@@ -222,6 +239,17 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 	}
 	LOG4CXX_TRACE(logger, "operator(): all inits but trigger after " << build_timer.print() << ".");
+
+	// wait for CapMem to settle
+	auto const capmem_settling_wait_program_generator = []() {
+		PlaybackProgramBuilder capmem_settling_wait_builder;
+		capmem_settling_wait_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+		capmem_settling_wait_builder.write(TimerOnDLS(), haldls::vx::v3::Timer());
+		haldls::vx::v3::Timer::Value const capmem_settling_time(
+		    100000 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us);
+		capmem_settling_wait_builder.block_until(TimerOnDLS(), capmem_settling_time);
+		return capmem_settling_wait_builder.done();
+	};
 
 	// bring PPUs in running state
 	PlaybackProgramBuilder trigger_builder;
@@ -248,8 +276,10 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 	}
 	auto trigger_program = trigger_builder.done();
+
 	auto base_program = base_builder.done();
 	auto differential_program = differential_builder.done();
+	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
 	LOG4CXX_TRACE(logger, "operator(): all inits after " << build_timer.print() << ".");
 
 	// build realtime programs
@@ -272,20 +302,36 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			connection_lock.lock();
 		}
 
+		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
 			connection_state_storage.reinit_base.set(base_program, std::nullopt, enforce_base);
 
+			// Only enforce when not empty to support non-differential mode.
+			// In differential mode it is always enforced on changes.
 			connection_state_storage.reinit_differential.set(
 			    differential_program, std::nullopt, !differential_program.empty());
 		}
 
+		// Never enforce, since the reinit is only filled after a schedule-out operation.
+		connection_state_storage.reinit_schedule_out_replacement.set(
+		    PlaybackProgram(), schedule_out_replacement_program, false);
+
+		// Always write capmem settling wait reinit, but only enforce it when the wait is
+		// immediately required, i.e. after changes to the capmem.
+		connection_state_storage.reinit_capmem_settling_wait.set(
+		    capmem_settling_wait_program_generator(), std::nullopt, has_capmem_changes);
+
+		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
 		connection_state_storage.reinit_trigger.set(
 		    trigger_program, std::nullopt, !trigger_program.empty());
 
+		// Execute realtime sections
 		for (auto& p : program.realtime) {
 			backend::run(connection, p);
 		}
 
+		// If the PPUs (can) alter state, read it back to update current_config accordingly to
+		// represent the actual hardware state.
 		if (!read_builder.empty()) {
 			backend::run(connection, read_builder.done());
 		}

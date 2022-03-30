@@ -13,6 +13,8 @@ struct ConnectionStateStorage
 	std::vector<fisch::vx::word_access_type::Omnibus> current_config_words;
 	stadls::vx::v3::ReinitStackEntry reinit_base;
 	stadls::vx::v3::ReinitStackEntry reinit_differential;
+	stadls::vx::v3::ReinitStackEntry reinit_schedule_out_replacement;
+	stadls::vx::v3::ReinitStackEntry reinit_capmem_settling_wait;
 	stadls::vx::v3::ReinitStackEntry reinit_trigger;
 };
 
