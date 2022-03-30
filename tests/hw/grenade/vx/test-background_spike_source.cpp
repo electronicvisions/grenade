@@ -73,7 +73,7 @@ inline void test_background_spike_source_regular(
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	grenade::vx::IODataMap input_list;
-	input_list.runtime.push_back(running_period);
+	input_list.runtime[instance].push_back(running_period);
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs.insert({instance, lola::vx::v3::Chip()});

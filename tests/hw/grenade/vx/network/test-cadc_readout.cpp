@@ -127,8 +127,8 @@ TEST(CADCRecording, General)
 	auto const network_graph = grenade::vx::network::build_network_graph(network, routing_result);
 
 	grenade::vx::IODataMap inputs;
-	inputs.runtime.push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 100));
-	inputs.runtime.push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 400));
+	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 100));
+	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 400));
 
 	// run graph with given inputs and return results
 	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
@@ -147,7 +147,10 @@ TEST(CADCRecording, General)
 		}
 		// CADC sampling shall take between one and seven us
 		EXPECT_GE(
-		    samples.size(), inputs.runtime.at(i) / Timer::Value::fpga_clock_cycles_per_us / 7);
-		EXPECT_LE(samples.size(), inputs.runtime.at(i) / Timer::Value::fpga_clock_cycles_per_us);
+		    samples.size(),
+		    inputs.runtime.at(instance).at(i) / Timer::Value::fpga_clock_cycles_per_us / 7);
+		EXPECT_LE(
+		    samples.size(),
+		    inputs.runtime.at(instance).at(i) / Timer::Value::fpga_clock_cycles_per_us);
 	}
 }

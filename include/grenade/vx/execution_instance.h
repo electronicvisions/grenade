@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/genpybind.h"
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
@@ -9,7 +10,8 @@ namespace cereal {
 class access;
 } // namespace cereal
 
-namespace grenade::vx::coordinate {
+namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
+namespace coordinate {
 
 /**
  * Unique temporal identifier for a execution instance.
@@ -17,7 +19,8 @@ namespace grenade::vx::coordinate {
  * No guarantees are made on execution order
  * TODO: move to halco? Is this a hardware abstraction layer coordinate?
  */
-struct ExecutionIndex : public halco::common::detail::BaseType<ExecutionIndex, size_t>
+struct GENPYBIND(inline_base("*")) ExecutionIndex
+    : public halco::common::detail::BaseType<ExecutionIndex, size_t>
 {
 	constexpr explicit ExecutionIndex(value_type const value = 0) : base_t(value) {}
 };
@@ -31,7 +34,7 @@ size_t hash_value(ExecutionInstance const& e) SYMBOL_VISIBLE;
  * An execution instance describes a unique physically placed isolated execution.
  * It is placed physically on a global DLS instance.
  */
-struct ExecutionInstance
+struct GENPYBIND(visible) ExecutionInstance
 {
 	ExecutionInstance() = default;
 
@@ -44,6 +47,7 @@ struct ExecutionInstance
 	bool operator==(ExecutionInstance const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ExecutionInstance const& other) const SYMBOL_VISIBLE;
 
+	GENPYBIND(stringstream)
 	friend std::ostream& operator<<(std::ostream& os, ExecutionInstance const& instance)
 	    SYMBOL_VISIBLE;
 
@@ -61,7 +65,8 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
-} // namespace grenade::vx::coordinate
+} // namespace coordinate
+} // namespace grenade::vx
 
 namespace std {
 

@@ -22,10 +22,12 @@ TEST(IODataMap, General)
 	EXPECT_EQ(map.batch_size(), 2);
 	EXPECT_TRUE(map.valid());
 
-	map.runtime = {haldls::vx::v3::Timer::Value(0)};
+	map.runtime[coordinate::ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
 	EXPECT_FALSE(map.valid());
 	EXPECT_THROW(map.batch_size(), std::runtime_error);
-	auto const runtime =
+	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
+	    runtime;
+	runtime[coordinate::ExecutionInstance()] =
 	    std::vector{haldls::vx::v3::Timer::Value(0), haldls::vx::v3::Timer::Value(1)};
 	map.runtime = runtime;
 	EXPECT_TRUE(map.valid());
@@ -53,7 +55,9 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.data.contains(1));
 	EXPECT_EQ(map.data.at(1), data_1);
 	EXPECT_EQ(map.runtime, runtime);
-	auto const runtime_2 = std::vector{haldls::vx::v3::Timer::Value(0)};
+	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
+	    runtime_2;
+	runtime_2[coordinate::ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
 	map_2.runtime = runtime_2;
 	map.merge(map_2);
 	EXPECT_EQ(map.runtime, runtime);

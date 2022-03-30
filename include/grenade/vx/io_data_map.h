@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/event.h"
+#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph_representation.h"
 #include "grenade/vx/port.h"
@@ -9,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 #include <variant>
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -48,7 +50,8 @@ struct GENPYBIND(visible) IODataMap
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::vector<haldls::vx::v3::Timer::Value> runtime;
+	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
+	    runtime;
 
 	IODataMap() SYMBOL_VISIBLE;
 
@@ -117,7 +120,8 @@ struct ConstantReferenceIODataMap
 	std::map<detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
-	std::vector<haldls::vx::v3::Timer::Value> runtime;
+	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
+	    runtime;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

@@ -49,7 +49,8 @@ TEST(JITGraphExecutor, DifferentialConfig)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::IODataMap input_map;
-	input_map.runtime.push_back(haldls::vx::Timer::Value(100));
+	input_map.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+	    haldls::vx::Timer::Value(100));
 
 	grenade::vx::JITGraphExecutor::ChipConfigs initial_config{
 	    {grenade::vx::coordinate::ExecutionInstance(), lola::vx::v3::Chip()}};

@@ -136,7 +136,7 @@ void test_background_spike_source_regular(
 
 	// generate input
 	grenade::vx::IODataMap inputs;
-	inputs.runtime.push_back(running_period);
+	inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(running_period);
 
 	// run graph with given inputs and return results
 	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
@@ -233,7 +233,7 @@ void test_background_spike_source_poisson(
 
 		// generate input
 		grenade::vx::IODataMap inputs;
-		inputs.runtime.push_back(running_period);
+		inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(running_period);
 
 		// run graph with given inputs and return results
 		auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);

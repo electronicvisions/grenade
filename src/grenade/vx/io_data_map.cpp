@@ -23,9 +23,7 @@ void IODataMap::merge(IODataMap&& other)
 {
 	std::unique_lock<std::mutex> lock(*mutex);
 	data.merge(other.data);
-	if (runtime.empty()) {
-		runtime = std::move(other.runtime);
-	}
+	runtime.merge(other.runtime);
 }
 
 void IODataMap::merge(IODataMap& other)
@@ -54,7 +52,9 @@ size_t unsafe_batch_size(IODataMap const& map)
 {
 	size_t size = 0;
 	if (map.runtime.size()) {
-		size = map.runtime.size();
+		if (map.runtime.begin()->second.size()) {
+			size = map.runtime.begin()->second.size();
+		}
 	} else if (map.data.size()) {
 		size = std::visit([](auto const& d) { return d.size(); }, map.data.begin()->second);
 	}
@@ -74,7 +74,9 @@ size_t IODataMap::batch_size() const
 bool IODataMap::valid() const
 {
 	size_t size = unsafe_batch_size(*this);
-	bool const runtime_value = (runtime.size() == size) || (runtime.size() == 0);
+	bool const runtime_value = std::all_of(
+	    runtime.cbegin(), runtime.cend(),
+	    [size](auto const& ei) { return (ei.second.size() == size) || (ei.second.size() == 0); });
 	bool const data_value = std::all_of(data.cbegin(), data.cend(), [size](auto const& list) {
 		return std::visit([size](auto const& d) { return d.size() == size; }, list.second);
 	});

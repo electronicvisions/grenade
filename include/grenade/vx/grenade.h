@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/event.h"
+#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/extract_output.h"
