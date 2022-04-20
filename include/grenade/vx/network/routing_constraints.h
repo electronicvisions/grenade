@@ -2,8 +2,8 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/visibility.h"
 #include <map>
 #include <set>
@@ -39,16 +39,16 @@ struct RoutingConstraints
 	struct InternalConnection
 	{
 		/** Source neuron. */
-		halco::hicann_dls::vx::v2::AtomicNeuronOnDLS source;
+		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS source;
 		/** Target neuron. */
-		halco::hicann_dls::vx::v2::AtomicNeuronOnDLS target;
+		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
 		std::pair<ProjectionDescriptor, size_t> descriptor;
 		/** Receptor type of connection. */
 		Projection::ReceptorType receptor_type;
 
 		/** Get PADI-bus onto which the synapse is to be placed. */
-		halco::hicann_dls::vx::v2::PADIBusOnDLS toPADIBusOnDLS() const SYMBOL_VISIBLE;
+		halco::hicann_dls::vx::v3::PADIBusOnDLS toPADIBusOnDLS() const SYMBOL_VISIBLE;
 
 		bool operator==(InternalConnection const& other) const SYMBOL_VISIBLE;
 		bool operator!=(InternalConnection const& other) const SYMBOL_VISIBLE;
@@ -66,16 +66,16 @@ struct RoutingConstraints
 	struct BackgroundConnection
 	{
 		/** Source circuit. */
-		halco::hicann_dls::vx::v2::BackgroundSpikeSourceOnDLS source;
+		halco::hicann_dls::vx::v3::BackgroundSpikeSourceOnDLS source;
 		/** Target neuron. */
-		halco::hicann_dls::vx::v2::AtomicNeuronOnDLS target;
+		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
 		std::pair<ProjectionDescriptor, size_t> descriptor;
 		/** Receptor type of connection. */
 		Projection::ReceptorType receptor_type;
 
 		/** Get PADI-bus onto which the synapse is to be placed. */
-		halco::hicann_dls::vx::v2::PADIBusOnDLS toPADIBusOnDLS() const SYMBOL_VISIBLE;
+		halco::hicann_dls::vx::v3::PADIBusOnDLS toPADIBusOnDLS() const SYMBOL_VISIBLE;
 
 		bool operator==(BackgroundConnection const& other) const SYMBOL_VISIBLE;
 		bool operator!=(BackgroundConnection const& other) const SYMBOL_VISIBLE;
@@ -93,14 +93,14 @@ struct RoutingConstraints
 	struct ExternalConnection
 	{
 		/** Target neuron. */
-		halco::hicann_dls::vx::v2::AtomicNeuronOnDLS target;
+		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
 		std::pair<ProjectionDescriptor, size_t> descriptor;
 		/** Receptor type of connection. */
 		Projection::ReceptorType receptor_type;
 
 		/** Get PADI-bus block onto which the synapse is to be placed. */
-		halco::hicann_dls::vx::v2::PADIBusBlockOnDLS toPADIBusBlockOnDLS() const SYMBOL_VISIBLE;
+		halco::hicann_dls::vx::v3::PADIBusBlockOnDLS toPADIBusBlockOnDLS() const SYMBOL_VISIBLE;
 
 		bool operator==(ExternalConnection const& other) const SYMBOL_VISIBLE;
 		bool operator!=(ExternalConnection const& other) const SYMBOL_VISIBLE;
@@ -117,7 +117,7 @@ struct RoutingConstraints
 	 */
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, std::vector<std::pair<ProjectionDescriptor, size_t>>>,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	get_external_connections_per_hemisphere() const SYMBOL_VISIBLE;
 
 	/**
@@ -125,21 +125,21 @@ struct RoutingConstraints
 	 */
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, std::set<std::pair<PopulationDescriptor, size_t>>>,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	get_external_sources_to_hemisphere() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get in-degree per on-chip neuron.
 	 */
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	get_neuron_in_degree() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get in-degree per on-chip neuron for each incoming PADI-bus.
 	 */
 	halco::common::typed_array<
-	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>,
-	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	get_neuron_in_degree_per_padi_bus() const SYMBOL_VISIBLE;
 
 	/**
@@ -147,7 +147,7 @@ struct RoutingConstraints
 	 */
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, size_t>,
-	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	get_neuron_in_degree_per_receptor_type() const SYMBOL_VISIBLE;
 
 	/**
@@ -156,8 +156,8 @@ struct RoutingConstraints
 	halco::common::typed_array<
 	    halco::common::typed_array<
 	        std::map<Projection::ReceptorType, size_t>,
-	        halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>,
-	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	        halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	get_neuron_in_degree_per_receptor_type_per_padi_bus() const SYMBOL_VISIBLE;
 
 	/**
@@ -165,7 +165,7 @@ struct RoutingConstraints
 	 */
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, size_t>,
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	get_num_synapse_rows_per_padi_bus_per_receptor_type() const SYMBOL_VISIBLE;
 
 	/**
@@ -173,21 +173,21 @@ struct RoutingConstraints
 	 * This is the accumulation of all numbers of synapse rows required for different receptor types
 	 * on each PADI-bus.
 	 */
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	get_num_synapse_rows_per_padi_bus() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get neurons which are neither recorded nor serve as source of (a) connection(s).
 	 */
-	std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> get_neither_recorded_nor_source_neurons()
+	std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> get_neither_recorded_nor_source_neurons()
 	    const SYMBOL_VISIBLE;
 
 	/**
 	 * Get on-chip neurons forwarding their events per neuron event output.
 	 */
 	std::map<
-	    halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS,
-	    std::vector<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+	    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
+	    std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 	get_neurons_on_event_output() const SYMBOL_VISIBLE;
 
 	/**
@@ -195,8 +195,8 @@ struct RoutingConstraints
 	 * This function assumes the crossbar to forward all events at every node.
 	 */
 	std::map<
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS,
-	    std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS,
+	    std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 	get_neurons_on_padi_bus() const SYMBOL_VISIBLE;
 
 	/**
@@ -204,14 +204,14 @@ struct RoutingConstraints
 	 * This function assumes the crossbar to forward all events at every node.
 	 */
 	std::map<
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS,
-	    std::set<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS>>
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS,
+	    std::set<halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS>>
 	get_neuron_event_outputs_on_padi_bus() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get number of background spike sources projecting onto each PADI-bus.
 	 */
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	get_num_background_sources_on_padi_bus() const SYMBOL_VISIBLE;
 
 	/**
@@ -227,13 +227,13 @@ struct RoutingConstraints
 		/**
 		 * Neuron sources.
 		 */
-		std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> neuron_sources;
+		std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> neuron_sources;
 
 		/**
 		 * Neuron circuits, which don't serve as source for any other target neuron but are still
 		 * recorded and therefore elicit spike events.
 		 */
-		std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> only_recorded_neurons;
+		std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> only_recorded_neurons;
 
 		/**
 		 * Internal connections.
@@ -249,7 +249,7 @@ struct RoutingConstraints
 	/**
 	 * Get constraints for each PADI-bus.
 	 */
-	halco::common::typed_array<PADIBusConstraints, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	halco::common::typed_array<PADIBusConstraints, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	get_padi_bus_constraints() const SYMBOL_VISIBLE;
 
 private:

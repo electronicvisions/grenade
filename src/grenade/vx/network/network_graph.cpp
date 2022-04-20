@@ -45,8 +45,8 @@ NetworkGraph::SpikeLabels const& NetworkGraph::get_spike_labels() const
 bool NetworkGraph::valid() const
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	auto logger = log4cxx::Logger::getLogger("grenade.NetworkGraph.valid()");
 	assert(m_network);
@@ -490,7 +490,7 @@ NetworkGraph::PlacedConnection NetworkGraph::get_placed_connection(
 	assert(synapse.index_column < columns.size());
 	PlacedConnection placed_connection{
 	    synapse.weight,
-	    halco::hicann_dls::vx::v2::SynapseRowOnDLS(
+	    halco::hicann_dls::vx::v3::SynapseRowOnDLS(
 	        rows[synapse.index_row], synapse_array_view_sparse.get_synram()),
 	    columns[synapse.index_column]};
 	return placed_connection;

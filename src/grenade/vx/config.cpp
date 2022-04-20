@@ -30,7 +30,7 @@ bool ChipConfig::operator!=(ChipConfig const& other) const
 }
 
 ChipConfig convert_to_chip(
-    stadls::vx::v2::Dumper::done_type const& cocos, std::optional<ChipConfig> const& previous)
+    stadls::vx::v3::Dumper::done_type const& cocos, std::optional<ChipConfig> const& previous)
 {
 	ChipConfig chip;
 	if (previous) {
@@ -39,25 +39,25 @@ ChipConfig convert_to_chip(
 	auto const apply_coco = [&chip](auto const& coco) {
 		auto const& [coord, config] = coco;
 		typedef std::decay_t<decltype(config)> config_t;
-		if constexpr (std::is_same_v<config_t, haldls::vx::v2::CommonNeuronBackendConfig>) {
+		if constexpr (std::is_same_v<config_t, haldls::vx::v3::CommonNeuronBackendConfig>) {
 			chip.neuron_backend[coord] = config;
-		} else if constexpr (std::is_same_v<config_t, lola::vx::v2::Crossbar>) {
+		} else if constexpr (std::is_same_v<config_t, lola::vx::v3::Crossbar>) {
 			chip.crossbar = config;
-		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::BackgroundSpikeSource>) {
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v3::BackgroundSpikeSource>) {
 			chip.background_spike_sources[coord] = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::ReadoutSourceSelection>) {
 			chip.readout_source_selection = config;
 		} else if constexpr (std::is_same_v<config_t, haldls::vx::MADCConfig>) {
 			chip.madc_config = config;
-		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::CommonPADIBusConfig>) {
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v3::CommonPADIBusConfig>) {
 			chip.hemispheres[coord.toHemisphereOnDLS()].common_padi_bus_config = config;
-		} else if constexpr (std::is_same_v<config_t, haldls::vx::v2::SynapseDriverConfig>) {
+		} else if constexpr (std::is_same_v<config_t, haldls::vx::v3::SynapseDriverConfig>) {
 			chip.hemispheres[coord.toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 			    .synapse_driver_block[coord.toSynapseDriverOnSynapseDriverBlock()] = config;
-		} else if constexpr (std::is_same_v<config_t, lola::vx::v2::AtomicNeuron>) {
+		} else if constexpr (std::is_same_v<config_t, lola::vx::v3::AtomicNeuron>) {
 			chip.hemispheres[coord.toNeuronRowOnDLS().toHemisphereOnDLS()]
 			    .neuron_block[coord.toNeuronColumnOnDLS()] = config;
-		} else if constexpr (std::is_same_v<config_t, lola::vx::v2::SynapseMatrix>) {
+		} else if constexpr (std::is_same_v<config_t, lola::vx::v3::SynapseMatrix>) {
 			chip.hemispheres[coord.toHemisphereOnDLS()].synapse_matrix = config;
 		}
 	};

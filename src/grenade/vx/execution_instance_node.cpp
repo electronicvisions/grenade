@@ -29,9 +29,9 @@ ExecutionInstanceNode::ExecutionInstanceNode(
 
 void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 {
-	using namespace stadls::vx::v2;
+	using namespace stadls::vx::v3;
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 
 	ExecutionInstanceBuilder builder(
 	    graph, execution_instance, input_data_map, data_map, chip_config, playback_hooks);

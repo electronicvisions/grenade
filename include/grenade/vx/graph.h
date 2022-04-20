@@ -5,7 +5,7 @@
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include <cstddef>
 #include <iosfwd>
@@ -191,7 +191,7 @@ public:
 
 	typedef std::map<
 	    coordinate::ExecutionIndex,
-	    std::map<halco::hicann_dls::vx::v2::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
+	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
 	    ordered_vertices_type;
 
 	/**

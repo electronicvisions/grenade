@@ -4,7 +4,7 @@
 
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/v2/timer.h"
+#include "haldls/vx/v3/timer.h"
 
 namespace cereal {
 class access;
@@ -53,7 +53,7 @@ public:
 	    size_t input_size,
 	    size_t stride,
 	    size_t num_sends = 1,
-	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
+	    haldls::vx::v3::Timer::Value wait_between_events = haldls::vx::v3::Timer::Value(25),
 	    bool enable_loopback = false);
 
 	/**
@@ -85,7 +85,7 @@ private:
 	MAC m_mac{};
 
 	size_t m_num_sends{};
-	haldls::vx::v2::Timer::Value m_wait_between_events{};
+	haldls::vx::v3::Timer::Value m_wait_between_events{};
 
 	friend class cereal::access;
 	template <typename Archive>

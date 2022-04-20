@@ -3,11 +3,11 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/jit_graph_executor.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 
 namespace grenade::vx::network {
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,

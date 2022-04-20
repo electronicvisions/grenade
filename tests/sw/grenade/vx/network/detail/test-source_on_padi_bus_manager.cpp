@@ -3,11 +3,11 @@
 #include "grenade/vx/network/detail/source_on_padi_bus_manager.h"
 #include "grenade/vx/network/detail/source_on_padi_bus_manager.tcc"
 #include "halco/common/iter_all.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 
 
 using namespace grenade::vx::network::detail;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 TEST(detail_SourceOnPADIBusManager, split_linear)
@@ -20,10 +20,10 @@ TEST(detail_SourceOnPADIBusManager, split_linear)
 	}
 	auto const split = SourceOnPADIBusManager::split_linear(filter);
 	std::vector<std::vector<size_t>> expectation(2);
-	for (size_t i = 0; i < lola::vx::v2::SynapseMatrix::Label::size; ++i) {
+	for (size_t i = 0; i < lola::vx::v3::SynapseMatrix::Label::size; ++i) {
 		expectation.at(0).push_back(filter.at(i));
 	}
-	for (size_t i = lola::vx::v2::SynapseMatrix::Label::size; i < filter.size(); ++i) {
+	for (size_t i = lola::vx::v3::SynapseMatrix::Label::size; i < filter.size(); ++i) {
 		expectation.at(1).push_back(filter.at(i));
 	}
 	EXPECT_EQ(split, expectation);
@@ -87,11 +87,11 @@ TEST(detail_SourceOnPADIBusManager, distribute_external_sources_linear)
 TEST(detail_SourceOnPADIBusManager, get_allocation_requests_internal)
 {
 	std::vector<std::vector<size_t>> filter(2);
-	for (size_t i = 0; i < lola::vx::v2::SynapseMatrix::Label::size; ++i) {
+	for (size_t i = 0; i < lola::vx::v3::SynapseMatrix::Label::size; ++i) {
 		filter.at(0).push_back(i);
 	}
 	for (size_t i = 0; i < 32; ++i) {
-		filter.at(1).push_back(i + lola::vx::v2::SynapseMatrix::Label::size);
+		filter.at(1).push_back(i + lola::vx::v3::SynapseMatrix::Label::size);
 	}
 	PADIBusOnPADIBusBlock padi_bus(Enum(2));
 
@@ -127,11 +127,11 @@ TEST(detail_SourceOnPADIBusManager, get_allocation_requests_internal)
 TEST(detail_SourceOnPADIBusManager, get_allocation_requests_background)
 {
 	std::vector<std::vector<size_t>> filter(2);
-	for (size_t i = 0; i < lola::vx::v2::SynapseMatrix::Label::size; ++i) {
+	for (size_t i = 0; i < lola::vx::v3::SynapseMatrix::Label::size; ++i) {
 		filter.at(0).push_back(i);
 	}
 	for (size_t i = 0; i < 32; ++i) {
-		filter.at(1).push_back(i + lola::vx::v2::SynapseMatrix::Label::size);
+		filter.at(1).push_back(i + lola::vx::v3::SynapseMatrix::Label::size);
 	}
 	PADIBusOnDLS padi_bus(Enum(2));
 

@@ -1,14 +1,14 @@
 #include "grenade/vx/ppu/status.h"
-#include "libnux/vx/v2/correlation.h"
-#include "libnux/vx/v2/dls.h"
-#include "libnux/vx/v2/reset_neurons.h"
-#include "libnux/vx/v2/time.h"
-#include "libnux/vx/v2/vector_convert.h"
-#include "libnux/vx/v2/vector_math.h"
+#include "libnux/vx/v3/correlation.h"
+#include "libnux/vx/v3/dls.h"
+#include "libnux/vx/v3/reset_neurons.h"
+#include "libnux/vx/v3/time.h"
+#include "libnux/vx/v3/vector_convert.h"
+#include "libnux/vx/v3/vector_math.h"
 #include <s2pp.h>
 
 using namespace grenade::vx::ppu;
-using namespace libnux::vx::v2;
+using namespace libnux::vx::v3;
 
 // output: cadc measurement
 volatile __vector int8_t cadc_result[dls_num_vectors_per_row];

@@ -3,11 +3,11 @@
 #include "grenade/vx/transformation/mac_spiketrain_generator.h"
 
 #include "grenade/vx/io_data_map.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "haldls/vx/v2/event.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "haldls/vx/v3/event.h"
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 TEST(MACSpikeTrainGenerator, get_spike_label)
 {
@@ -80,7 +80,7 @@ TEST(MACSpikeTrainGenerator, apply)
 	}
 
 	size_t num_sends = 2;
-	haldls::vx::v2::Timer::Value wait_between_events(3);
+	haldls::vx::v3::Timer::Value wait_between_events(3);
 
 	grenade::vx::transformation::MACSpikeTrainGenerator generator(
 	    {hemisphere_size_top, hemisphere_size_bot}, num_sends, wait_between_events);

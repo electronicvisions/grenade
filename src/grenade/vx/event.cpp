@@ -1,6 +1,6 @@
 #include "grenade/vx/event.h"
 
-#include "stadls/vx/v2/playback_program_builder.h"
+#include "stadls/vx/v3/playback_program_builder.h"
 
 namespace grenade::vx {
 

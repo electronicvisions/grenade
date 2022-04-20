@@ -1,9 +1,9 @@
 #pragma once
 #include "grenade/vx/ppu/status.h"
-#include "halco/hicann-dls/vx/v2/ppu.h"
+#include "halco/hicann-dls/vx/v3/ppu.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
-#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
 
 namespace grenade::vx::generator {
 
@@ -14,7 +14,7 @@ namespace grenade::vx::generator {
 struct BlockingPPUCommand
 {
 	typedef hate::Nil Result;
-	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
 
 	/**
 	 * Construct blocking PPU command.
@@ -22,18 +22,18 @@ struct BlockingPPUCommand
 	 * @param status Command to place
 	 */
 	BlockingPPUCommand(
-	    halco::hicann_dls::vx::v2::PPUMemoryWordOnPPU const& coord,
+	    halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& coord,
 	    grenade::vx::ppu::Status const status) :
 	    m_coord(coord), m_status(status)
 	{}
 
 protected:
-	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<BlockingPPUCommand>(BlockingPPUCommand const&);
 
 private:
-	halco::hicann_dls::vx::v2::PPUMemoryWordOnPPU m_coord;
+	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_coord;
 	grenade::vx::ppu::Status m_status;
 };
 

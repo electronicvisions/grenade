@@ -6,14 +6,14 @@
 #include "hate/indent.h"
 #include "hate/join.h"
 #include "hate/math.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <sstream>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::network {
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 PADIBusOnPADIBusBlock SourceOnPADIBusManager::InternalSource::toPADIBusOnPADIBusBlock() const
 {
@@ -31,7 +31,7 @@ bool SourceOnPADIBusManager::Partition::Group::valid() const
 		LOG4CXX_ERROR(logger, "valid(): Partitioned source group indices are not unique.");
 		return false;
 	}
-	if (sources.size() > lola::vx::v2::SynapseMatrix::Label::size) {
+	if (sources.size() > lola::vx::v3::SynapseMatrix::Label::size) {
 		LOG4CXX_ERROR(logger, "valid(): Partitioned source group indices are too many.");
 		return false;
 	}

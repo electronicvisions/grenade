@@ -3,9 +3,9 @@
 #include "grenade/vx/transformation/concatenation.h"
 
 #include "grenade/vx/connection_type.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "haldls/vx/v2/event.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "haldls/vx/v3/event.h"
 
 using namespace grenade::vx;
 using namespace grenade::vx::transformation;

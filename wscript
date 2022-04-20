@@ -65,7 +65,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'halco_hicann_dls_vx_v2', 'lola_vx_v2', 'haldls_vx_v2', 'stadls_vx_v2', 'TBB'],
+        use = ['grenade_inc', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB'],
         depends_on = ['grenade_ppu_base_vx'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
@@ -75,8 +75,8 @@ def build(bld):
             target = 'grenade_ppu_base_vx',
             features = 'cxx',
             source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp'),
-            use = ['grenade_inc', 'nux_vx_v2', 'nux_runtime_vx_v2'],
-            env = bld.all_envs['nux_vx_v2'],
+            use = ['grenade_inc', 'nux_vx_v3', 'nux_runtime_vx_v3'],
+            env = bld.all_envs['nux_vx_v3'],
         )
 
     bld(
@@ -95,7 +95,7 @@ def build(bld):
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/hw/grenade/vx/**/test-*.cpp'),
         test_main = 'tests/common/grenade/vx/main.cpp',
-        use = ['grenade_vx', 'stadls_vx_v2', 'GTEST', 'haldls_vx_v2', 'lola_vx_v2'],
+        use = ['grenade_vx', 'stadls_vx_v3', 'GTEST', 'haldls_vx_v3', 'lola_vx_v3'],
         install_path = '${PREFIX}/bin',
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=240,

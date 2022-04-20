@@ -1,19 +1,19 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v2/background.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/background.h"
-#include "haldls/vx/v2/madc.h"
-#include "haldls/vx/v2/padi.h"
-#include "haldls/vx/v2/readout.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/background.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/background.h"
+#include "haldls/vx/v3/madc.h"
+#include "haldls/vx/v3/padi.h"
+#include "haldls/vx/v3/readout.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/neuron.h"
-#include "lola/vx/v2/routing_crossbar.h"
-#include "lola/vx/v2/synapse.h"
-#include "stadls/vx/v2/dumper.h"
+#include "lola/vx/v3/neuron.h"
+#include "lola/vx/v3/routing_crossbar.h"
+#include "lola/vx/v3/synapse.h"
+#include "stadls/vx/v3/dumper.h"
 #include <optional>
 #include <boost/hana/adapt_struct.hpp>
 
@@ -29,19 +29,19 @@ public:
 	HemisphereConfig() SYMBOL_VISIBLE;
 
 	/** Synapse matrix. */
-	lola::vx::v2::SynapseMatrix synapse_matrix;
+	lola::vx::v3::SynapseMatrix synapse_matrix;
 
 	typedef halco::common::typed_array<
-	    haldls::vx::v2::SynapseDriverConfig,
-	    halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock>
+	    haldls::vx::v3::SynapseDriverConfig,
+	    halco::hicann_dls::vx::v3::SynapseDriverOnSynapseDriverBlock>
 	    _synapse_driver_block_type GENPYBIND(visible);
 	/** Synapse driver block. TODO: should be lola container. */
 	_synapse_driver_block_type synapse_driver_block;
 
-	haldls::vx::v2::CommonPADIBusConfig common_padi_bus_config;
+	haldls::vx::v3::CommonPADIBusConfig common_padi_bus_config;
 
 	typedef halco::common::
-	    typed_array<lola::vx::v2::AtomicNeuron, halco::hicann_dls::vx::v2::NeuronColumnOnDLS>
+	    typed_array<lola::vx::v3::AtomicNeuron, halco::hicann_dls::vx::v3::NeuronColumnOnDLS>
 	        _neuron_block_type GENPYBIND(opaque);
 	/** Neuron block. TODO: should be lola container. */
 	_neuron_block_type neuron_block;
@@ -62,18 +62,18 @@ public:
 	ChipConfig() SYMBOL_VISIBLE;
 
 	typedef halco::common::
-	    typed_array<grenade::vx::HemisphereConfig, halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    typed_array<grenade::vx::HemisphereConfig, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	        _hemispheres_type GENPYBIND(opaque);
 
 	/** HemisphereConfig configuration. */
 	_hemispheres_type hemispheres;
 
 	/** Crossbar configuration. */
-	lola::vx::v2::Crossbar crossbar;
+	lola::vx::v3::Crossbar crossbar;
 
 	typedef halco::common::typed_array<
-	    haldls::vx::v2::BackgroundSpikeSource,
-	    haldls::vx::v2::BackgroundSpikeSource::coordinate_type>
+	    haldls::vx::v3::BackgroundSpikeSource,
+	    haldls::vx::v3::BackgroundSpikeSource::coordinate_type>
 	    _background_spike_sources_type GENPYBIND(opaque);
 
 	/** Background spike source configuration. */
@@ -86,8 +86,8 @@ public:
 	haldls::vx::MADCConfig madc_config;
 
 	typedef halco::common::typed_array<
-	    haldls::vx::v2::CommonNeuronBackendConfig,
-	    haldls::vx::v2::CommonNeuronBackendConfig::coordinate_type>
+	    haldls::vx::v3::CommonNeuronBackendConfig,
+	    haldls::vx::v3::CommonNeuronBackendConfig::coordinate_type>
 	    _neuron_backend_type GENPYBIND(visible);
 
 	/** Neuron backend configuration. */
@@ -104,7 +104,7 @@ public:
  * @param previous Optional previous ChipConfig to apply changes to
  */
 ChipConfig GENPYBIND(visible) convert_to_chip(
-    stadls::vx::v2::Dumper::done_type const& cocos,
+    stadls::vx::v3::Dumper::done_type const& cocos,
     std::optional<ChipConfig> const& previous = std::nullopt) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx

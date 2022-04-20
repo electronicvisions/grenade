@@ -3,8 +3,8 @@
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "haldls/vx/v2/systime.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "haldls/vx/v3/systime.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -18,7 +18,7 @@ namespace network {
  * @return Time-series neuron spike data per batch entry
  */
 std::vector<
-    std::map<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, std::vector<haldls::vx::v2::ChipTime>>>
+    std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<haldls::vx::v3::ChipTime>>>
 extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
 
 
@@ -29,7 +29,7 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph) 
  * @return Time-series MADC sample data per batch entry
  */
 std::vector<
-    std::vector<std::pair<haldls::vx::v2::ChipTime, haldls::vx::v2::MADCSampleFromChip::Value>>>
+    std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
 
 

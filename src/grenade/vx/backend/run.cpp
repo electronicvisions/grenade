@@ -1,12 +1,12 @@
 #include "grenade/vx/backend/run.h"
 
-#include "halco/hicann-dls/vx/v2/coordinates.h"
+#include "halco/hicann-dls/vx/v3/coordinates.h"
 #include "haldls/vx/arq.h"
 #include "haldls/vx/phy.h"
-#include "haldls/vx/v2/barrier.h"
+#include "haldls/vx/v3/barrier.h"
 #include "hate/timer.h"
-#include "stadls/vx/v2/playback_program_builder.h"
-#include "stadls/vx/v2/run.h"
+#include "stadls/vx/v3/playback_program_builder.h"
+#include "stadls/vx/v3/run.h"
 #include <sstream>
 #include <log4cxx/logger.h>
 
@@ -14,13 +14,13 @@ namespace {
 
 void check_link_notifications(
     log4cxx::Logger* logger,
-    stadls::vx::v2::PlaybackProgram::highspeed_link_notifications_type const& link_notifications,
+    stadls::vx::v3::PlaybackProgram::highspeed_link_notifications_type const& link_notifications,
     size_t n_expected_notifications)
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
 
 	std::map<PhyStatusOnFPGA, HighspeedLinkNotification> notis_per_phy;
 	for (auto const& noti : link_notifications) {
@@ -51,12 +51,12 @@ template <typename Connection>
 void perform_post_fail_analysis(
     log4cxx::Logger* logger,
     Connection& connection,
-    stadls::vx::v2::PlaybackProgram const& dead_program)
+    stadls::vx::v3::PlaybackProgram const& dead_program)
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
 
 	{
 		std::stringstream ss;
@@ -102,16 +102,16 @@ void perform_post_fail_analysis(
 
 namespace grenade::vx::backend {
 
-using namespace stadls::vx::v2;
+using namespace stadls::vx::v3;
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram& program)
 {
 	static log4cxx::Logger* const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 	stadls::vx::RunTimeInfo ret;
 	try {
-		ret = stadls::vx::v2::run(connection.m_connection, program);
+		ret = stadls::vx::v3::run(connection.m_connection, program);
 		check_link_notifications(
 		    logger, program.get_highspeed_link_notifications(),
 		    connection.m_expected_link_notification_count);

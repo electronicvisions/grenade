@@ -66,7 +66,7 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 
 	os << "SynapseRow modes (not disabled):\n";
 	for (auto const& [row, mode] : result.synapse_row_modes) {
-		if (mode != haldls::vx::v2::SynapseDriverConfig::RowMode::disabled) {
+		if (mode != haldls::vx::v3::SynapseDriverConfig::RowMode::disabled) {
 			os << '\t' << row << " " << mode << '\n';
 		}
 	}

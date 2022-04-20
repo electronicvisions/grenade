@@ -21,11 +21,11 @@ TEST(IODataMap, General)
 	EXPECT_EQ(map.batch_size(), 2);
 	EXPECT_TRUE(map.valid());
 
-	map.runtime = {haldls::vx::v2::Timer::Value(0)};
+	map.runtime = {haldls::vx::v3::Timer::Value(0)};
 	EXPECT_FALSE(map.valid());
 	EXPECT_THROW(map.batch_size(), std::runtime_error);
 	auto const runtime =
-	    std::vector{haldls::vx::v2::Timer::Value(0), haldls::vx::v2::Timer::Value(1)};
+	    std::vector{haldls::vx::v3::Timer::Value(0), haldls::vx::v3::Timer::Value(1)};
 	map.runtime = runtime;
 	EXPECT_TRUE(map.valid());
 	EXPECT_EQ(map.batch_size(), 2);
@@ -51,7 +51,7 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.data.contains(1));
 	EXPECT_EQ(map.data.at(1), data_1);
 	EXPECT_EQ(map.runtime, runtime);
-	auto const runtime_2 = std::vector{haldls::vx::v2::Timer::Value(0)};
+	auto const runtime_2 = std::vector{haldls::vx::v3::Timer::Value(0)};
 	map_2.runtime = runtime_2;
 	map.merge(map_2);
 	EXPECT_EQ(map.runtime, runtime);

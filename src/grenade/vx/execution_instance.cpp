@@ -7,11 +7,11 @@
 namespace grenade::vx::coordinate {
 
 ExecutionInstance::ExecutionInstance(
-    ExecutionIndex const execution_index, halco::hicann_dls::vx::v2::DLSGlobal const dls) :
+    ExecutionIndex const execution_index, halco::hicann_dls::vx::v3::DLSGlobal const dls) :
     m_execution_index(execution_index), m_dls_global(dls)
 {}
 
-halco::hicann_dls::vx::v2::DLSGlobal ExecutionInstance::toDLSGlobal() const
+halco::hicann_dls::vx::v3::DLSGlobal ExecutionInstance::toDLSGlobal() const
 {
 	return m_dls_global;
 }
@@ -43,7 +43,7 @@ size_t hash_value(ExecutionInstance const& e)
 {
 	size_t hash = 0;
 	boost::hash_combine(hash, boost::hash<ExecutionIndex>()(e.m_execution_index));
-	boost::hash_combine(hash, boost::hash<halco::hicann_dls::vx::v2::DLSGlobal>()(e.m_dls_global));
+	boost::hash_combine(hash, boost::hash<halco::hicann_dls::vx::v3::DLSGlobal>()(e.m_dls_global));
 	return hash;
 }
 

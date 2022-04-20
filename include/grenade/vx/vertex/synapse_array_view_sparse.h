@@ -2,7 +2,7 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <array>
 #include <cstddef>
 #include <iosfwd>
@@ -22,14 +22,14 @@ struct SynapseArrayViewSparse
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::v2::SynapseRowOnSynram> Rows;
-	typedef halco::hicann_dls::vx::v2::SynramOnDLS Synram;
-	typedef std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow> Columns;
+	typedef std::vector<halco::hicann_dls::vx::v3::SynapseRowOnSynram> Rows;
+	typedef halco::hicann_dls::vx::v3::SynramOnDLS Synram;
+	typedef std::vector<halco::hicann_dls::vx::v3::SynapseOnSynapseRow> Columns;
 
 	struct Synapse
 	{
-		lola::vx::v2::SynapseMatrix::Label label;
-		lola::vx::v2::SynapseMatrix::Weight weight;
+		lola::vx::v3::SynapseMatrix::Label label;
+		lola::vx::v3::SynapseMatrix::Weight weight;
 		size_t index_row;
 		size_t index_column;
 

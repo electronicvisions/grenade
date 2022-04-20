@@ -2,8 +2,8 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/ppu.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/padi.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/padi.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
@@ -27,14 +27,14 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar.nodes) {
-		node = haldls::vx::v2::CrossbarNode::drop_all;
+		node = haldls::vx::v3::CrossbarNode::drop_all;
 	}
 	for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
 			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_top(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
 			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_row_mode_bottom(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
 			m_config.hemispheres[hemisphere].synapse_driver_block[drv].set_enable_receiver(false);
 		}
 	}
@@ -42,7 +42,7 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 		m_config.neuron_backend[backend].set_enable_event_registers(false);
 	}
 	{
-		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
+		auto const new_matrix = std::make_unique<lola::vx::v3::SynapseMatrix>();
 		for (auto const& hemisphere : iter_all<HemisphereOnDLS>()) {
 			m_config.hemispheres[hemisphere].synapse_matrix = *new_matrix;
 		}
@@ -84,8 +84,8 @@ template <>
 void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const& data)
 {
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	// MADCReadoutView inputs size equals 1
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -159,9 +159,9 @@ void ExecutionInstanceConfigBuilder::process(
 	    m_config.hemispheres[data.get_coordinate().toSynapseDriverBlockOnDLS().toHemisphereOnDLS()]
 	        .synapse_driver_block[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
-	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
+	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
-	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
+	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::bottom]);
 	synapse_driver_config.set_row_address_compare_mask(data.get_config().row_address_compare_mask);
 	synapse_driver_config.set_enable_address_out(data.get_config().enable_address_out);
 	synapse_driver_config.set_enable_receiver(true);
@@ -197,8 +197,8 @@ template <>
 void ExecutionInstanceConfigBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 	size_t i = 0;
 	auto const& configs = data.get_configs();
 	auto& hemisphere = m_config.hemispheres[data.get_row().toHemisphereOnDLS()];
@@ -238,15 +238,15 @@ void ExecutionInstanceConfigBuilder::pre_process()
 }
 
 std::tuple<
-    stadls::vx::v2::PlaybackProgramBuilder,
-    std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
+    stadls::vx::v3::PlaybackProgramBuilder,
+    std::optional<lola::vx::v3::PPUElfFile::symbols_type>>
 ExecutionInstanceConfigBuilder::generate()
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
-	using namespace lola::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
+	using namespace lola::vx::v3;
 
 	PlaybackProgramBuilder builder;
 	// write static configuration

@@ -2,10 +2,10 @@
 #include "grenade/vx/config.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
-#include "stadls/vx/v2/playback_program_builder.h"
+#include "stadls/vx/v3/playback_program_builder.h"
 #include <optional>
 #include <tuple>
 
@@ -40,8 +40,8 @@ public:
 	 * symbols
 	 */
 	std::tuple<
-	    stadls::vx::v2::PlaybackProgramBuilder,
-	    std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
+	    stadls::vx::v3::PlaybackProgramBuilder,
+	    std::optional<lola::vx::v3::PPUElfFile::symbols_type>>
 	generate() SYMBOL_VISIBLE;
 
 private:
@@ -50,7 +50,7 @@ private:
 
 	ChipConfig m_config;
 
-	halco::common::typed_array<bool, halco::hicann_dls::vx::v2::NeuronResetOnDLS>
+	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
 	bool m_requires_ppu;
 	bool m_used_madc;

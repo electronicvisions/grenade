@@ -2,7 +2,7 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
-#include "haldls/vx/v2/event.h"
+#include "haldls/vx/v3/event.h"
 #include "hate/visibility.h"
 #include <iosfwd>
 #include <variant>
@@ -15,7 +15,7 @@ struct ConnectumConnection
 	typedef std::pair<PopulationDescriptor, size_t> Source;
 	Source source;
 
-	halco::hicann_dls::vx::v2::AtomicNeuronOnDLS target;
+	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 
 	Projection::ReceptorType receptor_type;
 	Projection::Connection::Weight weight;

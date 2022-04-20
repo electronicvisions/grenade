@@ -1,9 +1,9 @@
 #pragma once
 #include "grenade/vx/network/synapse_driver_on_padi_bus_manager.h"
 #include "halco/common/geometry.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <optional>
@@ -48,7 +48,7 @@ struct SynapseDriverOnDLSManager
 		/**
 		 * Shape(s) of allocation.
 		 */
-		std::map<halco::hicann_dls::vx::v2::PADIBusOnDLS, std::vector<Shape>> shapes;
+		std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, std::vector<Shape>> shapes;
 		/**
 		 * Potential labels of events which shall be forwarded exclusively to allocated synapse
 		 * drivers.
@@ -86,7 +86,7 @@ struct SynapseDriverOnDLSManager
 		/**
 		 * Collection of synapse drivers with their mask.
 		 */
-		std::map<halco::hicann_dls::vx::v2::PADIBusOnDLS, SynapseDriverOnPADIBusManager::Allocation>
+		std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, SynapseDriverOnPADIBusManager::Allocation>
 		    synapse_drivers;
 		/**
 		 * Labels of events.
@@ -102,7 +102,7 @@ struct SynapseDriverOnDLSManager
 	 * @param unavailable_synapse_drivers Synapse drivers excluded from allocation(s).
 	 */
 	SynapseDriverOnDLSManager(
-	    std::set<halco::hicann_dls::vx::v2::SynapseDriverOnDLS> const& unavailable_synapse_drivers =
+	    std::set<halco::hicann_dls::vx::v3::SynapseDriverOnDLS> const& unavailable_synapse_drivers =
 	        {}) SYMBOL_VISIBLE;
 
 	/**
@@ -120,7 +120,7 @@ struct SynapseDriverOnDLSManager
 
 private:
 	halco::common::
-	    typed_array<SynapseDriverOnPADIBusManager, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	    typed_array<SynapseDriverOnPADIBusManager, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	        m_synapse_driver_on_padi_bus_manager;
 	log4cxx::Logger* m_logger;
 };

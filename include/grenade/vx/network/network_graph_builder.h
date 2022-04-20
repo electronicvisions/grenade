@@ -7,11 +7,11 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_result.h"
-#include "halco/hicann-dls/vx/v2/background.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/background.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
 #include <map>
 #include <memory>
@@ -67,15 +67,15 @@ public:
 		std::optional<Graph::vertex_descriptor> external_input;
 		std::map<
 		    PopulationDescriptor,
-		    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Graph::vertex_descriptor>>
+		    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, Graph::vertex_descriptor>>
 		    background_spike_sources;
 		std::optional<Graph::vertex_descriptor> crossbar_l2_input;
-		std::map<halco::hicann_dls::vx::v2::CrossbarNodeOnDLS, Graph::vertex_descriptor>
+		std::map<halco::hicann_dls::vx::v3::CrossbarNodeOnDLS, Graph::vertex_descriptor>
 		    crossbar_nodes;
-		std::map<halco::hicann_dls::vx::v2::PADIBusOnDLS, Graph::vertex_descriptor> padi_busses;
-		std::map<halco::hicann_dls::vx::v2::SynapseDriverOnDLS, Graph::vertex_descriptor>
+		std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, Graph::vertex_descriptor> padi_busses;
+		std::map<halco::hicann_dls::vx::v3::SynapseDriverOnDLS, Graph::vertex_descriptor>
 		    synapse_drivers;
-		std::map<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS, Graph::vertex_descriptor>
+		std::map<halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS, Graph::vertex_descriptor>
 		    neuron_event_outputs;
 		std::map<PopulationDescriptor, PlacedPopulation> populations;
 		std::map<ProjectionDescriptor, PlacedProjection> projections;
@@ -130,19 +130,19 @@ public:
 	void add_population(
 	    Graph& graph,
 	    Resources& resources,
-	    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, std::vector<Input>> const& input,
+	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, std::vector<Input>> const& input,
 	    PopulationDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
-	std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input> add_projection_from_external_input(
+	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, Input> add_projection_from_external_input(
 	    Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
-	std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input>
+	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, Input>
 	add_projection_from_background_spike_source(
 	    Graph& graph,
 	    Resources& resources,
@@ -150,7 +150,7 @@ public:
 	    RoutingResult const& connection_result,
 	    coordinate::ExecutionInstance const& instance) const;
 
-	std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, Input> add_projection_from_internal_input(
+	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, Input> add_projection_from_internal_input(
 	    Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,

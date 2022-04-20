@@ -4,7 +4,7 @@
 #include "grenade/vx/graph_representation.h"
 #include "grenade/vx/port.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/v2/timer.h"
+#include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
 #include <map>
 #include <memory>
@@ -48,7 +48,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::vector<haldls::vx::v2::Timer::Value> runtime;
+	std::vector<haldls::vx::v3::Timer::Value> runtime;
 
 	IODataMap() SYMBOL_VISIBLE;
 
@@ -117,7 +117,7 @@ struct ConstantReferenceIODataMap
 	std::map<detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
-	std::vector<haldls::vx::v2::Timer::Value> runtime;
+	std::vector<haldls::vx::v3::Timer::Value> runtime;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

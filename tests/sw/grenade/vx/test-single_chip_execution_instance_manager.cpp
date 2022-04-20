@@ -2,7 +2,7 @@
 
 #include "grenade/vx/single_chip_execution_instance_manager.h"
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 TEST(SingleChipExecutionInstanceManager, General)
 {

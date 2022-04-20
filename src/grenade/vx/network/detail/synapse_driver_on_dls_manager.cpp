@@ -7,7 +7,7 @@
 namespace grenade::vx::network::detail {
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 std::set<std::set<PADIBusOnDLS>> SynapseDriverOnDLSManager::get_interdependent_padi_busses(
     std::vector<AllocationRequest> const& requested_allocations)
@@ -195,7 +195,7 @@ void SynapseDriverOnDLSManager::update_solution(
     std::vector<Allocation>& allocation,
     std::vector<SynapseDriverOnPADIBusManager::Allocation> const& local_allocations,
     AllocationRequestPerPADIBus::mapped_type const& requested_allocation,
-    halco::hicann_dls::vx::v2::PADIBusOnDLS const& padi_bus,
+    halco::hicann_dls::vx::v3::PADIBusOnDLS const& padi_bus,
     std::vector<AllocationRequest> const& requested_allocations,
     std::vector<int64_t> const& label_indices,
     std::vector<size_t> const& independent_allocation_requests,

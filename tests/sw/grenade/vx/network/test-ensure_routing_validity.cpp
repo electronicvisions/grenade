@@ -12,9 +12,9 @@
 #include <ranges>
 
 using namespace grenade::vx::network;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
-using namespace haldls::vx::v2;
+using namespace haldls::vx::v3;
 
 
 struct RandomNetworkGenerator

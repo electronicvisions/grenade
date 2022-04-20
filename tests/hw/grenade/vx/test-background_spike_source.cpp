@@ -8,18 +8,18 @@
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "haldls/vx/v2/systime.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "haldls/vx/v3/systime.h"
 #include "logging_ctrl.h"
-#include "stadls/vx/v2/init_generator.h"
-#include "stadls/vx/v2/playback_generator.h"
-#include "stadls/vx/v2/run.h"
+#include "stadls/vx/v3/init_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
+#include "stadls/vx/v3/run.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
-using namespace stadls::vx::v2;
-using namespace lola::vx::v2;
-using namespace haldls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
+using namespace stadls::vx::v3;
+using namespace lola::vx::v3;
+using namespace haldls::vx::v3;
 
 void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
@@ -60,7 +60,7 @@ void test_background_spike_source_regular(
 		    CrossbarNodeOnDLS(
 		        source_coord.toCrossbarInputOnDLS(),
 		        CrossbarOutputOnDLS(8 + source_coord % CrossbarL2OutputOnDLS::size)),
-		    haldls::vx::v2::CrossbarNode());
+		    haldls::vx::v3::CrossbarNode());
 
 		crossbar_nodes.push_back(g.add(crossbar_node, instance, {v1}));
 	}

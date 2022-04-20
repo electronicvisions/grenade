@@ -6,13 +6,13 @@
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing_builder.h"
-#include "haldls/vx/v2/event.h"
+#include "haldls/vx/v3/event.h"
 
 using namespace grenade::vx;
 using namespace grenade::vx::network;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
-using namespace haldls::vx::v2;
+using namespace haldls::vx::v3;
 
 TEST(network_InputGenerator, General)
 {

@@ -2,9 +2,9 @@
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
 #include "grenade/vx/network/synapse_driver_on_padi_bus_manager.h"
 #include "halco/common/geometry.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
 #include <set>
 #include <vector>
@@ -30,7 +30,7 @@ struct SynapseDriverOnDLSManager
 	 * @param requested_allocations Requested allocations from which to extract interdependent
 	 * collections
 	 */
-	static std::set<std::set<halco::hicann_dls::vx::v2::PADIBusOnDLS>>
+	static std::set<std::set<halco::hicann_dls::vx::v3::PADIBusOnDLS>>
 	get_interdependent_padi_busses(std::vector<AllocationRequest> const& requested_allocations)
 	    SYMBOL_VISIBLE;
 
@@ -41,7 +41,7 @@ struct SynapseDriverOnDLSManager
 	 * requested allocations
 	 */
 	typedef std::map<
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS,
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS,
 	    std::pair<
 	        std::vector<SynapseDriverOnPADIBusManager::AllocationRequest>,
 	        std::vector<size_t>>>
@@ -66,7 +66,7 @@ struct SynapseDriverOnDLSManager
 	 */
 	static std::vector<size_t> get_independent_allocation_requests(
 	    std::vector<AllocationRequest> const& requested_allocations,
-	    std::set<halco::hicann_dls::vx::v2::PADIBusOnDLS> const& padi_busses) SYMBOL_VISIBLE;
+	    std::set<halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_busses) SYMBOL_VISIBLE;
 
 	/**
 	 * Get unique dependent label groups on specified PADI-busses.
@@ -75,7 +75,7 @@ struct SynapseDriverOnDLSManager
 	 */
 	static std::vector<AllocationRequest::DependentLabelGroup> get_unique_dependent_label_groups(
 	    std::vector<AllocationRequest> const& requested_allocations,
-	    std::set<halco::hicann_dls::vx::v2::PADIBusOnDLS> const& padi_busses) SYMBOL_VISIBLE;
+	    std::set<halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_busses) SYMBOL_VISIBLE;
 
 	/**
 	 * Get label space.
@@ -143,7 +143,7 @@ struct SynapseDriverOnDLSManager
 	    std::vector<Allocation>& allocation,
 	    std::vector<SynapseDriverOnPADIBusManager::Allocation> const& local_allocations,
 	    AllocationRequestPerPADIBus::mapped_type const& requested_allocation,
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS const& padi_bus,
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS const& padi_bus,
 	    std::vector<AllocationRequest> const& requested_allocations,
 	    std::vector<int64_t> const& label_indices,
 	    std::vector<size_t> const& independent_allocation_requests,

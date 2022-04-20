@@ -4,9 +4,9 @@
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "hate/timer.h"
 #include <ostream>
 
@@ -35,14 +35,14 @@ NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph)
 
 	statistics.m_neuron_usage =
 	    static_cast<double>(statistics.m_num_neurons) /
-	    static_cast<double>(halco::hicann_dls::vx::v2::AtomicNeuronOnDLS::size);
+	    static_cast<double>(halco::hicann_dls::vx::v3::AtomicNeuronOnDLS::size);
 
 	statistics.m_synapse_usage = static_cast<double>(statistics.m_num_synapses) /
 	                             static_cast<double>(
-	                                 halco::hicann_dls::vx::v2::SynapseRowOnDLS::size *
-	                                 halco::hicann_dls::vx::v2::SynapseOnSynapseRow::size);
+	                                 halco::hicann_dls::vx::v3::SynapseRowOnDLS::size *
+	                                 halco::hicann_dls::vx::v3::SynapseOnSynapseRow::size);
 
-	std::set<halco::hicann_dls::vx::v2::SynapseDriverOnDLS> used_synapse_drivers;
+	std::set<halco::hicann_dls::vx::v3::SynapseDriverOnDLS> used_synapse_drivers;
 	for (auto const d :
 	     boost::make_iterator_range(boost::vertices(network_graph.get_graph().get_graph()))) {
 		auto const& vertex_property = network_graph.get_graph().get_vertex_property(d);
@@ -55,7 +55,7 @@ NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph)
 	statistics.m_num_synapse_drivers = used_synapse_drivers.size();
 	statistics.m_synapse_driver_usage =
 	    static_cast<double>(statistics.m_num_synapse_drivers) /
-	    static_cast<double>(halco::hicann_dls::vx::v2::SynapseDriverOnDLS::size);
+	    static_cast<double>(halco::hicann_dls::vx::v3::SynapseDriverOnDLS::size);
 
 	statistics.m_abstract_network_construction_duration = network.construction_duration;
 	statistics.m_hardware_network_construction_duration = network_graph.m_construction_duration;

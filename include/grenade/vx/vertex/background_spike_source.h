@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v2/background.h"
+#include "halco/hicann-dls/vx/v3/background.h"
 #include "haldls/vx/background.h"
 #include "hate/visibility.h"
 #include <array>

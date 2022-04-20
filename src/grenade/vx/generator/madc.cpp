@@ -1,16 +1,16 @@
 #include "grenade/vx/generator/madc.h"
 
-#include "halco/hicann-dls/vx/v2/barrier.h"
-#include "halco/hicann-dls/vx/v2/madc.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/madc.h"
-#include "stadls/vx/v2/playback_program_builder.h"
+#include "halco/hicann-dls/vx/v3/barrier.h"
+#include "halco/hicann-dls/vx/v3/madc.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/madc.h"
+#include "stadls/vx/v3/playback_program_builder.h"
 
 namespace grenade::vx::generator {
 
-using namespace haldls::vx::v2;
-using namespace stadls::vx::v2;
-using namespace halco::hicann_dls::vx::v2;
+using namespace haldls::vx::v3;
+using namespace stadls::vx::v3;
+using namespace halco::hicann_dls::vx::v3;
 
 PlaybackGeneratorReturn<MADCArm::Result> MADCArm::generate() const
 {

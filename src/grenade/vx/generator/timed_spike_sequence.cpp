@@ -1,20 +1,20 @@
 #include "grenade/vx/generator/timed_spike_sequence.h"
 
-#include "halco/hicann-dls/vx/v2/timing.h"
-#include "haldls/vx/v2/timer.h"
-#include "stadls/vx/v2/playback_program_builder.h"
+#include "halco/hicann-dls/vx/v3/timing.h"
+#include "haldls/vx/v3/timer.h"
+#include "stadls/vx/v3/playback_program_builder.h"
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::generator {
 
-stadls::vx::v2::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSequence::generate()
+stadls::vx::v3::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSequence::generate()
     const
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.generator.TimedSpikeSequence");
 
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
+	using namespace halco::hicann_dls::vx::v3;
 
 	// approx. 10ms in biological time deemed high enough to warn the user something is wrong
 	TimedSpike::Time const max_delay(TimedSpike::Time::fpga_clock_cycles_per_us * 10);

@@ -2,13 +2,13 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/event.h"
-#include "haldls/vx/v2/neuron.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/event.h"
+#include "haldls/vx/v3/neuron.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <chrono>
 #include <iosfwd>
 #include <map>
@@ -29,10 +29,10 @@ struct GENPYBIND(visible) RoutingResult
 	 */
 	struct PlacedConnection
 	{
-		lola::vx::v2::SynapseMatrix::Weight const weight;
-		lola::vx::v2::SynapseMatrix::Label const label;
-		halco::hicann_dls::vx::v2::SynapseRowOnDLS const synapse_row;
-		halco::hicann_dls::vx::v2::SynapseOnSynapseRow const synapse_on_row;
+		lola::vx::v3::SynapseMatrix::Weight const weight;
+		lola::vx::v3::SynapseMatrix::Label const label;
+		halco::hicann_dls::vx::v3::SynapseRowOnDLS const synapse_row;
+		halco::hicann_dls::vx::v3::SynapseOnSynapseRow const synapse_on_row;
 
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
@@ -43,7 +43,7 @@ struct GENPYBIND(visible) RoutingResult
 	/**
 	 * Spike label corresponding to each neuron in a external population.
 	 */
-	typedef std::map<PopulationDescriptor, std::vector<std::vector<haldls::vx::v2::SpikeLabel>>>
+	typedef std::map<PopulationDescriptor, std::vector<std::vector<haldls::vx::v3::SpikeLabel>>>
 	    ExternalSpikeLabels;
 	ExternalSpikeLabels external_spike_labels;
 
@@ -53,7 +53,7 @@ struct GENPYBIND(visible) RoutingResult
 	typedef std::map<
 	    PopulationDescriptor,
 	    std::
-	        map<halco::hicann_dls::vx::v2::HemisphereOnDLS, halco::hicann_dls::vx::v2::NeuronLabel>>
+	        map<halco::hicann_dls::vx::v3::HemisphereOnDLS, halco::hicann_dls::vx::v3::NeuronLabel>>
 	    BackgroundSpikeSourceLabels;
 	BackgroundSpikeSourceLabels background_spike_source_labels;
 
@@ -62,7 +62,7 @@ struct GENPYBIND(visible) RoutingResult
 	 */
 	typedef std::map<
 	    PopulationDescriptor,
-	    std::vector<std::optional<haldls::vx::v2::NeuronBackendConfig::AddressOut>>>
+	    std::vector<std::optional<haldls::vx::v3::NeuronBackendConfig::AddressOut>>>
 	    InternalNeuronLabels;
 	InternalNeuronLabels internal_neuron_labels;
 
@@ -72,8 +72,8 @@ struct GENPYBIND(visible) RoutingResult
 	 * considered disabled.
 	 */
 	typedef std::map<
-	    halco::hicann_dls::vx::v2::SynapseDriverOnDLS,
-	    haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask>
+	    halco::hicann_dls::vx::v3::SynapseDriverOnDLS,
+	    haldls::vx::v3::SynapseDriverConfig::RowAddressCompareMask>
 	    SynapseDriverRowAddressCompareMasks;
 	SynapseDriverRowAddressCompareMasks synapse_driver_compare_masks;
 
@@ -83,8 +83,8 @@ struct GENPYBIND(visible) RoutingResult
 	 * disabled.
 	 */
 	typedef std::map<
-	    halco::hicann_dls::vx::v2::SynapseRowOnDLS,
-	    haldls::vx::v2::SynapseDriverConfig::RowMode>
+	    halco::hicann_dls::vx::v3::SynapseRowOnDLS,
+	    haldls::vx::v3::SynapseDriverConfig::RowMode>
 	    SynapseRowModes;
 	SynapseRowModes synapse_row_modes;
 
@@ -93,7 +93,7 @@ struct GENPYBIND(visible) RoutingResult
 	 * This map is only required to feature used crossbar nodes, all other will be
 	 * considered disabled.
 	 */
-	typedef std::map<halco::hicann_dls::vx::v2::CrossbarNodeOnDLS, haldls::vx::v2::CrossbarNode>
+	typedef std::map<halco::hicann_dls::vx::v3::CrossbarNodeOnDLS, haldls::vx::v3::CrossbarNode>
 	    CrossbarNodes;
 	CrossbarNodes crossbar_nodes;
 

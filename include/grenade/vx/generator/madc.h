@@ -1,7 +1,7 @@
 #pragma once
 #include "hate/nil.h"
 #include "hate/visibility.h"
-#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
 
 namespace grenade::vx::generator {
 
@@ -11,10 +11,10 @@ namespace grenade::vx::generator {
 struct MADCArm
 {
 	typedef hate::Nil Result;
-	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCArm>(MADCArm const&);
 };
@@ -26,10 +26,10 @@ protected:
 struct MADCStart
 {
 	typedef hate::Nil Result;
-	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCStart>(MADCStart const&);
 };
@@ -41,10 +41,10 @@ protected:
 struct MADCStop
 {
 	typedef hate::Nil Result;
-	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCStop>(MADCStop const&);
 };

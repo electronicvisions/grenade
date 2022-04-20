@@ -2,10 +2,10 @@
 #include "grenade/vx/port.h"
 #include "grenade/vx/vertex/transformation.h"
 #include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/event.h"
-#include "haldls/vx/v2/timer.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/event.h"
+#include "haldls/vx/v3/timer.h"
 #include <vector>
 #include <gtest/gtest_prod.h>
 
@@ -32,10 +32,10 @@ struct MACSpikeTrainGenerator : public vertex::Transformation::Function
 	 * @param wait_between_events Wait time between input events in FPGA cycles
 	 */
 	MACSpikeTrainGenerator(
-	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::HemisphereOnDLS> const&
+	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS> const&
 	        hemisphere_sizes,
 	    size_t num_sends,
-	    haldls::vx::v2::Timer::Value wait_between_events) SYMBOL_VISIBLE;
+	    haldls::vx::v3::Timer::Value wait_between_events) SYMBOL_VISIBLE;
 
 	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 	Port output() const SYMBOL_VISIBLE;
@@ -53,11 +53,11 @@ private:
 	 * @param value Activation value to send
 	 * @return SpikeLabel value if activation value is larger than zero
 	 */
-	static std::optional<haldls::vx::v2::SpikeLabel> get_spike_label(
-	    halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver,
+	static std::optional<haldls::vx::v3::SpikeLabel> get_spike_label(
+	    halco::hicann_dls::vx::v3::SynapseDriverOnDLS const& driver,
 	    UInt5 const value) SYMBOL_VISIBLE;
 
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    m_hemisphere_sizes;
 	size_t m_num_sends{};
 	haldls::vx::Timer::Value m_wait_between_events{};

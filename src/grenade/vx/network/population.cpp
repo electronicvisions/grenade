@@ -95,7 +95,7 @@ std::ostream& operator<<(std::ostream& os, BackgroundSpikeSourcePopulation const
 	os << "\tcoordinate:\n";
 	for (auto const& [hemisphere, padi_bus] : population.coordinate) {
 		os << "\t\t"
-		   << halco::hicann_dls::vx::v2::PADIBusOnDLS(padi_bus, hemisphere.toPADIBusBlockOnDLS())
+		   << halco::hicann_dls::vx::v3::PADIBusOnDLS(padi_bus, hemisphere.toPADIBusBlockOnDLS())
 		   << "\n";
 	}
 	os << "\t" << population.config << "\n)";

@@ -54,7 +54,7 @@ struct GENPYBIND(visible) NetworkGraph
 	 */
 	typedef std::map<
 	    PopulationDescriptor,
-	    std::vector<std::vector<std::optional<haldls::vx::v2::SpikeLabel>>>>
+	    std::vector<std::vector<std::optional<haldls::vx::v3::SpikeLabel>>>>
 	    SpikeLabels;
 	GENPYBIND(getter_for(spike_labels))
 	SpikeLabels const& get_spike_labels() const SYMBOL_VISIBLE;
@@ -72,11 +72,11 @@ struct GENPYBIND(visible) NetworkGraph
 	struct PlacedConnection
 	{
 		/** Weight of connection. */
-		lola::vx::v2::SynapseMatrix::Weight weight;
+		lola::vx::v3::SynapseMatrix::Weight weight;
 		/** Vertical location. */
-		halco::hicann_dls::vx::v2::SynapseRowOnDLS synapse_row;
+		halco::hicann_dls::vx::v3::SynapseRowOnDLS synapse_row;
 		/** Horizontal location. */
-		halco::hicann_dls::vx::v2::SynapseOnSynapseRow synapse_on_row;
+		halco::hicann_dls::vx::v3::SynapseOnSynapseRow synapse_on_row;
 
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;

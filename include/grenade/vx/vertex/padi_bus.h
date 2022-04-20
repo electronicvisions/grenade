@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/visibility.h"
 #include <array>
 #include <iosfwd>
@@ -26,7 +26,7 @@ struct PADIBus
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef halco::hicann_dls::vx::v2::PADIBusOnDLS Coordinate;
+	typedef halco::hicann_dls::vx::v3::PADIBusOnDLS Coordinate;
 
 	PADIBus() = default;
 

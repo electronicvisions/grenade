@@ -3,9 +3,9 @@
 #include "hxcomm/common/connection_time_info.h"
 #include "hxcomm/vx/connection_variant.h"
 #include "stadls/vx/run_time_info.h"
-#include "stadls/vx/v2/init_generator.h"
-#include "stadls/vx/v2/playback_program.h"
-#include "stadls/vx/v2/reinit_stack_entry.h"
+#include "stadls/vx/v3/init_generator.h"
+#include "stadls/vx/v3/playback_program.h"
+#include "stadls/vx/v3/reinit_stack_entry.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -17,8 +17,8 @@
 namespace grenade::vx::backend {
 
 struct Connection;
-stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&);
-stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&&);
+stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
+stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
 
 
 /**
@@ -29,7 +29,7 @@ struct Connection
 	static constexpr char name[] = "Connection";
 
 	/** Accepted initialization generators. */
-	typedef std::variant<stadls::vx::v2::ExperimentInit, stadls::vx::v2::DigitalInit> Init;
+	typedef std::variant<stadls::vx::v3::ExperimentInit, stadls::vx::v3::DigitalInit> Init;
 
 	Connection() SYMBOL_VISIBLE;
 	Connection(hxcomm::vx::ConnectionVariant&& connection) SYMBOL_VISIBLE;
@@ -42,17 +42,17 @@ struct Connection
 
 	hxcomm::vx::ConnectionVariant&& release() SYMBOL_VISIBLE;
 
-	stadls::vx::v2::ReinitStackEntry create_reinit_stack_entry() SYMBOL_VISIBLE;
+	stadls::vx::v3::ReinitStackEntry create_reinit_stack_entry() SYMBOL_VISIBLE;
 
 	bool is_quiggeldy() const SYMBOL_VISIBLE;
 
 private:
 	hxcomm::vx::ConnectionVariant m_connection;
 	size_t m_expected_link_notification_count;
-	stadls::vx::v2::ReinitStackEntry m_init;
+	stadls::vx::v3::ReinitStackEntry m_init;
 
-	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&);
-	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v2::PlaybackProgram&&);
+	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
+	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
 };
 
 } // namespace grenade::vx::backend

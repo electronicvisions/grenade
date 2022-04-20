@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include <array>
 #include <iosfwd>
@@ -26,8 +26,8 @@ struct NeuronEventOutputView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::v2::NeuronColumnOnDLS> Columns;
-	typedef halco::hicann_dls::vx::v2::NeuronRowOnDLS Row;
+	typedef std::vector<halco::hicann_dls::vx::v3::NeuronColumnOnDLS> Columns;
+	typedef halco::hicann_dls::vx::v3::NeuronRowOnDLS Row;
 	typedef std::map<Row, std::vector<Columns>> Neurons;
 
 	NeuronEventOutputView() = default;

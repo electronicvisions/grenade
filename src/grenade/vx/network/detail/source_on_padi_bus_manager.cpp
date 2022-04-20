@@ -4,22 +4,22 @@
 #include "halco/common/iter_all.h"
 #include "hate/math.h"
 #include "hate/multidim_iterator.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <stdexcept>
 
 namespace grenade::vx::network::detail {
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 std::vector<std::vector<size_t>> SourceOnPADIBusManager::split_linear(
     std::vector<size_t> const& filter)
 {
 	std::vector<std::vector<size_t>> split(hate::math::round_up_integer_division(
-	    filter.size(), lola::vx::v2::SynapseMatrix::Label::size));
+	    filter.size(), lola::vx::v3::SynapseMatrix::Label::size));
 
 	for (size_t i = 0; i < filter.size(); ++i) {
-		split.at(i / lola::vx::v2::SynapseMatrix::Label::size).push_back(filter.at(i));
+		split.at(i / lola::vx::v3::SynapseMatrix::Label::size).push_back(filter.at(i));
 	}
 
 	return split;
@@ -28,9 +28,9 @@ std::vector<std::vector<size_t>> SourceOnPADIBusManager::split_linear(
 std::vector<SynapseDriverOnDLSManager::AllocationRequest>
 SourceOnPADIBusManager::get_allocation_requests_internal(
     std::vector<std::vector<size_t>> const& filter,
-    halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock const& padi_bus,
+    halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock const& padi_bus,
     NeuronBackendConfigBlockOnDLS const& backend_block,
-    halco::common::typed_array<std::vector<size_t>, halco::hicann_dls::vx::v2::PADIBusOnDLS> const&
+    halco::common::typed_array<std::vector<size_t>, halco::hicann_dls::vx::v3::PADIBusOnDLS> const&
         num_synapse_drivers)
 {
 	std::vector<SynapseDriverOnDLSManager::AllocationRequest> allocation_requests(filter.size());
@@ -62,7 +62,7 @@ SourceOnPADIBusManager::get_allocation_requests_internal(
 std::vector<SynapseDriverOnDLSManager::AllocationRequest>
 SourceOnPADIBusManager::get_allocation_requests_background(
     std::vector<std::vector<size_t>> const& filter,
-    halco::hicann_dls::vx::v2::PADIBusOnDLS const& padi_bus,
+    halco::hicann_dls::vx::v3::PADIBusOnDLS const& padi_bus,
     std::vector<size_t> const& num_synapse_drivers)
 {
 	std::vector<SynapseDriverOnDLSManager::AllocationRequest> allocation_requests(filter.size());
@@ -106,7 +106,7 @@ SourceOnPADIBusManager::get_allocation_requests_background(
 
 SynapseDriverOnDLSManager::AllocationRequest
 SourceOnPADIBusManager::get_allocation_requests_external(
-    halco::hicann_dls::vx::v2::PADIBusOnDLS const& padi_bus, size_t num_synapse_drivers)
+    halco::hicann_dls::vx::v3::PADIBusOnDLS const& padi_bus, size_t num_synapse_drivers)
 {
 	SynapseDriverOnDLSManager::AllocationRequest allocation_requests;
 	allocation_requests.shapes[padi_bus] = {
@@ -119,10 +119,10 @@ SourceOnPADIBusManager::get_allocation_requests_external(
 
 std::optional<halco::common::typed_array<
     std::vector<std::vector<size_t>>,
-    halco::hicann_dls::vx::v2::PADIBusOnDLS>>
+    halco::hicann_dls::vx::v3::PADIBusOnDLS>>
 SourceOnPADIBusManager::distribute_external_sources_linear(
     std::vector<ExternalSource> const& sources,
-    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS> const&
+    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS> const&
         used_num_synapse_drivers)
 {
 	typed_array<std::vector<std::vector<size_t>>, PADIBusOnDLS> split_external_sources_per_padi_bus;
@@ -135,7 +135,7 @@ SourceOnPADIBusManager::distribute_external_sources_linear(
 			    used_num_synapse_drivers[PADIBusOnDLS(padi_bus, padi_bus_block)];
 			while (i < sources.size() && get_num_synapse_drivers(sources, filter)[padi_bus_block] <=
 			                                 unused_num_synapse_drivers) {
-				if (filter.size() == lola::vx::v2::SynapseMatrix::Label::size) {
+				if (filter.size() == lola::vx::v3::SynapseMatrix::Label::size) {
 					unused_num_synapse_drivers -=
 					    get_num_synapse_drivers(sources, filter)[padi_bus_block];
 					split_external_sources_per_padi_bus[PADIBusOnDLS(padi_bus, padi_bus_block)]
