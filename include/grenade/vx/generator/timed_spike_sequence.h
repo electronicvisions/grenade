@@ -2,7 +2,7 @@
 #include "grenade/vx/event.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
-#include "stadls/vx/v2/playback_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
 
 namespace grenade::vx::generator {
 
@@ -15,10 +15,10 @@ public:
 	TimedSpikeSequence(grenade::vx::TimedSpikeSequence const& values) : m_values(values) {}
 
 	typedef hate::Nil Result;
-	typedef stadls::vx::v2::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v2::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 
 private:
 	friend auto stadls::vx::generate<TimedSpikeSequence>(TimedSpikeSequence const&);

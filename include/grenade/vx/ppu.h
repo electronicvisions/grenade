@@ -1,9 +1,9 @@
 #pragma once
 #include "halco/common/typed_array.h"
-#include "haldls/vx/v2/neuron.h"
-#include "haldls/vx/v2/ppu.h"
+#include "haldls/vx/v3/neuron.h"
+#include "haldls/vx/v3/ppu.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/ppu.h"
+#include "lola/vx/v3/ppu.h"
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
@@ -15,15 +15,15 @@ namespace grenade::vx {
 /**
  * Convert column byte values to PPUMemoryBlock.
  */
-haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(
-    halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS> const& values)
+haldls::vx::v3::PPUMemoryBlock to_vector_unit_row(
+    halco::common::typed_array<int8_t, halco::hicann_dls::vx::v3::NeuronColumnOnDLS> const& values)
     SYMBOL_VISIBLE;
 
 /**
  * Convert PPUMemoryBlock to column byte values.
  */
-halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS>
-from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& values) SYMBOL_VISIBLE;
+halco::common::typed_array<int8_t, halco::hicann_dls::vx::v3::NeuronColumnOnDLS>
+from_vector_unit_row(haldls::vx::v3::PPUMemoryBlock const& values) SYMBOL_VISIBLE;
 
 /**
  * Create (and automatically delete) temporary directory.
@@ -110,9 +110,9 @@ struct Compiler
 	    "-Bstatic",
 	    get_library_paths(),
 	    "-lgcc",
-	    "-lnux_vx_v2",
+	    "-lnux_vx_v3",
 	    "-Wl,--whole-archive",
-	    get_libnux_runtime("nux_runtime_vx_v2.o"),
+	    get_libnux_runtime("nux_runtime_vx_v3.o"),
 	    "-Wl,--no-whole-archive",
 	    "-Bdynamic",
 	};
@@ -120,7 +120,7 @@ struct Compiler
 	/**
 	 * Compile sources into target program.
 	 */
-	std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> compile(
+	std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock> compile(
 	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 };
 
@@ -141,7 +141,7 @@ struct CachingCompiler : public Compiler
 		/**
 		 * Program information comprised of the symbols and memory image.
 		 */
-		typedef std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock>
+		typedef std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock>
 		    Program;
 
 		/**
@@ -172,7 +172,7 @@ struct CachingCompiler : public Compiler
 	/**
 	 * Compile sources into target program or return from cache if already compiled.
 	 */
-	std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> compile(
+	std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock> compile(
 	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 
 private:

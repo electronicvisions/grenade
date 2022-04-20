@@ -30,8 +30,8 @@ TEST(CrossbarNode, General)
 	}
 	{
 		CrossbarNode::Coordinate coord(
-		    halco::hicann_dls::vx::v2::CrossbarOutputOnDLS(2),
-		    halco::hicann_dls::vx::v2::CrossbarInputOnDLS(14));
+		    halco::hicann_dls::vx::v3::CrossbarOutputOnDLS(2),
+		    halco::hicann_dls::vx::v3::CrossbarInputOnDLS(14));
 		CrossbarNode::Config cfg;
 		CrossbarNode config(coord, cfg);
 		BackgroundSpikeSource source({}, BackgroundSpikeSource::Coordinate(2));

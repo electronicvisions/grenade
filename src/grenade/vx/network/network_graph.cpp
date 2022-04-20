@@ -50,8 +50,8 @@ NetworkGraph::SpikeLabels const& NetworkGraph::get_spike_labels() const
 bool NetworkGraph::valid() const
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	auto logger = log4cxx::Logger::getLogger("grenade.NetworkGraph.valid()");
 	assert(m_network);
@@ -462,8 +462,8 @@ bool NetworkGraph::valid() const
 			auto const& synapse_array_view = std::get<vertex::SynapseArrayViewSparse>(
 			    m_graph.get_vertex_property(vertex_descriptor));
 			std::vector<std::pair<
-			    halco::hicann_dls::vx::v2::SynapseRowOnSynram,
-			    halco::hicann_dls::vx::v2::SynapseOnSynapseRow>>
+			    halco::hicann_dls::vx::v3::SynapseRowOnSynram,
+			    halco::hicann_dls::vx::v3::SynapseOnSynapseRow>>
 			    locations;
 			auto const rows = synapse_array_view.get_rows();
 			auto const columns = synapse_array_view.get_columns();
@@ -523,7 +523,7 @@ NetworkGraph::PlacedConnection NetworkGraph::get_placed_connection(
 	assert(synapse.index_column < columns.size());
 	PlacedConnection placed_connection{
 	    synapse.weight,
-	    halco::hicann_dls::vx::v2::SynapseRowOnDLS(
+	    halco::hicann_dls::vx::v3::SynapseRowOnDLS(
 	        rows[synapse.index_row], synapse_array_view_sparse.get_synram()),
 	    columns[synapse.index_column]};
 	return placed_connection;

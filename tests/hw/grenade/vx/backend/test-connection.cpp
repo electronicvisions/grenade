@@ -2,7 +2,7 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "hxcomm/vx/connection_from_env.h"
-#include "stadls/vx/v2/init_generator.h"
+#include "stadls/vx/v3/init_generator.h"
 
 TEST(Connection, General)
 {
@@ -34,7 +34,7 @@ TEST(Connection, General)
 	}
 	{
 		grenade::vx::backend::Connection connection(
-		    hxcomm::vx::get_connection_from_env(), stadls::vx::v2::DigitalInit());
+		    hxcomm::vx::get_connection_from_env(), stadls::vx::v3::DigitalInit());
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
 	}
 }

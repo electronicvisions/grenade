@@ -4,7 +4,7 @@
 #include "grenade/vx/network/population.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <vector>
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include <pybind11/numpy.h>
@@ -31,7 +31,7 @@ struct GENPYBIND(visible) Projection
 	/** Single neuron connection. */
 	struct Connection
 	{
-		typedef lola::vx::v2::SynapseMatrix::Weight Weight GENPYBIND(visible);
+		typedef lola::vx::v3::SynapseMatrix::Weight Weight GENPYBIND(visible);
 
 		/** Index of neuron in pre-synaptic population. */
 		size_t index_pre;

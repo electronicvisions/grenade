@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/population.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/neuron.h"
+#include "lola/vx/v3/neuron.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -15,7 +15,7 @@ struct GENPYBIND(visible) MADCRecording
 {
 	PopulationDescriptor population{};
 	size_t index{0};
-	typedef lola::vx::v2::AtomicNeuron::Readout::Source Source;
+	typedef lola::vx::v3::AtomicNeuron::Readout::Source Source;
 	Source source{Source::membrane};
 
 	MADCRecording() = default;

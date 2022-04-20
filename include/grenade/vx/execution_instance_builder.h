@@ -10,16 +10,16 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/types.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "haldls/vx/v2/ppu.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "haldls/vx/v3/ppu.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/cadc.h"
-#include "lola/vx/v2/ppu.h"
-#include "lola/vx/v2/synapse.h"
-#include "stadls/vx/v2/playback_generator.h"
-#include "stadls/vx/v2/playback_program.h"
-#include "stadls/vx/v2/playback_program_builder.h"
+#include "lola/vx/v3/cadc.h"
+#include "lola/vx/v3/ppu.h"
+#include "lola/vx/v3/synapse.h"
+#include "stadls/vx/v3/playback_generator.h"
+#include "stadls/vx/v3/playback_program.h"
+#include "stadls/vx/v3/playback_program_builder.h"
 
 namespace grenade::vx {
 
@@ -46,7 +46,7 @@ public:
 	    coordinate::ExecutionInstance const& execution_instance,
 	    IODataMap const& input_list,
 	    IODataMap const& data_output,
-	    std::optional<lola::vx::v2::PPUElfFile::symbols_type> const& ppu_symbols,
+	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
 	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	/**
@@ -56,7 +56,7 @@ public:
 
 	struct PlaybackPrograms
 	{
-		std::vector<stadls::vx::v2::PlaybackProgram> realtime;
+		std::vector<stadls::vx::v3::PlaybackProgram> realtime;
 		bool has_hook_around_realtime;
 	};
 
@@ -88,13 +88,13 @@ private:
 
 	ConstantReferenceIODataMap m_local_external_data;
 
-	std::optional<lola::vx::v2::PPUElfFile::symbols_type> m_ppu_symbols;
+	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
 	ExecutionInstancePlaybackHooks& m_playback_hooks;
 
 	std::vector<Graph::vertex_descriptor> m_post_vertices;
 
-	std::vector<stadls::vx::v2::PlaybackProgram> m_chunked_program;
+	std::vector<stadls::vx::v3::PlaybackProgram> m_chunked_program;
 
 	std::optional<Graph::vertex_descriptor> m_event_input_vertex;
 	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
@@ -104,7 +104,7 @@ private:
 	IODataMap m_local_data;
 	IODataMap m_local_data_output;
 
-	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ticket_request_type;
 	ticket_request_type m_ticket_requests;
 
@@ -112,21 +112,21 @@ private:
 	{
 		typedef halco::common::typed_array<
 		    std::optional<
-		        stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::PPUMemoryBlock>>,
+		        stadls::vx::v3::PlaybackProgram::ContainerTicket<haldls::vx::v3::PPUMemoryBlock>>,
 		    halco::hicann_dls::vx::PPUOnDLS>
 		    ticket_ppu_type;
 
 		ticket_ppu_type m_ppu_result;
 
 		typedef std::optional<
-		    stadls::vx::v2::PlaybackProgram::ContainerTicket<haldls::vx::v2::NullPayloadReadable>>
+		    stadls::vx::v3::PlaybackProgram::ContainerTicket<haldls::vx::v3::NullPayloadReadable>>
 		    event_guard_ticket_type;
 		event_guard_ticket_type m_ticket_events_begin;
 		event_guard_ticket_type m_ticket_events_end;
 
 		typedef halco::common::typed_array<
-		    std::optional<stadls::vx::v2::PlaybackProgram::ContainerTicket<
-		        lola::vx::v2::ExternalPPUMemoryBlock>>,
+		    std::optional<stadls::vx::v3::PlaybackProgram::ContainerTicket<
+		        lola::vx::v3::ExternalPPUMemoryBlock>>,
 		    halco::hicann_dls::vx::PPUOnDLS>
 		    ticket_extmem_type;
 

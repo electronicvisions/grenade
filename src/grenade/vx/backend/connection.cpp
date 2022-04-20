@@ -1,15 +1,15 @@
 #include "grenade/vx/backend/connection.h"
 
 #include "grenade/vx/backend/run.h"
-#include "halco/hicann-dls/vx/v2/barrier.h"
-#include "halco/hicann-dls/vx/v2/highspeed_link.h"
-#include "halco/hicann-dls/vx/v2/jtag.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/jtag.h"
+#include "halco/hicann-dls/vx/v3/barrier.h"
+#include "halco/hicann-dls/vx/v3/highspeed_link.h"
+#include "halco/hicann-dls/vx/v3/jtag.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/jtag.h"
 #include "hate/timer.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "stadls/vx/playback_generator.h"
-#include "stadls/vx/v2/run.h"
+#include "stadls/vx/v3/run.h"
 #include <log4cxx/logger.h>
 
 namespace {
@@ -21,17 +21,17 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 	}
 
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
 
 	// perform hardware version check(s)
 	PlaybackProgramBuilder builder;
 	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
 	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
-	stadls::vx::v2::run(connection, builder.done());
+	stadls::vx::v3::run(connection, builder.done());
 
-	if (jtag_id_ticket.get().get_version() != 2) {
+	if (jtag_id_ticket.get().get_version() != 3) {
 		std::stringstream ss;
 		ss << "Unexpected chip version: ";
 		ss << jtag_id_ticket.get().get_version();
@@ -45,14 +45,14 @@ namespace grenade::vx::backend {
 
 Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& init) :
     m_connection(std::move(connection)),
-    m_expected_link_notification_count(halco::hicann_dls::vx::v2::PhyConfigFPGAOnDLS::size),
+    m_expected_link_notification_count(halco::hicann_dls::vx::v3::PhyConfigFPGAOnDLS::size),
     m_init(m_connection)
 {
 	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.backend.Connection");
 	using namespace stadls::vx;
-	using namespace stadls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace stadls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace halco::hicann_dls::vx::v3;
 
 	hate::Timer timer;
 
@@ -76,7 +76,7 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& i
 }
 
 Connection::Connection(hxcomm::vx::ConnectionVariant&& connection) :
-    Connection(std::move(connection), stadls::vx::v2::ExperimentInit())
+    Connection(std::move(connection), stadls::vx::v3::ExperimentInit())
 {}
 
 Connection::Connection() : Connection(hxcomm::vx::get_connection_from_env()) {}
@@ -97,7 +97,7 @@ hxcomm::vx::ConnectionVariant&& Connection::release()
 	return std::move(m_connection);
 }
 
-stadls::vx::v2::ReinitStackEntry Connection::create_reinit_stack_entry()
+stadls::vx::v3::ReinitStackEntry Connection::create_reinit_stack_entry()
 {
 	return std::visit([](auto& c) { return stadls::vx::ReinitStackEntry(c); }, m_connection);
 }

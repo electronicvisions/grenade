@@ -16,7 +16,7 @@ template <
     typename C,
     typename Ret,
     typename Input,
-    Ret (C::*F)(Input const&, lola::vx::v2::Chip const&, grenade::vx::backend::Connection&) const>
+    Ret (C::*F)(Input const&, lola::vx::v3::Chip const&, grenade::vx::backend::Connection&) const>
 struct run_input<F>
 {
 	typedef Input type;
@@ -29,7 +29,7 @@ using run_input_t = typename run_input<F>::type;
 
 Sequence::IOData Sequence::run(
     Sequence::IOData const& input,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     backend::Connection& connection)
 {
 	if (data.empty()) {

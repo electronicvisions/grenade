@@ -4,15 +4,15 @@
 
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/v2/timer.h"
+#include "haldls/vx/v3/timer.h"
 
 namespace cereal {
 class access;
 } // namespace cereal
 
-namespace lola::vx::v2 {
+namespace lola::vx::v3 {
 class Chip;
-} // namespace lola::vx::v2
+} // namespace lola::vx::v3
 
 namespace grenade::vx {
 
@@ -55,7 +55,7 @@ public:
 	    size_t input_size,
 	    size_t stride,
 	    size_t num_sends = 1,
-	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
+	    haldls::vx::v3::Timer::Value wait_between_events = haldls::vx::v3::Timer::Value(25),
 	    bool enable_loopback = false);
 
 	/**
@@ -67,7 +67,7 @@ public:
 	 */
 	std::vector<std::vector<Int8>> run(
 	    Activations const& inputs,
-	    lola::vx::v2::Chip const& config,
+	    lola::vx::v3::Chip const& config,
 	    backend::Connection& connection) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
@@ -87,7 +87,7 @@ private:
 	MAC m_mac{};
 
 	size_t m_num_sends{};
-	haldls::vx::v2::Timer::Value m_wait_between_events{};
+	haldls::vx::v3::Timer::Value m_wait_between_events{};
 
 	friend class cereal::access;
 	template <typename Archive>

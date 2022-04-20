@@ -1,9 +1,9 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/neuron.h"
+#include "lola/vx/v3/neuron.h"
 #include <array>
 #include <cstddef>
 #include <iosfwd>
@@ -30,13 +30,13 @@ struct NeuronView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef std::vector<halco::hicann_dls::vx::v2::NeuronColumnOnDLS> Columns;
+	typedef std::vector<halco::hicann_dls::vx::v3::NeuronColumnOnDLS> Columns;
 	typedef std::vector<bool> EnableResets;
-	typedef halco::hicann_dls::vx::v2::NeuronRowOnDLS Row;
+	typedef halco::hicann_dls::vx::v3::NeuronRowOnDLS Row;
 
 	struct Config
 	{
-		typedef lola::vx::v2::AtomicNeuron::EventRouting::Address Label;
+		typedef lola::vx::v3::AtomicNeuron::EventRouting::Address Label;
 		std::optional<Label> label;
 		bool enable_reset;
 

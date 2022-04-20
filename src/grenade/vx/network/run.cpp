@@ -3,15 +3,15 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/jit_graph_executor.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 
 namespace grenade::vx::network {
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs)
 {
@@ -21,7 +21,7 @@ IODataMap run(
 
 IODataMap run(
     backend::Connection& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs)
 {
@@ -31,7 +31,7 @@ IODataMap run(
 
 IODataMap run(
     backend::Connection& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
@@ -40,7 +40,7 @@ IODataMap run(
 	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<DLSGlobal, lola::vx::v2::Chip>(DLSGlobal(), config));
+	configs.insert(std::pair<DLSGlobal, lola::vx::v3::Chip>(DLSGlobal(), config));
 
 	JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
@@ -54,7 +54,7 @@ IODataMap run(
 
 IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)

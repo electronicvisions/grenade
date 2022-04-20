@@ -3,10 +3,10 @@
 #include "grenade/vx/vertex/neuron_view.h"
 
 #include "halco/common/iter_all.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace grenade::vx;
 using namespace grenade::vx::vertex;
 

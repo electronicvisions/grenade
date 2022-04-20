@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <chrono>
 #include <iosfwd>
 #include <optional>

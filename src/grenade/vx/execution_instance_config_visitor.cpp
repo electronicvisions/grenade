@@ -4,8 +4,8 @@
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/status.h"
 #include "grenade/vx/ppu_program_generator.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/padi.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/padi.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
@@ -20,24 +20,24 @@ namespace grenade::vx {
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
-    lola::vx::v2::Chip& chip_config) :
+    lola::vx::v3::Chip& chip_config) :
     m_graph(graph), m_execution_instance(execution_instance), m_config(chip_config)
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	m_requires_ppu = false;
 	m_used_madc = false;
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar.nodes) {
-		node = haldls::vx::v2::CrossbarNode::drop_all;
+		node = haldls::vx::v3::CrossbarNode::drop_all;
 	}
 	for (auto const& block : iter_all<SynapseDriverBlockOnDLS>()) {
 		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
 			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_top(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
 			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_bottom(
-			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
+			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
 			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_enable_receiver(false);
 		}
 	}
@@ -58,9 +58,9 @@ ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
 		for (auto const& block : iter_all<SynapseBlockOnDLS>()) {
 			for (auto const& row : iter_all<SynapseRowOnSynram>()) {
 				m_config.synapse_blocks[block].matrix.weights[row].fill(
-				    lola::vx::v2::SynapseMatrix::Weight(0));
+				    lola::vx::v3::SynapseMatrix::Weight(0));
 				m_config.synapse_blocks[block].matrix.labels[row].fill(
-				    lola::vx::v2::SynapseMatrix::Label(0));
+				    lola::vx::v3::SynapseMatrix::Label(0));
 			}
 		}
 	}
@@ -101,8 +101,8 @@ template <>
 void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const& data)
 {
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	// MADCReadoutView inputs size equals 1
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -185,7 +185,7 @@ void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
 {
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-	std::vector<std::pair<halco::hicann_dls::vx::v2::SynramOnDLS, ppu::SynapseArrayViewHandle>>
+	std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>
 	    synapses;
 	for (auto const in_edge : boost::make_iterator_range(in_edges)) {
 		auto const& view = std::get<vertex::SynapseArrayViewSparse>(
@@ -204,9 +204,9 @@ void ExecutionInstanceConfigVisitor::process(
 	    m_config.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
 	        .synapse_drivers[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
-	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::top]);
+	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
-	    data.get_config().row_modes[halco::hicann_dls::vx::v2::SynapseRowOnSynapseDriver::bottom]);
+	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::bottom]);
 	synapse_driver_config.set_row_address_compare_mask(data.get_config().row_address_compare_mask);
 	synapse_driver_config.set_enable_address_out(data.get_config().enable_address_out);
 	synapse_driver_config.set_enable_receiver(true);
@@ -243,8 +243,8 @@ template <>
 void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::NeuronView const& data)
 {
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 	size_t i = 0;
 	auto const& configs = data.get_configs();
 	auto& neurons = m_config.neuron_block.atomic_neurons;
@@ -314,17 +314,17 @@ void ExecutionInstanceConfigVisitor::pre_process()
 	}
 }
 
-std::tuple<lola::vx::v2::Chip&, std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
+std::tuple<lola::vx::v3::Chip&, std::optional<lola::vx::v3::PPUElfFile::symbols_type>>
 ExecutionInstanceConfigVisitor::operator()()
 {
 	static log4cxx::Logger* const logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigBuilder.generate()");
 
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
-	using namespace lola::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
+	using namespace lola::vx::v3;
 
 	pre_process();
 

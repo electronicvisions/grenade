@@ -36,8 +36,8 @@ void InputGenerator::add(
 			for (auto const& label : neuron) {
 				assert(label);
 				batch_entry.push_back(grenade::vx::TimedSpike{
-				    time, haldls::vx::v2::SpikePack1ToChip(
-				              haldls::vx::v2::SpikePack1ToChip::labels_type{*label})});
+				    time, haldls::vx::v3::SpikePack1ToChip(
+				              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 			}
 		}
 	}
@@ -102,8 +102,8 @@ void InputGenerator::add(
 			for (auto const label : labels) {
 				assert(label);
 				batch_entry.push_back(grenade::vx::TimedSpike{
-				    time, haldls::vx::v2::SpikePack1ToChip(
-				              haldls::vx::v2::SpikePack1ToChip::labels_type{*label})});
+				    time, haldls::vx::v3::SpikePack1ToChip(
+				              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 			}
 		}
 	}
@@ -179,8 +179,8 @@ void InputGenerator::add(
 				for (auto const label : labels) {
 					assert(label);
 					data_spikes.push_back(grenade::vx::TimedSpike{
-					    time, haldls::vx::v2::SpikePack1ToChip(
-					              haldls::vx::v2::SpikePack1ToChip::labels_type{*label})});
+					    time, haldls::vx::v3::SpikePack1ToChip(
+					              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 				}
 			}
 		}

@@ -48,7 +48,7 @@ std::vector<Port> NeuronEventOutputView::inputs() const
 
 Port NeuronEventOutputView::output() const
 {
-	std::set<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS> outputs;
+	std::set<halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS> outputs;
 	for (auto const& [_, columns_of_inputs] : m_neurons) {
 		for (auto const& columns_of_input : columns_of_inputs) {
 			for (auto const& column : columns_of_input) {

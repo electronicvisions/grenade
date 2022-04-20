@@ -4,7 +4,7 @@
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
-#include "lola/vx/v2/chip.h"
+#include "lola/vx/v3/chip.h"
 
 TEST(JITGraphExecutor, Empty)
 {

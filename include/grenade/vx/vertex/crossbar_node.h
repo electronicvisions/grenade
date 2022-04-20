@@ -2,8 +2,8 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
 #include "grenade/vx/port_restriction.h"
-#include "halco/hicann-dls/vx/v2/routing_crossbar.h"
-#include "haldls/vx/v2/routing_crossbar.h"
+#include "halco/hicann-dls/vx/v3/routing_crossbar.h"
+#include "haldls/vx/v3/routing_crossbar.h"
 #include "hate/visibility.h"
 #include <cstddef>
 #include <cstdint>
@@ -25,8 +25,8 @@ struct CrossbarNode
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef haldls::vx::v2::CrossbarNode Config;
-	typedef haldls::vx::v2::CrossbarNode::coordinate_type Coordinate;
+	typedef haldls::vx::v3::CrossbarNode Config;
+	typedef haldls::vx::v3::CrossbarNode::coordinate_type Coordinate;
 
 	CrossbarNode() = default;
 

@@ -42,11 +42,11 @@ Graph::vertex_descriptor MAC::insert_synram(
     Graph& graph,
     Weights&& weights,
     coordinate::ExecutionInstance const& instance,
-    halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
+    halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
     Graph::vertex_descriptor const crossbar_input_vertex)
 {
-	using namespace haldls::vx::v2;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace haldls::vx::v3;
+	using namespace halco::hicann_dls::vx::v3;
 
 	auto const x_size = weights.at(0).size();
 	auto const y_size = weights.size() * 2 /* signed */;
@@ -85,7 +85,7 @@ Graph::vertex_descriptor MAC::insert_synram(
 	for (auto& l : labels) {
 		SynapseRowOnSynram const sr(i);
 		rows.push_back(sr);
-		l.insert(l.end(), x_size, lola::vx::v2::SynapseMatrix::Label(0));
+		l.insert(l.end(), x_size, lola::vx::v3::SynapseMatrix::Label(0));
 		i++;
 	}
 
@@ -128,7 +128,7 @@ Graph::vertex_descriptor MAC::insert_synram(
 		auto const nrn = NeuronColumnOnDLS(o);
 		nrns.push_back(nrn);
 	}
-	vertex::NeuronView::Config config{lola::vx::v2::AtomicNeuron::EventRouting::Address(), true};
+	vertex::NeuronView::Config config{lola::vx::v3::AtomicNeuron::EventRouting::Address(), true};
 	vertex::NeuronView::Configs enable_resets(x_size, config);
 	vertex::NeuronView neurons(
 	    std::move(nrns), std::move(enable_resets), hemisphere.toNeuronRowOnDLS());
@@ -153,7 +153,7 @@ auto get_hemisphere_placement(
 	auto instance = coordinate::ExecutionInstance();
 
 	std::vector<
-	    std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v2::HemisphereOnDLS>>
+	    std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
 	    hemispheres;
 	for ([[maybe_unused]] auto const& x_range : x_split_ranges) {
 		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
@@ -168,13 +168,13 @@ auto get_placed_ranges(
     std::vector<RangeSplit::SubRange> const& x_split_ranges,
     std::vector<RangeSplit::SubRange> const& y_split_ranges,
     std::vector<
-        std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v2::HemisphereOnDLS>>
+        std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
         hemispheres)
 {
 	typedef std::pair<RangeSplit::SubRange, RangeSplit::SubRange> XYSubRange;
 	std::unordered_map<
 	    coordinate::ExecutionInstance,
-	    std::map<halco::hicann_dls::vx::v2::HemisphereOnDLS, XYSubRange>>
+	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, XYSubRange>>
 	    placed_ranges;
 	size_t i = 0;
 	for (auto const& x_range : x_split_ranges) {
@@ -195,13 +195,13 @@ void set_enable_loopback(
     coordinate::ExecutionInstance const& instance,
     Graph::vertex_descriptor const crossbar_input_vertex)
 {
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	if (enable) {
 		std::vector<Input> loopback_vertices;
 		loopback_vertices.reserve(SPL1Address::size);
 		for (size_t i = 0; i < SPL1Address::size; ++i) {
 			CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
-			haldls::vx::v2::CrossbarNode config;
+			haldls::vx::v3::CrossbarNode config;
 			vertex::CrossbarNode crossbar_node(coordinate, config);
 			loopback_vertices.push_back(
 			    graph.add(crossbar_node, instance, {crossbar_input_vertex}));
@@ -217,7 +217,7 @@ void set_enable_loopback(
 
 void MAC::build_graph()
 {
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 
 	if (std::adjacent_find(m_weights.begin(), m_weights.end(), [](auto const& a, auto const& b) {
 		    return a.size() != b.size();
@@ -365,10 +365,10 @@ size_t MAC::output_size() const
 
 std::vector<std::vector<Int8>> MAC::run(
     Activations const& inputs,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     backend::Connection& connection) const
 {
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	auto logger = log4cxx::Logger::getLogger("grenade.MAC");
 
 	// Construct map of one connection to HW

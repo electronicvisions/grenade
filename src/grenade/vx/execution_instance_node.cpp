@@ -4,8 +4,8 @@
 #include "grenade/vx/backend/run.h"
 #include "grenade/vx/execution_instance_config_visitor.h"
 #include "grenade/vx/ppu/status.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/timer.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/timer.h"
 #include "hate/timer.h"
 #include <log4cxx/logger.h>
 
@@ -16,7 +16,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     IODataMap const& input_data_map,
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
-    lola::vx::v2::Chip const& chip_config,
+    lola::vx::v3::Chip const& chip_config,
     backend::Connection& connection,
     std::mutex& continuous_chunked_program_execution_mutex,
     ExecutionInstancePlaybackHooks& playback_hooks) :
@@ -33,12 +33,12 @@ ExecutionInstanceNode::ExecutionInstanceNode(
 
 void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 {
-	using namespace stadls::vx::v2;
+	using namespace stadls::vx::v3;
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 
 	hate::Timer const initial_config_timer;
-	lola::vx::v2::Chip initial_config = chip_config;
+	lola::vx::v3::Chip initial_config = chip_config;
 	auto const ppu_symbols =
 	    std::get<1>(ExecutionInstanceConfigVisitor(graph, execution_instance, initial_config)());
 	LOG4CXX_TRACE(
@@ -63,23 +63,23 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	config_builder.write(ChipOnDLS(), initial_config);
 
 	// wait for CapMem to settle
-	config_builder.block_until(BarrierOnFPGA(), haldls::vx::v2::Barrier::omnibus);
-	config_builder.write(TimerOnDLS(), haldls::vx::v2::Timer());
+	config_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+	config_builder.write(TimerOnDLS(), haldls::vx::v3::Timer());
 	config_builder.block_until(
-	    TimerOnDLS(), haldls::vx::v2::Timer::Value(
-	                      100000 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+	    TimerOnDLS(), haldls::vx::v3::Timer::Value(
+	                      100000 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us));
 
 	// bring PPUs in running state
 	if (ppu_symbols) {
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			haldls::vx::v2::PPUControlRegister ctrl;
+			haldls::vx::v3::PPUControlRegister ctrl;
 			ctrl.set_inhibit_reset(true);
 			config_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 		}
 		auto const ppu_status_coord = ppu_symbols->at("status").coordinate.toMin();
 		// wait for PPUs to be ready
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			using namespace haldls::vx::v2;
+			using namespace haldls::vx::v3;
 			PollingOmnibusBlockConfig config;
 			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
 			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))

@@ -38,8 +38,8 @@ def build(bld):
         source='../include/grenade/vx/pygrenade.h',
         genpybind_tags='grenade_vx',
         features='genpybind cxx cxxshlib pyext',
-        use=['grenade_vx', 'pyhaldls_vx_v2', 'pylola_vx_v2',
-             'pyhalco_hicann_dls_vx_v2', 'pyhxcomm_vx', 'pystadls_vx_v2'],
+        use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
+             'pyhalco_hicann_dls_vx_v3', 'pyhxcomm_vx', 'pystadls_vx_v3'],
         install_path='${PREFIX}/lib',
     )
 
@@ -47,7 +47,7 @@ def build(bld):
         name='pygrenade_swtest_vx',
         tests='test/pygrenade_swtest_vx.py',
         features='use pytest pylint pycodestyle',
-        use=['pygrenade_vx', 'dlens_vx_v2'],
+        use=['pygrenade_vx', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin',
         pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")
@@ -57,7 +57,7 @@ def build(bld):
         name='pygrenade_hwtest_vx',
         tests='test/pygrenade_hwtest_vx.py',
         features='use pytest pylint pycodestyle',
-        use=['pygrenade_vx', 'dlens_vx_v2'],
+        use=['pygrenade_vx', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin',
         pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle"),

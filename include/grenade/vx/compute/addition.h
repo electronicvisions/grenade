@@ -8,9 +8,9 @@ namespace cereal {
 class access;
 } // namespace cereal
 
-namespace lola::vx::v2 {
+namespace lola::vx::v3 {
 class Chip;
-} // namespace lola::vx::v2
+} // namespace lola::vx::v3
 
 namespace grenade::vx {
 
@@ -43,7 +43,7 @@ public:
 	 */
 	std::vector<std::vector<Int8>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
-	    lola::vx::v2::Chip const& config,
+	    lola::vx::v3::Chip const& config,
 	    backend::Connection& connection) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;

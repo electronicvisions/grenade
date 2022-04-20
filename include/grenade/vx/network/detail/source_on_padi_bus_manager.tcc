@@ -2,16 +2,16 @@
 
 #include "grenade/vx/network/projection.h"
 #include "halco/common/iter_all.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/math.h"
-#include "lola/vx/v2/synapse.h"
+#include "lola/vx/v3/synapse.h"
 #include <numeric>
 
 namespace grenade::vx::network::detail {
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 template <typename S>
 typed_array<size_t, PADIBusBlockOnDLS> SourceOnPADIBusManager::get_num_synapse_drivers(

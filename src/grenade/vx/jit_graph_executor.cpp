@@ -6,7 +6,7 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
 #include <chrono>
 #include <map>
@@ -37,7 +37,7 @@ IODataMap JITGraphExecutor::run(
     ChipConfigs const& chip_configs,
     PlaybackHooks& playback_hooks)
 {
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	hate::Timer const timer;
 
 	check(graph, connections);

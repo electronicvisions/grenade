@@ -79,7 +79,7 @@ TEST(Transformation, General)
 	std::vector<Int8> value(123, Int8(42));
 	EXPECT_EQ(
 	    transformation.apply({std::vector<TimedDataSequence<std::vector<Int8>>>{
-	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), value}}}}),
+	        {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), value}}}}),
 	    function_copy.apply({std::vector<TimedDataSequence<std::vector<Int8>>>{
-	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), value}}}}));
+	        {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), value}}}}));
 }

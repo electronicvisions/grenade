@@ -2,10 +2,10 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
 #include <optional>
 #include <set>
@@ -44,19 +44,19 @@ struct SourceOnPADIBusManager
 		/**
 		 * Location of source.
 		 */
-		halco::hicann_dls::vx::v2::AtomicNeuronOnDLS neuron;
+		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS neuron;
 		/**
 		 * Number of required synapses per atomic neuron.
 		 */
 		std::map<
 		    Projection::ReceptorType,
-		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 		    out_degree;
 		/**
 		 * Get PADI-bus on block which carries outgoing events of source.
 		 * @return PADI-bus on block
 		 */
-		halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock toPADIBusOnPADIBusBlock() const
+		halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock toPADIBusOnPADIBusBlock() const
 		    SYMBOL_VISIBLE;
 	};
 
@@ -70,12 +70,12 @@ struct SourceOnPADIBusManager
 		 */
 		std::map<
 		    Projection::ReceptorType,
-		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 		    out_degree;
 		/**
 		 * PADI-bus which carries outgoing events of source.
 		 */
-		halco::hicann_dls::vx::v2::PADIBusOnDLS padi_bus;
+		halco::hicann_dls::vx::v3::PADIBusOnDLS padi_bus;
 	};
 
 	/**
@@ -88,7 +88,7 @@ struct SourceOnPADIBusManager
 		 */
 		std::map<
 		    Projection::ReceptorType,
-		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 		    out_degree;
 	};
 

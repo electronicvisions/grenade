@@ -7,7 +7,7 @@
 #include "grenade/vx/network/routing_constraints.h"
 
 using namespace grenade::vx::network;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 TEST(RoutingConstraints, check)
@@ -296,7 +296,7 @@ TEST(RoutingConstraints, get_external_connections_per_hemisphere)
 
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, std::vector<std::pair<ProjectionDescriptor, size_t>>>,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    expectation;
 	expectation[HemisphereOnDLS(1)][Projection::ReceptorType::inhibitory] =
 	    std::vector<std::pair<ProjectionDescriptor, size_t>>{
@@ -344,7 +344,7 @@ TEST(RoutingConstraints, get_external_sources_to_hemisphere)
 
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, std::set<std::pair<PopulationDescriptor, size_t>>>,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    expectation;
 	expectation[HemisphereOnDLS(1)][Projection::ReceptorType::inhibitory] =
 	    std::set<std::pair<PopulationDescriptor, size_t>>{

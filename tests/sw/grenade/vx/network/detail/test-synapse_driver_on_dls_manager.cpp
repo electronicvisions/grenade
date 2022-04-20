@@ -5,7 +5,7 @@
 
 
 using namespace grenade::vx::network::detail;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 TEST(detail_SynapseDriverOnDLSManager, get_interdependent_padi_busses)

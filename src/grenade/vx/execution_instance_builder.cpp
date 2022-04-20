@@ -10,10 +10,10 @@
 #include "grenade/vx/ppu/extmem.h"
 #include "grenade/vx/ppu/status.h"
 #include "grenade/vx/types.h"
-#include "haldls/vx/v2/barrier.h"
-#include "haldls/vx/v2/block.h"
-#include "haldls/vx/v2/fpga.h"
-#include "haldls/vx/v2/padi.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/block.h"
+#include "haldls/vx/v3/fpga.h"
+#include "haldls/vx/v3/padi.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
 #include "lola/vx/ppu.h"
@@ -46,7 +46,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     coordinate::ExecutionInstance const& execution_instance,
     IODataMap const& input_list,
     IODataMap const& data_output,
-    std::optional<lola::vx::v2::PPUElfFile::symbols_type> const& ppu_symbols,
+    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
     ExecutionInstancePlaybackHooks& playback_hooks) :
     m_graph(graph),
     m_execution_instance(execution_instance),
@@ -126,8 +126,8 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
 {
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 	size_t i = 0;
 	auto const& configs = data.get_configs();
 	for (auto const column : data.get_columns()) {
@@ -202,9 +202,9 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::DataInput const& /* data */)
 {
-	using namespace lola::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace lola::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace halco::hicann_dls::vx::v3;
 	using namespace halco::common;
 
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -265,9 +265,9 @@ void ExecutionInstanceBuilder::process(
 	auto const& columns = data.get_columns();
 
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace lola::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace lola::vx::v3;
+	using namespace haldls::vx::v3;
 	if (!m_postprocessing) { // pre-hw-run processing
 		m_ticket_requests[hemisphere] = true;
 		// results need hardware execution
@@ -642,7 +642,7 @@ void ExecutionInstanceBuilder::filter_events(
 		std::vector<T> data_batch(begin, end);
 		// subtract the interval begin time to get relative times
 		for (auto& event : data_batch) {
-			event.chip_time = haldls::vx::v2::ChipTime(event.chip_time - interval_begin_time);
+			event.chip_time = haldls::vx::v3::ChipTime(event.chip_time - interval_begin_time);
 		}
 		if (!data_batch.empty()) {
 			filtered_data.at(i) = std::move(data_batch);
@@ -750,7 +750,7 @@ IODataMap ExecutionInstanceBuilder::post_process()
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
 	for (auto const& batch_entry : m_batch_entries) {
-		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v2::PPUOnDLS>()) {
+		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
 			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
 			if (scheduler_finished) {
 				auto const value = ppu::Status(scheduler_finished->get().at(0).get_value().value());
@@ -810,10 +810,10 @@ IODataMap ExecutionInstanceBuilder::post_process()
 ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
-	using namespace stadls::vx::v2;
-	using namespace lola::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+	using namespace stadls::vx::v3;
+	using namespace lola::vx::v3;
 
 	// if no on-chip computation is to be done, return without static configuration
 	auto const has_computation =
@@ -1018,11 +1018,11 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v3::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::v2::Timer::Value(
-			        1.0 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			    haldls::vx::v3::Timer::Value(
+			        1.0 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us));
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {
@@ -1076,11 +1076,11 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// wait until scheduler finished, readout stats
 		if (enable_ppu && m_has_plasticity_rule) {
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v2::Timer());
+			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v3::Timer());
 			builder.block_until(
 			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::v2::Timer::Value(
-			        100000.0 * haldls::vx::v2::Timer::Value::fpga_clock_cycles_per_us));
+			    haldls::vx::v3::Timer::Value(
+			        100000.0 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us));
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				batch_entry.m_ppu_scheduler_finished[ppu] = builder.read(PPUMemoryBlockOnDLS(
 				    PPUMemoryBlockOnPPU(ppu_status_coord, ppu_status_coord), ppu));

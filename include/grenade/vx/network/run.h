@@ -10,9 +10,9 @@
 #include "pyhxcomm/vx/connection_handle.h"
 #endif
 
-namespace lola::vx::v2 {
+namespace lola::vx::v3 {
 class Chip;
-} // namespace lola::vx::v2
+} // namespace lola::vx::v3
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -29,7 +29,7 @@ namespace network {
  */
 IODataMap run(
     backend::Connection& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs) SYMBOL_VISIBLE;
 
@@ -44,7 +44,7 @@ IODataMap run(
  */
 IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs) SYMBOL_VISIBLE;
 
@@ -60,7 +60,7 @@ IODataMap run(
  */
 IODataMap run(
     backend::Connection& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
@@ -77,7 +77,7 @@ IODataMap run(
  */
 IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
@@ -118,7 +118,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 	{
 		m.def(
 		    "run",
-		    [](T& conn, lola::vx::v2::Chip const& config, NetworkGraph const& network_graph,
+		    [](T& conn, lola::vx::v3::Chip const& config, NetworkGraph const& network_graph,
 		       IODataMap const& inputs,
 		       ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
 			    ConnectionAcquisor acquisor(conn);
@@ -128,7 +128,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
 		m.def(
 		    "run",
-		    [](T& conn, lola::vx::v2::Chip const& config, NetworkGraph const& network_graph,
+		    [](T& conn, lola::vx::v3::Chip const& config, NetworkGraph const& network_graph,
 		       IODataMap const& inputs) -> IODataMap {
 			    ConnectionAcquisor acquisor(conn);
 			    return run(acquisor.connection, config, network_graph, inputs);
@@ -149,7 +149,7 @@ GENPYBIND_MANUAL({
 	using namespace grenade::vx;
 	parent.def(
 	    "run",
-	    [](::pyhxcomm::Handle<backend::Connection>& conn, lola::vx::v2::Chip const& config,
+	    [](::pyhxcomm::Handle<backend::Connection>& conn, lola::vx::v3::Chip const& config,
 	       network::NetworkGraph const& network_graph, IODataMap const& inputs,
 	       ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
 		    return network::run(conn.get(), config, network_graph, inputs, playback_hooks);
@@ -158,7 +158,7 @@ GENPYBIND_MANUAL({
 	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
 	parent.def(
 	    "run",
-	    [](::pyhxcomm::Handle<backend::Connection>& conn, lola::vx::v2::Chip const& config,
+	    [](::pyhxcomm::Handle<backend::Connection>& conn, lola::vx::v3::Chip const& config,
 	       network::NetworkGraph const& network_graph, IODataMap const& inputs) -> IODataMap {
 		    return network::run(conn.get(), config, network_graph, inputs);
 	    },

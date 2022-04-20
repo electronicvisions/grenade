@@ -3,11 +3,11 @@
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/transformation/concatenation.h"
-#include "halco/hicann-dls/vx/v2/event.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/routing_crossbar.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/event.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/routing_crossbar.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
 #include <algorithm>
@@ -18,7 +18,7 @@
 
 namespace grenade::vx::network {
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network)
@@ -364,7 +364,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 			    std::to_string(descriptor) + ").");
 		}
 		auto const& label = routing_result.background_spike_source_labels.at(descriptor);
-		haldls::vx::v2::BackgroundSpikeSource config;
+		haldls::vx::v3::BackgroundSpikeSource config;
 		config.set_period(pop.config.period);
 		config.set_rate(pop.config.rate);
 		config.set_seed(pop.config.seed);
@@ -372,7 +372,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 		config.set_enable_random(pop.config.enable_random);
 		if (pop.config.enable_random) {
 			assert(!(pop.size == 0) && !(pop.size & (pop.size - 1)));
-			config.set_mask(haldls::vx::v2::BackgroundSpikeSource::Mask(pop.size - 1));
+			config.set_mask(haldls::vx::v3::BackgroundSpikeSource::Mask(pop.size - 1));
 		} else {
 			assert(pop.size == 1);
 		}
@@ -1157,7 +1157,7 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			    connection_result.internal_neuron_labels.at(descriptor);
 			for (size_t i = 0; i < population.neurons.size(); ++i) {
 				if (local_neuron_labels.at(i)) {
-					haldls::vx::v2::SpikeLabel spike_label;
+					haldls::vx::v3::SpikeLabel spike_label;
 					spike_label.set_neuron_event_output(
 					    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
 					spike_label.set_spl1_address(SPL1Address(
@@ -1182,7 +1182,7 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			    connection_result.background_spike_source_labels.at(descriptor);
 			for (auto const& [hemisphere, base_label] : local_labels) {
 				for (size_t k = 0; k < population.size; ++k) {
-					haldls::vx::v2::SpikeLabel label;
+					haldls::vx::v3::SpikeLabel label;
 					label.set_neuron_label(NeuronLabel(base_label + k));
 					local_spike_labels.at(k).push_back(label);
 				}

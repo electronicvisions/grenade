@@ -7,13 +7,13 @@
 namespace grenade::vx::network {
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 RoutingConstraints::RoutingConstraints(Network const& network) : m_network(network) {}
 
 void RoutingConstraints::check() const
 {
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 
 	auto const neuron_in_degree = get_neuron_in_degree();
 	if (*std::max_element(neuron_in_degree.begin(), neuron_in_degree.end()) >
@@ -42,7 +42,7 @@ void RoutingConstraints::check() const
 	}
 }
 
-halco::hicann_dls::vx::v2::PADIBusOnDLS RoutingConstraints::InternalConnection::toPADIBusOnDLS()
+halco::hicann_dls::vx::v3::PADIBusOnDLS RoutingConstraints::InternalConnection::toPADIBusOnDLS()
     const
 {
 	auto const source_event_output = source.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS();
@@ -50,7 +50,7 @@ halco::hicann_dls::vx::v2::PADIBusOnDLS RoutingConstraints::InternalConnection::
 
 	auto const target_padi_bus_block = target.toNeuronRowOnDLS().toPADIBusBlockOnDLS();
 
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	return PADIBusOnDLS(
 	    PADIBusOnPADIBusBlock(crossbar_input % PADIBusOnPADIBusBlock::size), target_padi_bus_block);
 }
@@ -93,7 +93,7 @@ std::vector<RoutingConstraints::InternalConnection> RoutingConstraints::get_inte
 	return ret;
 }
 
-halco::hicann_dls::vx::v2::PADIBusOnDLS RoutingConstraints::BackgroundConnection::toPADIBusOnDLS()
+halco::hicann_dls::vx::v3::PADIBusOnDLS RoutingConstraints::BackgroundConnection::toPADIBusOnDLS()
     const
 {
 	return source.toPADIBusOnDLS();
@@ -145,7 +145,7 @@ RoutingConstraints::get_background_connections() const
 	return ret;
 }
 
-halco::hicann_dls::vx::v2::PADIBusBlockOnDLS
+halco::hicann_dls::vx::v3::PADIBusBlockOnDLS
 RoutingConstraints::ExternalConnection::toPADIBusBlockOnDLS() const
 {
 	return target.toNeuronRowOnDLS().toPADIBusBlockOnDLS();
@@ -186,12 +186,12 @@ std::vector<RoutingConstraints::ExternalConnection> RoutingConstraints::get_exte
 
 halco::common::typed_array<
     std::map<Projection::ReceptorType, std::vector<std::pair<ProjectionDescriptor, size_t>>>,
-    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 RoutingConstraints::get_external_connections_per_hemisphere() const
 {
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, std::vector<std::pair<ProjectionDescriptor, size_t>>>,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ret;
 
 	for (auto const& connection : get_external_connections()) {
@@ -203,18 +203,18 @@ RoutingConstraints::get_external_connections_per_hemisphere() const
 
 halco::common::typed_array<
     std::map<Projection::ReceptorType, std::set<std::pair<PopulationDescriptor, size_t>>>,
-    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 RoutingConstraints::get_external_sources_to_hemisphere() const
 {
 	auto const external_connections_per_hemisphere = get_external_connections_per_hemisphere();
 
 	halco::common::typed_array<
 	    std::map<Projection::ReceptorType, std::set<std::pair<PopulationDescriptor, size_t>>>,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ret;
 
 	for (auto const hemisphere :
-	     halco::common::iter_all<halco::hicann_dls::vx::v2::HemisphereOnDLS>()) {
+	     halco::common::iter_all<halco::hicann_dls::vx::v3::HemisphereOnDLS>()) {
 		for (auto const& [receptor_type, descriptors] :
 		     external_connections_per_hemisphere[hemisphere]) {
 			for (auto const& descriptor : descriptors) {
@@ -228,10 +228,10 @@ RoutingConstraints::get_external_sources_to_hemisphere() const
 	return ret;
 }
 
-halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 RoutingConstraints::get_neuron_in_degree() const
 {
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> in_degree;
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> in_degree;
 	in_degree.fill(0);
 
 	for (auto const& connection : get_internal_connections()) {
@@ -247,16 +247,16 @@ RoutingConstraints::get_neuron_in_degree() const
 }
 
 halco::common::typed_array<
-    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>,
-    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>,
+    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 RoutingConstraints::get_neuron_in_degree_per_padi_bus() const
 {
 	halco::common::typed_array<
-	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>,
-	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	    in_degree;
 	{
-		halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock> zero;
+		halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock> zero;
 		zero.fill(0);
 		in_degree.fill(zero);
 	}
@@ -271,11 +271,11 @@ RoutingConstraints::get_neuron_in_degree_per_padi_bus() const
 
 halco::common::typed_array<
     std::map<Projection::ReceptorType, size_t>,
-    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 RoutingConstraints::get_neuron_in_degree_per_receptor_type() const
 {
 	halco::common::typed_array<
-	    std::map<Projection::ReceptorType, size_t>, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	    std::map<Projection::ReceptorType, size_t>, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	    in_degree;
 	for (auto const& connection : get_internal_connections()) {
 		in_degree[connection.target][connection.receptor_type]++;
@@ -292,15 +292,15 @@ RoutingConstraints::get_neuron_in_degree_per_receptor_type() const
 halco::common::typed_array<
     halco::common::typed_array<
         std::map<Projection::ReceptorType, size_t>,
-        halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>,
-    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+        halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>,
+    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 RoutingConstraints::get_neuron_in_degree_per_receptor_type_per_padi_bus() const
 {
 	halco::common::typed_array<
 	    halco::common::typed_array<
 	        std::map<Projection::ReceptorType, size_t>,
-	        halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>,
-	    halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+	        halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 	    in_degree;
 	for (auto const& connection : get_internal_connections()) {
 		in_degree[connection.target][connection.toPADIBusOnDLS().toPADIBusOnPADIBusBlock()]
@@ -314,16 +314,16 @@ RoutingConstraints::get_neuron_in_degree_per_receptor_type_per_padi_bus() const
 }
 
 halco::common::
-    typed_array<std::map<Projection::ReceptorType, size_t>, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+    typed_array<std::map<Projection::ReceptorType, size_t>, halco::hicann_dls::vx::v3::PADIBusOnDLS>
     RoutingConstraints::get_num_synapse_rows_per_padi_bus_per_receptor_type() const
 {
 	halco::common::typed_array<
-	    std::map<Projection::ReceptorType, size_t>, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+	    std::map<Projection::ReceptorType, size_t>, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	    num;
 
 	auto const neuron_in_degree = get_neuron_in_degree_per_receptor_type_per_padi_bus();
 
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	for (auto const nrn : halco::common::iter_all<AtomicNeuronOnDLS>()) {
 		for (auto const padi_bus : halco::common::iter_all<PADIBusOnPADIBusBlock>()) {
 			PADIBusOnDLS const padi_bus_on_dls(
@@ -339,16 +339,16 @@ halco::common::
 	return num;
 }
 
-halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 RoutingConstraints::get_num_synapse_rows_per_padi_bus() const
 {
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS> num;
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS> num;
 	num.fill(0);
 
 	auto const num_synapse_rows_per_receptor_type =
 	    get_num_synapse_rows_per_padi_bus_per_receptor_type();
 
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	for (auto const padi_bus : halco::common::iter_all<PADIBusOnDLS>()) {
 		for (auto const& [_, c] : num_synapse_rows_per_receptor_type[padi_bus]) {
 			num.at(padi_bus) += c;
@@ -358,17 +358,17 @@ RoutingConstraints::get_num_synapse_rows_per_padi_bus() const
 }
 
 std::map<
-    halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS,
-    std::vector<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
+    std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 RoutingConstraints::get_neurons_on_event_output() const
 {
 	std::map<
-	    halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS,
-	    std::vector<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+	    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
+	    std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 	    ret;
 
-	std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> neurons;
-	using namespace halco::hicann_dls::vx::v2;
+	std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> neurons;
+	using namespace halco::hicann_dls::vx::v3;
 	for (auto const& [_, pop] : m_network.populations) {
 		if (!std::holds_alternative<Population>(pop)) {
 			continue;
@@ -388,12 +388,12 @@ RoutingConstraints::get_neurons_on_event_output() const
 	return ret;
 }
 
-std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>
+std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
 RoutingConstraints::get_neither_recorded_nor_source_neurons() const
 {
-	std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> ret;
+	std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> ret;
 
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	for (auto const& [_, pop] : m_network.populations) {
 		if (!std::holds_alternative<Population>(pop)) {
 			continue;
@@ -410,13 +410,13 @@ RoutingConstraints::get_neither_recorded_nor_source_neurons() const
 }
 
 std::map<
-    halco::hicann_dls::vx::v2::PADIBusOnDLS,
-    std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+    halco::hicann_dls::vx::v3::PADIBusOnDLS,
+    std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 RoutingConstraints::get_neurons_on_padi_bus() const
 {
 	std::map<
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS,
-	    std::set<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS,
+	    std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 	    ret;
 
 	for (auto const& connection : get_internal_connections()) {
@@ -426,10 +426,10 @@ RoutingConstraints::get_neurons_on_padi_bus() const
 	return ret;
 }
 
-halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 RoutingConstraints::get_num_background_sources_on_padi_bus() const
 {
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS> ret;
+	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS> ret;
 	ret.fill(0);
 
 	for (auto const& [_, pop] : m_network.populations) {
@@ -446,14 +446,14 @@ RoutingConstraints::get_num_background_sources_on_padi_bus() const
 }
 
 std::map<
-    halco::hicann_dls::vx::v2::PADIBusOnDLS,
-    std::set<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS>>
+    halco::hicann_dls::vx::v3::PADIBusOnDLS,
+    std::set<halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS>>
 RoutingConstraints::get_neuron_event_outputs_on_padi_bus() const
 {
 	auto const internal_connections = get_internal_connections();
 	std::map<
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS,
-	    std::set<halco::hicann_dls::vx::v2::NeuronEventOutputOnDLS>>
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS,
+	    std::set<halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS>>
 	    ret;
 	for (auto const& connection : internal_connections) {
 		ret[connection.toPADIBusOnDLS()].insert(
@@ -463,7 +463,7 @@ RoutingConstraints::get_neuron_event_outputs_on_padi_bus() const
 }
 
 halco::common::
-    typed_array<RoutingConstraints::PADIBusConstraints, halco::hicann_dls::vx::v2::PADIBusOnDLS>
+    typed_array<RoutingConstraints::PADIBusConstraints, halco::hicann_dls::vx::v3::PADIBusOnDLS>
     RoutingConstraints::get_padi_bus_constraints() const
 {
 	typed_array<PADIBusConstraints, PADIBusOnDLS> padi_bus_constraints;

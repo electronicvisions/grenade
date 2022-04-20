@@ -8,7 +8,7 @@
 namespace grenade::vx::network::detail {
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 
 bool SynapseDriverOnPADIBusManager::forwards(
     Label const& label, Mask const& mask, SynapseDriver const& synapse_driver)

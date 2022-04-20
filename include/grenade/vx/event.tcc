@@ -5,8 +5,8 @@ namespace grenade::vx {
 
 template <typename T>
 TimedData<T>::TimedData(
-    haldls::vx::v2::FPGATime const& fpga_time,
-    haldls::vx::v2::ChipTime const& chip_time,
+    haldls::vx::v3::FPGATime const& fpga_time,
+    haldls::vx::v3::ChipTime const& chip_time,
     T const& data) :
     fpga_time(fpga_time), chip_time(chip_time), data(data)
 {}

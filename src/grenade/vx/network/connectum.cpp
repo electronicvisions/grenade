@@ -61,8 +61,8 @@ struct HardwareConnectionPath
 Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_graph)
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	auto logger = log4cxx::Logger::getLogger("grenade.generate_connectum_from_hardware_network()");
 	hate::Timer timer;
@@ -211,7 +211,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	auto const process_path = [&connectum](
 	                              HardwareConnectionPath const& path,
 	                              std::pair<PopulationDescriptor, size_t> const& descriptor,
-	                              haldls::vx::v2::SpikeLabel const& label) {
+	                              haldls::vx::v3::SpikeLabel const& label) {
 		auto const neuron_label = label.get_neuron_label();
 		auto const target = path.crossbar_node.get_config().get_target();
 		auto const mask = path.crossbar_node.get_config().get_mask();

@@ -3,11 +3,11 @@
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/routing_constraints.h"
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
-#include "halco/hicann-dls/vx/v2/event.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/routing_crossbar.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/event.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/routing_crossbar.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "hate/algorithm.h"
 #include "hate/variant.h"
 #include <map>
@@ -18,7 +18,7 @@
 
 namespace grenade::vx::network {
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<Network> const& old)
@@ -104,7 +104,7 @@ void RoutingBuilder::route_internal_crossbar(
 			    !neuron_event_outputs_per_padi_bus.at(padi_bus).contains(neuron_event_output)) {
 				result.crossbar_nodes[CrossbarNodeOnDLS(
 				    neuron_event_output.toCrossbarInputOnDLS(), padi_bus.toCrossbarOutputOnDLS())] =
-				    haldls::vx::v2::CrossbarNode::drop_all;
+				    haldls::vx::v3::CrossbarNode::drop_all;
 				LOG4CXX_DEBUG(
 				    m_logger, "route_internal_crossbar(): Disabled crossbar node for "
 				                  << neuron_event_output << " onto " << padi_bus << ".");
@@ -135,7 +135,7 @@ RoutingBuilder::get_internal_sources(
     RoutingConstraints const& /*constraints*/,
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
-        halco::hicann_dls::vx::v2::PADIBusOnDLS> const& padi_bus_constraints,
+        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
     Network const& network) const
 {
 	// All neurons which are present at the PADI-bus are to be added.
@@ -203,7 +203,7 @@ RoutingBuilder::get_background_sources(
     RoutingConstraints const& /*constraints*/,
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
-        halco::hicann_dls::vx::v2::PADIBusOnDLS> const& padi_bus_constraints,
+        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
     Network const& network) const
 {
 	// All background spike sources act as source because they can't be filtered before reaching
@@ -267,7 +267,7 @@ RoutingBuilder::get_external_sources(
     RoutingConstraints const& constraints,
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
-        halco::hicann_dls::vx::v2::PADIBusOnDLS> const& /*padi_bus_constraints*/,
+        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& /*padi_bus_constraints*/,
     Network const& network) const
 {
 	// All external sources act as sources.
@@ -306,7 +306,7 @@ RoutingBuilder::get_external_sources(
 	return std::pair{external_sources, descriptors};
 }
 
-std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v2::SpikeLabel>
+std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel>
 RoutingBuilder::get_internal_labels(
     std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
     SourceOnPADIBusManager::Partition const& partition,
@@ -315,7 +315,7 @@ RoutingBuilder::get_internal_labels(
 	// The label consists of the label found by the routing and the synapse label.
 	// The latter is assigned linearly here, since its assignment does not have any influence on the
 	// later steps, it only has to be unambiguous.
-	std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v2::SpikeLabel> labels;
+	std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> labels;
 	for (size_t i = 0; i < partition.internal.size(); ++i) {
 		auto const local_label = allocations.at(i).label;
 		auto const& local_sources = partition.internal.at(i).sources;
@@ -323,8 +323,8 @@ RoutingBuilder::get_internal_labels(
 			auto const local_index = local_sources.at(k);
 			auto const& local_descriptor = descriptors.at(local_index);
 			assert(!labels.contains(local_descriptor));
-			haldls::vx::v2::SpikeLabel label;
-			label.set_row_select_address(haldls::vx::v2::PADIEvent::RowSelectAddress(local_label));
+			haldls::vx::v3::SpikeLabel label;
+			label.set_row_select_address(haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
 			label.set_synapse_label(haldls::vx::SynapseLabelValue(k));
 			labels[local_descriptor] = label;
 		}
@@ -334,7 +334,7 @@ RoutingBuilder::get_internal_labels(
 
 std::map<
     std::pair<PopulationDescriptor, size_t>,
-    std::map<HemisphereOnDLS, haldls::vx::v2::SpikeLabel>>
+    std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>>
 RoutingBuilder::get_background_labels(
     std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
     std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
@@ -346,7 +346,7 @@ RoutingBuilder::get_background_labels(
 	// later steps, it only has to be unambiguous.
 	std::map<
 	    std::pair<PopulationDescriptor, size_t>,
-	    std::map<HemisphereOnDLS, haldls::vx::v2::SpikeLabel>>
+	    std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>>
 	    labels;
 	for (size_t i = 0; i < partition.background.size(); ++i) {
 		auto const local_label = allocations.at(partition.internal.size() + i).label;
@@ -360,8 +360,8 @@ RoutingBuilder::get_background_labels(
 			assert(
 			    !labels.contains(local_descriptor) ||
 			    !labels.at(local_descriptor).contains(hemisphere));
-			haldls::vx::v2::SpikeLabel label;
-			label.set_row_select_address(haldls::vx::v2::PADIEvent::RowSelectAddress(local_label));
+			haldls::vx::v3::SpikeLabel label;
+			label.set_row_select_address(haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
 			label.set_synapse_label(haldls::vx::SynapseLabelValue(k));
 			labels[local_descriptor][hemisphere] = label;
 		}
@@ -370,7 +370,7 @@ RoutingBuilder::get_background_labels(
 }
 
 std::
-    map<std::pair<PopulationDescriptor, size_t>, std::map<PADIBusOnDLS, haldls::vx::v2::SpikeLabel>>
+    map<std::pair<PopulationDescriptor, size_t>, std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>>
     RoutingBuilder::get_external_labels(
         std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
         SourceOnPADIBusManager::Partition const& partition,
@@ -382,7 +382,7 @@ std::
 	// The static label part used for crossbar filtering is aligned to the requirements in
 	// apply_crossbar_internal().
 	std::map<
-	    std::pair<PopulationDescriptor, size_t>, std::map<PADIBusOnDLS, haldls::vx::v2::SpikeLabel>>
+	    std::pair<PopulationDescriptor, size_t>, std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>>
 	    labels;
 	for (size_t i = 0; i < partition.external.size(); ++i) {
 		auto const& local_allocation =
@@ -394,10 +394,10 @@ std::
 			auto const local_index = local_sources.at(k);
 			auto const& local_descriptor = descriptors.at(local_index);
 			for (auto const& [padi_bus, _] : targets) {
-				haldls::vx::v2::SpikeLabel label;
+				haldls::vx::v3::SpikeLabel label;
 				label.set_neuron_label(NeuronLabel(padi_bus.toPADIBusBlockOnDLS().value() << 13));
 				label.set_row_select_address(
-				    haldls::vx::v2::PADIEvent::RowSelectAddress(local_label));
+				    haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
 				label.set_synapse_label(haldls::vx::SynapseLabelValue(k));
 				label.set_spl1_address(SPL1Address(padi_bus.toPADIBusOnPADIBusBlock().value()));
 				labels[local_descriptor][padi_bus] = label;
@@ -409,13 +409,13 @@ std::
 
 std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_source_labels(
     RoutingConstraints const& constraints,
-    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v2::SpikeLabel> const& internal,
+    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> const& internal,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<HemisphereOnDLS, haldls::vx::v2::SpikeLabel>> const& background,
+        std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>> const& background,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<PADIBusOnDLS, haldls::vx::v2::SpikeLabel>> const& external,
+        std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>> const& external,
     Network const& network,
     Result& result) const
 {
@@ -456,7 +456,7 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
 			// Find the root of the label, i.e. without the lower bits depending on the actual
 			// single neuron source.
-			std::map<HemisphereOnDLS, std::set<haldls::vx::v2::SpikeLabel>> local_labels;
+			std::map<HemisphereOnDLS, std::set<haldls::vx::v3::SpikeLabel>> local_labels;
 			auto const size = std::get<BackgroundSpikeSourcePopulation>(population).size;
 			for (size_t i = 0; i < size; ++i) {
 				if (!background.contains(std::pair{descriptor, i})) {
@@ -467,11 +467,11 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 				} else {
 					for (auto [hemisphere, label] : background.at(std::pair{descriptor, i})) {
 						if (size <= 64) {
-							label = haldls::vx::v2::SpikeLabel(label.value() & 0b1111111111000000);
+							label = haldls::vx::v3::SpikeLabel(label.value() & 0b1111111111000000);
 						} else if (size > 64 && size <= 128) {
-							label = haldls::vx::v2::SpikeLabel(label.value() & 0b1111111110000000);
+							label = haldls::vx::v3::SpikeLabel(label.value() & 0b1111111110000000);
 						} else if (size > 128) {
-							label = haldls::vx::v2::SpikeLabel(label.value() & 0b1111111100000000);
+							label = haldls::vx::v3::SpikeLabel(label.value() & 0b1111111100000000);
 						} else {
 							throw std::logic_error("Impossible background source population size.");
 						}
@@ -490,14 +490,14 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 		}
 	}
 	// all unset labels can be uniquely assigned now
-	std::set<haldls::vx::v2::SpikeLabel> set_labels;
+	std::set<haldls::vx::v3::SpikeLabel> set_labels;
 	for (auto const& [_, label] : internal) {
 		set_labels.insert(label);
 	}
 	for (auto const& [descriptor, index] : unset_labels) {
 		auto const& neuron =
 		    std::get<Population>(network.populations.at(descriptor)).neurons.at(index);
-		haldls::vx::v2::SpikeLabel label;
+		haldls::vx::v3::SpikeLabel label;
 		label.set_neuron_event_output(neuron.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
 		bool success = false;
 		for (auto const neuron_backend_address_out :
@@ -523,13 +523,13 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 std::map<std::pair<ProjectionDescriptor, size_t>, RoutingBuilder::PlacedConnection>
 RoutingBuilder::place_routed_connections(
     std::vector<RoutedConnection> const& connections,
-    std::vector<halco::hicann_dls::vx::v2::SynapseRowOnDLS> const& synapse_rows) const
+    std::vector<halco::hicann_dls::vx::v3::SynapseRowOnDLS> const& synapse_rows) const
 {
 	// We place connections to a set of rows by filling like:
 	// x   x     x
 	// x   x x   x
 	// x x x x x x
-	std::map<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, size_t> num_placed_connections_by_target;
+	std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, size_t> num_placed_connections_by_target;
 	std::map<std::pair<ProjectionDescriptor, size_t>, RoutingBuilder::PlacedConnection> ret;
 	for (auto const& connection : connections) {
 		auto const num_connections = num_placed_connections_by_target[connection.target];
@@ -548,7 +548,7 @@ RoutingBuilder::place_routed_connections(
     std::vector<Connection> const& connections,
     std::map<
         Projection::ReceptorType,
-        std::vector<halco::hicann_dls::vx::v2::SynapseRowOnDLS>> const& synapse_rows) const
+        std::vector<halco::hicann_dls::vx::v3::SynapseRowOnDLS>> const& synapse_rows) const
 {
 	std::map<std::pair<ProjectionDescriptor, size_t>, RoutingBuilder::PlacedConnection> ret;
 	for (auto const& [receptor_type, rows] : synapse_rows) {
@@ -589,7 +589,7 @@ RoutingBuilder::place_routed_connections(
 		auto const local_synapse_drivers = local_allocation.synapse_drivers;
 		std::map<
 		    Projection::ReceptorType,
-		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS>>
+		    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
 		    in_degree;
 		in_degree[Projection::ReceptorType::excitatory].fill(0);
 		in_degree[Projection::ReceptorType::inhibitory].fill(0);
@@ -650,8 +650,8 @@ RoutingBuilder::place_routed_connections(
 				for (auto const& row : rs) {
 					result.synapse_row_modes[row] =
 					    receptor_type == Projection::ReceptorType::excitatory
-					        ? haldls::vx::v2::SynapseDriverConfig::RowMode::excitatory
-					        : haldls::vx::v2::SynapseDriverConfig::RowMode::inhibitory;
+					        ? haldls::vx::v3::SynapseDriverConfig::RowMode::excitatory
+					        : haldls::vx::v3::SynapseDriverConfig::RowMode::inhibitory;
 					for (auto const orow : iter_all<SynapseRowOnSynapseDriver>()) {
 						SynapseRowOnDLS other_row(
 						    row.toSynapseRowOnSynram()
@@ -660,7 +660,7 @@ RoutingBuilder::place_routed_connections(
 						    row.toSynramOnDLS());
 						if (!result.synapse_row_modes.contains(other_row)) {
 							result.synapse_row_modes[other_row] =
-							    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled;
+							    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled;
 						}
 					}
 				}
@@ -732,14 +732,14 @@ RoutingBuilder::place_routed_connections(
 
 void RoutingBuilder::apply_routed_connections(
     std::map<std::pair<ProjectionDescriptor, size_t>, PlacedConnection> const& placed_connections,
-    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v2::SpikeLabel> const&
+    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> const&
         internal_labels,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<HemisphereOnDLS, haldls::vx::v2::SpikeLabel>> const& background_labels,
+        std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>> const& background_labels,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<PADIBusOnDLS, haldls::vx::v2::SpikeLabel>> const& external_labels,
+        std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>> const& external_labels,
 
     Network const& network,
     Result& result) const
@@ -756,11 +756,11 @@ void RoutingBuilder::apply_routed_connections(
 			auto const synapse_on_row = placed_connection.synapse_on_row;
 			std::pair const population_descriptor{projection.population_pre,
 			                                      projection.connections.at(i).index_pre};
-			lola::vx::v2::SynapseMatrix::Label label;
-			if (projection.connections.at(i).weight > lola::vx::v2::SynapseMatrix::Weight::max) {
+			lola::vx::v3::SynapseMatrix::Label label;
+			if (projection.connections.at(i).weight > lola::vx::v3::SynapseMatrix::Weight::max) {
 				throw std::out_of_range("Requested too large weight value.");
 			}
-			lola::vx::v2::SynapseMatrix::Weight const weight(projection.connections.at(i).weight);
+			lola::vx::v3::SynapseMatrix::Weight const weight(projection.connections.at(i).weight);
 			if (internal_labels.contains(population_descriptor)) {
 				label = internal_labels.at(population_descriptor).get_synapse_label();
 			} else if (background_labels.contains(population_descriptor)) {
@@ -798,7 +798,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_l2(Result& result) const
 		for (auto const coutput : iter_all<PADIBusOnDLS>()) {
 			CrossbarNodeOnDLS const coord(
 			    coutput.toCrossbarOutputOnDLS(), cinput.toCrossbarInputOnDLS());
-			result.crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode::drop_all;
+			result.crossbar_nodes[coord] = haldls::vx::v3::CrossbarNode::drop_all;
 		}
 	}
 	// enable input from L2 to top half
@@ -806,7 +806,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_l2(Result& result) const
 		CrossbarNodeOnDLS const coord(
 		    PADIBusOnDLS(coutput, PADIBusBlockOnDLS::top).toCrossbarOutputOnDLS(),
 		    SPL1Address(coutput).toCrossbarInputOnDLS());
-		haldls::vx::v2::CrossbarNode config;
+		haldls::vx::v3::CrossbarNode config;
 		config.set_mask(NeuronLabel(1 << 13));
 		config.set_target(NeuronLabel(0 << 13));
 		result.crossbar_nodes[coord] = config;
@@ -816,7 +816,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_l2(Result& result) const
 		CrossbarNodeOnDLS const coord(
 		    PADIBusOnDLS(coutput, PADIBusBlockOnDLS::bottom).toCrossbarOutputOnDLS(),
 		    SPL1Address(coutput).toCrossbarInputOnDLS());
-		haldls::vx::v2::CrossbarNode config;
+		haldls::vx::v3::CrossbarNode config;
 		config.set_mask(NeuronLabel(1 << 13));
 		config.set_target(NeuronLabel(1 << 13));
 		result.crossbar_nodes[coord] = config;
@@ -831,7 +831,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_background(Result& result) const
 	for (auto const background : iter_all<BackgroundSpikeSourceOnDLS>()) {
 		CrossbarNodeOnDLS const coord(
 		    background.toPADIBusOnDLS().toCrossbarOutputOnDLS(), background.toCrossbarInputOnDLS());
-		result.crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode();
+		result.crossbar_nodes[coord] = haldls::vx::v3::CrossbarNode();
 	}
 }
 
@@ -846,7 +846,7 @@ void RoutingBuilder::apply_crossbar_nodes_internal(Result& result) const
 		    CrossbarOutputOnDLS(cinput % PADIBusOnPADIBusBlock::size),
 		    cinput.toCrossbarInputOnDLS());
 		if (!result.crossbar_nodes.contains(coord)) {
-			result.crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode();
+			result.crossbar_nodes[coord] = haldls::vx::v3::CrossbarNode();
 		}
 	}
 	for (auto const cinput : iter_all<NeuronEventOutputOnDLS>()) {
@@ -854,7 +854,7 @@ void RoutingBuilder::apply_crossbar_nodes_internal(Result& result) const
 		    CrossbarOutputOnDLS(cinput % PADIBusOnPADIBusBlock::size + PADIBusOnPADIBusBlock::size),
 		    cinput.toCrossbarInputOnDLS());
 		if (!result.crossbar_nodes.contains(coord)) {
-			result.crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode();
+			result.crossbar_nodes[coord] = haldls::vx::v3::CrossbarNode();
 		}
 	}
 }
@@ -868,7 +868,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_internal_to_l2(Result& result) co
 		CrossbarNodeOnDLS const coord(
 		    CrossbarOutputOnDLS(PADIBusOnDLS::size + (cinput % PADIBusOnPADIBusBlock::size)),
 		    cinput.toCrossbarInputOnDLS());
-		result.crossbar_nodes[coord] = haldls::vx::v2::CrossbarNode();
+		result.crossbar_nodes[coord] = haldls::vx::v3::CrossbarNode();
 	}
 }
 

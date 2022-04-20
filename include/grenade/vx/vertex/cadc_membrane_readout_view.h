@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
-#include "halco/hicann-dls/vx/v2/cadc.h"
+#include "halco/hicann-dls/vx/v3/cadc.h"
 #include "hate/visibility.h"
 #include <array>
 #include <cstddef>
@@ -34,8 +34,8 @@ struct CADCMembraneReadoutView
 	 * Each inner collection corresponds to one input port of the vertex and thus allows recording
 	 * neurons from different non-contiguous input vertices.
 	 */
-	typedef std::vector<std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow>> Columns;
-	typedef halco::hicann_dls::vx::v2::SynramOnDLS Synram;
+	typedef std::vector<std::vector<halco::hicann_dls::vx::v3::SynapseOnSynapseRow>> Columns;
+	typedef halco::hicann_dls::vx::v3::SynramOnDLS Synram;
 
 	enum class Mode
 	{

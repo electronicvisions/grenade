@@ -45,7 +45,7 @@ size_t Addition::output_size() const
 
 std::vector<std::vector<Int8>> Addition::run(
     std::vector<std::vector<Int8>> const& inputs,
-    lola::vx::v2::Chip const& config,
+    lola::vx::v3::Chip const& config,
     backend::Connection& connection) const
 {
 	using namespace halco::hicann_dls::vx;
@@ -54,7 +54,7 @@ std::vector<std::vector<Int8>> Addition::run(
 	connections.insert(std::pair<DLSGlobal, backend::Connection&>(DLSGlobal(), connection));
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<DLSGlobal, lola::vx::v2::Chip>(DLSGlobal(), config));
+	configs.insert(std::pair<DLSGlobal, lola::vx::v3::Chip>(DLSGlobal(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

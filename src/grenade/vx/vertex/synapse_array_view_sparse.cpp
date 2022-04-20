@@ -3,8 +3,8 @@
 #include "grenade/cerealization.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "halco/common/cerealization_geometry.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include <ostream>
 #include <stdexcept>
 #include <cereal/types/vector.hpp>
@@ -109,7 +109,7 @@ ppu::SynapseArrayViewHandle SynapseArrayViewSparse::toSynapseArrayViewHandle() c
 std::vector<Port> SynapseArrayViewSparse::inputs() const
 {
 	Port const port(1, ConnectionType::SynapseInputLabel);
-	std::set<halco::hicann_dls::vx::v2::SynapseDriverOnSynapseDriverBlock> drivers;
+	std::set<halco::hicann_dls::vx::v3::SynapseDriverOnSynapseDriverBlock> drivers;
 	std::for_each(m_rows.begin(), m_rows.end(), [&](auto const& r) {
 		drivers.insert(r.toSynapseDriverOnSynapseDriverBlock());
 	});

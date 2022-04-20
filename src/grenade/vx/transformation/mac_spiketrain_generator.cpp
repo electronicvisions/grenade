@@ -3,9 +3,9 @@
 #include "grenade/cerealization.h"
 #include "halco/common/cerealization_geometry.h"
 #include "halco/common/cerealization_typed_array.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/event.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/event.h"
 #include <cereal/types/polymorphic.hpp>
 
 namespace grenade::vx::transformation {
@@ -13,10 +13,10 @@ namespace grenade::vx::transformation {
 MACSpikeTrainGenerator::~MACSpikeTrainGenerator() {}
 
 MACSpikeTrainGenerator::MACSpikeTrainGenerator(
-    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::HemisphereOnDLS> const&
+    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS> const&
         hemisphere_sizes,
     size_t num_sends,
-    haldls::vx::v2::Timer::Value wait_between_events) :
+    haldls::vx::v3::Timer::Value wait_between_events) :
     m_hemisphere_sizes(hemisphere_sizes),
     m_num_sends(num_sends),
     m_wait_between_events(wait_between_events)
@@ -41,8 +41,8 @@ Port MACSpikeTrainGenerator::output() const
 MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
     std::vector<Function::Value> const& value) const
 {
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	size_t batch_size = 0;
 	if (!value.empty()) {
@@ -134,19 +134,19 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 	return events;
 }
 
-std::optional<haldls::vx::v2::SpikeLabel> MACSpikeTrainGenerator::get_spike_label(
-    halco::hicann_dls::vx::v2::SynapseDriverOnDLS const& driver, UInt5 const value)
+std::optional<haldls::vx::v3::SpikeLabel> MACSpikeTrainGenerator::get_spike_label(
+    halco::hicann_dls::vx::v3::SynapseDriverOnDLS const& driver, UInt5 const value)
 {
 	if (value == 0) {
 		return std::nullopt;
 	}
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 	auto const synapse_driver = driver.toSynapseDriverOnSynapseDriverBlock();
 	auto const spl1_address = synapse_driver % PADIBusOnPADIBusBlock::size;
 	auto const synapse_label = ((UInt5::max - value.value()) + 1);
 	auto const row_select = synapse_driver / PADIBusOnPADIBusBlock::size;
 	auto const h = (static_cast<size_t>(driver.toSynapseDriverBlockOnDLS()) << 13);
-	return haldls::vx::v2::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
+	return haldls::vx::v3::SpikeLabel(h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
 bool MACSpikeTrainGenerator::equal(vertex::Transformation::Function const& other) const

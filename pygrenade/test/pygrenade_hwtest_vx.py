@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import unittest
-from dlens_vx_v2 import halco, hxcomm, sta, hal, lola, logger
+from dlens_vx_v3 import halco, hxcomm, sta, hal, lola, logger
 import pygrenade_vx as grenade
 
 logger_grenade = logger.get("grenade")

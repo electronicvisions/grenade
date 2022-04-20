@@ -10,12 +10,12 @@
 #include "grenade/vx/vertex/external_input.h"
 #include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
-#include "halco/hicann-dls/vx/v2/event.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 
 #include <cereal/archives/json.hpp>
 #include <cereal/cereal.hpp>
 
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace grenade::vx;
 using namespace grenade::vx::coordinate;
 using namespace grenade::vx::vertex;
@@ -169,7 +169,7 @@ TEST(Graph, check_supports_input_from)
 	    CrossbarNodeOnDLS(
 	        SPL1Address().toCrossbarInputOnDLS(),
 	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v2 -> v3
 	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
@@ -184,7 +184,7 @@ TEST(Graph, check_supports_input_from)
 	// crossbar node not connecting loopback
 	CrossbarNode vertex7(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v5
 	auto const v5 = graph.add(vertex7, ExecutionInstance(), {v2});
@@ -211,7 +211,7 @@ TEST(Graph, recurrence)
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
 
 	PADIBus::Coordinate c;
@@ -229,8 +229,8 @@ TEST(Graph, recurrence)
 	SynapseArrayView synapses(
 	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
 	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
-	    SynapseArrayView::Weights{{lola::vx::v2::SynapseMatrix::Weight()}},
-	    SynapseArrayView::Labels{{lola::vx::v2::SynapseMatrix::Label()}});
+	    SynapseArrayView::Weights{{lola::vx::v3::SynapseMatrix::Weight()}},
+	    SynapseArrayView::Labels{{lola::vx::v3::SynapseMatrix::Label()}});
 	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
 
 	NeuronView neurons(
@@ -245,7 +245,7 @@ TEST(Graph, recurrence)
 	// recurrence
 	CrossbarNode crossbar_recurrent(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarOutputOnDLS(0)),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstance(), {v8});
 
 	auto const v10 = graph.add(v4, ExecutionInstance(), {v3, v9});
@@ -260,7 +260,7 @@ TEST(Graph, recurrence)
 
 	CrossbarNode crossbar_out(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const v15 = graph.add(crossbar_out, ExecutionInstance(), {v14});
 
 	CrossbarL2Output crossbar_l2_output;
@@ -303,7 +303,7 @@ TEST(Graph, CerealizeCoverage)
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
 
 	PADIBus::Coordinate c;
@@ -321,8 +321,8 @@ TEST(Graph, CerealizeCoverage)
 	SynapseArrayView synapses(
 	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
 	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
-	    SynapseArrayView::Weights{{lola::vx::v2::SynapseMatrix::Weight()}},
-	    SynapseArrayView::Labels{{lola::vx::v2::SynapseMatrix::Label()}});
+	    SynapseArrayView::Weights{{lola::vx::v3::SynapseMatrix::Weight()}},
+	    SynapseArrayView::Labels{{lola::vx::v3::SynapseMatrix::Label()}});
 	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
 
 	NeuronView neurons(
@@ -397,7 +397,7 @@ TEST(Graph, update)
 	    CrossbarNodeOnDLS(
 	        SPL1Address().toCrossbarInputOnDLS(),
 	        SPL1Address().toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v2 -> v3
 	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
@@ -412,7 +412,7 @@ TEST(Graph, update)
 	// crossbar node not connecting loopback
 	CrossbarNode vertex7(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), PADIBusOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> X -> v3 -> v4
 	EXPECT_THROW(graph.update(v3, vertex7), std::runtime_error);
@@ -422,7 +422,7 @@ TEST(Graph, update)
 	    CrossbarNodeOnDLS(
 	        SPL1Address(1).toCrossbarInputOnDLS(),
 	        SPL1Address(1).toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> X -> v3 -> v4
 	EXPECT_NO_THROW(graph.update(v3, vertex8));
@@ -446,17 +446,17 @@ TEST(Graph, update_and_relocate)
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
 
 	CrossbarNode other_crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(9), CrossbarOutputOnDLS(0)),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const other_v3 = graph.add(other_crossbar_in, ExecutionInstance(), {v2});
 
 	CrossbarNode other_crossbar_in_different_padi_bus(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(1)),
-	    haldls::vx::v2::CrossbarNode());
+	    haldls::vx::v3::CrossbarNode());
 	auto const other_v3_different_padi_bus =
 	    graph.add(other_crossbar_in_different_padi_bus, ExecutionInstance(), {v2});
 

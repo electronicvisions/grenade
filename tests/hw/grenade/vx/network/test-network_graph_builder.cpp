@@ -11,29 +11,29 @@
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/types.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "haldls/vx/v2/neuron.h"
-#include "haldls/vx/v2/timer.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "haldls/vx/v3/neuron.h"
+#include "haldls/vx/v3/timer.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
-#include "lola/vx/v2/chip.h"
-#include "stadls/vx/v2/init_generator.h"
-#include "stadls/vx/v2/playback_generator.h"
-#include "stadls/vx/v2/run.h"
+#include "lola/vx/v3/chip.h"
+#include "stadls/vx/v3/init_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
+#include "stadls/vx/v3/run.h"
 #include <random>
 #include <gtest/gtest.h>
 #include <log4cxx/logger.h>
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
-using namespace stadls::vx::v2;
-using namespace lola::vx::v2;
-using namespace haldls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
+using namespace stadls::vx::v3;
+using namespace lola::vx::v3;
+using namespace haldls::vx::v3;
 
-inline std::pair<lola::vx::v2::Chip, grenade::vx::backend::Connection>
+inline std::pair<lola::vx::v3::Chip, grenade::vx::backend::Connection>
 initialize_excitatory_bypass()
 {
-	std::unique_ptr<lola::vx::v2::Chip> chip = std::make_unique<lola::vx::v2::Chip>();
+	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
 	// Initialize chip
 	ExperimentInit init;
 	for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
@@ -48,13 +48,13 @@ initialize_excitatory_bypass()
 		}
 	}
 	grenade::vx::backend::Connection connection(hxcomm::vx::get_connection_from_env(), init);
-	stadls::vx::v2::PlaybackProgramBuilder builder;
+	stadls::vx::v3::PlaybackProgramBuilder builder;
 	// enable excitatory bypass mode
 	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
 		auto& config = chip->neuron_block.atomic_neurons[neuron];
 		config.event_routing.enable_digital = true;
 		config.event_routing.analog_output =
-		    lola::vx::v2::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
+		    lola::vx::v3::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
 		config.event_routing.enable_bypass_excitatory = true;
 		config.threshold.enable = false;
 	}

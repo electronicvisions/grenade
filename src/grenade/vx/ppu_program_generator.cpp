@@ -13,7 +13,7 @@ namespace grenade::vx {
 void PPUProgramGenerator::add(
     vertex::PlasticityRule const& rule,
     std::vector<
-        std::pair<halco::hicann_dls::vx::v2::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
+        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
         synapses)
 {
 	m_plasticity_rules.push_back({rule, synapses});
@@ -26,8 +26,8 @@ std::vector<std::string> PPUProgramGenerator::done()
 	    log4cxx::Logger::getLogger("grenade.PPUProgramGenerator.done()");
 
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
-	using namespace haldls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
 
 	std::vector<std::string> sources;
 	// plasticity rules

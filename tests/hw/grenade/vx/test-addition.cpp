@@ -8,19 +8,19 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
-#include "haldls/vx/v2/systime.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
+#include "haldls/vx/v3/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
-#include "lola/vx/v2/chip.h"
-#include "stadls/vx/v2/init_generator.h"
-#include "stadls/vx/v2/playback_generator.h"
-#include "stadls/vx/v2/run.h"
+#include "lola/vx/v3/chip.h"
+#include "stadls/vx/v3/init_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
+#include "stadls/vx/v3/run.h"
 
 using namespace halco::common;
-using namespace halco::hicann_dls::vx::v2;
-using namespace stadls::vx::v2;
-using namespace lola::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
+using namespace stadls::vx::v3;
+using namespace lola::vx::v3;
 
 TEST(Addition, Single)
 {
@@ -57,9 +57,9 @@ TEST(Addition, Single)
 	}
 	input_list.data[v1] =
 	    std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>{
-	        {{haldls::vx::v2::FPGATime(), haldls::vx::v2::ChipTime(), inputs}}};
+	        {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), inputs}}};
 
-	std::unique_ptr<lola::vx::v2::Chip> chip = std::make_unique<lola::vx::v2::Chip>();
+	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[DLSGlobal()] = *chip;
 

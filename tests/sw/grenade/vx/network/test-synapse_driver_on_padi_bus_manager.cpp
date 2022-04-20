@@ -6,7 +6,7 @@
 
 
 using namespace grenade::vx::network;
-using namespace halco::hicann_dls::vx::v2;
+using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 

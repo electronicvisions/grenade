@@ -1,8 +1,8 @@
 #pragma once
 #include "grenade/vx/network/source_on_padi_bus_manager.h"
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/padi.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/visibility.h"
 #include <optional>
 #include <set>
@@ -35,7 +35,7 @@ struct SourceOnPADIBusManager
 	 * @return Number of required synapse drivers per PADI-bus
 	 */
 	template <typename S>
-	static halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusBlockOnDLS>
+	static halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusBlockOnDLS>
 	get_num_synapse_drivers(std::vector<S> const& sources, std::vector<size_t> const& filter);
 
 	/**
@@ -48,10 +48,10 @@ struct SourceOnPADIBusManager
 	 */
 	static std::optional<halco::common::typed_array<
 	    std::vector<std::vector<size_t>>,
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS>>
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS>>
 	distribute_external_sources_linear(
 	    std::vector<ExternalSource> const& sources,
-	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v2::PADIBusOnDLS> const&
+	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS> const&
 	        used_num_synapse_drivers) SYMBOL_VISIBLE;
 
 	/**
@@ -64,11 +64,11 @@ struct SourceOnPADIBusManager
 	static std::vector<SynapseDriverOnDLSManager::AllocationRequest>
 	get_allocation_requests_internal(
 	    std::vector<std::vector<size_t>> const& filter,
-	    halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock const& padi_bus,
-	    halco::hicann_dls::vx::v2::NeuronBackendConfigBlockOnDLS const& backend_block,
+	    halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock const& padi_bus,
+	    halco::hicann_dls::vx::v3::NeuronBackendConfigBlockOnDLS const& backend_block,
 	    halco::common::typed_array<
 	        std::vector<size_t>,
-	        halco::hicann_dls::vx::v2::PADIBusOnDLS> const& num_synapse_drivers) SYMBOL_VISIBLE;
+	        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& num_synapse_drivers) SYMBOL_VISIBLE;
 
 	/**
 	 * Get allocation requests for filtered background sources.
@@ -80,7 +80,7 @@ struct SourceOnPADIBusManager
 	static std::vector<SynapseDriverOnDLSManager::AllocationRequest>
 	get_allocation_requests_background(
 	    std::vector<std::vector<size_t>> const& filter,
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS const& padi_bus,
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS const& padi_bus,
 	    std::vector<size_t> const& num_synapse_drivers) SYMBOL_VISIBLE;
 
 	/**
@@ -90,7 +90,7 @@ struct SourceOnPADIBusManager
 	 * @return Allocation requests for synapse driver allocation algorithm
 	 */
 	static SynapseDriverOnDLSManager::AllocationRequest get_allocation_requests_external(
-	    halco::hicann_dls::vx::v2::PADIBusOnDLS const& padi_bus,
+	    halco::hicann_dls::vx::v3::PADIBusOnDLS const& padi_bus,
 	    size_t num_synapse_drivers) SYMBOL_VISIBLE;
 };
 

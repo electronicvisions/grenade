@@ -4,12 +4,12 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
-#include "halco/hicann-dls/vx/v2/chip.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 
-namespace lola::vx::v2 {
+namespace lola::vx::v3 {
 struct Chip;
-} // namespace lola::vx::v2
+} // namespace lola::vx::v3
 
 namespace grenade::vx {
 
@@ -32,9 +32,9 @@ class JITGraphExecutor
 {
 public:
 	/** Map of connections. */
-	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, backend::Connection&> Connections;
+	typedef std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection&> Connections;
 
-	typedef std::map<halco::hicann_dls::vx::v2::DLSGlobal, lola::vx::v2::Chip> ChipConfigs;
+	typedef std::map<halco::hicann_dls::vx::v3::DLSGlobal, lola::vx::v3::Chip> ChipConfigs;
 
 	typedef std::unordered_map<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>
 	    PlaybackHooks;

@@ -7,18 +7,18 @@
 #include "grenade/vx/types.h"
 #include "grenade/vx/vertex/synapse_array_view.h"
 #include "halco/common/geometry.h"
-#include "haldls/vx/v2/event.h"
-#include "haldls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/timer.h"
-#include "lola/vx/v2/synapse.h"
+#include "haldls/vx/v3/event.h"
+#include "haldls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/timer.h"
+#include "lola/vx/v3/synapse.h"
 
 namespace cereal {
 class access;
 } // namespace cereal
 
-namespace lola::vx::v2 {
+namespace lola::vx::v3 {
 class Chip;
-} // namespace lola::vx::v2
+} // namespace lola::vx::v3
 
 namespace grenade::vx {
 
@@ -46,7 +46,7 @@ public:
 		    rant_t(val)
 		{}
 
-		typedef lola::vx::v2::SynapseMatrix::Weight UnsignedWeight;
+		typedef lola::vx::v3::SynapseMatrix::Weight UnsignedWeight;
 
 		UnsignedWeight toExcitatory() const SYMBOL_VISIBLE;
 		UnsignedWeight toInhibitory() const SYMBOL_VISIBLE;
@@ -68,7 +68,7 @@ public:
 	template <typename WeightsT>
 	MAC(WeightsT&& weights,
 	    size_t num_sends = 1,
-	    haldls::vx::v2::Timer::Value wait_between_events = haldls::vx::v2::Timer::Value(25),
+	    haldls::vx::v3::Timer::Value wait_between_events = haldls::vx::v3::Timer::Value(25),
 	    bool enable_loopback = true);
 
 	/**
@@ -80,7 +80,7 @@ public:
 	 */
 	std::vector<std::vector<Int8>> run(
 	    Activations const& inputs,
-	    lola::vx::v2::Chip const& config,
+	    lola::vx::v3::Chip const& config,
 	    backend::Connection& connection) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
@@ -100,7 +100,7 @@ private:
 	    Graph& graph,
 	    Weights&& weights,
 	    coordinate::ExecutionInstance const& instance,
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS const& hemisphere,
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
 	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
 
 	bool m_enable_loopback{false};
@@ -113,7 +113,7 @@ private:
 	void build_graph() SYMBOL_VISIBLE;
 
 	size_t m_num_sends{};
-	haldls::vx::v2::Timer::Value m_wait_between_events{};
+	haldls::vx::v3::Timer::Value m_wait_between_events{};
 
 	friend class cereal::access;
 	template <typename Archive>

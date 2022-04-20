@@ -1,7 +1,7 @@
 #pragma once
-#include "halco/hicann-dls/vx/v2/synapse_driver.h"
-#include "haldls/vx/v2/padi.h"
-#include "haldls/vx/v2/synapse_driver.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/padi.h"
+#include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <iosfwd>
@@ -23,15 +23,15 @@ struct SynapseDriverOnPADIBusManager
 	/**
 	 * Label to identify events at synapse driver(s).
 	 */
-	typedef haldls::vx::v2::PADIEvent::RowSelectAddress Label;
+	typedef haldls::vx::v3::PADIEvent::RowSelectAddress Label;
 	/**
 	 * Mask to filter events at synapse driver(s) depending on their label.
 	 */
-	typedef haldls::vx::v2::SynapseDriverConfig::RowAddressCompareMask Mask;
+	typedef haldls::vx::v3::SynapseDriverConfig::RowAddressCompareMask Mask;
 	/**
 	 * Synapse driver location.
 	 */
-	typedef halco::hicann_dls::vx::v2::SynapseDriverOnPADIBus SynapseDriver;
+	typedef halco::hicann_dls::vx::v3::SynapseDriverOnPADIBus SynapseDriver;
 
 	/**
 	 * Properties of a requested allocation of synapse drivers.

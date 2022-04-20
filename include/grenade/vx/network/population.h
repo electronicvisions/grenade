@@ -1,10 +1,10 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "halco/hicann-dls/vx/v2/background.h"
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "haldls/vx/v2/background.h"
+#include "halco/hicann-dls/vx/v3/background.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "haldls/vx/v3/background.h"
 #include "hate/visibility.h"
-#include "lola/vx/v2/neuron.h"
+#include "lola/vx/v3/neuron.h"
 #include <cstddef>
 #include <iosfwd>
 #include <vector>
@@ -17,7 +17,7 @@ namespace network {
 struct GENPYBIND(visible) Population
 {
 	/** List of on-chip neurons. */
-	typedef std::vector<halco::hicann_dls::vx::v2::AtomicNeuronOnDLS> Neurons;
+	typedef std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> Neurons;
 	Neurons neurons{};
 	/** Enable spike recording. */
 	typedef std::vector<bool> EnableRecordSpikes;
@@ -59,17 +59,17 @@ struct GENPYBIND(visible) BackgroundSpikeSourcePopulation
 
 	/** Placement of the source. */
 	typedef std::map<
-	    halco::hicann_dls::vx::v2::HemisphereOnDLS,
-	    halco::hicann_dls::vx::v2::PADIBusOnPADIBusBlock>
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS,
+	    halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>
 	    Coordinate;
 	Coordinate coordinate;
 
 	/** Configuration of the source. */
 	struct Config
 	{
-		haldls::vx::v2::BackgroundSpikeSource::Period period;
-		haldls::vx::v2::BackgroundSpikeSource::Rate rate;
-		haldls::vx::v2::BackgroundSpikeSource::Seed seed;
+		haldls::vx::v3::BackgroundSpikeSource::Period period;
+		haldls::vx::v3::BackgroundSpikeSource::Rate rate;
+		haldls::vx::v3::BackgroundSpikeSource::Seed seed;
 		bool enable_random;
 
 		bool operator==(Config const& other) const SYMBOL_VISIBLE;

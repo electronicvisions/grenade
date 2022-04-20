@@ -1,8 +1,8 @@
 #include "grenade/vx/ppu.h"
 
-#include "halco/hicann-dls/vx/v2/neuron.h"
-#include "halco/hicann-dls/vx/v2/quad.h"
-#include "halco/hicann-dls/vx/v2/synapse.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/quad.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/join.h"
 #include <cstdlib>
 #include <fstream>
@@ -13,12 +13,12 @@
 
 namespace grenade::vx {
 
-haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(
-    halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS> const& values)
+haldls::vx::v3::PPUMemoryBlock to_vector_unit_row(
+    halco::common::typed_array<int8_t, halco::hicann_dls::vx::v3::NeuronColumnOnDLS> const& values)
 {
-	using namespace haldls::vx::v2;
+	using namespace haldls::vx::v3;
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 
 	PPUMemoryBlock block(
 	    PPUMemoryBlockSize(NeuronColumnOnDLS::size / sizeof(PPUMemoryWord::raw_type)));
@@ -34,12 +34,12 @@ haldls::vx::v2::PPUMemoryBlock to_vector_unit_row(
 	return block;
 }
 
-halco::common::typed_array<int8_t, halco::hicann_dls::vx::v2::NeuronColumnOnDLS>
-from_vector_unit_row(haldls::vx::v2::PPUMemoryBlock const& values)
+halco::common::typed_array<int8_t, halco::hicann_dls::vx::v3::NeuronColumnOnDLS>
+from_vector_unit_row(haldls::vx::v3::PPUMemoryBlock const& values)
 {
-	using namespace haldls::vx::v2;
+	using namespace haldls::vx::v3;
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v2;
+	using namespace halco::hicann_dls::vx::v3;
 
 	if (values.size() != NeuronColumnOnDLS::size / sizeof(PPUMemoryWord::raw_type)) {
 		throw std::runtime_error("Trying to convert values to vector-unit row of wrong size.");
@@ -143,7 +143,7 @@ std::string get_library_paths()
 			std::filesystem::path fp(p);
 			fp = fp.parent_path();
 			fp /= "lib";
-			if (std::filesystem::exists(fp / "libnux_vx_v2.a")) {
+			if (std::filesystem::exists(fp / "libnux_vx_v3.a")) {
 				return "-L" + std::string(fp);
 			}
 		}
@@ -151,7 +151,7 @@ std::string get_library_paths()
 			std::filesystem::path fp_libnux(p);
 			fp_libnux = fp_libnux.parent_path();
 			fp_libnux /= "libnux";
-			if (std::filesystem::exists(fp_libnux / "libnux_vx_v2.a")) {
+			if (std::filesystem::exists(fp_libnux / "libnux_vx_v3.a")) {
 				return "-L" + static_cast<std::string>(fp_libnux);
 			}
 		}
@@ -295,7 +295,7 @@ TemporaryDirectory::~TemporaryDirectory()
 
 Compiler::Compiler() {}
 
-std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> Compiler::compile(
+std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock> Compiler::compile(
     std::vector<std::string> sources)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
@@ -366,7 +366,7 @@ std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock
 			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
 		}
 	}
-	lola::vx::v2::PPUElfFile elf_file(temporary.get_path() / "program.bin");
+	lola::vx::v3::PPUElfFile elf_file(temporary.get_path() / "program.bin");
 	return {elf_file.read_symbols(), elf_file.read_program()};
 }
 
@@ -392,7 +392,7 @@ CachingCompiler::ProgramCache& CachingCompiler::get_program_cache()
 	return data;
 }
 
-std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock>
+std::pair<lola::vx::v3::PPUElfFile::symbols_type, haldls::vx::v3::PPUMemoryBlock>
 CachingCompiler::compile(std::vector<std::string> sources)
 {
 	auto& program_cache = get_program_cache();
