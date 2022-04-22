@@ -137,7 +137,7 @@ Graph::vertex_descriptor MAC::insert_synram(
 	// add readout
 	vertex::CADCMembraneReadoutView readout(
 	    std::move(vertex::CADCMembraneReadoutView::Columns({std::move(columns)})),
-	    hemisphere.toSynramOnDLS());
+	    hemisphere.toSynramOnDLS(), vertex::CADCMembraneReadoutView::Mode::hagen);
 	auto const v2 = graph.add(readout, instance, {v1});
 	// add store
 	vertex::DataOutput data_output(ConnectionType::Int8, x_size);

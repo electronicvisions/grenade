@@ -6,6 +6,7 @@
 #include "grenade/vx/generator/timed_spike_sequence.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
+#include "grenade/vx/ppu/extmem.h"
 #include "grenade/vx/ppu/status.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v2/barrier.h"
@@ -248,8 +249,14 @@ template <>
 void ExecutionInstanceBuilder::process(
     Graph::vertex_descriptor const vertex, vertex::CADCMembraneReadoutView const& data)
 {
-	// CADCMembraneReadoutView inputs size equals 1
-	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	// check mode and save
+	if (m_cadc_readout_mode) {
+		if (*m_cadc_readout_mode != data.get_mode()) {
+			throw std::runtime_error("Heterogenous CADC readout modes not supported.");
+		}
+	} else {
+		m_cadc_readout_mode = data.get_mode();
+	}
 
 	// get source NeuronView
 	auto const synram = data.get_synram();
@@ -267,24 +274,81 @@ void ExecutionInstanceBuilder::process(
 	} else { // post-hw-run processing
 		// extract Int8 values
 		std::vector<TimedDataSequence<std::vector<Int8>>> sample_batches(m_batch_entries.size());
-		for (auto& e : sample_batches) {
-			e.resize(1);
-			// TODO: Think about what to do with timing information
-			e.at(0).data.resize(data.output().size);
-		}
-		for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-			assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
-			auto const block =
-			    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
-			auto const values = from_vector_unit_row(block);
-			auto& samples = sample_batches.at(batch_index).at(0).data;
+		assert(m_cadc_readout_mode);
+		if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::hagen) {
+			for (auto& e : sample_batches) {
+				e.resize(1);
+				// TODO: Think about what to do with timing information
+				e.at(0).data.resize(data.output().size);
+			}
+			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+				assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
+				auto const block =
+				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
+				auto const values = from_vector_unit_row(block);
+				auto& samples = sample_batches.at(batch_index).at(0).data;
 
-			// get samples via neuron mapping from incoming NeuronView
-			size_t i = 0;
-			for (auto const& column_collection : columns) {
-				for (auto const& column : column_collection) {
-					samples.at(i) = Int8(values[column.toNeuronColumnOnDLS()]);
-					i++;
+				// get samples via neuron mapping from incoming NeuronView
+				size_t i = 0;
+				for (auto const& column_collection : columns) {
+					for (auto const& column : column_collection) {
+						samples.at(i) = Int8(values[column.toNeuronColumnOnDLS()]);
+						i++;
+					}
+				}
+			}
+		} else {
+			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+				assert(m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]);
+				auto const local_block =
+				    m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]->get();
+
+				// get number of samples
+				uint32_t num_samples = 0;
+				for (size_t i = 0; i < 4; ++i) {
+					num_samples |= static_cast<uint32_t>(local_block.at(i).get_value().value())
+					               << (3 - i) * CHAR_BIT;
+				}
+				size_t offset = 16;
+				// get samples
+				auto& samples = sample_batches.at(batch_index);
+				samples.resize(num_samples);
+				for (size_t i = 0; i < num_samples; ++i) {
+					auto& local_samples = samples.at(i);
+					uint64_t time = 0;
+					for (size_t j = 0; j < 8; ++j) {
+						time |=
+						    static_cast<uint64_t>(local_block.at(offset + j).get_value().value())
+						    << (7 - j) * CHAR_BIT;
+					}
+					local_samples.chip_time =
+					    ChipTime(time / 2); // FPGA clock 125MHz vs. PPU clock 250MHz
+					offset += 16;
+					auto const get_index = [](auto const& column) {
+						size_t const j = column / 2;
+						size_t const index = 127 - ((j / 4) * 4 + (3 - j % 4)) + (column % 2) * 128;
+						return index;
+					};
+					local_samples.data.resize(data.output().size);
+					for (size_t j = 0; auto const& column_collection : columns) {
+						for (auto const& column : column_collection) {
+							local_samples.data.at(j) =
+							    Int8(local_block.at(offset + get_index(column.value()))
+							             .get_value()
+							             .value());
+							j++;
+						}
+					}
+					offset += 256;
+				}
+				// Since there's no time synchronisation between PPUs and ChipTime, we assume the
+				// first received sample happens at time 0 and calculate the time of later samples
+				// from that reference point via the given PPU-local counter value.
+				if (!samples.empty()) {
+					auto const chip_time_0 = samples.at(0).chip_time;
+					for (auto& entry : samples) {
+						entry.chip_time -= chip_time_0;
+					}
 				}
 			}
 		}
@@ -737,6 +801,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	PlaybackProgramBuilder blocking_ppu_command_baseline_read;
 	PlaybackProgramBuilder blocking_ppu_command_reset_neurons;
 	PlaybackProgramBuilder blocking_ppu_command_read;
+	PlaybackProgramBuilder blocking_ppu_command_stop_periodic_read;
 	PPUMemoryWordOnPPU ppu_status_coord;
 	if (enable_ppu) {
 		assert(ppu_symbols);
@@ -754,6 +819,10 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		        .builder;
 		blocking_ppu_command_read =
 		    stadls::vx::generate(generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::read))
+		        .builder;
+		blocking_ppu_command_stop_periodic_read =
+		    stadls::vx::generate(
+		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::stop_periodic_read))
 		        .builder;
 	}
 
@@ -784,7 +853,10 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
-			builder.copy_back(blocking_ppu_command_baseline_read);
+			assert(m_cadc_readout_mode);
+			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::hagen) {
+				builder.copy_back(blocking_ppu_command_baseline_read);
+			}
 		}
 		// reset neurons
 		if (enable_ppu) {
@@ -792,6 +864,31 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		} else {
 			builder.copy_back(builder_neuron_reset);
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		}
+		// start periodic CADC readout
+		if (has_cadc_readout) {
+			assert(m_cadc_readout_mode);
+			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					builder.write(
+					    PPUMemoryWordOnDLS(ppu_status_coord, ppu),
+					    PPUMemoryWord(PPUMemoryWord::Value(
+					        static_cast<uint32_t>(ppu::Status::periodic_read))));
+				}
+				// poll for completion by waiting until PPU is asleep
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					PollingOmnibusBlockConfig config;
+					config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+					                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
+					                       .at(0));
+					config.set_target(PollingOmnibusBlockConfig::Value(
+					    static_cast<uint32_t>(ppu::Status::inside_periodic_read)));
+					config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+					builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
+					builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+					builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+				}
+			}
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
@@ -827,11 +924,21 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {
-			builder.copy_back(blocking_ppu_command_read);
-			// readout result
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				batch_entry.m_ppu_result[ppu] =
-				    builder.read(PPUMemoryBlockOnDLS(ppu_result_coord, ppu));
+			assert(m_cadc_readout_mode);
+			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::hagen) {
+				builder.copy_back(blocking_ppu_command_read);
+				// readout result
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_ppu_result[ppu] =
+					    builder.read(PPUMemoryBlockOnDLS(ppu_result_coord, ppu));
+				}
+			}
+		}
+		// stop periodic CADC readout
+		if (has_cadc_readout) {
+			assert(m_cadc_readout_mode);
+			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+				builder.copy_back(blocking_ppu_command_stop_periodic_read);
 			}
 		}
 		// stop MADC
@@ -843,6 +950,24 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			EventRecordingConfig config;
 			config.set_enable_event_recording(false);
 			builder.write(EventRecordingConfigOnFPGA(), config);
+		}
+		// readout extmem data from periodic CADC readout
+		if (has_cadc_readout) {
+			assert(m_cadc_readout_mode);
+			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_extmem_result[ppu] = builder.read(ExternalPPUMemoryBlockOnFPGA(
+					    ExternalPPUMemoryByteOnFPGA(
+					        ExternalPPUMemoryByteOnFPGA::min +
+					        ((ppu == PPUOnDLS::bottom) ? ppu::cadc_recording_storage_base_bottom
+					                                   : ppu::cadc_recording_storage_base_top)),
+					    ExternalPPUMemoryByteOnFPGA(
+					        ExternalPPUMemoryByteOnFPGA::min +
+					        ((ppu == PPUOnDLS::bottom) ? ppu::cadc_recording_storage_base_bottom
+					                                   : ppu::cadc_recording_storage_base_top) +
+					        ppu::cadc_recording_storage_size - 1)));
+				}
+			}
 		}
 		// wait for response data
 		if (!builder.empty()) {

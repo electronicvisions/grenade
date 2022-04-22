@@ -37,6 +37,12 @@ struct CADCMembraneReadoutView
 	typedef std::vector<std::vector<halco::hicann_dls::vx::v2::SynapseOnSynapseRow>> Columns;
 	typedef halco::hicann_dls::vx::v2::SynramOnDLS Synram;
 
+	enum class Mode
+	{
+		hagen,
+		periodic
+	};
+
 	CADCMembraneReadoutView() = default;
 
 	/**
@@ -44,10 +50,11 @@ struct CADCMembraneReadoutView
 	 * @param columns Columns to read out
 	 */
 	template <typename ColumnsT, typename SynramT>
-	explicit CADCMembraneReadoutView(ColumnsT&& columns, SynramT&& synram);
+	explicit CADCMembraneReadoutView(ColumnsT&& columns, SynramT&& synram, Mode const& mode);
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Synram const& get_synram() const SYMBOL_VISIBLE;
+	Mode const& get_mode() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	std::vector<Port> inputs() const SYMBOL_VISIBLE;
@@ -67,6 +74,7 @@ struct CADCMembraneReadoutView
 private:
 	Columns m_columns{};
 	Synram m_synram{};
+	Mode m_mode{};
 
 	void check(Columns const& columns) SYMBOL_VISIBLE;
 

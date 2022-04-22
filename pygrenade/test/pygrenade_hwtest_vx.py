@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import unittest
-from dlens_vx_v2 import halco, hxcomm, sta
+from dlens_vx_v2 import halco, hxcomm, sta, hal, lola, logger
 import pygrenade_vx as grenade
 
+logger_grenade = logger.get("grenade")
+logger.set_loglevel(logger_grenade, logger.LogLevel.INFO)
 
 class HwTestPygrenadeVx(unittest.TestCase):
     # pylint: disable=too-many-locals
@@ -86,6 +88,76 @@ class HwTestPygrenadeVx(unittest.TestCase):
                 grenade.ChipConfig(),
                 network_graph,
                 inputs)
+
+
+    def test_cadc_readout(self, enable_spikes: bool=True):
+        batch_size = 2
+        int_pop_size = 3
+        ext_pop_size = 3
+        network_builder = grenade.NetworkBuilder()
+
+        ext_pop = grenade.ExternalPopulation(ext_pop_size)
+
+        neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
+                   for coord in halco.iter_all(halco.NeuronColumnOnDLS)][:int_pop_size]
+        record_spikes = [enable_spikes] * len(neurons)
+        int_pop = grenade.Population(neurons, record_spikes)
+
+        int_pop_descr = network_builder.add(int_pop)
+        ext_pop_descr = network_builder.add(ext_pop)
+
+        cadc_recording = grenade.CADCRecording()
+        recorded_neurons = list()
+        for nrn_id in range(int_pop_size):
+            recorded_neurons.append(
+                grenade.CADCRecording.Neuron(
+                    int_pop_descr, nrn_id, lola.AtomicNeuron.Readout.Source.membrane))
+        cadc_recording.neurons = recorded_neurons
+        network_builder.add(cadc_recording)
+
+        connections = []
+        for i in range(ext_pop_size):
+            for j in range(int_pop_size):
+                connections.append(grenade.Projection.Connection(i, j, 63))
+        proj = grenade.Projection(
+            grenade.Projection.ReceptorType.excitatory,
+            connections,
+            ext_pop_descr,
+            int_pop_descr
+        )
+        network_builder.add(proj)
+
+        network = network_builder.done()
+
+        routing_result = grenade.build_routing(network)
+
+        network_graph = grenade.build_network_graph(network, routing_result)
+
+        config = grenade.ChipConfig()
+
+        input_generator = grenade.InputGenerator(network_graph, batch_size)
+        times = []
+        for b in range(batch_size):
+            b_times = []
+            for idx in range(ext_pop_size):
+                b_times.append([])
+            times.append(b_times)
+        input_generator.add(times, ext_pop_descr)
+        inputs = input_generator.done()
+        inputs.runtime = batch_size * [
+            int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100]
+
+        with hxcomm.ManagedConnection() as connection:
+            init, _ = sta.generate(sta.ExperimentInit())
+            sta.run(connection, init.done())
+            result_map = grenade.run(connection, config, network_graph, inputs)
+
+        hw_spike_times = grenade.extract_neuron_spikes(
+            result_map, network_graph)
+        print(hw_spike_times)
+        hw_cadc_samples = grenade.extract_cadc_samples(
+            result_map, network_graph)
+        print(hw_cadc_samples)
 
 
 if __name__ == "__main__":

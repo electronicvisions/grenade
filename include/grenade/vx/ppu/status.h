@@ -9,6 +9,9 @@ enum class Status : uint32_t
 	reset_neurons,
 	baseline_read,
 	read,
+	periodic_read,
+	inside_periodic_read,
+	stop_periodic_read,
 	stop
 };
 

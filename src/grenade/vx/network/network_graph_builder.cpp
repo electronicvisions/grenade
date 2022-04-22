@@ -1167,33 +1167,43 @@ void NetworkGraphBuilder::add_cadc_recording(
     coordinate::ExecutionInstance const& instance) const
 {
 	hate::Timer timer;
-	std::vector<Input> cadc_membrane_readout_views;
+	halco::common::typed_array<std::vector<std::pair<NeuronColumnOnDLS, Input>>, NeuronRowOnDLS>
+	    neurons;
 	for (auto const& neuron : cadc_recording.neurons) {
 		auto const& population = std::get<Population>(m_network.populations.at(neuron.population));
 		auto const an = population.neurons.at(neuron.index);
-		// TODO (Issue #3986): support source selection in vertex
-		vertex::CADCMembraneReadoutView vertex(
-		    std::move(vertex::CADCMembraneReadoutView::Columns{
-		        an.toNeuronColumnOnDLS().toSynapseOnSynapseRow()}),
-		    an.toNeuronRowOnDLS().toSynramOnDLS());
-		std::vector<AtomicNeuronOnDLS> sorted_neurons(population.neurons);
+		std::vector<AtomicNeuronOnDLS> sorted_neurons;
+		for (auto const& nrn : population.neurons) {
+			if (an.toNeuronRowOnDLS() == nrn.toNeuronRowOnDLS()) {
+				sorted_neurons.push_back(nrn);
+			}
+		}
 		std::sort(sorted_neurons.begin(), sorted_neurons.end());
 		size_t const sorted_index = std::distance(
 		    sorted_neurons.begin(), std::find(sorted_neurons.begin(), sorted_neurons.end(), an));
-		PortRestriction port_restriction(sorted_index, sorted_index);
-		cadc_membrane_readout_views.push_back(graph.add(
-		    std::move(vertex), instance,
-		    {{resources.populations.at(neuron.population)
-		          .neurons.at(an.toNeuronRowOnDLS().toHemisphereOnDLS()),
-		      port_restriction}}));
+		assert(sorted_index < sorted_neurons.size());
+		PortRestriction const port_restriction(sorted_index, sorted_index);
+		Input const input(
+		    resources.populations.at(neuron.population)
+		        .neurons.at(an.toNeuronRowOnDLS().toHemisphereOnDLS()),
+		    port_restriction);
+		neurons[an.toNeuronRowOnDLS()].push_back({an.toNeuronColumnOnDLS(), input});
 	}
-	std::vector<size_t> concatenation_sizes(cadc_membrane_readout_views.size(), 1);
-	auto concatenation =
-	    std::make_unique<transformation::Concatenation>(ConnectionType::Int8, concatenation_sizes);
-	Vertex transformation(std::move(vertex::Transformation(std::move(concatenation))));
-	auto const vc = graph.add(std::move(transformation), instance, cadc_membrane_readout_views);
-	vertex::DataOutput data_output(ConnectionType::Int8, cadc_recording.neurons.size());
-	resources.cadc_output.push_back(graph.add(data_output, instance, {vc}));
+	for (auto const row : iter_all<NeuronRowOnDLS>()) {
+		vertex::CADCMembraneReadoutView::Columns columns;
+		std::vector<Input> inputs;
+		for (auto const& [c, i] : neurons[row]) {
+			columns.push_back({c.toSynapseOnSynapseRow()});
+			inputs.push_back(i);
+		}
+		// TODO (Issue #3986): support source selection in vertex
+		vertex::CADCMembraneReadoutView vertex(
+		    std::move(columns), row.toSynramOnDLS(),
+		    vertex::CADCMembraneReadoutView::Mode::periodic);
+		vertex::DataOutput data_output(ConnectionType::Int8, vertex.output().size);
+		auto const cv = graph.add(std::move(vertex), instance, inputs);
+		resources.cadc_output.push_back(graph.add(data_output, instance, {cv}));
+	}
 	LOG4CXX_TRACE(
 	    m_logger, "add_cadc_recording(): Added CADC recording in " << timer.print() << ".");
 }

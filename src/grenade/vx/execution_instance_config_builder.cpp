@@ -302,11 +302,13 @@ ExecutionInstanceConfigBuilder::generate()
 	if (m_requires_ppu) {
 		PPUMemoryBlock ppu_program;
 		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
+		PPUMemoryWordOnPPU ppu_location_coord;
 		{
 			PPUElfFile ppu_elf_file(get_program_path(ppu_program_name));
 			ppu_program = ppu_elf_file.read_program();
 			ppu_symbols = ppu_elf_file.read_symbols();
 			ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
+			ppu_location_coord = ppu_symbols->at("ppu").coordinate.toMin();
 		}
 
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -342,6 +344,9 @@ ExecutionInstanceConfigBuilder::generate()
 			}
 			auto const neuron_reset_mask = to_vector_unit_row(values);
 			builder.write(PPUMemoryBlockOnDLS(ppu_neuron_reset_mask_coord, ppu), neuron_reset_mask);
+			builder.write(
+			    PPUMemoryWordOnDLS(ppu_location_coord, ppu),
+			    PPUMemoryWord(PPUMemoryWord::Value(ppu.value())));
 		}
 	}
 

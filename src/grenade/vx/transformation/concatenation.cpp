@@ -47,9 +47,11 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 				ret.at(i).resize(v.at(i).size());
 				for (size_t j = 0; j < v.at(i).size(); ++j) {
 					ret.at(i).at(j).data.resize(output_size);
+					// TODO: think about what to do with event time information, whether to
+					// check for equality or just drop, etc.
+					ret.at(i).at(j).chip_time = v.at(i).at(j).chip_time;
+					ret.at(i).at(j).fpga_time = v.at(i).at(j).fpga_time;
 					for (size_t k = 0; k < v.at(i).at(j).data.size(); ++k) {
-						// TODO: think about what to do with event time information, whether to
-						// check for equality or just drop, etc.
 						ret.at(i).at(j).data.at(k + o_offset) = v.at(i).at(j).data.at(k);
 						ret.at(i).at(j).data.at(k + o_offset) = v.at(i).at(j).data.at(k);
 					}

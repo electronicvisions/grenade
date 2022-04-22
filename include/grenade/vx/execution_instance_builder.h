@@ -17,6 +17,7 @@
 #include "haldls/vx/v2/synapse_driver.h"
 #include "hate/visibility.h"
 #include "lola/vx/v2/cadc.h"
+#include "lola/vx/v2/ppu.h"
 #include "lola/vx/v2/synapse.h"
 #include "stadls/vx/v2/playback_generator.h"
 #include "stadls/vx/v2/playback_program.h"
@@ -125,6 +126,14 @@ private:
 		    event_guard_ticket_type;
 		event_guard_ticket_type m_ticket_events_begin;
 		event_guard_ticket_type m_ticket_events_end;
+
+		typedef halco::common::typed_array<
+		    std::optional<stadls::vx::v2::PlaybackProgram::ContainerTicket<
+		        lola::vx::v2::ExternalPPUMemoryBlock>>,
+		    halco::hicann_dls::vx::PPUOnDLS>
+		    ticket_extmem_type;
+
+		ticket_extmem_type m_extmem_result;
 	};
 
 	std::vector<BatchEntry> m_batch_entries;
@@ -132,6 +141,8 @@ private:
 	generator::NeuronResetMask m_neuron_resets;
 	// Optional vertex descriptor of MADC readout if the execution instance contains such
 	std::optional<Graph::vertex_descriptor> m_madc_readout_vertex;
+
+	std::optional<vertex::CADCMembraneReadoutView::Mode> m_cadc_readout_mode;
 
 	/**
 	 * Check if any incoming vertex requires post processing.

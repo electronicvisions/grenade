@@ -36,6 +36,11 @@ CADCMembraneReadoutView::Synram const& CADCMembraneReadoutView::get_synram() con
 	return m_synram;
 }
 
+CADCMembraneReadoutView::Mode const& CADCMembraneReadoutView::get_mode() const
+{
+	return m_mode;
+}
+
 std::vector<Port> CADCMembraneReadoutView::inputs() const
 {
 	std::vector<Port> ret;
@@ -106,7 +111,8 @@ bool CADCMembraneReadoutView::supports_input_from(
 
 bool CADCMembraneReadoutView::operator==(CADCMembraneReadoutView const& other) const
 {
-	return (m_columns == other.m_columns) && (m_synram == other.m_synram);
+	return (m_columns == other.m_columns) && (m_synram == other.m_synram) &&
+	       (m_mode == other.m_mode);
 }
 
 bool CADCMembraneReadoutView::operator!=(CADCMembraneReadoutView const& other) const
@@ -119,6 +125,7 @@ void CADCMembraneReadoutView::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_columns);
 	ar(m_synram);
+	ar(m_mode);
 }
 
 } // namespace grenade::vx::vertex
