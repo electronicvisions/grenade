@@ -75,25 +75,45 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 	return ret;
 }
 
-std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>>
+std::vector<std::vector<
+    std::tuple<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, Int8>>>
 extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 {
-	if (network_graph.get_cadc_sample_output_vertex().empty()) {
-		std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>> ret(
-		    data.batch_size());
-		return ret;
-	}
 	// convert samples
-	auto const& samples = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
-	    data.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
-	std::vector<std::vector<std::pair<haldls::vx::v2::ChipTime, std::vector<Int8>>>> ret(
-	    data.batch_size());
-	assert(!samples.size() || samples.size() == data.batch_size());
-	for (size_t b = 0; b < samples.size(); ++b) {
-		auto& local_ret = ret.at(b);
-		for (auto const& sample : samples.at(b)) {
-			local_ret.push_back({sample.chip_time, sample.data});
+	std::vector<std::vector<
+	    std::tuple<haldls::vx::v2::ChipTime, halco::hicann_dls::vx::v2::AtomicNeuronOnDLS, Int8>>>
+	    ret(data.batch_size());
+	for (auto const cadc_output_vertex : network_graph.get_cadc_sample_output_vertex()) {
+		auto const& samples = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+		    data.data.at(cadc_output_vertex));
+		assert(!samples.size() || samples.size() == data.batch_size());
+		assert(boost::in_degree(cadc_output_vertex, network_graph.get_graph().get_graph()) == 1);
+		auto const in_edges =
+		    boost::in_edges(cadc_output_vertex, network_graph.get_graph().get_graph());
+		auto const cadc_vertex =
+		    boost::source(*in_edges.first, network_graph.get_graph().get_graph());
+		auto const& vertex = std::get<vertex::CADCMembraneReadoutView>(
+		    network_graph.get_graph().get_vertex_property(cadc_vertex));
+		auto const& columns = vertex.get_columns();
+		auto const& row = vertex.get_synram().toNeuronRowOnDLS();
+		for (size_t b = 0; b < samples.size(); ++b) {
+			auto& local_ret = ret.at(b);
+			for (auto const& sample : samples.at(b)) {
+				for (size_t j = 0; auto const& cs : columns) {
+					for (auto const& column : cs) {
+						local_ret.push_back(
+						    {sample.chip_time,
+						     halco::hicann_dls::vx::v2::AtomicNeuronOnDLS(
+						         column.toNeuronColumnOnDLS(), row),
+						     sample.data.at(j)});
+						j++;
+					}
+				}
+			}
 		}
+	}
+	for (auto& batch : ret) {
+		std::sort(batch.begin(), batch.end());
 	}
 	return ret;
 }
