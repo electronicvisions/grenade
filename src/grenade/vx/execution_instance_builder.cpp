@@ -956,6 +956,9 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			assert(m_cadc_readout_mode);
 			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					if (!m_ticket_requests[ppu.toHemisphereOnDLS()]) {
+						continue;
+					}
 					batch_entry.m_extmem_result[ppu] = builder.read(ExternalPPUMemoryBlockOnFPGA(
 					    ExternalPPUMemoryByteOnFPGA(
 					        ExternalPPUMemoryByteOnFPGA::min +

@@ -1190,9 +1190,12 @@ void NetworkGraphBuilder::add_cadc_recording(
 		neurons[an.toNeuronRowOnDLS()].push_back({an.toNeuronColumnOnDLS(), input});
 	}
 	for (auto const row : iter_all<NeuronRowOnDLS>()) {
+		if (neurons.at(row).empty()) {
+			continue;
+		}
 		vertex::CADCMembraneReadoutView::Columns columns;
 		std::vector<Input> inputs;
-		for (auto const& [c, i] : neurons[row]) {
+		for (auto const& [c, i] : neurons.at(row)) {
 			columns.push_back({c.toSynapseOnSynapseRow()});
 			inputs.push_back(i);
 		}
