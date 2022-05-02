@@ -6,6 +6,7 @@ import pygrenade_vx as grenade
 logger_grenade = logger.get("grenade")
 logger.set_loglevel(logger_grenade, logger.LogLevel.INFO)
 
+
 class HwTestPygrenadeVx(unittest.TestCase):
     # pylint: disable=too-many-locals
     def run_network_graph(self, enable_spikes=True, enable_v=False):
@@ -138,12 +139,9 @@ class HwTestPygrenadeVx(unittest.TestCase):
         config = grenade.ChipConfig()
 
         input_generator = grenade.InputGenerator(network_graph, batch_size)
-        times = []
-        for _ in range(batch_size):
-            b_times = []
-            for __ in range(ext_pop_size):
-                b_times.append([])
-            times.append(b_times)
+        times = [None for _ in range(batch_size)]
+        for i in range(batch_size):
+            times[i] = [[] for _ in range(ext_pop_size)]
         input_generator.add(times, ext_pop_descr)
         inputs = input_generator.done()
         inputs.runtime = batch_size * [
