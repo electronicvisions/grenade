@@ -89,8 +89,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
                 network_graph,
                 inputs)
 
-
-    def test_cadc_readout(self, enable_spikes: bool=True):
+    @staticmethod
+    def test_cadc_readout(enable_spikes: bool = True):
         batch_size = 2
         int_pop_size = 3
         ext_pop_size = 3
@@ -99,7 +99,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
         ext_pop = grenade.ExternalPopulation(ext_pop_size)
 
         neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
-                   for coord in halco.iter_all(halco.NeuronColumnOnDLS)][:int_pop_size]
+                   for coord
+                   in halco.iter_all(halco.NeuronColumnOnDLS)][:int_pop_size]
         record_spikes = [enable_spikes] * len(neurons)
         int_pop = grenade.Population(neurons, record_spikes)
 
@@ -111,7 +112,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
         for nrn_id in range(int_pop_size):
             recorded_neurons.append(
                 grenade.CADCRecording.Neuron(
-                    int_pop_descr, nrn_id, lola.AtomicNeuron.Readout.Source.membrane))
+                    int_pop_descr, nrn_id,
+                    lola.AtomicNeuron.Readout.Source.membrane))
         cadc_recording.neurons = recorded_neurons
         network_builder.add(cadc_recording)
 
@@ -137,9 +139,9 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         input_generator = grenade.InputGenerator(network_graph, batch_size)
         times = []
-        for b in range(batch_size):
+        for _ in range(batch_size):
             b_times = []
-            for idx in range(ext_pop_size):
+            for __ in range(ext_pop_size):
                 b_times.append([])
             times.append(b_times)
         input_generator.add(times, ext_pop_descr)
