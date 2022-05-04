@@ -90,9 +90,6 @@ int start()
 						continue;
 					}
 					uint64_t const time = now();
-					uint64_t volatile* time_ptr = (uint64_t*) (storage_base_scalar + offset);
-					*time_ptr = time;
-					offset += 16;
 					// clang-format off
 					asm volatile(
 					"fxvinx %[d0], %[ca_base], %[i]\n"
@@ -102,16 +99,18 @@ int start()
 					:
 					  [d0] "=&qv" (read[0]),
 					  [d1] "=&qv" (read[1])
-					: [b0] "b" (storage_base_vector + (offset >> 4)),
-					  [b1] "b" (storage_base_vector + ((offset + sizeof(read[0])) >> 4)),
+					: [b0] "b" (storage_base_vector + ((offset + 16) >> 4)),
+					  [b1] "b" (storage_base_vector + ((offset + 16 + sizeof(read[0])) >> 4)),
 					  [ca_base] "r" (dls_causal_base),
 					  [cab_base] "r" (dls_causal_base|dls_buffer_enable_mask),
 					  [i] "r" (uint32_t(0)),
 					  [j] "r" (uint32_t(1))
 					: /* no clobber */
 					);
+					uint64_t volatile* time_ptr = (uint64_t*) (storage_base_scalar + offset);
+					*time_ptr = time;
 					// clang-format on
-					offset += sizeof(read[0]) + sizeof(read[1]);
+					offset += 16 + sizeof(read[0]) + sizeof(read[1]);
 					size++;
 					*size_ptr = size;
 					asm volatile("sync");
