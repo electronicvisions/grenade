@@ -110,8 +110,10 @@ void ExecutionInstanceConfigBuilder::process(
 	neuron_odd[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 	smux.set_neuron_odd(neuron_odd);
 	m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()].enable = true;
-	// Set source configuration at neuron
+	// Configure neuron
 	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.source = data.get_config();
+	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.enable_amplifier = true;
+	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.enable_buffered_access = true;
 	// Configure analog parameters
 	// TODO: should come from calibration
 	for (auto const smux : halco::common::iter_all<SourceMultiplexerOnReadoutSourceSelection>()) {
