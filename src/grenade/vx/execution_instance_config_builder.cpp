@@ -21,7 +21,7 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
     m_graph(graph), m_execution_instance(execution_instance), m_config(chip_config)
 {
 	using namespace halco::common;
-	using namespace halco::hicann_dls::vx;
+	using namespace halco::hicann_dls::vx::v2;
 	m_requires_ppu = false;
 	m_used_madc = false;
 
@@ -36,6 +36,16 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_bottom(
 			    haldls::vx::v2::SynapseDriverConfig::RowMode::disabled);
 			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_enable_receiver(false);
+		}
+	}
+	for (auto const& row : iter_all<ColumnCurrentRowOnDLS>()) {
+		for (auto const col : iter_all<SynapseOnSynapseRow>()) {
+			m_config.neuron_block.current_rows[row]
+			    .values[col]
+			    .set_enable_synaptic_current_excitatory(false);
+			m_config.neuron_block.current_rows[row]
+			    .values[col]
+			    .set_enable_synaptic_current_inhibitory(false);
 		}
 	}
 	for (auto const backend : iter_all<CommonNeuronBackendConfigOnDLS>()) {
@@ -206,7 +216,7 @@ void ExecutionInstanceConfigBuilder::process(
 
 template <>
 void ExecutionInstanceConfigBuilder::process(
-    Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
+    Graph::vertex_descriptor const vertex, vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
@@ -225,6 +235,36 @@ void ExecutionInstanceConfigBuilder::process(
 			neurons[an].event_routing.enable_digital = false;
 		}
 		i++;
+	}
+	// get incoming synapse columns and enable current switches
+	if (boost::in_degree(vertex, m_graph.get_graph()) > 0) {
+		std::set<SynapseOnSynapseRow> incoming_synapse_columns;
+		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
+			auto const source = boost::source(in_edge, m_graph.get_graph());
+			if (std::holds_alternative<vertex::SynapseArrayView>(
+			        m_graph.get_vertex_property(source))) {
+				auto const& synapses =
+				    std::get<vertex::SynapseArrayView>(m_graph.get_vertex_property(source));
+				for (auto const& column : synapses.get_columns()) {
+					incoming_synapse_columns.insert(column);
+				}
+			} else {
+				auto const& synapses =
+				    std::get<vertex::SynapseArrayViewSparse>(m_graph.get_vertex_property(source));
+				for (auto const& column : synapses.get_columns()) {
+					incoming_synapse_columns.insert(column);
+				}
+			}
+		}
+		for (auto const& column : incoming_synapse_columns) {
+			m_config.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
+			    .values[column]
+			    .set_enable_synaptic_current_excitatory(true);
+			m_config.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
+			    .values[column]
+			    .set_enable_synaptic_current_inhibitory(true);
+		}
 	}
 }
 
