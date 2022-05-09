@@ -147,9 +147,9 @@ TEST(CADCRecording, General)
 		for (auto const& sample : samples) {
 			EXPECT_EQ(sample.data.size(), cadc_recording.neurons.size());
 		}
-		// CADC sampling shall take between one and two us
+		// CADC sampling shall take between one and three us
 		EXPECT_GE(
-		    samples.size(), inputs.runtime.at(i) / Timer::Value::fpga_clock_cycles_per_us / 2);
+		    samples.size(), inputs.runtime.at(i) / Timer::Value::fpga_clock_cycles_per_us / 3);
 		EXPECT_LE(samples.size(), inputs.runtime.at(i) / Timer::Value::fpga_clock_cycles_per_us);
 	}
 }
