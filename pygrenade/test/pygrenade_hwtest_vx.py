@@ -136,7 +136,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         network_graph = grenade.build_network_graph(network, routing_result)
 
-        config = grenade.ChipConfig()
+        config = lola.Chip()
 
         input_generator = grenade.InputGenerator(network_graph, batch_size)
         times = [None for _ in range(batch_size)]
