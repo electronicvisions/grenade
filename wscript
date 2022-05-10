@@ -31,7 +31,7 @@ def configure(cfg):
     from waflib.Options import options as o
     if cfg.env.have_ppu_toolchain:
         cfg.define('WITH_GRENADE_PPU_SUPPORT', 1)
-    cfg.write_config_header('grenade-build-config.h')
+    cfg.write_config_header('include/grenade/build-config.h')
 
     cfg.load('compiler_cxx')
     cfg.load('gtest')

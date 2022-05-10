@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/build-config.h"
 #include "grenade/vx/ppu.h"
 #include "halco/hicann-dls/vx/v2/ppu.h"
 #include "haldls/vx/v2/ppu.h"

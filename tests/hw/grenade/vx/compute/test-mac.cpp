@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/build-config.h"
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/execution_instance.h"
