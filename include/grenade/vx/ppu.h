@@ -3,6 +3,7 @@
 #include "haldls/vx/v2/neuron.h"
 #include "haldls/vx/v2/ppu.h"
 #include "hate/visibility.h"
+#include "lola/vx/v2/ppu.h"
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -116,7 +117,8 @@ struct Compiler
 	/**
 	 * Compile sources into target program.
 	 */
-	void compile(std::vector<std::string> sources, std::string target) SYMBOL_VISIBLE;
+	std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> compile(
+	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx

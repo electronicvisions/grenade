@@ -290,16 +290,17 @@ TemporaryDirectory::~TemporaryDirectory()
 
 Compiler::Compiler() {}
 
-void Compiler::compile(std::vector<std::string> sources, std::string target)
+std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> Compiler::compile(
+    std::vector<std::string> sources)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
+	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
 	std::stringstream ss;
 	ss << name << " "
 	   << hate::join_string(options_before_source.begin(), options_before_source.end(), " ") << " "
 	   << hate::join_string(sources.begin(), sources.end(), " ") << " "
 	   << hate::join_string(options_after_source.begin(), options_after_source.end(), " ") << " -o"
-	   << target;
-	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
+	   << (temporary.get_path() / "program.bin");
 	ss << " > " << (temporary.get_path() / "compile_log") << " 2>&1";
 	LOG4CXX_DEBUG(logger, "compile(): Command: " << ss.str());
 	auto ret = std::system(ss.str().c_str());
@@ -311,6 +312,8 @@ void Compiler::compile(std::vector<std::string> sources, std::string target)
 		throw std::runtime_error("Compilation failed:\n" + log.str());
 	}
 	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
+	lola::vx::v2::PPUElfFile elf_file(temporary.get_path() / "program.bin");
+	return {elf_file.read_symbols(), elf_file.read_program()};
 }
 
 } // namespace grenade::vx
