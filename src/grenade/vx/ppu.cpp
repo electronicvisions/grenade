@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
+#include <boost/compute/detail/sha1.hpp>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx {
@@ -314,6 +315,28 @@ std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock
 	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
 	lola::vx::v2::PPUElfFile elf_file(temporary.get_path() / "program.bin");
 	return {elf_file.read_symbols(), elf_file.read_program()};
+}
+
+
+std::string ProgramCache::Source::sha1() const
+{
+	boost::compute::detail::sha1 digestor;
+	for (auto const& option : options_before_source) {
+		digestor.process(option);
+	}
+	for (auto const& option : options_after_source) {
+		digestor.process(option);
+	}
+	for (auto const& source : source_codes) {
+		digestor.process(source);
+	}
+	return static_cast<std::string>(digestor);
+}
+
+ProgramCache& get_program_cache()
+{
+	static ProgramCache data;
+	return data;
 }
 
 } // namespace grenade::vx

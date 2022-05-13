@@ -346,9 +346,25 @@ ExecutionInstanceConfigBuilder::generate()
 			}
 			sources.push_back(get_program_base_source());
 			compiler.options_before_source.push_back("-DLIBNUX_TIME_RESOLUTION_SHIFT=0");
-			auto const program = compiler.compile(sources);
-			ppu_program = program.second;
-			ppu_symbols = program.first;
+			{
+				auto& program_cache = get_program_cache();
+				std::lock_guard lock(program_cache.data_mutex);
+				ProgramCache::Source source;
+				source.options_before_source = compiler.options_before_source;
+				source.options_after_source = compiler.options_after_source;
+				source.source_codes = sources_str;
+				auto const sha1 = source.sha1();
+				if (program_cache.data.contains(sha1)) {
+					auto const& program = program_cache.data.at(sha1);
+					ppu_program = program.second;
+					ppu_symbols = program.first;
+				} else {
+					auto const program = compiler.compile(sources);
+					ppu_program = program.second;
+					ppu_symbols = program.first;
+					program_cache.data[sha1] = program;
+				}
+			}
 			ppu_neuron_reset_mask_coord = ppu_symbols->at("neuron_reset_mask").coordinate;
 			ppu_location_coord = ppu_symbols->at("ppu").coordinate.toMin();
 			ppu_status_coord = ppu_symbols->at("status").coordinate;

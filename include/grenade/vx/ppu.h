@@ -6,6 +6,7 @@
 #include "lola/vx/v2/ppu.h"
 #include <cstdint>
 #include <filesystem>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -120,5 +121,47 @@ struct Compiler
 	std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> compile(
 	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 };
+
+
+/**
+ * Cache for compiled PPU programs.
+ * The program information is indexed by hashed compilation options and the source code supplied on
+ * top of the base program. It assumes, that the base source and included headers are not modified
+ * concurrently.
+ */
+struct ProgramCache
+{
+	/**
+	 * Program information comprised of the symbols and memory image.
+	 */
+	typedef std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock>
+	    Program;
+
+	/**
+	 * Sources used for compilation of program serving as hash source into the cache.
+	 */
+	struct Source
+	{
+		/**
+		 * Compiler options before the source location specification.
+		 */
+		std::vector<std::string> options_before_source;
+		/**
+		 * Compiler options after the source location specification.
+		 */
+		std::vector<std::string> options_after_source;
+		/**
+		 * Source code additional to the constant base program sources.
+		 */
+		std::vector<std::string> source_codes;
+
+		std::string sha1() const SYMBOL_VISIBLE;
+	};
+
+	std::map<std::string, Program> data;
+	std::mutex data_mutex;
+};
+
+ProgramCache& get_program_cache() SYMBOL_VISIBLE;
 
 } // namespace grenade::vx
