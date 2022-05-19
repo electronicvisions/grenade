@@ -94,6 +94,7 @@ struct Compiler
 	    "-ffunction-sections",
 	    "-fdata-sections",
 	    "-fno-threadsafe-statics",
+	    "-fstack-usage",
 	    "-mcpu=s2pp_hx",
 	    get_include_paths(),
 	    "-DSYSTEM_HICANN_DLS_MINI",

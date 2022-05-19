@@ -297,12 +297,22 @@ std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
 	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
 	std::stringstream ss;
+	ss << "cd " << temporary.get_path() << " && ";
 	ss << name << " "
-	   << hate::join_string(options_before_source.begin(), options_before_source.end(), " ") << " "
-	   << hate::join_string(sources.begin(), sources.end(), " ") << " "
-	   << hate::join_string(options_after_source.begin(), options_after_source.end(), " ") << " -o"
-	   << (temporary.get_path() / "program.bin");
-	ss << " > " << (temporary.get_path() / "compile_log") << " 2>&1";
+	   << hate::join_string(options_before_source.begin(), options_before_source.end(), " ") << " ";
+	for (auto const& source : sources) {
+		std::filesystem::path path(source);
+		if (path.is_absolute()) {
+			ss << path << " ";
+		} else {
+			ss << "../" / path << " ";
+		}
+	}
+	ss << hate::join_string(options_after_source.begin(), options_after_source.end(), " ") << " -o"
+	   << "program.bin";
+	ss << " > "
+	   << "compile_log"
+	   << " 2>&1";
 	LOG4CXX_DEBUG(logger, "compile(): Command: " << ss.str());
 	auto ret = std::system(ss.str().c_str());
 	std::stringstream log;
@@ -313,6 +323,31 @@ std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock
 		throw std::runtime_error("Compilation failed:\n" + log.str());
 	}
 	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
+	if (logger->isDebugEnabled()) {
+		ret = std::system(("powerpc-ppu-readelf -a " +
+		                   std::string(temporary.get_path() / "program.bin") + " > " +
+		                   std::string(temporary.get_path() / "readelf_log") + " 2>&1")
+		                      .c_str());
+		{
+			std::stringstream log;
+			{
+				log << std::ifstream(temporary.get_path() / "readelf_log").rdbuf();
+			}
+			if (ret != 0) {
+				throw std::runtime_error("Readelf failed:\n" + log.str());
+			}
+			LOG4CXX_DEBUG(logger, "compile(): Readelf:\n" << log.str());
+		}
+		{
+			std::stringstream log;
+			for (auto const& source : sources) {
+				auto path = temporary.get_path() /
+				            std::filesystem::path(source).replace_extension("su").filename();
+				log << std::ifstream(path).rdbuf();
+			}
+			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
+		}
+	}
 	lola::vx::v2::PPUElfFile elf_file(temporary.get_path() / "program.bin");
 	return {elf_file.read_symbols(), elf_file.read_program()};
 }
