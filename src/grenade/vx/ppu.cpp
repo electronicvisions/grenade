@@ -299,11 +299,25 @@ std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
 	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
+
+	// save sources to files for compiler subprocess to use
+	std::vector<std::string> source_paths;
+	for (size_t i = 0; auto const& source : sources) {
+		auto const path = temporary.get_path() / ("source_" + std::to_string(i) + ".cpp");
+		{
+			std::ofstream fs(path);
+			fs << source;
+		}
+		i++;
+		source_paths.push_back(path);
+	}
+	source_paths.push_back(get_program_base_source());
+
 	std::stringstream ss;
 	ss << "cd " << temporary.get_path() << " && ";
 	ss << name << " "
 	   << hate::join_string(options_before_source.begin(), options_before_source.end(), " ") << " ";
-	for (auto const& source : sources) {
+	for (auto const& source : source_paths) {
 		std::filesystem::path path(source);
 		if (path.is_absolute()) {
 			ss << path << " ";

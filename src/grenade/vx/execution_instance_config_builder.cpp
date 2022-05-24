@@ -334,33 +334,19 @@ ExecutionInstanceConfigBuilder::generate()
 		PPUMemoryWordOnPPU ppu_location_coord;
 		PPUMemoryBlockOnPPU ppu_status_coord;
 		{
-			TemporaryDirectory temporary("grenade-ppu-XXXXXX");
 			Compiler compiler;
 			PPUProgramGenerator ppu_program_generator;
 			for (auto const& [rule, synapses] : m_plasticity_rules) {
 				ppu_program_generator.add(rule, synapses);
 			}
-			std::vector<std::string> sources_str = ppu_program_generator.done();
-			std::vector<std::string> sources;
-			size_t i = 0;
-			for (auto const& source : sources_str) {
-				auto const path = temporary.get_path() / ("source_" + std::to_string(i) + ".cpp");
-				{
-					std::ofstream fs(path);
-					fs << source;
-				}
-				i++;
-				sources.push_back(path);
-			}
-			sources.push_back(get_program_base_source());
-			compiler.options_before_source.push_back("-DLIBNUX_TIME_RESOLUTION_SHIFT=0");
 			{
+				std::vector<std::string> const sources = ppu_program_generator.done();
 				auto& program_cache = get_program_cache();
 				std::lock_guard lock(program_cache.data_mutex);
 				ProgramCache::Source source;
 				source.options_before_source = compiler.options_before_source;
 				source.options_after_source = compiler.options_after_source;
-				source.source_codes = sources_str;
+				source.source_codes = sources;
 				auto const sha1 = source.sha1();
 				if (program_cache.data.contains(sha1)) {
 					auto const& program = program_cache.data.at(sha1);

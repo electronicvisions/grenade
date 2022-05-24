@@ -98,6 +98,7 @@ struct Compiler
 	    "-mcpu=s2pp_hx",
 	    get_include_paths(),
 	    "-DSYSTEM_HICANN_DLS_MINI",
+	    "-DLIBNUX_TIME_RESOLUTION_SHIFT=0",
 	    "-fuse-ld=bfd",
 	    "-Wl,--gc-sections",
 	    "-nostdlib",
