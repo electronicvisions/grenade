@@ -2,9 +2,11 @@
 
 #include "grenade/vx/ppu.h"
 #include "hate/join.h"
+#include "hate/timer.h"
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
 #include <vector>
+#include <log4cxx/logger.h>
 
 namespace grenade::vx {
 
@@ -19,6 +21,10 @@ void PPUProgramGenerator::add(
 
 std::vector<std::string> PPUProgramGenerator::done()
 {
+	hate::Timer timer;
+	static log4cxx::Logger* const logger =
+	    log4cxx::Logger::getLogger("grenade.PPUProgramGenerator.done()");
+
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
@@ -162,6 +168,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		sources.push_back(source.str());
 	}
 
+	LOG4CXX_TRACE(logger, "Generated PPU program sources in " << timer.print() << ".");
 	return sources;
 }
 

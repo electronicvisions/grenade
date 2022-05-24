@@ -317,12 +317,16 @@ void ExecutionInstanceConfigBuilder::pre_process()
 std::tuple<lola::vx::v2::Chip, std::optional<lola::vx::v2::PPUElfFile::symbols_type>>
 ExecutionInstanceConfigBuilder::generate()
 {
+	static log4cxx::Logger* const logger =
+	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigBuilder.generate()");
+
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v2;
 	using namespace haldls::vx::v2;
 	using namespace stadls::vx::v2;
 	using namespace lola::vx::v2;
 
+	hate::Timer ppu_timer;
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
 	if (m_requires_ppu) {
 		PPUMemoryBlock ppu_program;
@@ -373,6 +377,7 @@ ExecutionInstanceConfigBuilder::generate()
 			ppu_location_coord = ppu_symbols->at("ppu").coordinate.toMin();
 			ppu_status_coord = ppu_symbols->at("status").coordinate;
 		}
+		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
 
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
 			// zero-initialize all symbols (esp. bss)
