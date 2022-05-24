@@ -6,6 +6,7 @@
 #include "hate/join.h"
 #include <cstdlib>
 #include <fstream>
+#include <mutex>
 #include <sstream>
 #include <boost/compute/detail/sha1.hpp>
 #include <log4cxx/logger.h>
@@ -370,7 +371,7 @@ std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock
 }
 
 
-std::string ProgramCache::Source::sha1() const
+std::string CachingCompiler::ProgramCache::Source::sha1() const
 {
 	boost::compute::detail::sha1 digestor;
 	for (auto const& option : options_before_source) {
@@ -385,10 +386,29 @@ std::string ProgramCache::Source::sha1() const
 	return static_cast<std::string>(digestor);
 }
 
-ProgramCache& get_program_cache()
+CachingCompiler::ProgramCache& CachingCompiler::get_program_cache()
 {
 	static ProgramCache data;
 	return data;
+}
+
+std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock>
+CachingCompiler::compile(std::vector<std::string> sources)
+{
+	auto& program_cache = get_program_cache();
+	std::lock_guard lock(program_cache.data_mutex);
+	ProgramCache::Source source;
+	source.options_before_source = options_before_source;
+	source.options_after_source = options_after_source;
+	source.source_codes = sources;
+	auto const sha1 = source.sha1();
+	if (program_cache.data.contains(sha1)) {
+		return program_cache.data.at(sha1);
+	} else {
+		auto const program = static_cast<Compiler*>(this)->compile(sources);
+		program_cache.data[sha1] = program;
+		return program;
+	}
 }
 
 } // namespace grenade::vx

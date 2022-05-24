@@ -126,44 +126,57 @@ struct Compiler
 
 
 /**
- * Cache for compiled PPU programs.
- * The program information is indexed by hashed compilation options and the source code supplied on
- * top of the base program. It assumes, that the base source and included headers are not modified
- * concurrently.
+ * Compiler with global cache of compiled programs.
  */
-struct ProgramCache
+struct CachingCompiler : public Compiler
 {
 	/**
-	 * Program information comprised of the symbols and memory image.
+	 * Cache for compiled PPU programs.
+	 * The program information is indexed by hashed compilation options and the source code supplied
+	 * on top of the base program. It assumes, that the base source and included headers are not
+	 * modified concurrently.
 	 */
-	typedef std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock>
-	    Program;
-
-	/**
-	 * Sources used for compilation of program serving as hash source into the cache.
-	 */
-	struct Source
+	struct ProgramCache
 	{
 		/**
-		 * Compiler options before the source location specification.
+		 * Program information comprised of the symbols and memory image.
 		 */
-		std::vector<std::string> options_before_source;
-		/**
-		 * Compiler options after the source location specification.
-		 */
-		std::vector<std::string> options_after_source;
-		/**
-		 * Source code additional to the constant base program sources.
-		 */
-		std::vector<std::string> source_codes;
+		typedef std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock>
+		    Program;
 
-		std::string sha1() const SYMBOL_VISIBLE;
+		/**
+		 * Sources used for compilation of program serving as hash source into the cache.
+		 */
+		struct Source
+		{
+			/**
+			 * Compiler options before the source location specification.
+			 */
+			std::vector<std::string> options_before_source;
+			/**
+			 * Compiler options after the source location specification.
+			 */
+			std::vector<std::string> options_after_source;
+			/**
+			 * Source code additional to the constant base program sources.
+			 */
+			std::vector<std::string> source_codes;
+
+			std::string sha1() const SYMBOL_VISIBLE;
+		};
+
+		std::map<std::string, Program> data;
+		std::mutex data_mutex;
 	};
 
-	std::map<std::string, Program> data;
-	std::mutex data_mutex;
-};
+	/**
+	 * Compile sources into target program or return from cache if already compiled.
+	 */
+	std::pair<lola::vx::v2::PPUElfFile::symbols_type, haldls::vx::v2::PPUMemoryBlock> compile(
+	    std::vector<std::string> sources) SYMBOL_VISIBLE;
 
-ProgramCache& get_program_cache() SYMBOL_VISIBLE;
+private:
+	static ProgramCache& get_program_cache();
+};
 
 } // namespace grenade::vx
