@@ -72,7 +72,8 @@ std::string get_include_paths()
 {
 	// assume, that include paths are found under:
 	// - after install: PATH/../include
-	// - during build:  PATH/../../libnux, PATH/../../grenade/include, PATH/../../hate/include
+	// - during build:  PATH/../../libnux/include, PATH/../../grenade/include,
+	// PATH/../../hate/include
 	// TODO (Issue #3990): Implement properly without magic assumptions
 	char const* env_path = std::getenv("PATH");
 	if (!env_path) {
@@ -98,6 +99,7 @@ std::string get_include_paths()
 			fp_libnux = fp_libnux.parent_path();
 			fp_libnux = fp_libnux.parent_path();
 			fp_libnux /= "libnux";
+			fp_libnux /= "include";
 			std::filesystem::path fp_grenade(p);
 			fp_grenade = fp_grenade.parent_path();
 			fp_grenade = fp_grenade.parent_path();
@@ -160,7 +162,7 @@ std::string get_linker_file(std::string const& name)
 {
 	// assume, that linker script is found under:
 	// - after install: PATH/../share/libnux
-	// - during build:  PATH/../../libnux/libnux
+	// - during build:  PATH/../../libnux/share/libnux
 	// TODO (Issue #3990): Implement properly without magic assumptions
 	char const* env_path = std::getenv("PATH");
 	if (!env_path) {
@@ -187,6 +189,7 @@ std::string get_linker_file(std::string const& name)
 			fp = fp.parent_path();
 			fp = fp.parent_path();
 			fp /= "libnux";
+			fp /= "share";
 			fp /= "libnux";
 			fp /= name;
 			if (std::filesystem::exists(fp)) {
