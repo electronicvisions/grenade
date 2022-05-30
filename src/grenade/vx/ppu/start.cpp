@@ -120,6 +120,7 @@ int start()
 				             : [d0] "=qv"(read[0])
 				             : [b0] "b"(storage_base_vector), [i] "r"(uint32_t(0))
 				             : "memory");
+				status = Status::idle;
 				break;
 			}
 			case Status::scheduler: {
