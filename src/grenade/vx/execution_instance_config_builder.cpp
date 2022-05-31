@@ -55,9 +55,13 @@ ExecutionInstanceConfigBuilder::ExecutionInstanceConfigBuilder(
 		m_config.neuron_block.backends[backend].set_enable_event_registers(false);
 	}
 	{
-		auto const new_matrix = std::make_unique<lola::vx::v2::SynapseMatrix>();
 		for (auto const& block : iter_all<SynapseBlockOnDLS>()) {
-			m_config.synapse_blocks[block].matrix = *new_matrix;
+			for (auto const& row : iter_all<SynapseRowOnSynram>()) {
+				m_config.synapse_blocks[block].matrix.weights[row].fill(
+				    lola::vx::v2::SynapseMatrix::Weight(0));
+				m_config.synapse_blocks[block].matrix.labels[row].fill(
+				    lola::vx::v2::SynapseMatrix::Label(0));
+			}
 		}
 	}
 }
