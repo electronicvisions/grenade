@@ -42,6 +42,8 @@ struct Connection
 
 	std::string get_bitfile_info() const SYMBOL_VISIBLE;
 
+	std::string get_remote_repo_state() const SYMBOL_VISIBLE;
+
 	hxcomm::vx::ConnectionVariant&& release() SYMBOL_VISIBLE;
 
 	stadls::vx::v3::ReinitStackEntry create_reinit_stack_entry() SYMBOL_VISIBLE;
