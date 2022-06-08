@@ -14,9 +14,7 @@ class Chip;
 
 namespace grenade::vx {
 
-namespace backend {
-class Connection;
-} // namespace backend
+class JITGraphExecutor;
 
 namespace compute {
 
@@ -39,13 +37,13 @@ public:
 	 * Run given operation.
 	 * @param inputs Input values to use
 	 * @param config Static chip configuration to be used
-	 * @param connection Connection backend to use
+	 * @param executor Executor backend to use
 	 * @return Resulting values
 	 */
 	std::vector<std::vector<UInt32>> run(
 	    std::vector<std::vector<Int8>> const& inputs,
 	    lola::vx::v3::Chip const& config,
-	    backend::Connection& connection) const SYMBOL_VISIBLE;
+	    JITGraphExecutor& executor) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
 	size_t output_size() const SYMBOL_VISIBLE;

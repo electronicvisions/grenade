@@ -1,7 +1,6 @@
 #include "grenade/vx/compute/addition.h"
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/input.h"
@@ -46,16 +45,13 @@ size_t Addition::output_size() const
 std::vector<std::vector<Int8>> Addition::run(
     std::vector<std::vector<Int8>> const& inputs,
     lola::vx::v3::Chip const& config,
-    backend::Connection& connection) const
+    JITGraphExecutor& executor) const
 {
 	using namespace halco::hicann_dls::vx;
 
 	JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
 	    coordinate::ExecutionInstance(), config));
-
-	JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -92,8 +88,6 @@ std::vector<std::vector<Int8>> Addition::run(
 	input_map.data[m_other_vertex] = others;
 
 	auto const output_map = executor.run(m_graph, input_map, configs);
-
-	connection = std::move(executor.release_connection(DLSGlobal()));
 
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
 	    output_map.data.at(m_output_vertex));

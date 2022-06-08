@@ -1,7 +1,6 @@
 #include "grenade/vx/compute/mac.h"
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
@@ -364,16 +363,10 @@ size_t MAC::output_size() const
 }
 
 std::vector<std::vector<Int8>> MAC::run(
-    Activations const& inputs,
-    lola::vx::v3::Chip const& config,
-    backend::Connection& connection) const
+    Activations const& inputs, lola::vx::v3::Chip const& config, JITGraphExecutor& executor) const
 {
 	using namespace halco::hicann_dls::vx::v3;
 	auto logger = log4cxx::Logger::getLogger("grenade.MAC");
-
-	// Construct map of one connection to HW
-	JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -410,8 +403,6 @@ std::vector<std::vector<Int8>> MAC::run(
 
 	// run Graph with given inputs and return results
 	auto const output_activation_map = executor.run(m_graph, input_list, chip_configs);
-
-	connection = std::move(executor.release_connection(DLSGlobal()));
 
 	hate::Timer output_timer;
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(

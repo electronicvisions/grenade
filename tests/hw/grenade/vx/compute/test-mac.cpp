@@ -42,7 +42,9 @@ TEST(MAC, Single)
 
 	grenade::vx::compute::MAC mac(weights);
 
-	auto const res = mac.run({inputs}, *chip, connection);
+	grenade::vx::JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	auto const res = mac.run({inputs}, *chip, executor);
 	EXPECT_EQ(res.size(), 1);
 	EXPECT_EQ(res.at(0).size(), 1);
 }

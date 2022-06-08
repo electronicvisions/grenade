@@ -22,9 +22,7 @@ class Chip;
 
 namespace grenade::vx {
 
-namespace backend {
-class Connection;
-} // namespace backend
+class JITGraphExecutor;
 
 namespace compute {
 
@@ -75,13 +73,13 @@ public:
 	 * Run given set of activations weights given on construction.
 	 * @param inputs Input activations to use
 	 * @param config Static chip configuration to be used
-	 * @param connection Connection backend to use
+	 * @param executor Executor backend to use
 	 * @return Resulting accumulated membrane potentials
 	 */
 	std::vector<std::vector<Int8>> run(
 	    Activations const& inputs,
 	    lola::vx::v3::Chip const& config,
-	    backend::Connection& connection) const SYMBOL_VISIBLE;
+	    JITGraphExecutor& executor) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
 	size_t output_size() const SYMBOL_VISIBLE;
