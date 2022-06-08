@@ -49,6 +49,9 @@ struct ExecutionInstance
 
 	friend size_t hash_value(ExecutionInstance const& e) SYMBOL_VISIBLE;
 
+	GENPYBIND(expose_as(__hash__))
+	size_t hash() const SYMBOL_VISIBLE;
+
 private:
 	ExecutionIndex m_execution_index;
 	halco::hicann_dls::vx::v3::DLSGlobal m_dls_global;

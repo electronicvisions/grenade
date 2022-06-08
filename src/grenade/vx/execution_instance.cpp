@@ -32,6 +32,16 @@ bool ExecutionInstance::operator!=(ExecutionInstance const& other) const
 	return !(*this == other);
 }
 
+size_t ExecutionInstance::hash() const
+{
+	// We include the type name in the hash to reduce the number of hash collisions in
+	// python code, where __hash__ is used in heterogeneous containers.
+	static const size_t seed = boost::hash_value(typeid(ExecutionInstance).name());
+	size_t hash = seed;
+	boost::hash_combine(hash, hash_value(*this));
+	return hash;
+}
+
 std::ostream& operator<<(std::ostream& os, ExecutionInstance const& instance)
 {
 	return (
