@@ -92,6 +92,11 @@ std::string Connection::get_unique_identifier(std::optional<std::string> const& 
 	    [hwdb_path](auto const& c) { return c.get_unique_identifier(hwdb_path); }, m_connection);
 }
 
+std::string Connection::get_bitfile_info() const
+{
+	return std::visit([](auto const& c) { return c.get_bitfile_info(); }, m_connection);
+}
+
 hxcomm::vx::ConnectionVariant&& Connection::release()
 {
 	return std::move(m_connection);
