@@ -30,7 +30,17 @@ IODataMap run(
 }
 
 IODataMap run(
-    backend::Connection& connection,
+    JITGraphExecutor& executor,
+    lola::vx::v3::Chip const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs)
+{
+	ExecutionInstancePlaybackHooks empty;
+	return run(executor, config, network_graph, inputs, empty);
+}
+
+IODataMap run(
+    JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
@@ -40,15 +50,27 @@ IODataMap run(
 	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
 	    coordinate::ExecutionInstance(), config));
 
-	JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
-
 	JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
 	    std::pair<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>(
 	        coordinate::ExecutionInstance(), std::move(playback_hooks)));
 
 	auto ret = executor.run(network_graph.get_graph(), inputs, configs, playback_hooks_map);
+
+	return ret;
+}
+
+IODataMap run(
+    backend::Connection& connection,
+    lola::vx::v3::Chip const& config,
+    NetworkGraph const& network_graph,
+    IODataMap const& inputs,
+    ExecutionInstancePlaybackHooks& playback_hooks)
+{
+	JITGraphExecutor executor;
+	executor.acquire_connection(DLSGlobal(), std::move(connection));
+
+	auto ret = run(executor, config, network_graph, inputs, playback_hooks);
 
 	connection = std::move(executor.release_connection(DLSGlobal()));
 	return ret;
