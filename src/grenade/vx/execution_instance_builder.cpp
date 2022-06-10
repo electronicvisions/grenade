@@ -831,7 +831,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		builder.merge_back(m_playback_hooks.pre_realtime);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
-		return {m_chunked_program, false};
+		return {m_chunked_program, false, false};
 	}
 
 	// playback builder sequence to be concatenated in the end
@@ -1165,7 +1165,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	if (!builder.empty()) {
 		m_chunked_program.push_back(builder.done());
 	}
-	return {m_chunked_program, has_hook_around_realtime};
+	return {m_chunked_program, has_hook_around_realtime, m_has_plasticity_rule};
 }
 
 } // namespace grenade::vx

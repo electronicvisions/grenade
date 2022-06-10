@@ -185,6 +185,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 	}
 
+	// build realtime programs
+	auto program = builder.generate();
+
 	PlaybackProgramBuilder schedule_out_replacement_builder;
 	if (ppu_symbols) {
 		using namespace haldls::vx::v3;
@@ -219,22 +222,32 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
 			schedule_out_replacement_builder.read(ppu);
 		}
+		// if plasticity is present, synaptic weights are volatile between batch entries, read
+		if (program.has_plasticity) {
+			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
+				schedule_out_replacement_builder.read(coord);
+			}
+		}
 		schedule_out_replacement_builder.block_until(
 		    BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 	}
 
 	PlaybackProgramBuilder read_builder;
-	// TODO (Issue #3997): Complete the collection of containers to read to the ones which can be
-	// altered by the PPU program  during runtime. Currently only the local memory is read and
-	// restored, for plasticity we need to read and restore the synapses in addition.
 	halco::common::typed_array<
 	    std::optional<PlaybackProgram::ContainerTicket<haldls::vx::v3::PPUMemory>>, PPUMemoryOnDLS>
-	    read_ticket;
+	    read_ticket_ppu_memory;
+	halco::common::typed_array<
+	    std::optional<PlaybackProgram::ContainerTicket<lola::vx::v3::SynapseWeightMatrix>>,
+	    SynapseWeightMatrixOnDLS>
+	    read_ticket_synaptic_weights;
 	if (connection_state_storage.enable_differential_config) {
 		if (ppu_symbols) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				read_ticket[ppu.toPPUMemoryOnDLS()].emplace(
+				read_ticket_ppu_memory[ppu.toPPUMemoryOnDLS()].emplace(
 				    read_builder.read(ppu.toPPUMemoryOnDLS()));
+			}
+			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
+				read_ticket_synaptic_weights[coord].emplace(read_builder.read(coord));
 			}
 		}
 	}
@@ -282,8 +295,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
 	LOG4CXX_TRACE(logger, "operator(): all inits after " << build_timer.print() << ".");
 
-	// build realtime programs
-	auto program = builder.generate();
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 
 	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
@@ -357,8 +368,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		connection_state_storage.current_config = config;
 		if (ppu_symbols) {
 			for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
-				assert(read_ticket[ppu]);
-				connection_state_storage.current_config.ppu_memory[ppu] = read_ticket[ppu]->get();
+				assert(read_ticket_ppu_memory[ppu]);
+				connection_state_storage.current_config.ppu_memory[ppu] =
+				    read_ticket_ppu_memory[ppu]->get();
+			}
+			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
+				assert(read_ticket_synaptic_weights[coord]);
+				connection_state_storage.current_config.synapse_blocks[coord.toSynapseBlockOnDLS()]
+				    .matrix.weights = read_ticket_synaptic_weights[coord]->get().values;
 			}
 			connection_state_storage.current_config_words.clear();
 			haldls::vx::visit_preorder(
