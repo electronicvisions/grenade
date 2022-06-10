@@ -79,10 +79,8 @@ int start()
 				                                : cadc_recording_storage_base_top) >>
 				     4);
 				uint32_t offset = 0;
-				uint32_t volatile* size_ptr = (uint32_t*) (storage_base_scalar + offset);
 				uint32_t size = 0;
-				*size_ptr = size;
-				offset += 16;
+				offset += 16; // size
 				status = Status::inside_periodic_read;
 				while (status != Status::stop_periodic_read) {
 					if (offset > cadc_recording_storage_size - 256 /* samples */ - 16 /* time */ -
@@ -112,9 +110,9 @@ int start()
 					// clang-format on
 					offset += 16 + sizeof(read[0]) + sizeof(read[1]);
 					size++;
-					*size_ptr = size;
-					asm volatile("sync");
 				}
+				uint32_t volatile* const size_ptr = (uint32_t*) (storage_base_scalar);
+				*size_ptr = size;
 				asm volatile("fxvinx %[d0], %[b0], %[i]\n"
 				             "sync\n"
 				             : [d0] "=qv"(read[0])
