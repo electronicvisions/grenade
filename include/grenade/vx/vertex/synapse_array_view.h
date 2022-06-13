@@ -1,6 +1,8 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synram.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/synapse.h"
 #include <array>

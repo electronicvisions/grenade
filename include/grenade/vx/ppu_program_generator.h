@@ -2,6 +2,7 @@
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "grenade/vx/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synram.h"
 #include "hate/visibility.h"
 #include <tuple>
 #include <vector>
