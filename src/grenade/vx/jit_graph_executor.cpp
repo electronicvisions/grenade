@@ -76,6 +76,36 @@ JITGraphExecutor::release_connections()
 	return std::move(m_connections);
 }
 
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo>
+JITGraphExecutor::get_time_info() const
+{
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo> ret;
+	for (auto const& [identifier, connection] : m_connections) {
+		ret.emplace(identifier, connection.get_time_info());
+	}
+	return ret;
+}
+
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> JITGraphExecutor::get_unique_identifier(
+    std::optional<std::string> const& hwdb_path) const
+{
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> ret;
+	for (auto const& [identifier, connection] : m_connections) {
+		ret.emplace(identifier, connection.get_unique_identifier(hwdb_path));
+	}
+	return ret;
+}
+
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> JITGraphExecutor::get_bitfile_info()
+    const
+{
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> ret;
+	for (auto const& [identifier, connection] : m_connections) {
+		ret.emplace(identifier, connection.get_bitfile_info());
+	}
+	return ret;
+}
+
 bool JITGraphExecutor::is_executable_on(Graph const& graph)
 {
 	auto const connection_dls_globals = boost::adaptors::keys(m_connections);

@@ -197,6 +197,24 @@ GENPYBIND_MANUAL({
 	    },
 	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
 	    pybind11::arg("inputs"));
+
+	parent.def(
+	    "run",
+	    [](::pyhxcomm::Handle<JITGraphExecutor>& conn, lola::vx::v3::Chip const& config,
+	       network::NetworkGraph const& network_graph, IODataMap const& inputs,
+	       ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
+		    return network::run(conn.get(), config, network_graph, inputs, playback_hooks);
+	    },
+	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
+	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
+	parent.def(
+	    "run",
+	    [](::pyhxcomm::Handle<JITGraphExecutor>& conn, lola::vx::v3::Chip const& config,
+	       network::NetworkGraph const& network_graph, IODataMap const& inputs) -> IODataMap {
+		    return network::run(conn.get(), config, network_graph, inputs);
+	    },
+	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
+	    pybind11::arg("inputs"));
 })
 
 } // namespace network

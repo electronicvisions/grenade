@@ -10,6 +10,10 @@
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 
+#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
+#include "pyhxcomm/common/managed_connection.h"
+#endif
+
 namespace grenade::vx {
 
 class Graph;
@@ -27,6 +31,10 @@ class JITGraphExecutor;
 class JITGraphExecutor
 {
 public:
+	typedef std::tuple<bool> init_parameters_type;
+
+	static constexpr char name[] = "JITGraphExecutor";
+
 	typedef std::unordered_map<coordinate::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
 
 	typedef std::unordered_map<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>
@@ -60,6 +68,15 @@ public:
 	 * @return Connections to the associated hardware
 	 */
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& release_connections()
+	    SYMBOL_VISIBLE;
+
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo> get_time_info() const
+	    SYMBOL_VISIBLE;
+
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_unique_identifier(
+	    std::optional<std::string> const& hwdb_path) const SYMBOL_VISIBLE;
+
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_bitfile_info() const
 	    SYMBOL_VISIBLE;
 
 private:
@@ -156,3 +173,8 @@ IODataList run(
     bool only_unconnected_output = true) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx
+
+GENPYBIND_MANUAL({
+	pyhxcomm::ManagedPyBind11Helper<grenade::vx::JITGraphExecutor> helper(
+	    parent, BOOST_HANA_STRING("JITGraphExecutor"));
+})
