@@ -74,9 +74,10 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 TEST(JITGraphExecutor, EventLoopback)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::JITGraphExecutor executor;
 	grenade::vx::backend::Connection connection;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	constexpr size_t max_batch_size = 5;
 

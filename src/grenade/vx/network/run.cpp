@@ -68,12 +68,13 @@ IODataMap run(
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
-	JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	JITGraphExecutor executor(std::move(connections));
 
 	auto ret = run(executor, config, network_graph, inputs, playback_hooks);
 
-	connection = std::move(executor.release_connection(DLSGlobal()));
+	connection = std::move(executor.release_connections().at(DLSGlobal()));
 	return ret;
 }
 

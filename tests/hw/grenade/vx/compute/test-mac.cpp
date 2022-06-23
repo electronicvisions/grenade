@@ -42,8 +42,9 @@ TEST(MAC, Single)
 
 	grenade::vx::compute::MAC mac(weights);
 
-	grenade::vx::JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 	auto const res = mac.run({inputs}, *chip, executor);
 	EXPECT_EQ(res.size(), 1);
 	EXPECT_EQ(res.at(0).size(), 1);

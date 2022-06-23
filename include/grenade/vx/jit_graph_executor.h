@@ -33,22 +33,21 @@ public:
 	    PlaybackHooks;
 
 	/**
-	 * Construct executor without active connections.
+	 * Construct executor with active connections from environment.
 	 * @param enable_differential_config Whether to enable differential configuration writes instead
 	 * of full ones
 	 */
 	JITGraphExecutor(bool enable_differential_config = false) SYMBOL_VISIBLE;
 
 	/**
-	 * Acquire connection.
-	 * Acquisition requires ownership of the connection to ensure no intermediate access outside the
-	 * executor is possible.
-	 * @param identifier Identifier to use for to be acquired connection
-	 * @param connection Connection to acquire
+	 * Construct executor with given active connections.
+	 * @param connections Connections to acquire and provide
+	 * @param enable_differential_config Whether to enable differential configuration writes instead
+	 * of full ones
 	 */
-	void acquire_connection(
-	    halco::hicann_dls::vx::v3::DLSGlobal const& identifier,
-	    backend::Connection&& connection) SYMBOL_VISIBLE;
+	JITGraphExecutor(
+	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& connections,
+	    bool enable_differential_config = false) SYMBOL_VISIBLE;
 
 	/**
 	 * Get identifiers of connections contained in executor.
@@ -57,11 +56,10 @@ public:
 	std::set<halco::hicann_dls::vx::v3::DLSGlobal> contained_connections() const SYMBOL_VISIBLE;
 
 	/**
-	 * Release connection associated with identifier.
-	 * @param identifier Identifier for which to extract connection
-	 * @return Connection to the associated hardware
+	 * Release contained connections.
+	 * @return Connections to the associated hardware
 	 */
-	backend::Connection release_connection(halco::hicann_dls::vx::v3::DLSGlobal const& identifier)
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& release_connections()
 	    SYMBOL_VISIBLE;
 
 private:

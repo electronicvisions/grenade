@@ -114,9 +114,10 @@ inline void test_background_spike_source_regular(
 TEST(BackgroundSpikeSource, Regular)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::JITGraphExecutor executor;
 	grenade::vx::backend::Connection connection;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(

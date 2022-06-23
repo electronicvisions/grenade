@@ -44,9 +44,10 @@ TEST(Addition, Single)
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	// Construct map of one connection and connect to HW
-	grenade::vx::JITGraphExecutor executor;
 	grenade::vx::backend::Connection connection;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	// fill graph inputs
 	grenade::vx::IODataMap input_list;

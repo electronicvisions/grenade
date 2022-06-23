@@ -84,8 +84,9 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	grenade::vx::coordinate::ExecutionInstance instance;
 
@@ -184,8 +185,9 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	    log4cxx::Logger::getLogger("grenade.NetworkBuilderTest.FeedForwardAllToAll");
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	grenade::vx::coordinate::ExecutionInstance instance;
 
@@ -292,8 +294,9 @@ TEST(NetworkGraphBuilder, SynfireChain)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	grenade::vx::coordinate::ExecutionInstance instance;
 

@@ -43,9 +43,10 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	auto network_graph = grenade::vx::network::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
-	grenade::vx::JITGraphExecutor executor(true);
-	executor.acquire_connection(
-	    halco::hicann_dls::vx::v3::DLSGlobal(), grenade::vx::backend::Connection());
+	grenade::vx::backend::Connection connection;
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections), true);
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::IODataMap input_map;

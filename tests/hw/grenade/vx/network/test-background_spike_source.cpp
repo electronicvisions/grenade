@@ -165,8 +165,9 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
-	grenade::vx::JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
@@ -280,8 +281,9 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
-	grenade::vx::JITGraphExecutor executor;
-	executor.acquire_connection(DLSGlobal(), std::move(connection));
+	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(

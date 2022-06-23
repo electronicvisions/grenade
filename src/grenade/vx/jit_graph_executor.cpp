@@ -24,17 +24,9 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
     m_connections(),
     m_connection_state_storages(),
     m_enable_differential_config(enable_differential_config)
-{}
-
-void JITGraphExecutor::acquire_connection(
-    halco::hicann_dls::vx::v3::DLSGlobal const& identifier, backend::Connection&& connection)
 {
-	if (m_connections.contains(identifier)) {
-		throw std::runtime_error("Trying to acquire connection with already present identifier.");
-	}
-	assert(!m_connection_state_storages.contains(identifier));
-
-	m_connections.emplace(identifier, std::move(connection));
+	halco::hicann_dls::vx::v3::DLSGlobal identifier;
+	m_connections.emplace(identifier, std::move(backend::Connection()));
 	m_connection_state_storages.emplace(
 	    identifier, std::move(ConnectionStateStorage{
 	                    m_enable_differential_config,
@@ -47,6 +39,27 @@ void JITGraphExecutor::acquire_connection(
 	                    m_connections.at(identifier).create_reinit_stack_entry()}));
 }
 
+JITGraphExecutor::JITGraphExecutor(
+    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& connections,
+    bool const enable_differential_config) :
+    m_connections(std::move(connections)),
+    m_connection_state_storages(),
+    m_enable_differential_config(enable_differential_config)
+{
+	for (auto const& [identifier, _] : m_connections) {
+		m_connection_state_storages.emplace(
+		    identifier, std::move(ConnectionStateStorage{
+		                    m_enable_differential_config,
+		                    {},
+		                    {},
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry()}));
+	}
+}
+
 std::set<halco::hicann_dls::vx::v3::DLSGlobal> JITGraphExecutor::contained_connections() const
 {
 	std::set<halco::hicann_dls::vx::v3::DLSGlobal> ret;
@@ -56,15 +69,11 @@ std::set<halco::hicann_dls::vx::v3::DLSGlobal> JITGraphExecutor::contained_conne
 	return ret;
 }
 
-backend::Connection JITGraphExecutor::release_connection(
-    halco::hicann_dls::vx::v3::DLSGlobal const& identifier)
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&&
+JITGraphExecutor::release_connections()
 {
-	if (!m_connections.contains(identifier)) {
-		throw std::runtime_error("Trying to release connection with not present identifier.");
-	}
-	assert(m_connection_state_storages.contains(identifier));
-	m_connection_state_storages.erase(identifier);
-	return std::move(m_connections.extract(identifier).mapped());
+	m_connection_state_storages.clear();
+	return std::move(m_connections);
 }
 
 bool JITGraphExecutor::is_executable_on(Graph const& graph)
