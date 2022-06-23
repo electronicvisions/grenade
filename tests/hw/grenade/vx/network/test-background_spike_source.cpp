@@ -139,7 +139,8 @@ void test_background_spike_source_regular(
 	inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(running_period);
 
 	// run graph with given inputs and return results
-	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	auto const spikes = grenade::vx::network::extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
@@ -235,7 +236,8 @@ void test_background_spike_source_poisson(
 		inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(running_period);
 
 		// run graph with given inputs and return results
-		auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map =
+		    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		auto const spikes = grenade::vx::network::extract_neuron_spikes(result_map, network_graph);
 		EXPECT_EQ(spikes.size(), 1);

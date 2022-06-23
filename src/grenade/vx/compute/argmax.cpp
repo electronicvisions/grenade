@@ -58,7 +58,7 @@ std::vector<std::vector<UInt32>> ArgMax::run(
 	}
 	input_map.data[m_input_vertex] = timed_inputs;
 
-	auto const output_map = executor.run(m_graph, input_map, configs);
+	auto const output_map = grenade::vx::run(executor, m_graph, input_map, configs);
 
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<UInt32>>>>(
 	    output_map.data.at(m_output_vertex));

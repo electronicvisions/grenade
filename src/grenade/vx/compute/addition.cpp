@@ -87,7 +87,7 @@ std::vector<std::vector<Int8>> Addition::run(
 	}
 	input_map.data[m_other_vertex] = others;
 
-	auto const output_map = executor.run(m_graph, input_map, configs);
+	auto const output_map = grenade::vx::run(executor, m_graph, input_map, configs);
 
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
 	    output_map.data.at(m_output_vertex));

@@ -149,7 +149,8 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
 	// run graph with given inputs and return results
-	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
 	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
@@ -253,7 +254,8 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
 	// run graph with given inputs and return results
-	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
 	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
@@ -383,7 +385,8 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
 		// run graph with given inputs and return results
-		auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map =
+		    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		assert(network_graph.get_event_output_vertex());
 		auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(

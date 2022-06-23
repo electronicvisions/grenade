@@ -16,6 +16,7 @@ class Graph;
 class IODataMap;
 class IODataList;
 class ExecutionInstancePlaybackHooks;
+class JITGraphExecutor;
 
 /**
  * Just-in-time graph executor.
@@ -63,60 +64,6 @@ public:
 	backend::Connection release_connection(halco::hicann_dls::vx::v3::DLSGlobal const& identifier)
 	    SYMBOL_VISIBLE;
 
-	/**
-	 * Run the specified graph with specified inputs on the previously acquired connections.
-	 * @param graph Graph to execute
-	 * @param input List of input values to use
-	 * @param initial_config Map of initial configuration
-	 * @param playback_hooks Map of playback sequence collections to be inserted at specified
-	 * execution instances
-	 */
-	IODataMap run(
-	    Graph const& graph,
-	    IODataMap const& input,
-	    ChipConfigs const& initial_config,
-	    PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
-
-	/**
-	 * Run the specified graph with specified inputs on the previously acquired connections.
-	 * @param graph Graph to execute
-	 * @param input List of input values to use
-	 * @param initial_config Map of initial configuration
-	 */
-	IODataMap run(Graph const& graph, IODataMap const& input, ChipConfigs const& initial_config)
-	    SYMBOL_VISIBLE;
-
-	/**
-	 * Run the specified graph with specified inputs on the previously acquired connections.
-	 * @param graph Graph to execute
-	 * @param input List of input values to use
-	 * @param initial_config Map of initial configuration
-	 * @param playback_hooks List of playback sequence collections to be inserted at specified
-	 * execution instances
-	 * @param only_unconnected_output Whether to return only values to output vertices without out
-	 * edges
-	 */
-	IODataList run(
-	    Graph const& graph,
-	    IODataList const& input,
-	    ChipConfigs const& initial_config,
-	    PlaybackHooks& playback_hooks,
-	    bool only_unconnected_output = true) SYMBOL_VISIBLE;
-
-	/**
-	 * Run the specified graph with specified inputs on the previously acquired connections.
-	 * @param graph Graph to execute
-	 * @param input List of input values to use
-	 * @param initial_config Map of initial configuration
-	 * @param only_unconnected_output Whether to return only values to output vertices without out
-	 * edges
-	 */
-	IODataList run(
-	    Graph const& graph,
-	    IODataList const& input,
-	    ChipConfigs const& initial_config,
-	    bool only_unconnected_output = true) SYMBOL_VISIBLE;
-
 private:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> m_connections;
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, ConnectionStateStorage>
@@ -136,6 +83,78 @@ private:
 	 * @param graph Graph to check
 	 */
 	void check(Graph const& graph);
+
+	friend IODataMap run(
+	    JITGraphExecutor& executor,
+	    Graph const& graph,
+	    IODataMap const& input,
+	    ChipConfigs const& initial_config,
+	    PlaybackHooks& playback_hooks);
 };
+
+
+/**
+ * Run the specified graph with specified inputs on the supplied executor.
+ * @param executor Executor to use
+ * @param graph Graph to execute
+ * @param input List of input values to use
+ * @param initial_config Map of initial configuration
+ * @param playback_hooks Map of playback sequence collections to be inserted at specified
+ * execution instances
+ */
+IODataMap run(
+    JITGraphExecutor& executor,
+    Graph const& graph,
+    IODataMap const& input,
+    JITGraphExecutor::ChipConfigs const& initial_config,
+    JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+
+/**
+ * Run the specified graph with specified inputs on the supplied executor.
+ * @param executor Executor to use
+ * @param graph Graph to execute
+ * @param input List of input values to use
+ * @param initial_config Map of initial configuration
+ */
+IODataMap run(
+    JITGraphExecutor& executor,
+    Graph const& graph,
+    IODataMap const& input,
+    JITGraphExecutor::ChipConfigs const& initial_config) SYMBOL_VISIBLE;
+
+/**
+ * Run the specified graph with specified inputs on the supplied executor.
+ * @param executor Executor to use
+ * @param graph Graph to execute
+ * @param input List of input values to use
+ * @param initial_config Map of initial configuration
+ * @param playback_hooks List of playback sequence collections to be inserted at specified
+ * execution instances
+ * @param only_unconnected_output Whether to return only values to output vertices without out
+ * edges
+ */
+IODataList run(
+    JITGraphExecutor& executor,
+    Graph const& graph,
+    IODataList const& input,
+    JITGraphExecutor::ChipConfigs const& initial_config,
+    JITGraphExecutor::PlaybackHooks& playback_hooks,
+    bool only_unconnected_output = true) SYMBOL_VISIBLE;
+
+/**
+ * Run the specified graph with specified inputs on the supplied executor.
+ * @param executor Executor to use
+ * @param graph Graph to execute
+ * @param input List of input values to use
+ * @param initial_config Map of initial configuration
+ * @param only_unconnected_output Whether to return only values to output vertices without out
+ * edges
+ */
+IODataList run(
+    JITGraphExecutor& executor,
+    Graph const& graph,
+    IODataList const& input,
+    JITGraphExecutor::ChipConfigs const& initial_config,
+    bool only_unconnected_output = true) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx

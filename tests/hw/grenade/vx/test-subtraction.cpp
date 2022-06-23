@@ -63,7 +63,7 @@ TEST(Subtraction, Single)
 	chip_configs[instance] = *chip;
 
 	// run Graph with given inputs and return results
-	auto const result_map = executor.run(g, input_list, chip_configs);
+	auto const result_map = grenade::vx::run(executor, g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 

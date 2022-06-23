@@ -79,7 +79,7 @@ inline void test_background_spike_source_regular(
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
 
 	// run Graph with given inputs and return results
-	auto const result_map = executor.run(g, input_list, chip_configs);
+	auto const result_map = grenade::vx::run(executor, g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 

@@ -55,7 +55,8 @@ IODataMap run(
 	    std::pair<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>(
 	        coordinate::ExecutionInstance(), std::move(playback_hooks)));
 
-	auto ret = executor.run(network_graph.get_graph(), inputs, configs, playback_hooks_map);
+	auto ret =
+	    grenade::vx::run(executor, network_graph.get_graph(), inputs, configs, playback_hooks_map);
 
 	return ret;
 }

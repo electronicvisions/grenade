@@ -131,7 +131,8 @@ TEST(CADCRecording, General)
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 400));
 
 	// run graph with given inputs and return results
-	auto const result_map = executor.run(network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	assert(network_graph.get_cadc_sample_output_vertex().size());
 	EXPECT_EQ(network_graph.get_cadc_sample_output_vertex().size(), 1);

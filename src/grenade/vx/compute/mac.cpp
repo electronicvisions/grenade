@@ -402,7 +402,8 @@ std::vector<std::vector<Int8>> MAC::run(
 	}
 
 	// run Graph with given inputs and return results
-	auto const output_activation_map = executor.run(m_graph, input_list, chip_configs);
+	auto const output_activation_map =
+	    grenade::vx::run(executor, m_graph, input_list, chip_configs);
 
 	hate::Timer output_timer;
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(

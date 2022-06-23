@@ -22,13 +22,13 @@ TEST(JITGraphExecutor, Empty)
 
 	grenade::vx::IODataMap input_map;
 
-	auto const result_map = executor.run(g, input_map, initial_config);
+	auto const result_map = grenade::vx::run(executor, g, input_map, initial_config);
 	EXPECT_TRUE(result_map.empty());
 
 	grenade::vx::IODataList input_list;
 	input_list.from_input_map(input_map, g);
 
-	auto const result_list = executor.run(g, input_list, initial_config);
+	auto const result_list = grenade::vx::run(executor, g, input_list, initial_config);
 	EXPECT_TRUE(result_list.data.empty());
 }
 
@@ -59,7 +59,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.DifferentialConfig");
 	{
 		hate::Timer timer;
-		executor.run(network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// First run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), 100);
 	}
@@ -68,7 +68,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    lola::vx::v3::AtomicNeuron::AnalogValue(123);
 	{
 		hate::Timer timer;
-		executor.run(network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Second run: expect CapMem settling time due to single cell change
 		EXPECT_GE(timer.get_ms(), 100);
 	}
@@ -77,7 +77,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    !config.neuron_block.atomic_neurons.front().leak.enable_multiplication;
 	{
 		hate::Timer timer;
-		executor.run(network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Third run: expect no CapMem settling time due to non-CapMem change
 		EXPECT_LE(timer.get_ms(), 100);
 		// Not too fast (may change)
@@ -85,7 +85,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	}
 	{
 		hate::Timer timer;
-		executor.run(network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Fourth run: expect no CapMem settling time due to non-CapMem change and even faster
 		// construction due to equality of config
 		EXPECT_LE(timer.get_ms(), 5);
