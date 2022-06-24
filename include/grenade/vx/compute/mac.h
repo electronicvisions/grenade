@@ -67,7 +67,7 @@ public:
 	MAC(WeightsT&& weights,
 	    size_t num_sends = 1,
 	    haldls::vx::v3::Timer::Value wait_between_events = haldls::vx::v3::Timer::Value(25),
-	    bool enable_loopback = true);
+	    bool enable_loopback = false);
 
 	/**
 	 * Run given set of activations weights given on construction.
