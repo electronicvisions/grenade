@@ -8,6 +8,7 @@
 #include "grenade/vx/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
+#include "hxcomm/vx/connection_from_env.h"
 #include <chrono>
 #include <map>
 #include <mutex>
@@ -25,18 +26,22 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
     m_connection_state_storages(),
     m_enable_differential_config(enable_differential_config)
 {
-	halco::hicann_dls::vx::v3::DLSGlobal identifier;
-	m_connections.emplace(identifier, std::move(backend::Connection()));
-	m_connection_state_storages.emplace(
-	    identifier, std::move(ConnectionStateStorage{
-	                    m_enable_differential_config,
-	                    {},
-	                    {},
-	                    m_connections.at(identifier).create_reinit_stack_entry(),
-	                    m_connections.at(identifier).create_reinit_stack_entry(),
-	                    m_connections.at(identifier).create_reinit_stack_entry(),
-	                    m_connections.at(identifier).create_reinit_stack_entry(),
-	                    m_connections.at(identifier).create_reinit_stack_entry()}));
+	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env();
+	for (size_t i = 0; i < hxcomm_connections.size(); ++i) {
+		halco::hicann_dls::vx::v3::DLSGlobal identifier(i);
+		m_connections.emplace(
+		    identifier, std::move(backend::Connection(std::move(hxcomm_connections.at(i)))));
+		m_connection_state_storages.emplace(
+		    identifier, std::move(ConnectionStateStorage{
+		                    m_enable_differential_config,
+		                    {},
+		                    {},
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry(),
+		                    m_connections.at(identifier).create_reinit_stack_entry()}));
+	}
 }
 
 JITGraphExecutor::JITGraphExecutor(
