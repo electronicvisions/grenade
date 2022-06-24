@@ -82,11 +82,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
 
-	std::unique_lock<std::mutex> connection_lock(connection_mutex, std::defer_lock);
-	// lock whole function body for differential config mode
-	if (connection_state_storage.enable_differential_config) {
-		connection_lock.lock();
-	}
+	hate::Timer const build_timer;
 
 	hate::Timer const initial_config_timer;
 	auto config = initial_config;
@@ -99,95 +95,28 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	ExecutionInstanceBuilder builder(
 	    graph, execution_instance, input_data_map, data_map, ppu_symbols, playback_hooks);
 
-	hate::Timer const preprocess_timer;
+	hate::Timer const realtime_preprocess_timer;
 	builder.pre_process();
 	LOG4CXX_TRACE(
-	    logger, "operator(): Preprocessed local vertices in " << preprocess_timer.print() << ".");
-
-	// build PlaybackProgram
-	hate::Timer const build_timer;
-
-	// add pre static config playback hook
-	if (connection_state_storage.enable_differential_config &&
-	    !playback_hooks.pre_static_config.empty()) {
-		throw std::runtime_error(
-		    "A pre static config playback hook is not compatible with differential configuration.");
-	}
-	auto base_builder = std::move(playback_hooks.pre_static_config);
-	PlaybackProgramBuilder differential_builder;
-
-	bool enforce_base = true;
-	bool nothing_changed = false;
-	bool has_capmem_changes = false;
-	if (!connection_state_storage.enable_differential_config) {
-		// generate static configuration
-		base_builder.write(ChipOnDLS(), config);
-		has_capmem_changes = true;
-	} else if (connection_state_storage.current_config_words.empty() /* first invokation */) {
-		typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
-		haldls::vx::visit_preorder(
-		    config, ChipOnDLS(),
-		    stadls::EncodeVisitor<words_type>{connection_state_storage.current_config_words});
-		fisch::vx::PlaybackProgramBuilder fisch_base_builder;
-		std::vector<fisch::vx::Omnibus> base_data;
-		for (size_t i = 0; i < connection_state_storage.current_config_words.size(); ++i) {
-			base_data.push_back(
-			    fisch::vx::Omnibus(connection_state_storage.current_config_words.at(i)));
-		}
-		fisch_base_builder.write(chip_addresses, base_data);
-		base_builder.merge_back(fisch_base_builder);
-		has_capmem_changes = true;
-	} else {
-		enforce_base = false;
-
-		if (config != connection_state_storage.current_config) {
-			typedef std::vector<OmnibusAddress> addresses_type;
-			typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
-
-			auto const& write_addresses = chip_addresses;
-			LOG4CXX_TRACE(
-			    logger, "operator(): after fisch encode addresses " << build_timer.print() << ".");
-
-			ChipOnDLS coord;
-			words_type data_initial;
-			haldls::vx::visit_preorder(
-			    config, coord, stadls::EncodeVisitor<words_type>{data_initial});
-			words_type& data_current = connection_state_storage.current_config_words;
-			assert(data_current.size() == chip_addresses.size());
-
-			LOG4CXX_TRACE(logger, "operator(): after fisch encode " << build_timer.print() << ".");
-			fisch::vx::PlaybackProgramBuilder fisch_base_builder;
-			fisch::vx::PlaybackProgramBuilder fisch_differential_builder;
-			std::vector<fisch::vx::Omnibus> base_data;
-			std::vector<fisch::vx::Omnibus> differential_data;
-			addresses_type base_addresses;
-			addresses_type differential_addresses;
-			for (size_t i = 0; i < write_addresses.size(); ++i) {
-				if (data_initial.at(i) != data_current.at(i)) {
-					differential_addresses.push_back(write_addresses.at(i));
-					differential_data.push_back(fisch::vx::Omnibus(data_initial.at(i)));
-				} else {
-					base_addresses.push_back(write_addresses.at(i));
-					base_data.push_back(fisch::vx::Omnibus(data_initial.at(i)));
-				}
-			}
-			data_current = data_initial;
-			LOG4CXX_TRACE(logger, "operator(): after fisch split " << build_timer.print() << ".");
-			fisch_differential_builder.write(differential_addresses, differential_data);
-			fisch_base_builder.write(base_addresses, base_data);
-			LOG4CXX_TRACE(logger, "operator(): after fisch write " << build_timer.print() << ".");
-			base_builder.merge_back(fisch_base_builder);
-			differential_builder.merge_back(fisch_differential_builder);
-			LOG4CXX_TRACE(logger, "operator(): after fisch " << build_timer.print() << ".");
-			has_capmem_changes = contains_capmem(differential_addresses);
-		} else {
-			nothing_changed = true;
-		}
-	}
+	    logger, "operator(): Preprocessed local vertices for realtime section in "
+	                << realtime_preprocess_timer.print() << ".");
 
 	// build realtime programs
+	hate::Timer const realtime_generate_timer;
 	auto program = builder.generate();
+	LOG4CXX_TRACE(
+	    logger, "operator(): Generated playback programs for realtime section in "
+	                << realtime_generate_timer.print() << ".");
 
+	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
+	    program.has_hook_around_realtime) {
+		LOG4CXX_WARN(
+		    logger, "operator(): Connection uses quiggeldy and more than one playback programs "
+		            "shall be executed back-to-back with a pre or post realtime hook. Their "
+		            "contiguity can't be guaranteed.");
+	}
+
+	hate::Timer const schedule_out_replacement_timer;
 	PlaybackProgramBuilder schedule_out_replacement_builder;
 	if (ppu_symbols) {
 		using namespace haldls::vx::v3;
@@ -231,7 +160,12 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		schedule_out_replacement_builder.block_until(
 		    BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 	}
+	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
+	LOG4CXX_TRACE(
+	    logger, "operator(): Generated playback program for schedule out replacement in "
+	                << schedule_out_replacement_timer.print() << ".");
 
+	hate::Timer const read_timer;
 	PlaybackProgramBuilder read_builder;
 	halco::common::typed_array<
 	    std::optional<PlaybackProgram::ContainerTicket<haldls::vx::v3::PPUMemory>>, PPUMemoryOnDLS>
@@ -252,7 +186,10 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 		read_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 	}
-	LOG4CXX_TRACE(logger, "operator(): all inits but trigger after " << build_timer.print() << ".");
+	auto read_program = read_builder.done();
+	LOG4CXX_TRACE(
+	    logger, "operator(): Generated playback program for read-back of PPU alterations in "
+	                << read_timer.print() << ".");
 
 	// wait for CapMem to settle
 	auto const capmem_settling_wait_program_generator = []() {
@@ -266,6 +203,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	};
 
 	// bring PPUs in running state
+	hate::Timer const trigger_timer;
 	PlaybackProgramBuilder trigger_builder;
 	if (ppu_symbols) {
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -290,21 +228,90 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 	}
 	auto trigger_program = trigger_builder.done();
+	LOG4CXX_TRACE(
+	    logger, "operator(): Generated playback program for PPU startup trigger in "
+	                << trigger_timer.print() << ".");
+
+	std::unique_lock<std::mutex> connection_lock(connection_mutex, std::defer_lock);
+	// exclusive access to connection_state_storage and connection required from here in
+	// differential mode
+	if (connection_state_storage.enable_differential_config) {
+		connection_lock.lock();
+	}
+
+	hate::Timer const initial_config_program_timer;
+	PlaybackProgramBuilder base_builder;
+	PlaybackProgramBuilder differential_builder;
+	bool enforce_base = true;
+	bool nothing_changed = false;
+	bool has_capmem_changes = false;
+	if (!connection_state_storage.enable_differential_config) {
+		// generate static configuration
+		base_builder.write(ChipOnDLS(), config);
+		has_capmem_changes = true;
+	} else if (connection_state_storage.current_config_words.empty() /* first invokation */) {
+		typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
+		haldls::vx::visit_preorder(
+		    config, ChipOnDLS(),
+		    stadls::EncodeVisitor<words_type>{connection_state_storage.current_config_words});
+		fisch::vx::PlaybackProgramBuilder fisch_base_builder;
+		std::vector<fisch::vx::Omnibus> base_data;
+		for (size_t i = 0; i < connection_state_storage.current_config_words.size(); ++i) {
+			base_data.push_back(
+			    fisch::vx::Omnibus(connection_state_storage.current_config_words.at(i)));
+		}
+		fisch_base_builder.write(chip_addresses, base_data);
+		base_builder.merge_back(fisch_base_builder);
+		has_capmem_changes = true;
+	} else {
+		enforce_base = false;
+
+		if (config != connection_state_storage.current_config) {
+			typedef std::vector<OmnibusAddress> addresses_type;
+			typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
+
+			auto const& write_addresses = chip_addresses;
+
+			ChipOnDLS coord;
+			words_type data_initial;
+			haldls::vx::visit_preorder(
+			    config, coord, stadls::EncodeVisitor<words_type>{data_initial});
+			words_type& data_current = connection_state_storage.current_config_words;
+			assert(data_current.size() == chip_addresses.size());
+
+			fisch::vx::PlaybackProgramBuilder fisch_base_builder;
+			fisch::vx::PlaybackProgramBuilder fisch_differential_builder;
+			std::vector<fisch::vx::Omnibus> base_data;
+			std::vector<fisch::vx::Omnibus> differential_data;
+			addresses_type base_addresses;
+			addresses_type differential_addresses;
+			for (size_t i = 0; i < write_addresses.size(); ++i) {
+				if (data_initial.at(i) != data_current.at(i)) {
+					differential_addresses.push_back(write_addresses.at(i));
+					differential_data.push_back(fisch::vx::Omnibus(data_initial.at(i)));
+				} else {
+					base_addresses.push_back(write_addresses.at(i));
+					base_data.push_back(fisch::vx::Omnibus(data_initial.at(i)));
+				}
+			}
+			data_current = data_initial;
+			fisch_differential_builder.write(differential_addresses, differential_data);
+			fisch_base_builder.write(base_addresses, base_data);
+			base_builder.merge_back(fisch_base_builder);
+			differential_builder.merge_back(fisch_differential_builder);
+			has_capmem_changes = contains_capmem(differential_addresses);
+		} else {
+			nothing_changed = true;
+		}
+	}
 
 	auto base_program = base_builder.done();
 	auto differential_program = differential_builder.done();
-	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
-	LOG4CXX_TRACE(logger, "operator(): all inits after " << build_timer.print() << ".");
+	LOG4CXX_TRACE(
+	    logger, "operator(): Generated playback program of initial config after "
+	                << initial_config_program_timer.print() << ".");
 
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
-
-	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
-	    program.has_hook_around_realtime) {
-		LOG4CXX_WARN(
-		    logger, "operator(): Connection uses quiggeldy and more than one playback programs "
-		            "shall be executed back-to-back with a pre or post realtime hook. Their "
-		            "contiguity can't be guaranteed.");
-	}
 
 	// execute
 	hate::Timer const exec_timer;
@@ -344,8 +351,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 		// If the PPUs (can) alter state, read it back to update current_config accordingly to
 		// represent the actual hardware state.
-		if (!read_builder.empty()) {
-			backend::run(connection, read_builder.done());
+		if (!read_program.empty()) {
+			backend::run(connection, read_program);
 		}
 
 		// unlock execution section for non-differential config mode
@@ -356,15 +363,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	LOG4CXX_TRACE(
 	    logger, "operator(): Executed built PlaybackPrograms in " << exec_timer.print() << ".");
 
-	// extract output data map
-	hate::Timer const post_timer;
-	auto result_data_map = builder.post_process();
-	LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
-
-	// merge local data map into global data map
-	data_map.merge(result_data_map);
-
 	// update connection state
+	hate::Timer const update_state_timer;
 	if (connection_state_storage.enable_differential_config) {
 		connection_state_storage.current_config = config;
 		if (ppu_symbols) {
@@ -385,6 +385,21 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			        connection_state_storage.current_config_words});
 		}
 	}
+	LOG4CXX_TRACE(
+	    logger, "operator(): Updated connection state in " << update_state_timer.print() << ".");
+
+	// unlock execution section for differential config mode
+	if (connection_state_storage.enable_differential_config) {
+		connection_lock.unlock();
+	}
+
+	// extract output data map
+	hate::Timer const post_timer;
+	auto result_data_map = builder.post_process();
+	LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
+
+	// merge local data map into global data map
+	data_map.merge(result_data_map);
 }
 
 } // namespace grenade::vx
