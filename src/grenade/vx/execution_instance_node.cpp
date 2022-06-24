@@ -250,6 +250,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 				read_ticket_synaptic_weights[coord].emplace(read_builder.read(coord));
 			}
 		}
+		read_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 	}
 	LOG4CXX_TRACE(logger, "operator(): all inits but trigger after " << build_timer.print() << ".");
 
