@@ -45,7 +45,7 @@ public:
 	 * @param enable_differential_config Whether to enable differential configuration writes instead
 	 * of full ones
 	 */
-	JITGraphExecutor(bool enable_differential_config = false) SYMBOL_VISIBLE;
+	JITGraphExecutor(bool enable_differential_config = true) SYMBOL_VISIBLE;
 
 	/**
 	 * Construct executor with given active connections.
@@ -55,7 +55,7 @@ public:
 	 */
 	JITGraphExecutor(
 	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& connections,
-	    bool enable_differential_config = false) SYMBOL_VISIBLE;
+	    bool enable_differential_config = true) SYMBOL_VISIBLE;
 
 	/**
 	 * Get identifiers of connections contained in executor.
