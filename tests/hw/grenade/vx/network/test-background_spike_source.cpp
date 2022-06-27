@@ -169,10 +169,9 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(1000), Timer::Value(10000000), 1000, executor, chip_configs);
+	    BackgroundSpikeSource::Period(1000), Timer::Value(1000000), 100, executor, chip_configs);
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(10000), Timer::Value(100000000), 1000, executor,
-	    chip_configs);
+	    BackgroundSpikeSource::Period(10000), Timer::Value(10000000), 100, executor, chip_configs);
 }
 
 void test_background_spike_source_poisson(
@@ -285,8 +284,8 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(1000), BackgroundSpikeSource::Rate(255),
-	    Timer::Value(10000000), 1000, executor, chip_configs);
+	    Timer::Value(1000000), 100, executor, chip_configs);
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(10000), BackgroundSpikeSource::Rate(255),
-	    Timer::Value(100000000), 1000, executor, chip_configs);
+	    Timer::Value(10000000), 100, executor, chip_configs);
 }

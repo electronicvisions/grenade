@@ -353,7 +353,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		// generate input
 		grenade::vx::IODataMap inputs;
 		constexpr size_t num = 100;
-		constexpr size_t isi = 125000;
+		constexpr size_t isi = 12500;
 		std::vector<grenade::vx::TimedSpikeSequence> input_spikes(1);
 		for (size_t j = 0; j < num; ++j) {
 			assert(network_graph.get_spike_labels().at(population_external_descriptor).at(0).at(0));
