@@ -307,9 +307,21 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	std::mt19937 rng{seed};
 	std::shuffle(all_neurons.begin(), all_neurons.end(), rng);
 
-	// build network
-	// all synfire-chain lengths are tested
+	std::vector<size_t> all_lengths;
 	for (size_t length = 1; length < all_neurons.size(); ++length) {
+		all_lengths.push_back(length);
+	}
+	// build network
+	// 10 synfire-chain lengths are tested
+	constexpr static size_t num = 10;
+	std::set<size_t> lengths;
+	std::sample(
+	    all_lengths.begin(), all_lengths.end(), std::inserter(lengths, lengths.begin()), num, rng);
+	// always test minimal and maximal length
+	assert(!all_lengths.empty());
+	lengths.insert(all_lengths.front());
+	lengths.insert(all_lengths.back());
+	for (auto const& length : lengths) {
 		grenade::vx::network::NetworkBuilder network_builder;
 
 		grenade::vx::network::ExternalPopulation population_external{1};
