@@ -14,6 +14,7 @@
 #include "haldls/vx/v3/block.h"
 #include "haldls/vx/v3/fpga.h"
 #include "haldls/vx/v3/padi.h"
+#include "hate/math.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
 #include "lola/vx/ppu.h"
@@ -744,9 +745,122 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::PlasticityRule const& /* data */)
+    Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
 {
 	m_has_plasticity_rule = true;
+	if (!m_postprocessing) {
+		if (!data.get_recording()) {
+			return;
+		}
+		if (data.get_recorded_scratchpad_memory_size() % sizeof(uint32_t)) {
+			throw std::runtime_error(
+			    "Recorded scratchpad memory size needs to be a multiple of four.");
+		}
+		for (auto& batch_entry : m_batch_entries) {
+			batch_entry.m_plasticity_rule_recorded_scratchpad_memory[vertex].fill(std::nullopt);
+		}
+		m_post_vertices.push_back(vertex);
+	} else {
+		if (!data.get_recording()) {
+			return;
+		}
+		std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+		for (size_t i = 0; i < values.size(); ++i) {
+			auto& local_values = values.at(i);
+			if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
+			        *data.get_recording())) {
+				// TODO: Think about what shall happen with timing info
+				local_values.resize(1);
+				local_values.at(0).data.resize(data.output().size);
+				for (auto const ppu :
+				     halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
+					auto const& local_ticket =
+					    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(
+					        vertex)[ppu];
+					assert(local_ticket);
+					auto const bytes = local_ticket->get().get_bytes();
+					if (bytes.size() != data.get_recorded_scratchpad_memory_size()) {
+						throw std::logic_error(
+						    "Recording scratchpad memory size (" + std::to_string(bytes.size()) +
+						    ") does not match expectation(" +
+						    std::to_string(data.get_recorded_scratchpad_memory_size()) + ").");
+					}
+					size_t const offset = ppu ? local_values.at(0).data.size() / 2 : 0;
+					for (size_t j = 0; j < bytes.size(); ++j) {
+						local_values.at(0).data.at(offset + j) =
+						    Int8(bytes.at(j).get_value().value());
+					}
+				}
+			} else if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
+			               *data.get_recording())) {
+				local_values.resize(data.get_timer().num_periods);
+				for (auto& e : local_values) {
+					e.data.resize(data.output().size);
+				}
+				for (auto const ppu :
+				     halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
+					auto const& local_ticket =
+					    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(
+					        vertex)[ppu];
+					assert(local_ticket);
+					auto const bytes = local_ticket->get().get_bytes();
+					if (bytes.size() !=
+					    data.get_recorded_scratchpad_memory_size() * data.get_timer().num_periods) {
+						throw std::logic_error(
+						    "Recording scratchpad memory size (" + std::to_string(bytes.size()) +
+						    ") does not match expectation(" +
+						    std::to_string(
+						        data.get_recorded_scratchpad_memory_size() *
+						        data.get_timer().num_periods) +
+						    ").");
+					}
+					size_t const offset = ppu ? local_values.at(0).data.size() / 2 : 0;
+					for (size_t period = 0; period < data.get_timer().num_periods; ++period) {
+						uint64_t time = 0;
+						size_t period_offset = period * data.get_recorded_scratchpad_memory_size();
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 0).get_value().value()) & 0xff)
+						        << 56;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 1).get_value().value()) & 0xff)
+						        << 48;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 2).get_value().value()) & 0xff)
+						        << 40;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 3).get_value().value()) & 0xff)
+						        << 32;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 4).get_value().value()) & 0xff)
+						        << 24;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 5).get_value().value()) & 0xff)
+						        << 16;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 6).get_value().value()) & 0xff)
+						        << 8;
+						time |= static_cast<uint64_t>(
+						            (bytes.at(period_offset + 7).get_value().value()) & 0xff)
+						        << 0;
+						// TODO: decide what to do with the other time of the other PPU (top).
+						local_values.at(period).chip_time = haldls::vx::v3::ChipTime(time / 2);
+						for (size_t j = 0; j < local_values.at(period).data.size() / 2 /** PPUs */;
+						     ++j) {
+							local_values.at(period).data.at(offset + j) =
+							    Int8(bytes
+							             .at(period_offset +
+							                 data.get_recorded_memory_data_interval().first + j)
+							             .get_value()
+							             .value());
+						}
+					}
+				}
+			} else {
+				throw std::logic_error("Recording type not supported.");
+			}
+		}
+		m_local_data.data[vertex] = values;
+	}
 }
 
 void ExecutionInstanceBuilder::pre_process()
@@ -914,6 +1028,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	typed_array<std::optional<ExternalPPUMemoryBlockOnFPGA>, PPUOnDLS>
 	    ppu_periodic_cadc_readout_samples_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
+	std::map<Graph::vertex_descriptor, typed_array<ExternalPPUMemoryBlockOnFPGA, PPUOnDLS>>
+	    ppu_plasticity_rule_recorded_scratchpad_memory_coord;
 	if (enable_ppu) {
 		assert(m_ppu_symbols);
 		ppu_status_coord =
@@ -931,6 +1047,19 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					    std::get<PPUMemoryBlockOnPPU>(symbol.coordinate));
 				}
 			}
+		}
+		for (auto const& [descriptor, _] :
+		     m_batch_entries.at(0).m_plasticity_rule_recorded_scratchpad_memory) {
+			ppu_plasticity_rule_recorded_scratchpad_memory_coord[descriptor][PPUOnDLS::top] =
+			    std::get<ExternalPPUMemoryBlockOnFPGA>(
+			        m_ppu_symbols
+			            ->at("recorded_scratchpad_memory_top_" + std::to_string(descriptor))
+			            .coordinate);
+			ppu_plasticity_rule_recorded_scratchpad_memory_coord[descriptor][PPUOnDLS::bottom] =
+			    std::get<ExternalPPUMemoryBlockOnFPGA>(
+			        m_ppu_symbols
+			            ->at("recorded_scratchpad_memory_bot_" + std::to_string(descriptor))
+			            .coordinate);
 		}
 
 		if (has_cadc_readout) {
@@ -1233,6 +1362,16 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				batch_entry.m_ppu_mailbox[ppu] =
 				    builder.read(PPUMemoryBlockOnDLS(PPUMemoryBlockOnPPU::mailbox, ppu));
+			}
+		}
+		// readout recorded scratchpad memory for plasticity rules
+		if (m_has_plasticity_rule) {
+			for (auto const& [descriptor, coords] :
+			     ppu_plasticity_rule_recorded_scratchpad_memory_coord) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_plasticity_rule_recorded_scratchpad_memory.at(descriptor)[ppu] =
+					    builder.read(coords[ppu]);
+				}
 			}
 		}
 		// wait for response data

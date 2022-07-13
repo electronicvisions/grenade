@@ -210,7 +210,7 @@ void ExecutionInstanceConfigVisitor::process(
 		    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph())));
 		synapses.push_back({view.get_synram(), view.toSynapseArrayViewHandle()});
 	}
-	m_plasticity_rules.push_back({data, std::move(synapses)});
+	m_plasticity_rules.push_back({vertex, data, std::move(synapses)});
 	m_requires_ppu = true;
 }
 
@@ -355,8 +355,8 @@ ExecutionInstanceConfigVisitor::operator()()
 		PPUMemoryBlockOnPPU ppu_status_coord;
 		{
 			PPUProgramGenerator ppu_program_generator;
-			for (auto const& [rule, synapses] : m_plasticity_rules) {
-				ppu_program_generator.add(rule, synapses);
+			for (auto const& [descriptor, rule, synapses] : m_plasticity_rules) {
+				ppu_program_generator.add(descriptor, rule, synapses);
 			}
 			ppu_program_generator.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
 			CachingCompiler compiler;

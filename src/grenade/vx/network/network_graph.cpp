@@ -42,6 +42,20 @@ std::vector<Graph::vertex_descriptor> NetworkGraph::get_cadc_sample_output_verte
 	return m_cadc_sample_output_vertex;
 }
 
+std::map<
+    ProjectionDescriptor,
+    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
+NetworkGraph::get_synapse_vertices() const
+{
+	return m_synapse_vertices;
+}
+
+std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> const&
+NetworkGraph::get_plasticity_rule_output_vertices() const
+{
+	return m_plasticity_rule_output_vertices;
+}
+
 NetworkGraph::SpikeLabels const& NetworkGraph::get_spike_labels() const
 {
 	return m_spike_labels;

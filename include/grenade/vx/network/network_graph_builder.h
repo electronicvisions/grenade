@@ -85,6 +85,7 @@ public:
 		std::optional<Graph::vertex_descriptor> madc_output;
 		std::vector<Graph::vertex_descriptor> cadc_output;
 		std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> plasticity_rules;
+		std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> plasticity_rules_output;
 	};
 
 	static std::vector<Input> get_inputs(Graph const& graph, Graph::vertex_descriptor descriptor);

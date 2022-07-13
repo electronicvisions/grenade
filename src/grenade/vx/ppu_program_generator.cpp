@@ -11,12 +11,13 @@
 namespace grenade::vx {
 
 void PPUProgramGenerator::add(
+    Graph::vertex_descriptor const descriptor,
     vertex::PlasticityRule const& rule,
     std::vector<
         std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
         synapses)
 {
-	m_plasticity_rules.push_back({rule, synapses});
+	m_plasticity_rules.push_back({descriptor, rule, synapses});
 }
 
 std::vector<std::string> PPUProgramGenerator::done()
@@ -32,12 +33,31 @@ std::vector<std::string> PPUProgramGenerator::done()
 	std::vector<std::string> sources;
 	// plasticity rules
 	{
-		size_t i = 0;
-		for (auto const& [plasticity_rule, synapses] : m_plasticity_rules) {
+		for (auto const& [i, plasticity_rule, synapses] : m_plasticity_rules) {
 			std::stringstream kernel;
 			auto kernel_str = plasticity_rule.get_kernel();
 			std::string const kernel_name("PLASTICITY_RULE_KERNEL");
 
+			if (plasticity_rule.get_recording()) {
+				kernel << plasticity_rule.get_recorded_memory_definition() << "\n";
+				if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
+				        *plasticity_rule.get_recording())) {
+					kernel << "Recording recorded_scratchpad_memory_top_" << i << "["
+					       << plasticity_rule.get_timer().num_periods
+					       << "] __attribute__((section(\"ext.data.keep\")));\n";
+					kernel << "Recording recorded_scratchpad_memory_bot_" << i << "["
+					       << plasticity_rule.get_timer().num_periods
+					       << "] __attribute__((section(\"ext.data.keep\")));\n";
+				} else if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
+				               *plasticity_rule.get_recording())) {
+					kernel << "Recording recorded_scratchpad_memory_top_" << i
+					       << " __attribute__((section(\"ext.data.keep\")));\n";
+					kernel << "Recording recorded_scratchpad_memory_bot_" << i
+					       << " __attribute__((section(\"ext.data.keep\")));\n";
+				} else {
+					throw std::logic_error("Recording type not implemented.");
+				}
+			}
 			kernel_str.replace(
 			    kernel_str.find(kernel_name), kernel_name.size(),
 			    "plasticity_rule_kernel_" + std::to_string(i));
@@ -79,13 +99,46 @@ std::vector<std::string> PPUProgramGenerator::done()
 			}
 			kernel << "};\n";
 			kernel << "} // namespace\n";
+			kernel << "#include \"libnux/vx/helper.h\"\n";
 			kernel << "#include \"libnux/vx/mailbox.h\"\n";
 			kernel << "#include \"libnux/scheduling/types.hpp\"\n";
+			kernel << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
 			kernel << "void plasticity_rule_" << i << "() {\n";
 			kernel << "libnux::vx::mailbox_write_string(\"plasticity rule " << i << ": b: \");\n";
 			kernel << "auto const b = get_time();\n";
 			kernel << "libnux::vx::mailbox_write_int(b);\n";
-			kernel << "plasticity_rule_kernel_" << i << "(synapse_array_view_handle, synrams);\n";
+			if (plasticity_rule.get_recording()) {
+				if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
+				        *plasticity_rule.get_recording())) {
+					kernel << "plasticity_rule_kernel_" << i
+					       << "(synapse_array_view_handle, synrams, ppu == "
+					          "libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
+					       << i << " : recorded_scratchpad_memory_bot_" << i << ");\n";
+				} else if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
+				               *plasticity_rule.get_recording())) {
+					kernel << "static size_t recorded_scratchpad_memory_period = 0;\n";
+					kernel << "plasticity_rule_kernel_" << i
+					       << "(synapse_array_view_handle, synrams, "
+					          "(ppu == libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
+					       << i << " : recorded_scratchpad_memory_bot_" << i
+					       << ")[recorded_scratchpad_memory_period]"
+					          ");\n";
+					// TODO: reset by routine called prior to realtime section for each batch entry
+					// instead of modulo
+					kernel << "recorded_scratchpad_memory_period++;\n";
+					kernel << "recorded_scratchpad_memory_period %= "
+					       << plasticity_rule.get_timer().num_periods << ";\n";
+				} else {
+					throw std::logic_error("Recording type not implemented.");
+				}
+				kernel << "libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_top_" << i
+				       << ");\n";
+				kernel << "libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_bot_" << i
+				       << ");\n";
+			} else {
+				kernel << "plasticity_rule_kernel_" << i
+				       << "(synapse_array_view_handle, synrams);\n";
+			}
 			kernel << "libnux::vx::mailbox_write_string(\" d: \");\n";
 			kernel << "libnux::vx::mailbox_write_int(get_time() - b);\n";
 			kernel << "libnux::vx::mailbox_write_string(\"\\n\");\n";
@@ -100,7 +153,6 @@ std::vector<std::string> PPUProgramGenerator::done()
 			       << plasticity_rule.get_timer().period.value() << "); t.set_service(service_" << i
 			       << "); return t; }();\n";
 			sources.push_back(kernel.str());
-			i++;
 		}
 	}
 	// scheduler
@@ -115,11 +167,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
 		source << "volatile uint32_t runtime;\n";
 		source << "volatile uint32_t scheduler_event_drop_count;\n";
-		for (size_t i = 0; i < m_plasticity_rules.size(); ++i) {
+		for (auto const& [i, _, __] : m_plasticity_rules) {
 			source << "extern Timer timer_" << i << ";\n";
 			source << "volatile uint32_t timer_" << i << "_event_drop_count;\n";
 		}
-		for (size_t i = 0; i < m_plasticity_rules.size(); ++i) {
+		for (auto const& [i, _, __] : m_plasticity_rules) {
 			source << "extern void plasticity_rule_" << i << "();\n";
 			source << "extern Service_Function<" << i << ", &plasticity_rule_" << i << "> service_"
 			       << i << ";\n";
@@ -129,7 +181,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "auto timers = std::tie(";
 		{
 			std::vector<std::string> s;
-			for (size_t i = 0; i < m_plasticity_rules.size(); ++i) {
+			for (auto const& [i, _, __] : m_plasticity_rules) {
 				s.push_back("timer_" + std::to_string(i));
 			}
 			source << hate::join_string(s.begin(), s.end(), ",\n") << ");\n";
@@ -137,7 +189,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "auto services = std::tie(";
 		{
 			std::vector<std::string> s;
-			for (size_t i = 0; i < m_plasticity_rules.size(); ++i) {
+			for (auto const& [i, _, __] : m_plasticity_rules) {
 				s.push_back("service_" + std::to_string(i));
 			}
 			source << hate::join_string(s.begin(), s.end(), ",\n") << ");\n";
@@ -149,7 +201,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		if (!m_plasticity_rules.empty()) {
 			source << "auto current = get_time();\n";
 			source << "SchedulerSignallerTimer timer(current, current + runtime);\n";
-			for (size_t i = 0; i < m_plasticity_rules.size(); ++i) {
+			for (auto const& [i, _, __] : m_plasticity_rules) {
 				source << "timer_" << i << ".set_first_deadline(current + timer_" << i
 				       << ".get_first_deadline());\n";
 			}
@@ -158,7 +210,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 			source << "libnux::vx::mailbox_write_string(\"\\n\");\n";
 			source << "scheduler.execute(timer, services, timers);\n";
 			source << "scheduler_event_drop_count = scheduler.get_dropped_events_count();\n";
-			for (size_t i = 0; i < m_plasticity_rules.size(); ++i) {
+			for (auto const& [i, _, __] : m_plasticity_rules) {
 				source << "timer_" << i << "_event_drop_count = timer_" << i
 				       << ".get_missed_count();\n";
 			}

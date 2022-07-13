@@ -55,6 +55,7 @@ private:
 	bool m_used_madc;
 
 	std::vector<std::tuple<
+	    Graph::vertex_descriptor,
 	    vertex::PlasticityRule,
 	    std::vector<
 	        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>>>

@@ -51,6 +51,19 @@ extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph) S
 
 
 /**
+ * Extract to be recorded observable data of a plasticity rule.
+ * @param data Data containing observables
+ * @param network_graph Network graph to use for vertex descriptor lookup of the observables
+ * @param descriptor Descriptor to plasticity rule to extract observable data for
+ * @return Observable data per batch entry
+ */
+PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
+    IODataMap const& data,
+    NetworkGraph const& network_graph,
+    PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;
+
+
+/**
  * PyNN's format expects times in floating-point ms, neurons as integer representation of the
  * AtomicNeuron enum value and MADC sample values as integer values.
  * Currently, only batch-size one is supported, i.e. one time sequence.

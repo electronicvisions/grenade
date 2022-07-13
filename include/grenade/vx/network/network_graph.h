@@ -53,6 +53,18 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(cadc_sample_output_vertex))
 	std::vector<Graph::vertex_descriptor> get_cadc_sample_output_vertex() const SYMBOL_VISIBLE;
 
+	/** Vertex descriptors of synapse views. */
+	GENPYBIND(getter_for(synapse_vertices))
+	std::map<
+	    ProjectionDescriptor,
+	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
+	get_synapse_vertices() const SYMBOL_VISIBLE;
+
+	/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory. */
+	GENPYBIND(getter_for(plasticity_rule_output_vertices))
+	std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> const&
+	get_plasticity_rule_output_vertices() const SYMBOL_VISIBLE;
+
 	/**
 	 * Spike labels corresponding to each neuron in a population.
 	 * For external populations these are the input spike labels, for internal population this is
@@ -114,6 +126,7 @@ private:
 	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>>
 	    m_background_spike_source_vertices;
 	std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> m_plasticity_rule_vertices;
+	std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> m_plasticity_rule_output_vertices;
 	SpikeLabels m_spike_labels;
 
 	std::chrono::microseconds m_construction_duration;

@@ -1,8 +1,10 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/projection.h"
+#include "grenade/vx/vertex/plasticity_rule.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -54,6 +56,48 @@ struct GENPYBIND(visible) PlasticityRule
 	 * them being in order.
 	 */
 	bool enable_requires_one_source_per_row_in_order{false};
+
+	/*
+	 * Recording information for execution of the rule.
+	 * Raw recording of one scratchpad memory region for all timed invokations of the
+	 * rule. No automated recording of time is performed.
+	 */
+	typedef vertex::PlasticityRule::RawRecording RawRecording GENPYBIND(opaque(false));
+
+	/**
+	 * Recording information for execution of the rule.
+	 * Recording of exclusive scratchpad memory per rule invokation with
+	 * time recording and returned data as time-annotated events.
+	 */
+	typedef vertex::PlasticityRule::TimedRecording TimedRecording GENPYBIND(opaque(false));
+
+	/**
+	 * Recording memory provided to plasticity rule kernel and recorded after
+	 * execution.
+	 */
+	typedef vertex::PlasticityRule::Recording Recording;
+	std::optional<Recording> recording;
+
+	/**
+	 * Recording data corresponding to a raw recording.
+	 */
+	typedef vertex::PlasticityRule::RawRecordingData RawRecordingData GENPYBIND(opaque(false));
+
+	/**
+	 * Extracted recorded data of observables corresponding to timed recording.
+	 */
+	struct TimedRecordingData
+	{
+		typedef vertex::PlasticityRule::TimedRecordingData::Entry Entry;
+
+		std::map<std::string, std::map<ProjectionDescriptor, Entry>> data_per_synapse;
+		std::map<std::string, Entry> data_array;
+	};
+
+	/**
+	 * Recorded data.
+	 */
+	typedef std::variant<RawRecordingData, TimedRecordingData> RecordingData;
 
 	PlasticityRule() = default;
 
