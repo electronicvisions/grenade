@@ -164,9 +164,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "#include \"libnux/scheduling/Service.hpp\"\n";
 		source << "#include \"libnux/vx/mailbox.h\"\n";
 		source << "#include \"libnux/vx/dls.h\"\n";
+		source << "#include \"libnux/vx/time.h\"\n";
 		source << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
 		source << "volatile uint32_t runtime;\n";
 		source << "volatile uint32_t scheduler_event_drop_count;\n";
+		source << "uint64_t time_origin = 0;\n";
 		for (auto const& [i, _, __] : m_plasticity_rules) {
 			source << "extern Timer timer_" << i << ";\n";
 			source << "volatile uint32_t timer_" << i << "_event_drop_count;\n";
@@ -200,6 +202,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "static_cast<void>(runtime);\n";
 		if (!m_plasticity_rules.empty()) {
 			source << "auto current = get_time();\n";
+			source << "time_origin = libnux::vx::now();\n";
 			source << "SchedulerSignallerTimer timer(current, current + runtime);\n";
 			for (auto const& [i, _, __] : m_plasticity_rules) {
 				source << "timer_" << i << ".set_first_deadline(current + timer_" << i
