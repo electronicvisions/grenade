@@ -258,7 +258,8 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 			std::set<size_t> rows;
 			std::set<size_t> columns;
 			std::vector<std::pair<size_t, size_t>> indices;
-			for (auto const& connection : m_projections.at(d).connections) {
+			auto const& projection = m_projections.at(d);
+			for (auto const& connection : projection.connections) {
 				rows.insert(connection.index_pre);
 				columns.insert(connection.index_post);
 				indices.push_back({connection.index_pre, connection.index_post});
@@ -268,6 +269,28 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 			}
 			if (!std::is_sorted(indices.begin(), indices.end())) {
 				throw std::runtime_error("Sources of rows are not in order in projection.");
+			}
+			// If the source population is internal, the requirement can only be fulfilled if the
+			// source population neuron event outputs on neuron event output block (or equivalently
+			// the connected PADI-busses) are in order.
+			if (std::holds_alternative<Population>(m_populations.at(projection.population_pre))) {
+				auto const& population_pre =
+				    std::get<Population>(m_populations.at(projection.population_pre));
+				if (!std::is_sorted(
+				        population_pre.neurons.begin(), population_pre.neurons.end(),
+				        [](auto const& a, auto const& b) {
+					        return a.toNeuronColumnOnDLS()
+					                   .toNeuronEventOutputOnDLS()
+					                   .toNeuronEventOutputOnNeuronBackendBlock() <
+					               b.toNeuronColumnOnDLS()
+					                   .toNeuronEventOutputOnDLS()
+					                   .toNeuronEventOutputOnNeuronBackendBlock();
+				        })) {
+					throw std::runtime_error(
+					    "Projection being in order can't be fulfilled since the source population "
+					    "neurons don't project in order onto PADI-busses, which implies that the "
+					    "synapse rows can't be allocated in order.");
+				}
 			}
 		}
 	}
