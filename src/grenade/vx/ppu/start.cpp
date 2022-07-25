@@ -24,6 +24,8 @@ volatile PPUOnDLS ppu;
 
 void scheduling();
 
+void perform_periodic_read();
+
 int start()
 {
 	mailbox_write_string("inside start\n");
@@ -68,56 +70,7 @@ int start()
 				break;
 			}
 			case Status::periodic_read: {
-				static_cast<void>(ppu);
-				uint32_t const storage_base_scalar =
-				    extmem_data_base + ((ppu == PPUOnDLS::bottom)
-				                            ? cadc_recording_storage_base_bottom
-				                            : cadc_recording_storage_base_top);
-				uint32_t const storage_base_vector =
-				    dls_extmem_base +
-				    (((ppu == PPUOnDLS::bottom) ? cadc_recording_storage_base_bottom
-				                                : cadc_recording_storage_base_top) >>
-				     4);
-				uint32_t offset = 0;
-				uint32_t size = 0;
-				offset += 16; // size
-				status = Status::inside_periodic_read;
-				while (status != Status::stop_periodic_read) {
-					if (offset > cadc_recording_storage_size - 256 /* samples */ - 16 /* time */ -
-					                 16 /* size */) {
-						continue;
-					}
-					uint64_t const time = now();
-					// clang-format off
-					asm volatile(
-					"fxvinx %[d0], %[ca_base], %[i]\n"
-					"fxvinx %[d1], %[cab_base], %[j]\n"
-					"fxvoutx %[d0], %[b0], %[i]\n"
-					"fxvoutx %[d1], %[b1], %[i]\n"
-					:
-					  [d0] "=&qv" (read[0]),
-					  [d1] "=&qv" (read[1])
-					: [b0] "b" (storage_base_vector + ((offset + 16) >> 4)),
-					  [b1] "b" (storage_base_vector + ((offset + 16 + sizeof(read[0])) >> 4)),
-					  [ca_base] "r" (dls_causal_base),
-					  [cab_base] "r" (dls_causal_base|dls_buffer_enable_mask),
-					  [i] "r" (uint32_t(0)),
-					  [j] "r" (uint32_t(1))
-					: /* no clobber */
-					);
-					uint64_t volatile* time_ptr = (uint64_t*) (storage_base_scalar + offset);
-					*time_ptr = time;
-					// clang-format on
-					offset += 16 + sizeof(read[0]) + sizeof(read[1]);
-					size++;
-				}
-				uint32_t volatile* const size_ptr = (uint32_t*) (storage_base_scalar);
-				*size_ptr = size;
-				asm volatile("fxvinx %[d0], %[b0], %[i]\n"
-				             "sync\n"
-				             : [d0] "=qv"(read[0])
-				             : [b0] "b"(storage_base_vector), [i] "r"(uint32_t(0))
-				             : "memory");
+				perform_periodic_read();
 				status = Status::idle;
 				break;
 			}

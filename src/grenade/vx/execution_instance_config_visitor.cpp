@@ -22,7 +22,10 @@ ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     Graph const& graph,
     coordinate::ExecutionInstance const& execution_instance,
     lola::vx::v3::Chip& chip_config) :
-    m_graph(graph), m_execution_instance(execution_instance), m_config(chip_config)
+    m_graph(graph),
+    m_execution_instance(execution_instance),
+    m_config(chip_config),
+    m_has_periodic_cadc_readout(false)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
@@ -91,6 +94,8 @@ void ExecutionInstanceConfigVisitor::process(
 	}
 
 	m_requires_ppu = true;
+	m_has_periodic_cadc_readout =
+	    data.get_mode() == vertex::CADCMembraneReadoutView::Mode::periodic;
 }
 
 template <>
@@ -353,6 +358,7 @@ ExecutionInstanceConfigVisitor::operator()()
 			for (auto const& [rule, synapses] : m_plasticity_rules) {
 				ppu_program_generator.add(rule, synapses);
 			}
+			ppu_program_generator.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
 			CachingCompiler compiler;
 			auto const program = compiler.compile(ppu_program_generator.done());
 			ppu_program = program.second;

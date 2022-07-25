@@ -80,7 +80,7 @@ initialize_excitatory_bypass()
 	return std::make_pair(*chip, std::move(connection));
 }
 
-TEST(CADCRecording, DISABLED_General)
+TEST(CADCRecording, General)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();

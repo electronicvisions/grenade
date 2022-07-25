@@ -51,6 +51,7 @@ private:
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
 	bool m_requires_ppu;
+	bool m_has_periodic_cadc_readout;
 	bool m_used_madc;
 
 	std::vector<std::tuple<

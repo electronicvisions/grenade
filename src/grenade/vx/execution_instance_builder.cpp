@@ -259,11 +259,6 @@ void ExecutionInstanceBuilder::process(
 		m_cadc_readout_mode = data.get_mode();
 	}
 
-	if (data.get_mode() == vertex::CADCMembraneReadoutView::Mode::periodic) {
-		throw std::runtime_error(
-		    "Periodic CADC readout not possible until data placement in extmem is implemented.");
-	}
-
 	// get source NeuronView
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
@@ -315,7 +310,7 @@ void ExecutionInstanceBuilder::process(
 					num_samples |= static_cast<uint32_t>(local_block.at(i).get_value().value())
 					               << (3 - i) * CHAR_BIT;
 				}
-				size_t offset = 16;
+				size_t offset = 8;
 				// get samples
 				auto& samples = sample_batches.at(batch_index);
 				samples.resize(num_samples);
@@ -329,7 +324,7 @@ void ExecutionInstanceBuilder::process(
 					}
 					local_samples.chip_time =
 					    ChipTime(time / 2); // FPGA clock 125MHz vs. PPU clock 250MHz
-					offset += 16;
+					offset += 8;
 					auto const get_index = [](auto const& column) {
 						size_t const j = column / 2;
 						size_t const index = 127 - ((j / 4) * 4 + (3 - j % 4)) + (column % 2) * 128;
@@ -346,6 +341,10 @@ void ExecutionInstanceBuilder::process(
 						}
 					}
 					offset += 256;
+				}
+				if (8 + (200 * (8 + 256)) != local_block.size()) {
+					throw std::logic_error(
+					    "Periodic CADC readout samples memory size doesn't match expectation.");
 				}
 				// Since there's no time synchronisation between PPUs and ChipTime, we assume the
 				// first received sample happens at time 0 and calculate the time of later samples
@@ -887,6 +886,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	PlaybackProgramBuilder ppu_command_scheduler;
 	PlaybackProgramBuilder wait_for_ppu_command_idle;
 	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
+	typed_array<std::optional<ExternalPPUMemoryBlockOnFPGA>, PPUOnDLS>
+	    ppu_periodic_cadc_readout_samples_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
 	if (enable_ppu) {
 		assert(m_ppu_symbols);
@@ -904,6 +905,18 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					ppu_timer_event_drop_count_coord.push_back(
 					    std::get<PPUMemoryBlockOnPPU>(symbol.coordinate));
 				}
+			}
+		}
+
+		if (has_cadc_readout) {
+			assert(m_cadc_readout_mode);
+			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+				ppu_periodic_cadc_readout_samples_coord[PPUOnDLS::top] =
+				    std::get<ExternalPPUMemoryBlockOnFPGA>(
+				        m_ppu_symbols->at("periodic_cadc_samples_top").coordinate);
+				ppu_periodic_cadc_readout_samples_coord[PPUOnDLS::bottom] =
+				    std::get<ExternalPPUMemoryBlockOnFPGA>(
+				        m_ppu_symbols->at("periodic_cadc_samples_bot").coordinate);
 			}
 		}
 
@@ -1110,16 +1123,9 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					if (!m_ticket_requests[ppu.toHemisphereOnDLS()]) {
 						continue;
 					}
-					batch_entry.m_extmem_result[ppu] = builder.read(ExternalPPUMemoryBlockOnFPGA(
-					    ExternalPPUMemoryByteOnFPGA(
-					        ExternalPPUMemoryByteOnFPGA::min +
-					        ((ppu == PPUOnDLS::bottom) ? ppu::cadc_recording_storage_base_bottom
-					                                   : ppu::cadc_recording_storage_base_top)),
-					    ExternalPPUMemoryByteOnFPGA(
-					        ExternalPPUMemoryByteOnFPGA::min +
-					        ((ppu == PPUOnDLS::bottom) ? ppu::cadc_recording_storage_base_bottom
-					                                   : ppu::cadc_recording_storage_base_top) +
-					        ppu::cadc_recording_storage_size - 1)));
+					assert(ppu_periodic_cadc_readout_samples_coord[ppu]);
+					batch_entry.m_extmem_result[ppu] =
+					    builder.read(*ppu_periodic_cadc_readout_samples_coord[ppu]);
 				}
 			}
 		}

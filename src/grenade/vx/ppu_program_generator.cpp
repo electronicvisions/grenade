@@ -166,6 +166,78 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "}";
 		sources.push_back(source.str());
 	}
+	// periodic CADC readout
+	{
+		size_t const num_samples = has_periodic_cadc_readout ? 200 : 0;
+
+		std::stringstream source;
+		source << "#include \"grenade/vx/ppu/status.h\"\n";
+		source << "#include \"libnux/vx/dls.h\"\n";
+		source << "#include \"libnux/vx/vector.h\"\n";
+		source << "#include \"libnux/vx/time.h\"\n";
+		source << "#include <array>\n";
+		source << "#include <tuple>\n";
+		source << "\n";
+		source << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
+		source << "extern volatile grenade::vx::ppu::Status status;\n";
+		source << "std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, "
+		       << num_samples
+		       << ">, uint32_t> periodic_cadc_samples_top "
+		          "__attribute__((section(\"ext.data\")));\n";
+		source << "std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, "
+		       << num_samples
+		       << ">, uint32_t> periodic_cadc_samples_bot "
+		          "__attribute__((section(\"ext.data\")));\n";
+		source << "\n";
+		source << "void perform_periodic_read()\n";
+		source << "{\n";
+		source << "using namespace libnux::vx;\n";
+		source << "__vector uint8_t read[2];\n";
+		source << "auto& local_periodic_cadc_samples = "
+		          "std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
+		          "periodic_cadc_samples_top);\n";
+		source << "uint32_t offset = 0;\n";
+		source << "uint32_t size = 0;\n";
+		source << "status = grenade::vx::ppu::Status::inside_periodic_read;\n";
+		source << "while (status != grenade::vx::ppu::Status::stop_periodic_read) {\n";
+		source << "if (offset >= local_periodic_cadc_samples.size()) {\n";
+		source << "  continue;\n";
+		source << "}\n";
+		source << "uint64_t const time = libnux::vx::now();\n";
+		source << "// clang-format off\n";
+		source << "asm volatile(\n";
+		source << "\"fxvinx %[d0], %[ca_base], %[i]\\n\"\n";
+		source << "\"fxvinx %[d1], %[cab_base], %[j]\\n\"\n";
+		source << "\"fxvoutx %[d0], %[b0], %[i]\\n\"\n";
+		source << "\"fxvoutx %[d1], %[b1], %[i]\\n\"\n";
+		source << ":\n";
+		source << "  [d0] \"=&qv\" (read[0]),\n";
+		source << "  [d1] \"=&qv\" (read[1])\n";
+		source << ":";
+		source << "  [b0] \"b\" (&local_periodic_cadc_samples[offset].second.even_columns),\n";
+		source << "  [b1] \"b\" (&local_periodic_cadc_samples[offset].second.odd_columns),\n";
+		source << "  [ca_base] \"r\" (dls_causal_base),\n";
+		source << "  [cab_base] \"r\" (dls_causal_base|dls_buffer_enable_mask),\n";
+		source << "  [i] \"r\" (uint32_t(0)),\n";
+		source << "  [j] \"r\" (uint32_t(1))\n";
+		source << ": /* no clobber */\n";
+		source << ");\n";
+		source << "local_periodic_cadc_samples[offset].first = time;\n";
+		source << "// clang-format on\n";
+		source << "offset++;\n";
+		source << "size++;\n";
+		source << "}\n";
+		source << "std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
+		          "periodic_cadc_samples_top) = size;\n";
+		source << "asm volatile(\"fxvinx %[d0], %[b0], %[i]\\n\"\n";
+		source << "             \"sync\\n\"\n";
+		source << "             : [d0] \"=qv\"(read[0])\n";
+		source << "             : [b0] "
+		          "\"r\"(dls_extmem_base), [i] \"r\"(uint32_t(0))\n";
+		source << "             : \"memory\");\n";
+		source << "}";
+		sources.push_back(source.str());
+	}
 
 	LOG4CXX_TRACE(
 	    logger, "Generated PPU program sources:\n"
