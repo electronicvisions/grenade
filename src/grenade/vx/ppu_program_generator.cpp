@@ -212,11 +212,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "\"fxvoutx 1, %[b1], %[i]\\n\"\n";
 		source << "::\n";
 		source << "  [b0] \"b\" (GlobalAddress::from_global(0, "
-		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even_"
-		          "columns)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
+		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even"
+		          ")) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
 		source << "  [b1] \"b\" (GlobalAddress::from_global(0, "
-		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd_"
-		          "columns)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
+		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd"
+		          ")) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
 		source << "  [ca_base] \"r\" (dls_causal_base),\n";
 		source << "  [cab_base] \"r\" (dls_causal_base|dls_buffer_enable_mask),\n";
 		source << "  [i] \"r\" (uint32_t(0)),\n";
