@@ -12,6 +12,9 @@
 
 namespace grenade::vx {
 
+constexpr static size_t num_cadc_samples_in_extmem = 100;
+constexpr static size_t ppu_vector_alignment = 128;
+
 /**
  * Convert column byte values to PPUMemoryBlock.
  */

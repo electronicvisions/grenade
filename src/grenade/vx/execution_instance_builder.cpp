@@ -304,13 +304,24 @@ void ExecutionInstanceBuilder::process(
 				auto const local_block =
 				    m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]->get();
 
+				constexpr size_t local_block_size_expectation =
+				    ppu_vector_alignment /* num samples */ +
+				    (num_cadc_samples_in_extmem * (ppu_vector_alignment /* sample time stamp */ +
+				                                   2 * ppu_vector_alignment /* sample values */));
+				if (local_block_size_expectation != local_block.size()) {
+					throw std::logic_error(
+					    "Periodic CADC readout samples memory size (" +
+					    std::to_string(local_block.size()) + ") doesn't match expectation(" +
+					    std::to_string(local_block_size_expectation) + ").");
+				}
+
 				// get number of samples
 				uint32_t num_samples = 0;
 				for (size_t i = 0; i < 4; ++i) {
 					num_samples |= static_cast<uint32_t>(local_block.at(i).get_value().value())
 					               << (3 - i) * CHAR_BIT;
 				}
-				size_t offset = 8;
+				size_t offset = ppu_vector_alignment;
 				// get samples
 				auto& samples = sample_batches.at(batch_index);
 				samples.resize(num_samples);
@@ -324,10 +335,12 @@ void ExecutionInstanceBuilder::process(
 					}
 					local_samples.chip_time =
 					    ChipTime(time / 2); // FPGA clock 125MHz vs. PPU clock 250MHz
-					offset += 8;
+					offset += ppu_vector_alignment;
 					auto const get_index = [](auto const& column) {
 						size_t const j = column / 2;
-						size_t const index = 127 - ((j / 4) * 4 + (3 - j % 4)) + (column % 2) * 128;
+						size_t const index = (ppu_vector_alignment - 1) -
+						                     ((j / 4) * 4 + (3 - j % 4)) +
+						                     (column % 2) * ppu_vector_alignment;
 						return index;
 					};
 					local_samples.data.resize(data.output().size);
@@ -341,10 +354,6 @@ void ExecutionInstanceBuilder::process(
 						}
 					}
 					offset += 256;
-				}
-				if (8 + (200 * (8 + 256)) != local_block.size()) {
-					throw std::logic_error(
-					    "Periodic CADC readout samples memory size doesn't match expectation.");
 				}
 				// Since there's no time synchronisation between PPUs and ChipTime, we assume the
 				// first received sample happens at time 0 and calculate the time of later samples

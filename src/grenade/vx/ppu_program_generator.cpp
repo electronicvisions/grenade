@@ -168,7 +168,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 	}
 	// periodic CADC readout
 	{
-		size_t const num_samples = has_periodic_cadc_readout ? 200 : 0;
+		size_t const num_samples = has_periodic_cadc_readout ? num_cadc_samples_in_extmem : 0;
 
 		std::stringstream source;
 		source << "#include \"grenade/vx/ppu/status.h\"\n";
