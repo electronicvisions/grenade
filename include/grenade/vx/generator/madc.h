@@ -43,6 +43,8 @@ struct MADCStop
 	typedef hate::Nil Result;
 	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
 
+	bool enable_power_down_after_sampling{false};
+
 protected:
 	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
 

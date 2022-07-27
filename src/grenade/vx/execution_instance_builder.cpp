@@ -920,6 +920,16 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	bool const has_hook_around_realtime =
 	    !m_playback_hooks.pre_realtime.empty() || !m_playback_hooks.post_realtime.empty();
 
+	// arm MADC
+	if (m_madc_readout_vertex) {
+		PlaybackProgramBuilder builder;
+		builder.merge_back(stadls::vx::generate(generator::MADCArm()).builder);
+		builder.write(TimerOnDLS(), Timer());
+		builder.block_until(
+		    TimerOnDLS(), Timer::Value(1000 * Timer::Value::fpga_clock_cycles_per_us));
+		builders.push_back(std::move(builder));
+	}
+
 	// add pre realtime playback hook
 	builders.push_back(std::move(m_playback_hooks.pre_realtime));
 
@@ -949,8 +959,11 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// start MADC
 		if (m_madc_readout_vertex) {
-			builder.merge_back(stadls::vx::generate(generator::MADCArm()).builder);
 			builder.merge_back(stadls::vx::generate(generator::MADCStart()).builder);
+			builder.write(TimerOnDLS(), Timer());
+			builder.block_until(
+			    TimerOnDLS(), Timer::Value(10 * Timer::Value::fpga_clock_cycles_per_us));
+			builders.push_back(std::move(builder));
 		}
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
@@ -1050,9 +1063,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 				builder.copy_back(blocking_ppu_command_stop_periodic_read);
 			}
 		}
-		// stop MADC
+		// stop MADC (and power-down in last batch entry)
 		if (m_madc_readout_vertex) {
-			builder.merge_back(stadls::vx::generate(generator::MADCStop()).builder);
+			builder.merge_back(stadls::vx::generate(generator::MADCStop{
+			                                            .enable_power_down_after_sampling =
+			                                                (b == m_batch_entries.size() - 1)})
+			                       .builder);
 		}
 		// disable event recording
 		if (m_event_output_vertex || m_madc_readout_vertex) {
