@@ -1083,11 +1083,19 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// wait until scheduler finished, readout stats
 		if (enable_ppu && m_has_plasticity_rule) {
-			builder.write(halco::hicann_dls::vx::TimerOnDLS(), haldls::vx::v3::Timer());
-			builder.block_until(
-			    halco::hicann_dls::vx::TimerOnDLS(),
-			    haldls::vx::v3::Timer::Value(
-			        100000.0 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us));
+			// increase instruction timeout for wait until scheduler finished
+			InstructionTimeoutConfig instruction_timeout;
+			instruction_timeout.set_value(InstructionTimeoutConfig::Value(
+			    100000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
+			builder.write(
+			    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
+			// wait for PPUs being idle
+			builder.copy_back(wait_for_ppu_command_idle);
+			// reset instruction timeout to default after wait until scheduler finished
+			builder.write(
+			    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(),
+			    InstructionTimeoutConfig());
+			// readout stats
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				batch_entry.m_ppu_scheduler_finished[ppu] = builder.read(PPUMemoryBlockOnDLS(
 				    PPUMemoryBlockOnPPU(ppu_status_coord, ppu_status_coord), ppu));

@@ -77,6 +77,9 @@ void perform_post_fail_analysis(
 		// perform post-mortem reads
 		PlaybackProgramBuilder builder;
 
+		// reset instruction timeout, since we may have failed with non-default value
+		builder.write(InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
+
 		// perform stat readout at the end of the experiment
 		auto ticket_arq = builder.read(HicannARQStatusOnFPGA());
 
