@@ -70,9 +70,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 			for (auto const& [synram, synapse_array_view_handle] : synapses) {
 				kernel << "[](){\n";
 				kernel << "grenade::vx::ppu::SynapseArrayViewHandle synapse_array_view_handle;\n";
+				kernel << "synapse_array_view_handle.column_mask = 0;\n";
 				for (size_t j = 0; j < 256; ++j) {
 					if (synapse_array_view_handle.columns.test(j)) {
 						kernel << "synapse_array_view_handle.columns.set(" << j << ");\n";
+						kernel << "synapse_array_view_handle.column_mask[" << j << "] = 1;\n";
 					}
 					if (synapse_array_view_handle.rows.test(j)) {
 						kernel << "synapse_array_view_handle.rows.set(" << j << ");\n";

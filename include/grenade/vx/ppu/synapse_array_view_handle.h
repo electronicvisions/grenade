@@ -26,6 +26,8 @@ struct SynapseArrayViewHandle
 	 */
 	typedef libnux::vx::vector_row_t Row;
 
+	Row column_mask;
+
 	/**
 	 * Get weight values of specified row.
 	 */
@@ -45,11 +47,7 @@ struct SynapseArrayViewHandle
 		}
 		static_cast<void>(value);
 		using namespace libnux::vx;
-		vector_row_t mask;
-		for (size_t i = 0; i < columns.size; ++i) {
-			mask[i] = columns.test(i);
-		}
-		set_row_via_vector_masked(value, mask, index_row, dls_weight_base);
+		set_row_via_vector_masked(value, column_mask, index_row, dls_weight_base);
 	}
 #endif
 };
