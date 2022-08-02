@@ -168,6 +168,9 @@ std::vector<std::string> PPUProgramGenerator::done()
 		sources.push_back(source.str());
 	}
 
+	LOG4CXX_TRACE(
+	    logger, "Generated PPU program sources:\n"
+	                << hate::join_string(sources.begin(), sources.end(), "\n\n") << ".");
 	LOG4CXX_TRACE(logger, "Generated PPU program sources in " << timer.print() << ".");
 	return sources;
 }
