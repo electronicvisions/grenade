@@ -12,6 +12,8 @@ def depends(ctx):
     ctx('haldls')
     ctx('hate')
     ctx('libnux')
+    ctx('fisch')
+    ctx('hxcomm')
 
     if getattr(ctx.options, 'with_grenade_python_bindings', True):
         ctx('grenade', 'pygrenade')
