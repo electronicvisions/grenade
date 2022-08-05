@@ -13,7 +13,7 @@
 
 namespace grenade::vx::vertex {
 
-void CADCMembraneReadoutView::check(Columns const& columns)
+void CADCMembraneReadoutView::check(Columns const& columns, Sources const& sources)
 {
 	std::set<Columns::value_type::value_type> unique;
 	size_t size = 0;
@@ -23,6 +23,14 @@ void CADCMembraneReadoutView::check(Columns const& columns)
 	}
 	if (unique.size() != size) {
 		throw std::runtime_error("Column locations provided to CADCReadoutView are not unique.");
+	}
+	if (columns.size() != sources.size()) {
+		throw std::runtime_error("Column size doesn't match source size.");
+	}
+	for (size_t i = 0; i < columns.size(); ++i) {
+		if (columns.at(i).size() != sources.at(i).size()) {
+			throw std::runtime_error("Column size doesn't match source size.");
+		}
 	}
 }
 
@@ -39,6 +47,11 @@ CADCMembraneReadoutView::Synram const& CADCMembraneReadoutView::get_synram() con
 CADCMembraneReadoutView::Mode const& CADCMembraneReadoutView::get_mode() const
 {
 	return m_mode;
+}
+
+CADCMembraneReadoutView::Sources const& CADCMembraneReadoutView::get_sources() const
+{
+	return m_sources;
 }
 
 std::vector<Port> CADCMembraneReadoutView::inputs() const
@@ -112,7 +125,7 @@ bool CADCMembraneReadoutView::supports_input_from(
 bool CADCMembraneReadoutView::operator==(CADCMembraneReadoutView const& other) const
 {
 	return (m_columns == other.m_columns) && (m_synram == other.m_synram) &&
-	       (m_mode == other.m_mode);
+	       (m_mode == other.m_mode) && (m_sources == other.m_sources);
 }
 
 bool CADCMembraneReadoutView::operator!=(CADCMembraneReadoutView const& other) const
@@ -126,9 +139,10 @@ void CADCMembraneReadoutView::serialize(Archive& ar, std::uint32_t const)
 	ar(m_columns);
 	ar(m_synram);
 	ar(m_mode);
+	ar(m_sources);
 }
 
 } // namespace grenade::vx::vertex
 
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::CADCMembraneReadoutView)
-CEREAL_CLASS_VERSION(grenade::vx::vertex::CADCMembraneReadoutView, 1)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::CADCMembraneReadoutView, 2)

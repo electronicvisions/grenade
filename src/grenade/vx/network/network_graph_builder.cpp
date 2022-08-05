@@ -1238,7 +1238,9 @@ void NetworkGraphBuilder::add_cadc_recording(
     coordinate::ExecutionInstance const& instance) const
 {
 	hate::Timer timer;
-	halco::common::typed_array<std::vector<std::pair<NeuronColumnOnDLS, Input>>, NeuronRowOnDLS>
+	halco::common::typed_array<
+	    std::vector<std::tuple<NeuronColumnOnDLS, Input, CADCRecording::Neuron::Source>>,
+	    NeuronRowOnDLS>
 	    neurons;
 	for (auto const& neuron : cadc_recording.neurons) {
 		auto const& population = std::get<Population>(m_network.populations.at(neuron.population));
@@ -1258,22 +1260,24 @@ void NetworkGraphBuilder::add_cadc_recording(
 		    resources.populations.at(neuron.population)
 		        .neurons.at(an.toNeuronRowOnDLS().toHemisphereOnDLS()),
 		    port_restriction);
-		neurons[an.toNeuronRowOnDLS()].push_back({an.toNeuronColumnOnDLS(), input});
+		neurons[an.toNeuronRowOnDLS()].push_back({an.toNeuronColumnOnDLS(), input, neuron.source});
 	}
 	for (auto const row : iter_all<NeuronRowOnDLS>()) {
 		if (neurons.at(row).empty()) {
 			continue;
 		}
 		vertex::CADCMembraneReadoutView::Columns columns;
+		vertex::CADCMembraneReadoutView::Sources sources;
 		std::vector<Input> inputs;
-		for (auto const& [c, i] : neurons.at(row)) {
+		for (auto const& [c, i, s] : neurons.at(row)) {
 			columns.push_back({c.toSynapseOnSynapseRow()});
+			sources.push_back({s});
 			inputs.push_back(i);
 		}
 		// TODO (Issue #3986): support source selection in vertex
 		vertex::CADCMembraneReadoutView vertex(
 		    std::move(columns), row.toSynramOnDLS(),
-		    vertex::CADCMembraneReadoutView::Mode::periodic);
+		    vertex::CADCMembraneReadoutView::Mode::periodic, std::move(sources));
 		vertex::DataOutput data_output(ConnectionType::Int8, vertex.output().size);
 		auto const cv = graph.add(std::move(vertex), instance, inputs);
 		resources.cadc_output.push_back(graph.add(data_output, instance, {cv}));

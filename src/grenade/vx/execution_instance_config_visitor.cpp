@@ -75,8 +75,20 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::CADCMembraneReadoutView const& /* data */)
+    Graph::vertex_descriptor const /* vertex */, vertex::CADCMembraneReadoutView const& data)
 {
+	// Configure neurons
+	for (size_t i = 0; i < data.get_columns().size(); ++i) {
+		for (size_t j = 0; j < data.get_columns().at(i).size(); ++j) {
+			halco::hicann_dls::vx::v3::AtomicNeuronOnDLS neuron(
+			    data.get_columns().at(i).at(j).toNeuronColumnOnDLS(),
+			    data.get_synram().toNeuronRowOnDLS());
+			m_config.neuron_block.atomic_neurons[neuron].readout.source =
+			    data.get_sources().at(i).at(j);
+			m_config.neuron_block.atomic_neurons[neuron].readout.enable_amplifier = true;
+		}
+	}
+
 	m_requires_ppu = true;
 }
 
