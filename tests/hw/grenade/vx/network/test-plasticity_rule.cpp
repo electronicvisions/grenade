@@ -394,3 +394,104 @@ TEST(PlasticityRule, TimedRecording)
 		}
 	}
 }
+
+TEST(PlasticityRule, ExecutorInitialState)
+{
+	using namespace grenade::vx;
+	using namespace grenade::vx::network;
+
+	coordinate::ExecutionInstance instance;
+
+	JITGraphExecutor::ChipConfigs chip_configs;
+	chip_configs[instance] = lola::vx::v3::Chip();
+
+	IODataMap inputs;
+	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
+
+	// Construct connection to HW
+	backend::Connection connection;
+	std::map<DLSGlobal, backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	JITGraphExecutor executor(std::move(connections));
+
+	Projection::Connection::Weight weight_63(63);
+	Projection::Connection::Weight weight_32(32);
+
+	auto const execute = [&](bool const set_weight) {
+		NetworkBuilder network_builder;
+
+		Population::Neurons neurons{AtomicNeuronOnDLS()};
+		Population::EnableRecordSpikes enable_record_spikes{false};
+		Population population{std::move(neurons), std::move(enable_record_spikes)};
+		auto const population_descriptor = network_builder.add(population);
+
+		Projection::Connections projection_connections;
+		for (size_t i = 0; i < population.neurons.size(); ++i) {
+			projection_connections.push_back({i, i, weight_63});
+		}
+		Projection projection{
+		    Projection::ReceptorType::excitatory, std::move(projection_connections),
+		    population_descriptor, population_descriptor};
+		auto const projection_descriptor = network_builder.add(projection);
+
+		PlasticityRule plasticity_rule;
+		plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
+		plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
+		plasticity_rule.timer.num_periods = 1;
+		plasticity_rule.projections.push_back(projection_descriptor);
+		plasticity_rule.recording = PlasticityRule::TimedRecording{
+		    {{"w", PlasticityRule::TimedRecording::ObservablePerSynapse{
+		               PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8,
+		               PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
+		                   packed_active_columns}}}};
+
+		std::stringstream kernel;
+		kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+		kernel << "#include \"libnux/vx/location.h\"\n";
+		kernel << "using namespace grenade::vx::ppu;\n";
+		kernel << "using namespace libnux::vx;\n";
+		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
+		          "std::array<PPUOnDLS, 1> synrams, Recording& recording)\n";
+		kernel << "{\n";
+		kernel << "  auto w = synapses[0].get_weights(0);\n";
+		if (set_weight) {
+			kernel << "  w = " << static_cast<int>(weight_32.value()) << ";\n";
+		}
+		kernel << "  for (size_t i = 0; i < std::get<0>(recording.w).size(); ++i) {\n";
+		kernel << "    size_t active_column = 0;\n";
+		kernel << "    for (size_t j = 0; j < synapses[0].columns.size; ++j) {\n";
+		kernel << "      if (synapses[0].columns.test(j)) {\n";
+		kernel << "        std::get<0>(recording.w)[i][active_column] = w[j];\n";
+		kernel << "        active_column++;\n";
+		kernel << "      }\n";
+		kernel << "    }\n";
+		kernel << "  synapses[0].set_weights(w, 0);\n";
+		kernel << "  }\n";
+		kernel << "}\n";
+		plasticity_rule.kernel = kernel.str();
+
+		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
+
+		auto const network = network_builder.done();
+		auto const routing_result = build_routing(network);
+		auto const network_graph = build_network_graph(network, routing_result);
+
+		// run graph with given inputs and return results
+		auto const result_map = run(executor, network_graph.get_graph(), inputs, chip_configs);
+
+		assert(network_graph.get_plasticity_rule_output_vertices().size());
+		assert(network_graph.get_plasticity_rule_output_vertices().contains(
+		    plasticity_rule_descriptor));
+		auto const result = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+		    result_map.data.at(network_graph.get_plasticity_rule_output_vertices().at(
+		        plasticity_rule_descriptor)));
+		assert(result.size() == inputs.batch_size());
+		assert(result.at(0).size() == plasticity_rule.timer.num_periods);
+		return static_cast<int>(result.at(0).at(0).data.at(0));
+	};
+
+	auto const with_weight_32 = execute(true);
+	auto const with_weight_63 = execute(false);
+	EXPECT_EQ(with_weight_32, weight_32);
+	EXPECT_EQ(with_weight_63, weight_63);
+}
