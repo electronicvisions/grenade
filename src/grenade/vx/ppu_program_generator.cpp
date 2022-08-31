@@ -79,7 +79,6 @@ std::vector<std::string> PPUProgramGenerator::done()
 			}
 			kernel << "};\n";
 			kernel << "} // namespace\n";
-			kernel << "#include \"libnux/vx/location.h\"\n";
 			kernel << "#include \"libnux/vx/mailbox.h\"\n";
 			kernel << "#include \"libnux/scheduling/types.hpp\"\n";
 			kernel << "void plasticity_rule_" << i << "() {\n";
