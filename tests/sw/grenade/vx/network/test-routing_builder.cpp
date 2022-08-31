@@ -143,8 +143,12 @@ TEST(build_routing, DenseInOrder)
 	     {1, 0, Projection::Connection::Weight()},
 	     {1, 1, Projection::Connection::Weight()}},
 	    descriptor, descriptor);
-	projection.enable_is_required_dense_in_order = true;
-	builder.add(projection);
+	auto const projection_descriptor = builder.add(projection);
+
+	PlasticityRule plasticity_rule;
+	plasticity_rule.projections.push_back(projection_descriptor);
+	plasticity_rule.enable_requires_one_source_per_row_in_order = true;
+	builder.add(plasticity_rule);
 
 	auto network = builder.done();
 	EXPECT_NO_THROW(grenade::vx::network::build_routing(network));

@@ -58,8 +58,7 @@ Projection::Projection(
 bool Projection::operator==(Projection const& other) const
 {
 	return receptor_type == other.receptor_type && connections == other.connections &&
-	       population_pre == other.population_pre && population_post == other.population_post &&
-	       enable_is_required_dense_in_order == other.enable_is_required_dense_in_order;
+	       population_pre == other.population_pre && population_post == other.population_post;
 }
 
 bool Projection::operator!=(Projection const& other) const
@@ -77,8 +76,6 @@ std::ostream& operator<<(std::ostream& os, Projection const& projection)
 	for (auto const& connection : projection.connections) {
 		os << "\t\t" << connection << "\n";
 	}
-	os << "\tenable_is_required_dense_in_order: " << projection.enable_is_required_dense_in_order
-	   << "\n";
 	os << ")";
 	return os;
 }

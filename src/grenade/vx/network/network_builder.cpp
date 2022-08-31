@@ -166,24 +166,6 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 		}
 	}
 
-	// check that is required dense in order is fulfilled
-	if (projection.enable_is_required_dense_in_order) {
-		std::set<size_t> rows;
-		std::set<size_t> columns;
-		std::vector<std::pair<size_t, size_t>> indices;
-		for (auto const& connection : projection.connections) {
-			rows.insert(connection.index_pre);
-			columns.insert(connection.index_post);
-			indices.push_back({connection.index_pre, connection.index_post});
-		}
-		if (rows.size() * columns.size() != indices.size()) {
-			throw std::runtime_error("Projection not dense.");
-		}
-		if (!std::is_sorted(indices.begin(), indices.end())) {
-			throw std::runtime_error("Projection not in order.");
-		}
-	}
-
 	ProjectionDescriptor descriptor(m_projections.size());
 	m_projections.insert({descriptor, projection});
 	LOG4CXX_TRACE(
@@ -270,10 +252,23 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 		}
 	}
 
-	// check that target projections are dense and in order
-	for (auto const& d : plasticity_rule.projections) {
-		if (!m_projections.at(d).enable_is_required_dense_in_order) {
-			throw std::runtime_error("PlasticityRule projection not dense and in order.");
+	// check that target projections fulfil source requirement
+	if (plasticity_rule.enable_requires_one_source_per_row_in_order) {
+		for (auto const& d : plasticity_rule.projections) {
+			std::set<size_t> rows;
+			std::set<size_t> columns;
+			std::vector<std::pair<size_t, size_t>> indices;
+			for (auto const& connection : m_projections.at(d).connections) {
+				rows.insert(connection.index_pre);
+				columns.insert(connection.index_post);
+				indices.push_back({connection.index_pre, connection.index_post});
+			}
+			if (rows.size() * columns.size() != indices.size()) {
+				throw std::runtime_error("Not only one source per row in projection.");
+			}
+			if (!std::is_sorted(indices.begin(), indices.end())) {
+				throw std::runtime_error("Sources of rows are not in order in projection.");
+			}
 		}
 	}
 

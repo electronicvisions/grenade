@@ -52,11 +52,11 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 			}
 		}
 	}
-	// check if dense and in order enable value changed
-	for (auto const& [descriptor, projection] : current->projections) {
-		auto const& old_projection = old->projections.at(descriptor);
-		if (projection.enable_is_required_dense_in_order !=
-		    old_projection.enable_is_required_dense_in_order) {
+	// check if requires one source per row and in order enable value changed
+	for (auto const& [descriptor, plasticity_rule] : current->plasticity_rules) {
+		auto const& old_plasticity_rule = old->plasticity_rules.at(descriptor);
+		if (plasticity_rule.enable_requires_one_source_per_row_in_order !=
+		    old_plasticity_rule.enable_requires_one_source_per_row_in_order) {
 			return true;
 		}
 	}

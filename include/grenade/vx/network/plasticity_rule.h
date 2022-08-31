@@ -49,6 +49,12 @@ struct GENPYBIND(visible) PlasticityRule
 		friend std::ostream& operator<<(std::ostream& os, Timer const& timer) SYMBOL_VISIBLE;
 	} timer;
 
+	/**
+	 * Enable whether this plasticity rule requires all projections to have one source per row and
+	 * them being in order.
+	 */
+	bool enable_requires_one_source_per_row_in_order{false};
+
 	PlasticityRule() = default;
 
 	bool operator==(PlasticityRule const& other) const SYMBOL_VISIBLE;
