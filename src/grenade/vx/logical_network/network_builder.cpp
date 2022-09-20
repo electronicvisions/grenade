@@ -242,8 +242,62 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 		throw std::runtime_error(
 		    "MADC recording references atomic neuron index out of range of neuron.");
 	}
+	if (m_cadc_recording) {
+		for (auto const& neuron : m_cadc_recording->neurons) {
+			if (neuron.population == madc_recording.population &&
+			    neuron.neuron_on_population == madc_recording.neuron_on_population &&
+			    neuron.compartment_on_neuron == madc_recording.compartment_on_neuron &&
+			    neuron.atomic_neuron_on_compartment ==
+			        madc_recording.atomic_neuron_on_compartment &&
+			    neuron.source != madc_recording.source) {
+				throw std::runtime_error(
+				    "MADC recording source conflicts with CADC recording's source.");
+			}
+		}
+	}
 	m_madc_recording = madc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
+}
+
+void NetworkBuilder::add(CADCRecording const& cadc_recording)
+{
+	hate::Timer timer;
+	if (m_cadc_recording) {
+		throw std::runtime_error("Only one CADC recording per network possible.");
+	}
+	std::set<std::tuple<
+	    PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+	    size_t>>
+	    unique;
+	for (auto const& neuron : cadc_recording.neurons) {
+		if (!m_populations.contains(neuron.population)) {
+			throw std::runtime_error("CADC recording references unknown population.");
+		}
+		if (!std::holds_alternative<Population>(m_populations.at(neuron.population))) {
+			throw std::runtime_error("CADC recording does not reference internal population.");
+		}
+		if (neuron.neuron_on_population >=
+		    std::get<Population>(m_populations.at(neuron.population)).neurons.size()) {
+			throw std::runtime_error(
+			    "CADC recording references neuron index out of range of population.");
+		}
+		if (m_madc_recording && neuron.population == m_madc_recording->population &&
+		    neuron.neuron_on_population == m_madc_recording->neuron_on_population &&
+		    neuron.compartment_on_neuron == m_madc_recording->compartment_on_neuron &&
+		    neuron.atomic_neuron_on_compartment == m_madc_recording->atomic_neuron_on_compartment &&
+		    neuron.source != m_madc_recording->source) {
+			throw std::runtime_error(
+			    "CADC recording source conflicts with MADC recording's source.");
+		}
+		unique.insert(
+		    {neuron.population, neuron.neuron_on_population, neuron.compartment_on_neuron,
+		     neuron.atomic_neuron_on_compartment});
+	}
+	if (unique.size() != cadc_recording.neurons.size()) {
+		throw std::runtime_error("CADC recording neurons are not unique.");
+	}
+	m_cadc_recording = cadc_recording;
+	LOG4CXX_TRACE(m_logger, "add(): Added CADC recording in " << timer.print() << ".");
 }
 
 PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_rule)
@@ -270,8 +324,9 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
 	auto const ret = std::make_shared<Network>(
 	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording),
-	    std::move(m_plasticity_rules));
+	    std::move(m_cadc_recording), std::move(m_plasticity_rules));
 	m_madc_recording.reset();
+	m_cadc_recording.reset();
 	assert(ret);
 	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);
 	return ret;

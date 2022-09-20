@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
+#include "grenade/vx/logical_network/cadc_recording.h"
 #include "grenade/vx/logical_network/madc_recording.h"
 #include "grenade/vx/logical_network/network.h"
 #include "grenade/vx/logical_network/plasticity_rule.h"
@@ -52,9 +53,20 @@ public:
 	/**
 	 * Add MADC recording of a single neuron.
 	 * Only one MADC recording per network is allowed.
+	 * If another recording is present at the recorded neuron, their source specification is
+	 * required to match.
 	 * @param madc_recording MADC recording to add
 	 */
 	void add(MADCRecording const& madc_recording) SYMBOL_VISIBLE;
+
+	/**
+	 * Add CADC recording of a collection of neurons.
+	 * Only one CADC recording per network is allowed.
+	 * If another recording is present at a recorded neuron, their source specification is required
+	 * to match.
+	 * @param cadc_recording CADC recording to add
+	 */
+	void add(CADCRecording const& cadc_recording) SYMBOL_VISIBLE;
 
 	/*
 	 * Add plasticity rule on already added projections.
@@ -73,6 +85,7 @@ private:
 	    m_populations{};
 	std::map<ProjectionDescriptor, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
+	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
 	std::map<PlasticityRuleDescriptor, PlasticityRule> m_plasticity_rules{};
 	log4cxx::Logger* m_logger;
 };

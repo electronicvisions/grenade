@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
+#include "grenade/vx/logical_network/cadc_recording.h"
 #include "grenade/vx/logical_network/madc_recording.h"
 #include "grenade/vx/logical_network/plasticity_rule.h"
 #include "grenade/vx/logical_network/population.h"
@@ -26,6 +27,7 @@ struct GENPYBIND(
 	    populations;
 	std::map<ProjectionDescriptor, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;
+	std::optional<CADCRecording> const cadc_recording;
 	std::map<PlasticityRuleDescriptor, PlasticityRule> const plasticity_rules;
 
 	bool operator==(Network const& other) const SYMBOL_VISIBLE;

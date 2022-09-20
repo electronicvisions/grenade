@@ -70,6 +70,22 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 		builder.add(hardware_madc_recording);
 	}
 
+	// add CADC recording if present
+	if (network->cadc_recording) {
+		network::CADCRecording hardware_cadc_recording;
+		for (auto const& neuron : network->cadc_recording->neurons) {
+			network::CADCRecording::Neuron hardware_neuron;
+			hardware_neuron.population = population_translation.at(neuron.population);
+			hardware_neuron.index = neuron_translation.at(neuron.population)
+			                            .at(neuron.neuron_on_population)
+			                            .at(neuron.compartment_on_neuron)
+			                            .at(neuron.atomic_neuron_on_compartment);
+			hardware_neuron.source = neuron.source;
+			hardware_cadc_recording.neurons.push_back(hardware_neuron);
+		}
+		builder.add(hardware_cadc_recording);
+	}
+
 	// add projections, distribute weight onto multiple synapses
 	// we split the weight like: 123 -> 63 + 60
 	// we distribute over all neurons in every compartment
