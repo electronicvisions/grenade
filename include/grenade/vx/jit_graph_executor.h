@@ -79,6 +79,9 @@ public:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_bitfile_info() const
 	    SYMBOL_VISIBLE;
 
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_remote_repo_state() const
+	    SYMBOL_VISIBLE;
+
 private:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> m_connections;
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, ConnectionStateStorage>

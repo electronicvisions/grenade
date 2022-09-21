@@ -111,6 +111,16 @@ std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> JITGraphExecutor::ge
 	return ret;
 }
 
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string>
+JITGraphExecutor::get_remote_repo_state() const
+{
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> ret;
+	for (auto const& [identifier, connection] : m_connections) {
+		ret.emplace(identifier, connection.get_remote_repo_state());
+	}
+	return ret;
+}
+
 bool JITGraphExecutor::is_executable_on(Graph const& graph)
 {
 	auto const connection_dls_globals = boost::adaptors::keys(m_connections);
