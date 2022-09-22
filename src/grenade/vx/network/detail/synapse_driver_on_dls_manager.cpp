@@ -271,7 +271,7 @@ bool SynapseDriverOnDLSManager::valid_solution(
 					LOG4CXX_ERROR(
 					    logger, "valid_solution(): Shape of requested allocation("
 					                << padi_bus << ": " << i << ", " << j
-					                << ") is allocated in a different size.")
+					                << ") is allocated in a different size.");
 					return false;
 				}
 				// check that all shapes which shall be contiguous are contiguous
@@ -286,7 +286,7 @@ bool SynapseDriverOnDLSManager::valid_solution(
 						    logger, "valid_solution(): Shape of requested allocation("
 						                << padi_bus << ": " << i << ", " << j
 						                << ") is requested to be contiguous but is allocated "
-						                   "non-contiguous.")
+						                   "non-contiguous.");
 						return false;
 					}
 				}

@@ -24,7 +24,7 @@ using namespace halco::common;
 void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network)
 {
 	hate::Timer timer;
-	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.update_network_graph");
+	static log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.update_network_graph");
 
 	if (requires_routing(network, network_graph.m_network)) {
 		throw std::runtime_error(
@@ -179,7 +179,7 @@ NetworkGraph build_network_graph(
 {
 	hate::Timer timer;
 	assert(network);
-	static log4cxx::Logger* logger = log4cxx::Logger::getLogger("grenade.build_network_graph");
+	static log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.build_network_graph");
 
 	NetworkGraph result;
 	result.m_routing_duration = routing_result.timing_statistics.routing;

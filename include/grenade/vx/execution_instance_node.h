@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <mutex>
 #include <tbb/flow_graph.h>
 
@@ -12,6 +13,7 @@
 
 namespace log4cxx {
 class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx {
@@ -51,7 +53,7 @@ private:
 	ConnectionStateStorage& connection_state_storage;
 	std::mutex& connection_mutex;
 	ExecutionInstancePlaybackHooks& playback_hooks;
-	log4cxx::Logger* logger;
+	log4cxx::LoggerPtr logger;
 };
 
 } // namespace grenade::vx

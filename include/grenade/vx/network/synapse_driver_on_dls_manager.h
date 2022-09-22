@@ -6,12 +6,14 @@
 #include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <set>
 #include <vector>
 
 namespace log4cxx {
 class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx::network {
@@ -122,7 +124,7 @@ private:
 	halco::common::
 	    typed_array<SynapseDriverOnPADIBusManager, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	        m_synapse_driver_on_padi_bus_manager;
-	log4cxx::Logger* m_logger;
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace grenade::vx::networke

@@ -7,12 +7,14 @@
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "haldls/vx/v3/synapse_driver.h"
 #include "hate/visibility.h"
+#include <memory>
 #include <optional>
 #include <set>
 #include <vector>
 
 namespace log4cxx {
 class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx::network {
@@ -162,7 +164,7 @@ struct SourceOnPADIBusManager
 	    std::vector<ExternalSource> const& external_sources) const SYMBOL_VISIBLE;
 
 private:
-	log4cxx::Logger* m_logger;
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace grenade::vx::network

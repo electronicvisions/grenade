@@ -31,6 +31,7 @@ class Timer;
 
 namespace log4cxx {
 class Logger;
+typedef std::shared_ptr<log4cxx::Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -215,7 +216,7 @@ private:
 	vertex_property_map_type m_vertex_property_map;
 	vertex_descriptor_map_type m_vertex_descriptor_map;
 	execution_instance_map_type m_execution_instance_map;
-	log4cxx::Logger* m_logger;
+	log4cxx::LoggerPtr m_logger;
 
 	void add_edges(
 	    vertex_descriptor descriptor,

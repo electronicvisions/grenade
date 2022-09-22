@@ -29,6 +29,7 @@
 
 namespace log4cxx {
 class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -213,7 +214,7 @@ private:
 	void apply_crossbar_nodes_internal(Result& result) const;
 	void apply_crossbar_nodes_from_internal_to_l2(Result& result) const;
 
-	log4cxx::Logger* m_logger;
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace network

@@ -13,7 +13,7 @@
 namespace {
 
 void check_link_notifications(
-    log4cxx::Logger* logger,
+    log4cxx::LoggerPtr logger,
     stadls::vx::v3::PlaybackProgram::highspeed_link_notifications_type const& link_notifications,
     size_t n_expected_notifications)
 {
@@ -49,7 +49,7 @@ void check_link_notifications(
 
 template <typename Connection>
 void perform_post_fail_analysis(
-    log4cxx::Logger* logger,
+    log4cxx::LoggerPtr logger,
     Connection& connection,
     stadls::vx::v3::PlaybackProgram const& dead_program)
 {
@@ -111,7 +111,7 @@ using namespace halco::hicann_dls::vx::v3;
 
 stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram& program)
 {
-	static log4cxx::Logger* const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
+	static log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 	stadls::vx::RunTimeInfo ret;
 	try {
 		ret = stadls::vx::v3::run(connection.m_connection, program);

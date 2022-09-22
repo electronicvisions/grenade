@@ -13,6 +13,7 @@
 
 namespace log4cxx {
 class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -89,7 +90,7 @@ private:
 	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
 	std::map<PlasticityRuleDescriptor, PlasticityRule> m_plasticity_rules{};
 	std::chrono::microseconds m_duration;
-	log4cxx::Logger* m_logger;
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace network

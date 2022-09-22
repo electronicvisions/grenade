@@ -87,7 +87,7 @@ private:
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
 	std::map<PlasticityRuleDescriptor, PlasticityRule> m_plasticity_rules{};
-	log4cxx::Logger* m_logger;
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace logical_network
