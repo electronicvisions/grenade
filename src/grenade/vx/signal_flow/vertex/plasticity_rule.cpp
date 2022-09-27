@@ -19,6 +19,7 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
+#include <inja/inja.hpp>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -473,213 +474,192 @@ size_t PlasticityRule::get_recorded_scratchpad_memory_alignment() const
 	return sizeof(uint64_t /* time value */);
 }
 
+void to_json(inja::json& j, PlasticityRule::SynapseViewShape const& shape)
+{
+	j = inja::json{{"num_rows", shape.num_rows}, {"num_columns", shape.columns.size()}};
+}
+
+void to_json(inja::json& j, PlasticityRule::NeuronViewShape const& shape)
+{
+	j = inja::json{{"num_columns", shape.columns.size()}};
+}
+
 std::string PlasticityRule::get_recorded_memory_definition() const
 {
 	if (!m_recording) {
 		return "";
 	}
 	if (std::holds_alternative<RawRecording>(*m_recording)) {
-		std::stringstream ss;
-		ss << "#include <array>\n";
-		ss << "\n";
-		ss << "struct Recording\n";
-		ss << "{\n";
-		ss << "\tstd::array<char, " << std::get<RawRecording>(*m_recording).scratchpad_memory_size
-		   << "> memory;\n";
-		ss << "};";
-		return ss.str();
+		// clang-format off
+		std::string source_template = R"grenadeTemplate(
+#include <array>
+
+struct Recording
+{
+	std::array<char, {{scratchpad_memory_size}}> memory;
+};
+)grenadeTemplate";
+		// clang-format on
+		inja::json parameters;
+		parameters["scratchpad_memory_size"] =
+		    std::get<RawRecording>(*m_recording).scratchpad_memory_size;
+		return inja::render(source_template, parameters);
 	} else if (std::holds_alternative<TimedRecording>(*m_recording)) {
-		auto const print_observable_array_type = [](TimedRecording::ObservableArray const&
-		                                                observable) {
-			std::stringstream ss;
-			ss << "std::array<";
-			std::visit(
-			    hate::overloaded{
-			        [&ss](TimedRecording::ObservableArray::Type::Int8 const&) { ss << "int8_t"; },
-			        [&ss](TimedRecording::ObservableArray::Type::UInt8 const&) { ss << "uint8_t"; },
-			        [&ss](TimedRecording::ObservableArray::Type::Int16 const&) { ss << "int16_t"; },
-			        [&ss](TimedRecording::ObservableArray::Type::UInt16 const&) {
-				        ss << "uint16_t";
-			        },
-			        [](auto const&) { throw std::logic_error("Observable array type unknown."); }},
-			    observable.type);
-			ss << ", " << observable.size << ">";
-			return ss.str();
-		};
+		// clang-format off
+		std::string source_template = R"grenadeTemplate(
+#include <array>
+#include <tuple>
+#include "libnux/vx/vector_row.h"
 
-		auto const print_observable_per_synapse_type =
-		    [](TimedRecording::ObservablePerSynapse const& observable,
-		       SynapseViewShape synapse_view_shape) {
-			    std::stringstream ss;
-			    ss << "std::array<";
-			    switch (observable.layout_per_row) {
-				    case TimedRecording::ObservablePerSynapse::LayoutPerRow::complete_rows: {
-					    ss << "libnux::vx::VectorRow";
-					    std::visit(
-					        hate::overloaded{
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::Int8 const&) {
-						            ss << "FracSat8";
-					            },
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::UInt8 const&) {
-						            ss << "Mod8";
-					            },
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::Int16 const&) {
-						            ss << "FracSat16";
-					            },
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::UInt16 const&) {
-						            ss << "Mod16";
-					            },
-					            [](auto const&) {
-						            throw std::logic_error("Observable array type unknown.");
-					            }},
-					        observable.type);
-					    break;
-				    }
-				    case TimedRecording::ObservablePerSynapse::LayoutPerRow::
-				        packed_active_columns: {
-					    ss << "std::array<";
-					    std::visit(
-					        hate::overloaded{
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::Int8 const&) {
-						            ss << "int8_t";
-					            },
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::UInt8 const&) {
-						            ss << "uint8_t";
-					            },
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::Int16 const&) {
-						            ss << "int16_t";
-					            },
-					            [&ss](TimedRecording::ObservablePerSynapse::Type::UInt16 const&) {
-						            ss << "uint16_t";
-					            },
-					            [](auto const&) {
-						            throw std::logic_error("Observable array type unknown.");
-					            }},
-					        observable.type);
-					    ss << ", " << synapse_view_shape.columns.size() << ">";
-					    break;
-				    }
-				    default: {
-					    throw std::logic_error("Unknown layout per row.");
-				    }
-			    }
-			    ss << ", " << synapse_view_shape.num_rows << ">";
-			    return ss.str();
-		    };
+struct Recording
+{
+	uint64_t time;
 
-		auto const print_observable_per_neuron_type =
-		    [](TimedRecording::ObservablePerNeuron const& observable,
-		       NeuronViewShape neuron_view_shape) {
-			    std::stringstream ss;
-			    switch (observable.layout) {
-				    case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
-					    ss << "libnux::vx::VectorRow";
-					    std::visit(
-					        hate::overloaded{
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int8 const&) {
-						            ss << "FracSat8";
-					            },
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt8 const&) {
-						            ss << "Mod8";
-					            },
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int16 const&) {
-						            ss << "FracSat16";
-					            },
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt16 const&) {
-						            ss << "Mod16";
-					            },
-					            [](auto const&) {
-						            throw std::logic_error("Observable array type unknown.");
-					            }},
-					        observable.type);
-					    break;
-				    }
-				    case TimedRecording::ObservablePerNeuron::Layout::packed_active_columns: {
-					    ss << "std::array<";
-					    std::visit(
-					        hate::overloaded{
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int8 const&) {
-						            ss << "int8_t";
-					            },
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt8 const&) {
-						            ss << "uint8_t";
-					            },
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int16 const&) {
-						            ss << "int16_t";
-					            },
-					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt16 const&) {
-						            ss << "uint16_t";
-					            },
-					            [](auto const&) {
-						            throw std::logic_error("Observable array type unknown.");
-					            }},
-					        observable.type);
-					    ss << ", " << neuron_view_shape.columns.size() << ">";
-					    break;
-				    }
-				    default: {
-					    throw std::logic_error("Unknown layout per row.");
-				    }
-			    }
-			    return ss.str();
-		    };
+## if exists("observables")
+## for observable in observables
+## if observable.is_array
+	std::array<{{observable.type}}, {{observable.size}}> {{observable.name}};
+## else if observable.is_synapse
+	std::tuple<
+## for synapse_view in synapse_views
+## if observable.layout_per_row == "complete_rows"
+	    std::array<{{observable.type}}, {{synapse_view.num_rows}}>{% if not loop.is_last %},{% endif %}
+## else if observable.layout_per_row == "packed_active_columns"
+	    std::array<std::array<{{observable.type}}, {{synapse_view.num_columns}}>, {{synapse_view.num_rows}}>{% if not loop.is_last %},{% endif %}
+## endif
+## endfor
+	    > {{observable.name}};
+## else
+	std::tuple<
+## for neuron_view in neuron_views
+## if observable.layout == "complete_row"
+	    {{observable.type}}{% if not loop.is_last %},{% endif %}
+## else if observable.layout == "packed_active_columns"
+	    std::array<{{observable.type}}, {{neuron_view.num_columns}}>{% if not loop.is_last %},{% endif %}
+## endif
+## endfor
+	    > {{observable.name}};
+## endif
+## endfor
+## endif
+};
 
-		std::stringstream ss;
-		ss << "#include <array>\n";
-		ss << "#include <tuple>\n";
-		ss << "#include \"libnux/vx/vector_row.h\"\n";
-		ss << "\n";
-		ss << "struct Recording\n";
-		ss << "{\n";
-		ss << "\tuint64_t time;\n";
+namespace {
+
+template <size_t RealSize>
+void static_assert_size()
+{
+	static_assert(RealSize == {{recorded_scratchpad_memory_size}}, "Recording size doesn't match expectation.");
+}
+
+[[maybe_unused]] void static_assert_size_eval()
+{
+	static_assert_size<sizeof(Recording)>();
+}
+
+} // namespace
+)grenadeTemplate";
+		// clang-format on
+
+		inja::json parameters;
+		std::vector<size_t> observable_array_scratchpad_memory_sizes;
 		for (auto const& [name, type] : std::get<TimedRecording>(*m_recording).observables) {
-			ss << "\t";
 			std::visit(
 			    hate::overloaded{
-			        [&ss, print_observable_array_type](
-			            TimedRecording::ObservableArray const& observable) {
-				        ss << print_observable_array_type(observable);
+			        [&parameters, name](TimedRecording::ObservableArray const& observable) {
+				        std::string const observable_type_str = [observable]() {
+					        std::stringstream ss;
+					        std::visit([&ss](auto const& t) { ss << t << "_t"; }, observable.type);
+					        return ss.str();
+				        }();
+				        parameters["observables"].push_back(
+				            {{"is_array", true},
+				             {"name", name},
+				             {"size", observable.size},
+				             {"type", observable_type_str}});
 			        },
-			        [&](TimedRecording::ObservablePerSynapse const& observable) {
-				        ss << "std::tuple<";
-				        std::vector<std::string> synapse_view_entries;
-				        for (auto const& synapse_view_shape : m_synapse_view_shapes) {
-					        synapse_view_entries.push_back(
-					            print_observable_per_synapse_type(observable, synapse_view_shape));
+			        [&parameters, name,
+			         this](TimedRecording::ObservablePerSynapse const& observable) {
+				        std::string layout_per_row = [observable]() {
+					        std::stringstream ss;
+					        ss << observable.layout_per_row;
+					        return ss.str();
+				        }();
+				        std::string type;
+				        switch (observable.layout_per_row) {
+					        case TimedRecording::ObservablePerSynapse::LayoutPerRow::
+					            complete_rows: {
+						        std::visit(
+						            [&type](auto t) { type = decltype(t)::on_ppu_type; },
+						            observable.type);
+						        break;
+					        }
+					        case TimedRecording::ObservablePerSynapse::LayoutPerRow::
+					            packed_active_columns: {
+						        type = [observable]() {
+							        std::stringstream ss;
+							        std::visit(
+							            [&ss](auto const& t) { ss << t << "_t"; }, observable.type);
+							        return ss.str();
+						        }();
+						        break;
+					        }
+					        default: {
+						        throw std::logic_error("Unknown layout per row.");
+					        }
 				        }
-				        ss << hate::join_string(
-				            synapse_view_entries.begin(), synapse_view_entries.end(), ", ");
-				        ss << ">";
+				        parameters["observables"].push_back(
+				            {{"is_array", false},
+				             {"is_synapse", true},
+				             {"name", name},
+				             {"type", type},
+				             {"layout_per_row", layout_per_row}});
 			        },
 			        [&](TimedRecording::ObservablePerNeuron const& observable) {
-				        ss << "std::tuple<";
-				        std::vector<std::string> neuron_view_entries;
-				        for (auto const& neuron_view_shape : m_neuron_view_shapes) {
-					        neuron_view_entries.push_back(
-					            print_observable_per_neuron_type(observable, neuron_view_shape));
+				        std::string layout = [observable]() {
+					        std::stringstream ss;
+					        ss << observable.layout;
+					        return ss.str();
+				        }();
+				        std::string type;
+				        switch (observable.layout) {
+					        case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+						        std::visit(
+						            [&type](auto t) { type = decltype(t)::on_ppu_type; },
+						            observable.type);
+						        break;
+					        }
+					        case TimedRecording::ObservablePerNeuron::Layout::
+					            packed_active_columns: {
+						        type = [observable]() {
+							        std::stringstream ss;
+							        std::visit(
+							            [&ss](auto const& t) { ss << t << "_t"; }, observable.type);
+							        return ss.str();
+						        }();
+						        break;
+					        }
+					        default: {
+						        throw std::logic_error("Unknown layout.");
+					        }
 				        }
-				        ss << hate::join_string(
-				            neuron_view_entries.begin(), neuron_view_entries.end(), ", ");
-				        ss << ">";
+				        parameters["observables"].push_back(
+				            {{"is_array", false},
+				             {"is_synapse", false},
+				             {"name", name},
+				             {"type", type},
+				             {"layout", layout}});
 			        },
 			        [](auto const&) {
 				        throw std::logic_error("Observable type not implemented.");
 			        }},
 			    type);
-			ss << " " << name << ";\n";
 		}
-		ss << "};\n";
-		ss << "namespace {\n";
-		ss << "template <size_t RealSize>\n";
-		ss << "void static_assert_size() {\n";
-		ss << "\tstatic_assert(RealSize == " << get_recorded_scratchpad_memory_size()
-		   << ", \"Recording size doesn't match expectation.\");\n";
-		ss << "}\n";
-		ss << "[[maybe_unused]] void static_assert_size_eval() {\n";
-		ss << "static_assert_size<sizeof(Recording)>();\n";
-		ss << "}\n";
-		ss << "}\n";
-		return ss.str();
+		parameters["synapse_views"] = m_synapse_view_shapes;
+		parameters["neuron_views"] = m_neuron_view_shapes;
+		parameters["recorded_scratchpad_memory_size"] = get_recorded_scratchpad_memory_size();
+
+		return inja::render(source_template, parameters);
 	} else {
 		throw std::logic_error("Recording type not implemented.");
 	}

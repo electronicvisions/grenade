@@ -6,6 +6,7 @@
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
 #include <vector>
+#include <inja/inja.hpp>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
@@ -39,289 +40,336 @@ std::vector<std::string> PPUProgramGenerator::done()
 			std::stringstream kernel;
 			auto kernel_str = plasticity_rule.get_kernel();
 			std::string const kernel_name("PLASTICITY_RULE_KERNEL");
-
-			if (plasticity_rule.get_recording()) {
-				kernel << plasticity_rule.get_recorded_memory_definition() << "\n";
-				if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
-				        *plasticity_rule.get_recording())) {
-					kernel << "Recording recorded_scratchpad_memory_top_" << i << "["
-					       << plasticity_rule.get_timer().num_periods
-					       << "] __attribute__((section(\"ext.data.keep\")));\n";
-					kernel << "Recording recorded_scratchpad_memory_bot_" << i << "["
-					       << plasticity_rule.get_timer().num_periods
-					       << "] __attribute__((section(\"ext.data.keep\")));\n";
-				} else if (std::holds_alternative<
-				               signal_flow::vertex::PlasticityRule::RawRecording>(
-				               *plasticity_rule.get_recording())) {
-					kernel << "Recording recorded_scratchpad_memory_top_" << i
-					       << " __attribute__((section(\"ext.data.keep\")));\n";
-					kernel << "Recording recorded_scratchpad_memory_bot_" << i
-					       << " __attribute__((section(\"ext.data.keep\")));\n";
-				} else {
-					throw std::logic_error("Recording type not implemented.");
-				}
-			}
 			kernel_str.replace(
 			    kernel_str.find(kernel_name), kernel_name.size(),
 			    "plasticity_rule_kernel_" + std::to_string(i));
-			kernel << kernel_str;
-			kernel << "\n";
-			kernel << "namespace {\n";
-			kernel << "std::array<grenade::vx::ppu::SynapseArrayViewHandle, " << synapses.size()
-			       << "> synapse_array_view_handle = {\n";
-			size_t l = 0;
+
+			// clang-format off
+			std::string source_template = R"grenadeTemplate(
+{{recorded_memory_definition}}
+
+## if has_timed_recording
+Recording recorded_scratchpad_memory_top_{{i}}[{{plasticity_rule.timer.num_periods}}]
+    __attribute__((section("ext.data.keep")));
+Recording recorded_scratchpad_memory_bot_{{i}}[{{plasticity_rule.timer.num_periods}}]
+    __attribute__((section("ext.data.keep")));
+## else if has_raw_recording
+Recording recorded_scratchpad_memory_top_{{i}} __attribute__((section("ext.data.keep")));
+Recording recorded_scratchpad_memory_bot_{{i}} __attribute__((section("ext.data.keep")));
+## endif
+
+{{kernel_str}}
+
+namespace {
+
+std::array<grenade::vx::ppu::SynapseArrayViewHandle, {{length(synapses)}}>
+synapse_array_view_handle = {
+## for synapse in synapses
+	[](){
+		grenade::vx::ppu::SynapseArrayViewHandle synapse_array_view_handle;
+		synapse_array_view_handle.hemisphere = static_cast<libnux::vx::PPUOnDLS>({{synapse.hemisphere}});
+		synapse_array_view_handle.column_mask = 0;
+## for column in synapse.enabled_columns
+		synapse_array_view_handle.columns.set({{column}});
+		synapse_array_view_handle.column_mask[{{column}}] = 1;
+## endfor
+## for row in synapse.enabled_rows
+		synapse_array_view_handle.rows.set({{row}});
+## endfor
+		return synapse_array_view_handle;
+	}(){% if not loop.is_last %},{% endif %}
+## endfor
+};
+
+std::array<grenade::vx::ppu::NeuronViewHandle, {{length(neurons)}}>
+neuron_view_handle = {
+## for neuron in neurons
+	[](){
+		grenade::vx::ppu::NeuronViewHandle neuron_view_handle;
+		neuron_view_handle.hemisphere = static_cast<libnux::vx::PPUOnDLS>({{neuron.hemisphere}});
+## for column in neuron.enabled_columns
+		neuron_view_handle.columns.set({{column}});
+## endfor
+		return neuron_view_handle;
+	}(){% if not loop.is_last %},{% endif %}
+## endfor
+};
+
+} // namespace
+
+#include "libnux/vx/helper.h"
+#include "libnux/vx/mailbox.h"
+#include "libnux/scheduling/types.hpp"
+
+extern volatile libnux::vx::PPUOnDLS ppu;
+
+void plasticity_rule_{{i}}()
+{
+	libnux::vx::mailbox_write_string("plasticity rule {{i}}: b: ");
+	auto const b = get_time();
+	libnux::vx::mailbox_write_int(b);
+
+## if has_raw_recording or has_timed_recording
+## if has_raw_recording
+	plasticity_rule_kernel_{{i}}(
+	    synapse_array_view_handle, neuron_view_handle, ppu == libnux::vx::PPUOnDLS::top ?
+	    recorded_scratchpad_memory_top_{{i}} : recorded_scratchpad_memory_bot_{{i}});
+## else if has_timed_recording
+	static size_t recorded_scratchpad_memory_period = 0;
+
+	plasticity_rule_kernel_{{i}}(
+	    synapse_array_view_handle, neuron_view_handle,
+	    (ppu == libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_{{i}} :
+	    recorded_scratchpad_memory_bot_{{i}})[recorded_scratchpad_memory_period]);
+
+	// TODO: reset by routine called prior to realtime section for each batch entry
+	// instead of modulo
+	recorded_scratchpad_memory_period++;
+	recorded_scratchpad_memory_period %= {{plasticity_rule.timer.num_periods}};
+## endif
+
+	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_top_{{i}});
+	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_bot_{{i}});
+## else
+	plasticity_rule_kernel_{{i}}(synapse_array_view_handle, neuron_view_handle);
+## endif
+
+	libnux::vx::mailbox_write_string(" d: ");
+	libnux::vx::mailbox_write_int(get_time() - b);
+	libnux::vx::mailbox_write_string("\n");
+}
+
+#include "libnux/scheduling/Service.hpp"
+
+Service_Function<{{i}}, &plasticity_rule_{{i}}> service_{{i}};
+
+#include "libnux/scheduling/Timer.hpp"
+
+Timer timer_{{i}} = [](){
+	Timer t;
+	t.set_first_deadline({{plasticity_rule.timer.start}});
+	t.set_num_periods({{plasticity_rule.timer.num_periods}});
+	t.set_period({{plasticity_rule.timer.period}});
+	t.set_service(service_{{i}});
+	return t;
+}();)grenadeTemplate";
+			// clang-format on
+
+			inja::json parameters;
+			parameters["i"] = i;
+
+			parameters["kernel_str"] = kernel_str;
+			parameters["recorded_memory_definition"] =
+			    plasticity_rule.get_recorded_memory_definition();
+
+			parameters["has_raw_recording"] =
+			    plasticity_rule.get_recording() &&
+			    std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
+			        *plasticity_rule.get_recording());
+			parameters["has_timed_recording"] =
+			    plasticity_rule.get_recording() &&
+			    std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
+			        *plasticity_rule.get_recording());
+
+			parameters["plasticity_rule"]["timer"]["start"] =
+			    plasticity_rule.get_timer().start.value();
+			parameters["plasticity_rule"]["timer"]["num_periods"] =
+			    plasticity_rule.get_timer().num_periods;
+			parameters["plasticity_rule"]["timer"]["period"] =
+			    plasticity_rule.get_timer().period.value();
+
+			parameters["synapses"] = inja::json::array();
+			parameters["neurons"] = inja::json::array();
 			for (auto const& [synram, synapse_array_view_handle] : synapses) {
-				kernel << "[](){\n";
-				kernel << "grenade::vx::ppu::SynapseArrayViewHandle synapse_array_view_handle;\n";
-				kernel << "synapse_array_view_handle.hemisphere = libnux::vx::PPUOnDLS("
-				       << synram.value() << ");\n";
-				kernel << "synapse_array_view_handle.column_mask = 0;\n";
-				for (size_t j = 0; j < 256; ++j) {
-					if (synapse_array_view_handle.columns.test(j)) {
-						kernel << "synapse_array_view_handle.columns.set(" << j << ");\n";
-						kernel << "synapse_array_view_handle.column_mask[" << j << "] = 1;\n";
-					}
-					if (synapse_array_view_handle.rows.test(j)) {
-						kernel << "synapse_array_view_handle.rows.set(" << j << ");\n";
+				std::vector<size_t> enabled_columns;
+				for (size_t column = 0; column < synapse_array_view_handle.columns.size; ++column) {
+					if (synapse_array_view_handle.columns.test(column)) {
+						enabled_columns.push_back(column);
 					}
 				}
-				kernel << "return synapse_array_view_handle;\n";
-				kernel << "}()";
-				if (l != synapses.size() - 1) {
-					kernel << ",";
+				std::vector<size_t> enabled_rows;
+				for (size_t row = 0; row < synapse_array_view_handle.rows.size; ++row) {
+					if (synapse_array_view_handle.rows.test(row)) {
+						enabled_rows.push_back(row);
+					}
 				}
-				kernel << "\n";
-				l++;
+				parameters["synapses"].push_back(
+				    {{"hemisphere", synram.value()},
+				     {"enabled_columns", enabled_columns},
+				     {"enabled_rows", enabled_rows}});
 			}
-			kernel << "};\n";
-			kernel << "std::array<grenade::vx::ppu::NeuronViewHandle, " << neurons.size()
-			       << "> neuron_view_handle = {\n";
-			l = 0;
+
 			for (auto const& [row, neuron_view_handle] : neurons) {
-				kernel << "[](){\n";
-				kernel << "grenade::vx::ppu::NeuronViewHandle neuron_view_handle;\n";
-				kernel << "neuron_view_handle.hemisphere = libnux::vx::PPUOnDLS(" << row.value()
-				       << ");\n";
-				for (size_t j = 0; j < 256; ++j) {
-					if (neuron_view_handle.columns.test(j)) {
-						kernel << "neuron_view_handle.columns.set(" << j << ");\n";
+				std::vector<size_t> enabled_columns;
+				for (size_t column = 0; column < neuron_view_handle.columns.size; ++column) {
+					if (neuron_view_handle.columns.test(column)) {
+						enabled_columns.push_back(column);
 					}
 				}
-				kernel << "return neuron_view_handle;\n";
-				kernel << "}()";
-				if (l != neurons.size() - 1) {
-					kernel << ",";
-				}
-				kernel << "\n";
-				l++;
+				parameters["neurons"].push_back(
+				    {{"hemisphere", row.value()}, {"enabled_columns", enabled_columns}});
 			}
-			kernel << "};\n";
-			kernel << "} // namespace\n";
-			kernel << "#include \"libnux/vx/helper.h\"\n";
-			kernel << "#include \"libnux/vx/mailbox.h\"\n";
-			kernel << "#include \"libnux/scheduling/types.hpp\"\n";
-			kernel << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
-			kernel << "void plasticity_rule_" << i << "() {\n";
-			kernel << "libnux::vx::mailbox_write_string(\"plasticity rule " << i << ": b: \");\n";
-			kernel << "auto const b = get_time();\n";
-			kernel << "libnux::vx::mailbox_write_int(b);\n";
-			if (plasticity_rule.get_recording()) {
-				if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
-				        *plasticity_rule.get_recording())) {
-					kernel << "plasticity_rule_kernel_" << i
-					       << "(synapse_array_view_handle, neuron_view_handle, ppu == "
-					          "libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
-					       << i << " : recorded_scratchpad_memory_bot_" << i << ");\n";
-				} else if (std::holds_alternative<
-				               signal_flow::vertex::PlasticityRule::TimedRecording>(
-				               *plasticity_rule.get_recording())) {
-					kernel << "static size_t recorded_scratchpad_memory_period = 0;\n";
-					kernel << "plasticity_rule_kernel_" << i
-					       << "(synapse_array_view_handle, neuron_view_handle, "
-					          "(ppu == libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
-					       << i << " : recorded_scratchpad_memory_bot_" << i
-					       << ")[recorded_scratchpad_memory_period]"
-					          ");\n";
-					// TODO: reset by routine called prior to realtime section for each batch entry
-					// instead of modulo
-					kernel << "recorded_scratchpad_memory_period++;\n";
-					kernel << "recorded_scratchpad_memory_period %= "
-					       << plasticity_rule.get_timer().num_periods << ";\n";
-				} else {
-					throw std::logic_error("Recording type not implemented.");
-				}
-				kernel << "libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_top_" << i
-				       << ");\n";
-				kernel << "libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_bot_" << i
-				       << ");\n";
-			} else {
-				kernel << "plasticity_rule_kernel_" << i
-				       << "(synapse_array_view_handle, neuron_view_handle);\n";
-			}
-			kernel << "libnux::vx::mailbox_write_string(\" d: \");\n";
-			kernel << "libnux::vx::mailbox_write_int(get_time() - b);\n";
-			kernel << "libnux::vx::mailbox_write_string(\"\\n\");\n";
-			kernel << "}\n";
-			kernel << "#include \"libnux/scheduling/Service.hpp\"\n";
-			kernel << "Service_Function<" << i << ", &plasticity_rule_" << i << "> service_" << i
-			       << ";\n";
-			kernel << "#include \"libnux/scheduling/Timer.hpp\"\n";
-			kernel << "Timer timer_" << i << " = [](){ Timer t; t.set_first_deadline("
-			       << plasticity_rule.get_timer().start.value() << "); t.set_num_periods("
-			       << plasticity_rule.get_timer().num_periods << "); t.set_period("
-			       << plasticity_rule.get_timer().period.value() << "); t.set_service(service_" << i
-			       << "); return t; }();\n";
+
+			sources.push_back(inja::render(source_template, parameters));
 			sources.push_back(kernel.str());
 		}
 	}
 	// scheduler
 	{
-		std::stringstream source;
-		source << "#include \"libnux/scheduling/SchedulerSignaller.hpp\"\n";
-		source << "#include \"libnux/scheduling/Scheduler.hpp\"\n";
-		source << "#include \"libnux/scheduling/Timer.hpp\"\n";
-		source << "#include \"libnux/scheduling/Service.hpp\"\n";
-		source << "#include \"libnux/vx/mailbox.h\"\n";
-		source << "#include \"libnux/vx/dls.h\"\n";
-		source << "#include \"libnux/vx/time.h\"\n";
-		source << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
-		source << "volatile uint32_t runtime;\n";
-		source << "volatile uint32_t scheduler_event_drop_count;\n";
-		source << "uint64_t time_origin = 0;\n";
-		for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-			source << "extern Timer timer_" << i << ";\n";
-			source << "volatile uint32_t timer_" << i << "_event_drop_count;\n";
-		}
-		for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-			source << "extern void plasticity_rule_" << i << "();\n";
-			source << "extern Service_Function<" << i << ", &plasticity_rule_" << i << "> service_"
-			       << i << ";\n";
-		}
-		source << "namespace {\n";
-		source << "Scheduler<32> scheduler;\n";
-		source << "auto timers = std::tie(";
+		// clang-format off
+		std::string source_template = R"grenadeTemplate(
+#include "libnux/scheduling/SchedulerSignaller.hpp"
+#include "libnux/scheduling/Scheduler.hpp"
+#include "libnux/scheduling/Timer.hpp"
+#include "libnux/scheduling/Service.hpp"
+#include "libnux/vx/mailbox.h"
+#include "libnux/vx/dls.h"
+#include "libnux/vx/time.h"
+
+extern volatile libnux::vx::PPUOnDLS ppu;
+
+volatile uint32_t runtime;
+volatile uint32_t scheduler_event_drop_count;
+uint64_t time_origin = 0;
+
+## for i in plasticity_rules_i
+extern Timer timer_{{i}};
+volatile uint32_t timer_{{i}}_event_drop_count;
+extern void plasticity_rule_{{i}}();
+extern Service_Function<{{i}}, &plasticity_rule_{{i}}> service_{{i}};
+## endfor
+
+namespace {
+
+Scheduler<32> scheduler;
+auto timers = std::tie({% for i in plasticity_rules_i %}timer_{{i}}{% if not loop.is_last %}, {% endif %}{% endfor %});
+auto services = std::tie({% for i in plasticity_rules_i %}service_{{i}}{% if not loop.is_last %}, {% endif %}{% endfor %});
+
+} // namespace
+
+void scheduling()
+{
+	static_cast<void>(ppu);
+	static_cast<void>(runtime);
+
+## if length(plasticity_rules_i) > 0
+	auto current = get_time();
+	SchedulerSignallerTimer timer(current, current + runtime);
+## for i in plasticity_rules_i
+	timer_{{i}}.set_first_deadline(current + timer_{{i}}.get_first_deadline());
+## endfor
+	libnux::vx::mailbox_write_string("time:");
+	libnux::vx::mailbox_write_int(current);
+	libnux::vx::mailbox_write_string("\n");
+
+	scheduler.execute(timer, services, timers);
+
+	scheduler_event_drop_count = scheduler.get_dropped_events_count();
+## for i in plasticity_rules_i
+	timer_{{i}}_event_drop_count = timer_{{i}}.get_missed_count();
+## endfor
+## endif
+})grenadeTemplate";
+		// clang-format on
+
+		inja::json parameters;
 		{
-			std::vector<std::string> s;
+			std::vector<size_t> plasticity_rules_i;
 			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-				s.push_back("timer_" + std::to_string(i));
+				plasticity_rules_i.push_back(i);
 			}
-			source << hate::join_string(s.begin(), s.end(), ",\n") << ");\n";
+			parameters["plasticity_rules_i"] = plasticity_rules_i;
 		}
-		source << "auto services = std::tie(";
-		{
-			std::vector<std::string> s;
-			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-				s.push_back("service_" + std::to_string(i));
-			}
-			source << hate::join_string(s.begin(), s.end(), ",\n") << ");\n";
-		}
-		source << "} // namespace\n";
-		source << "void scheduling() {\n";
-		source << "static_cast<void>(ppu);\n";
-		source << "static_cast<void>(runtime);\n";
-		if (!m_plasticity_rules.empty()) {
-			source << "auto current = get_time();\n";
-			source << "time_origin = libnux::vx::now();\n";
-			source << "SchedulerSignallerTimer timer(current, current + runtime);\n";
-			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-				source << "timer_" << i << ".set_first_deadline(current + timer_" << i
-				       << ".get_first_deadline());\n";
-			}
-			source << "libnux::vx::mailbox_write_string(\"time:\");\n";
-			source << "libnux::vx::mailbox_write_int(current);\n";
-			source << "libnux::vx::mailbox_write_string(\"\\n\");\n";
-			source << "scheduler.execute(timer, services, timers);\n";
-			source << "scheduler_event_drop_count = scheduler.get_dropped_events_count();\n";
-			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-				source << "timer_" << i << "_event_drop_count = timer_" << i
-				       << ".get_missed_count();\n";
-			}
-		}
-		source << "}";
-		sources.push_back(source.str());
+		sources.push_back(inja::render(source_template, parameters));
 	}
 	// periodic CADC readout
 	{
-		size_t const num_samples = has_periodic_cadc_readout ? num_cadc_samples_in_extmem : 0;
+		// clang-format off
+		std::string source_template = R"grenadeTemplate(
+#include "grenade/vx/ppu/detail/status.h"
+#include "libnux/vx/dls.h"
+#include "libnux/vx/vector.h"
+#include "libnux/vx/globaladdress.h"
+#include "libnux/vx/time.h"
+#include <array>
+#include <tuple>
 
-		std::stringstream source;
-		source << "#include \"grenade/vx/ppu/detail/status.h\"\n";
-		source << "#include \"libnux/vx/dls.h\"\n";
-		source << "#include \"libnux/vx/vector.h\"\n";
-		source << "#include \"libnux/vx/globaladdress.h\"\n";
-		source << "#include \"libnux/vx/time.h\"\n";
-		source << "#include <array>\n";
-		source << "#include <tuple>\n";
-		source << "\n";
-		source << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
-		source << "extern volatile grenade::vx::ppu::detail::Status status;\n";
-		source << "std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, "
-		       << num_samples
-		       << ">, uint32_t> periodic_cadc_samples_top "
-		          "__attribute__((section(\"ext.data\")));\n";
-		source << "std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, "
-		       << num_samples
-		       << ">, uint32_t> periodic_cadc_samples_bot "
-		          "__attribute__((section(\"ext.data\")));\n";
-		source << "\n";
-		source << "auto& local_periodic_cadc_samples = "
-		          "std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
-		          "periodic_cadc_samples_top);\n";
-		source << "void perform_periodic_read_recording(size_t const offset) {\n";
-		source << "using namespace libnux::vx;\n";
-		source << "if (offset >= local_periodic_cadc_samples.size()) {\n";
-		source << "  return;\n";
-		source << "}\n";
-		source << "// synchronize time-stamp and CADC readout\n";
-		source << "asm volatile(\n";
-		source << "\"sync\\n\"\n";
-		source << ":::\n";
-		source << ");\n";
-		source << "uint64_t const time = libnux::vx::now();\n";
-		source << "// clang-format off\n";
-		source << "asm volatile(\n";
-		source << "\"fxvinx 0, %[ca_base], %[i]\\n\"\n";
-		source << "\"fxvinx 1, %[cab_base], %[j]\\n\"\n";
-		source << "\"fxvoutx 0, %[b0], %[i]\\n\"\n";
-		source << "\"fxvoutx 1, %[b1], %[i]\\n\"\n";
-		source << "::\n";
-		source << "  [b0] \"b\" (GlobalAddress::from_global(0, "
-		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even"
-		          ")) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
-		source << "  [b1] \"b\" (GlobalAddress::from_global(0, "
-		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd"
-		          ")) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
-		source << "  [ca_base] \"r\" (dls_causal_base),\n";
-		source << "  [cab_base] \"r\" (dls_causal_base|dls_buffer_enable_mask),\n";
-		source << "  [i] \"r\" (uint32_t(0)),\n";
-		source << "  [j] \"r\" (uint32_t(1))\n";
-		source << ": \"qv0\", \"qv1\"\n";
-		source << ");\n";
-		source << "local_periodic_cadc_samples[offset].first = time;\n";
-		source << "// clang-format on\n";
-		source << "}\n";
-		source << "void perform_periodic_read()\n";
-		source << "{\n";
-		source << "using namespace libnux::vx;\n";
-		source << "uint32_t offset = 0;\n";
-		source << "uint32_t size = 0;\n";
-		source << "// instruction cache warming\n";
-		source << "perform_periodic_read_recording(offset);\n";
-		source << "status = grenade::vx::ppu::detail::Status::inside_periodic_read;\n";
-		source << "while (status != grenade::vx::ppu::detail::Status::stop_periodic_read) {\n";
-		source << "perform_periodic_read_recording(offset);\n";
-		source << "offset++;\n";
-		source << "size++;\n";
-		source << "}\n";
-		source << "std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
-		          "periodic_cadc_samples_top) = size;\n";
-		source << "asm volatile(\"fxvinx 0, %[b0], %[i]\\n\"\n";
-		source << "             \"sync\\n\"\n";
-		source << "             :: [b0] "
-		          "\"r\"(dls_extmem_base), [i] \"r\"(uint32_t(0))\n";
-		source << "             : \"qv0\", \"memory\");\n";
-		source << "}";
-		sources.push_back(source.str());
+extern volatile libnux::vx::PPUOnDLS ppu;
+extern volatile grenade::vx::ppu::detail::Status status;
+std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t>
+    periodic_cadc_samples_top __attribute__((section("ext.data")));
+std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t>
+    periodic_cadc_samples_bot __attribute__((section("ext.data")));
+
+auto& local_periodic_cadc_samples = std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ?
+    periodic_cadc_samples_bot : periodic_cadc_samples_top);
+
+void perform_periodic_read_recording(size_t const offset)
+{
+	using namespace libnux::vx;
+
+	if (offset >= local_periodic_cadc_samples.size()) {
+		return;
+	}
+
+	// synchronize time-stamp and CADC readout
+	asm volatile(
+		"sync\n"
+		:::
+	);
+
+	uint64_t const time = libnux::vx::now();
+
+	// clang-format off
+	asm volatile(
+	"fxvinx 0, %[ca_base], %[i]\n"
+	"fxvinx 1, %[cab_base], %[j]\n"
+	"fxvoutx 0, %[b0], %[i]\n"
+	"fxvoutx 1, %[b1], %[i]\n"
+	::
+	  [b0] "b" (GlobalAddress::from_global(0, reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),
+	  [b1] "b" (GlobalAddress::from_global(0, reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),
+	  [ca_base] "r" (dls_causal_base),
+	  [cab_base] "r" (dls_causal_base|dls_buffer_enable_mask),
+	  [i] "r" (uint32_t(0)),
+	  [j] "r" (uint32_t(1))
+	: "qv0", "qv1"
+	);
+	// clang-format on
+
+	local_periodic_cadc_samples[offset].first = time;
+}
+
+void perform_periodic_read()
+{
+	using namespace libnux::vx;
+
+	uint32_t offset = 0;
+	uint32_t size = 0;
+
+	// instruction cache warming
+	perform_periodic_read_recording(offset);
+	status = grenade::vx::ppu::detail::Status::inside_periodic_read;
+	while (status != grenade::vx::ppu::detail::Status::stop_periodic_read) {
+		perform_periodic_read_recording(offset);
+		offset++;
+		size++;
+	}
+
+	std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : periodic_cadc_samples_top) = size;
+	asm volatile(
+	    "fxvinx 0, %[b0], %[i]\n"
+	    "sync\n"
+	    :: [b0] "r"(dls_extmem_base), [i] "r"(uint32_t(0))
+	    : "qv0", "memory"
+	);
+})grenadeTemplate";
+		// clang-format on
+
+		inja::json parameters;
+		size_t const num_samples = has_periodic_cadc_readout ? num_cadc_samples_in_extmem : 0;
+		parameters["num_samples"] = num_samples;
+		sources.push_back(inja::render(source_template, parameters));
 	}
 
 	LOG4CXX_TRACE(
