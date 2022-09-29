@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/network/population.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/synapse.h"

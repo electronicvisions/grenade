@@ -105,7 +105,7 @@ bool IODataMap::valid() const
 	return unsafe_valid(*this, unsafe_batch_size(*this));
 }
 
-bool IODataMap::is_match(Entry const& entry, Port const& port)
+bool IODataMap::is_match(Entry const& entry, signal_flow::Port const& port)
 {
 	auto const check_shape = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
@@ -129,51 +129,51 @@ bool IODataMap::is_match(Entry const& entry, Port const& port)
 		return false;
 	}
 
-	if ((port.type == ConnectionType::DataUInt32) &&
+	if ((port.type == signal_flow::ConnectionType::DataUInt32) &&
 	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt32>>>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::DataUInt5) &&
+	    (port.type == signal_flow::ConnectionType::DataUInt5) &&
 	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt5>>>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::DataInt8) &&
+	    (port.type == signal_flow::ConnectionType::DataInt8) &&
 	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<Int8>>>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::DataTimedSpikeSequence) &&
+	    (port.type == signal_flow::ConnectionType::DataTimedSpikeSequence) &&
 	    !std::holds_alternative<std::vector<TimedSpikeSequence>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::DataTimedSpikeFromChipSequence) &&
+	    (port.type == signal_flow::ConnectionType::DataTimedSpikeFromChipSequence) &&
 	    !std::holds_alternative<std::vector<TimedSpikeFromChipSequence>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::DataTimedMADCSampleFromChipSequence) &&
+	    (port.type == signal_flow::ConnectionType::DataTimedMADCSampleFromChipSequence) &&
 	    !std::holds_alternative<std::vector<TimedMADCSampleFromChipSequence>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::UInt32) &&
+	    (port.type == signal_flow::ConnectionType::UInt32) &&
 	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt32>>>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::UInt5) &&
+	    (port.type == signal_flow::ConnectionType::UInt5) &&
 	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt5>>>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::Int8) &&
+	    (port.type == signal_flow::ConnectionType::Int8) &&
 	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<Int8>>>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::TimedSpikeSequence) &&
+	    (port.type == signal_flow::ConnectionType::TimedSpikeSequence) &&
 	    !std::holds_alternative<std::vector<TimedSpikeSequence>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::TimedSpikeFromChipSequence) &&
+	    (port.type == signal_flow::ConnectionType::TimedSpikeFromChipSequence) &&
 	    !std::holds_alternative<std::vector<TimedSpikeFromChipSequence>>(entry)) {
 		return false;
 	} else if (
-	    (port.type == ConnectionType::TimedMADCSampleFromChipSequence) &&
+	    (port.type == signal_flow::ConnectionType::TimedMADCSampleFromChipSequence) &&
 	    !std::holds_alternative<std::vector<TimedMADCSampleFromChipSequence>>(entry)) {
 		return false;
 	}

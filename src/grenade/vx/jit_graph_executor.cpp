@@ -1,12 +1,12 @@
 #include "grenade/vx/jit_graph_executor.h"
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_node.h"
 #include "grenade/vx/execution_time_info.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -107,7 +107,7 @@ JITGraphExecutor::get_remote_repo_state() const
 	return ret;
 }
 
-bool JITGraphExecutor::is_executable_on(Graph const& graph)
+bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 {
 	auto const connection_dls_globals = boost::adaptors::keys(m_connections);
 	auto const& execution_instance_map = graph.get_execution_instance_map();
@@ -122,7 +122,7 @@ bool JITGraphExecutor::is_executable_on(Graph const& graph)
 	});
 }
 
-void JITGraphExecutor::check(Graph const& graph)
+void JITGraphExecutor::check(signal_flow::Graph const& graph)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	hate::Timer const timer;
@@ -145,7 +145,7 @@ void JITGraphExecutor::check(Graph const& graph)
 
 IODataMap run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config)
 {
@@ -155,7 +155,7 @@ IODataMap run(
 
 IODataMap run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks)
@@ -174,7 +174,8 @@ IODataMap run(
 	tbb::flow::broadcast_node<tbb::flow::continue_msg> start(execution_graph);
 
 	// execution nodes
-	std::unordered_map<Graph::vertex_descriptor, tbb::flow::continue_node<tbb::flow::continue_msg>>
+	std::unordered_map<
+	    signal_flow::Graph::vertex_descriptor, tbb::flow::continue_node<tbb::flow::continue_msg>>
 	    nodes;
 
 	// global data map
@@ -242,7 +243,7 @@ IODataMap run(
 
 IODataList run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     bool only_unconnected_output)
@@ -253,7 +254,7 @@ IODataList run(
 
 IODataList run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks,

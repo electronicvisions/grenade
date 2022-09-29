@@ -1,9 +1,9 @@
 #pragma once
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
-#include "grenade/vx/vertex/plasticity_rule.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
@@ -31,8 +31,8 @@ public:
 	 * @param config Configuration to alter
 	 */
 	ExecutionInstanceConfigVisitor(
-	    Graph const& graph,
-	    coordinate::ExecutionInstance const& execution_instance,
+	    signal_flow::Graph const& graph,
+	    signal_flow::ExecutionInstance const& execution_instance,
 	    lola::vx::v3::Chip& config) SYMBOL_VISIBLE;
 
 	/**
@@ -44,8 +44,8 @@ public:
 	operator()() SYMBOL_VISIBLE;
 
 private:
-	Graph const& m_graph;
-	coordinate::ExecutionInstance m_execution_instance;
+	signal_flow::Graph const& m_graph;
+	signal_flow::ExecutionInstance m_execution_instance;
 
 	lola::vx::v3::Chip& m_config;
 
@@ -56,8 +56,8 @@ private:
 	bool m_used_madc;
 
 	std::vector<std::tuple<
-	    Graph::vertex_descriptor,
-	    vertex::PlasticityRule,
+	    signal_flow::Graph::vertex_descriptor,
+	    signal_flow::vertex::PlasticityRule,
 	    std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
 	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
 	    m_plasticity_rules;
@@ -69,7 +69,7 @@ private:
 	 * @param data Data associated with vertex
 	 */
 	template <typename Vertex>
-	void process(Graph::vertex_descriptor const vertex, Vertex const& data);
+	void process(signal_flow::Graph::vertex_descriptor const vertex, Vertex const& data);
 
 	/**
 	 * Preprocess by single visit of all local vertices.

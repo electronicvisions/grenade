@@ -1,6 +1,5 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/logical_network/population.h"
 #include "grenade/vx/logical_network/receptor.h"
 #include "halco/common/geometry.h"

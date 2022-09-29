@@ -5,8 +5,8 @@
 #include "grenade/vx/connection_state_storage.h"
 #include "grenade/vx/execution_instance_builder.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 
@@ -32,8 +32,8 @@ struct ExecutionInstanceNode
 	ExecutionInstanceNode(
 	    IODataMap& data_map,
 	    IODataMap const& input_data_map,
-	    Graph const& graph,
-	    coordinate::ExecutionInstance const& execution_instance,
+	    signal_flow::Graph const& graph,
+	    signal_flow::ExecutionInstance const& execution_instance,
 	    lola::vx::v3::Chip const& initial_config,
 	    backend::Connection& connection,
 	    ConnectionStateStorage& connection_state_storage,
@@ -44,8 +44,8 @@ struct ExecutionInstanceNode
 private:
 	IODataMap& data_map;
 	IODataMap const& input_data_map;
-	Graph const& graph;
-	coordinate::ExecutionInstance execution_instance;
+	signal_flow::Graph const& graph;
+	signal_flow::ExecutionInstance execution_instance;
 	lola::vx::v3::Chip const& initial_config;
 	backend::Connection& connection;
 	ConnectionStateStorage& connection_state_storage;

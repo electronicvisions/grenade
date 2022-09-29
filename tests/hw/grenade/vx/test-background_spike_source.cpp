@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/event.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -33,11 +33,11 @@ inline void test_background_spike_source_regular(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::Graph g;
+	grenade::vx::signal_flow::Graph g;
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	std::vector<grenade::vx::Input> crossbar_nodes;
+	std::vector<grenade::vx::signal_flow::Input> crossbar_nodes;
 
 	// enable background spike sources with unique configuration
 	for (auto source_coord : iter_all<BackgroundSpikeSourceOnDLS>()) {
@@ -54,10 +54,10 @@ inline void test_background_spike_source_regular(
 		source_config.set_enable_random(false);
 		source_config.set_neuron_label(neuron_label);
 
-		grenade::vx::vertex::BackgroundSpikeSource source(source_config, source_coord);
+		grenade::vx::signal_flow::vertex::BackgroundSpikeSource source(source_config, source_coord);
 		auto const v1 = g.add(source, instance, {});
 
-		grenade::vx::vertex::CrossbarNode crossbar_node(
+		grenade::vx::signal_flow::vertex::CrossbarNode crossbar_node(
 		    CrossbarNodeOnDLS(
 		        source_coord.toCrossbarInputOnDLS(),
 		        CrossbarOutputOnDLS(8 + source_coord % CrossbarL2OutputOnDLS::size)),
@@ -66,9 +66,9 @@ inline void test_background_spike_source_regular(
 		crossbar_nodes.push_back(g.add(crossbar_node, instance, {v1}));
 	}
 
-	grenade::vx::vertex::CrossbarL2Output crossbar_output;
-	grenade::vx::vertex::DataOutput data_output(
-	    grenade::vx::ConnectionType::TimedSpikeFromChipSequence, 1);
+	grenade::vx::signal_flow::vertex::CrossbarL2Output crossbar_output;
+	grenade::vx::signal_flow::vertex::DataOutput data_output(
+	    grenade::vx::signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
 
 	auto const v3 = g.add(crossbar_output, instance, crossbar_nodes);
 	auto const v4 = g.add(data_output, instance, {v3});

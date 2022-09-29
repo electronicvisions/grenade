@@ -1,11 +1,11 @@
 #include "grenade/vx/compute/converting_relu.h"
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input.h"
 
 namespace grenade::vx::compute {
 
@@ -14,14 +14,17 @@ ConvertingReLU::ConvertingReLU(size_t size, uint32_t shift) :
 {
 	using namespace halco::hicann_dls::vx;
 
-	auto const instance = coordinate::ExecutionInstance();
+	auto const instance = signal_flow::ExecutionInstance();
 
-	m_input_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
-	auto const v2 =
-	    m_graph.add(vertex::DataInput(ConnectionType::Int8, size), instance, {m_input_vertex});
-	auto const v3 = m_graph.add(vertex::ConvertingReLU(size, shift), instance, {v2});
-	m_output_vertex = m_graph.add(vertex::DataOutput(ConnectionType::UInt5, size), instance, {v3});
+	m_input_vertex = m_graph.add(
+	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
+	    {});
+	auto const v2 = m_graph.add(
+	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
+	    {m_input_vertex});
+	auto const v3 = m_graph.add(signal_flow::vertex::ConvertingReLU(size, shift), instance, {v2});
+	m_output_vertex = m_graph.add(
+	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::UInt5, size), instance, {v3});
 }
 
 std::vector<std::vector<UInt5>> ConvertingReLU::run(
@@ -32,8 +35,8 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 	using namespace halco::hicann_dls::vx;
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
-	    coordinate::ExecutionInstance(), config));
+	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
+	    signal_flow::ExecutionInstance(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -73,7 +76,7 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 
 size_t ConvertingReLU::input_size() const
 {
-	return std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
+	return std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
 	    .output()
 	    .size;
 }

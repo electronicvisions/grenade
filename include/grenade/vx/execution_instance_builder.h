@@ -4,11 +4,11 @@
 #include <set>
 #include <vector>
 
-#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/generator/neuron_reset_mask.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
@@ -42,8 +42,8 @@ public:
 	 * @param playback_hooks Playback sequences to inject
 	 */
 	ExecutionInstanceBuilder(
-	    Graph const& graph,
-	    coordinate::ExecutionInstance const& execution_instance,
+	    signal_flow::Graph const& graph,
+	    signal_flow::ExecutionInstance const& execution_instance,
 	    IODataMap const& input_list,
 	    IODataMap const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
@@ -73,7 +73,7 @@ public:
 	 * @return IODataMap of locally computed results
 	 */
 	IODataMap post_process() SYMBOL_VISIBLE;
-	void post_process(Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
+	void post_process(signal_flow::Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
 	/**
 	 * Switch to enable CADC baseline read before each sent input vector.
@@ -82,8 +82,8 @@ public:
 	bool enable_cadc_baseline = true;
 
 private:
-	Graph const& m_graph;
-	coordinate::ExecutionInstance m_execution_instance;
+	signal_flow::Graph const& m_graph;
+	signal_flow::ExecutionInstance m_execution_instance;
 	IODataMap const& m_input_list;
 	IODataMap const& m_data_output;
 
@@ -93,12 +93,12 @@ private:
 
 	ExecutionInstancePlaybackHooks& m_playback_hooks;
 
-	std::vector<Graph::vertex_descriptor> m_post_vertices;
+	std::vector<signal_flow::Graph::vertex_descriptor> m_post_vertices;
 
 	std::vector<stadls::vx::v3::PlaybackProgram> m_chunked_program;
 
-	std::optional<Graph::vertex_descriptor> m_event_input_vertex;
-	std::optional<Graph::vertex_descriptor> m_event_output_vertex;
+	std::optional<signal_flow::Graph::vertex_descriptor> m_event_input_vertex;
+	std::optional<signal_flow::Graph::vertex_descriptor> m_event_output_vertex;
 
 	bool m_postprocessing;
 
@@ -137,7 +137,7 @@ private:
 		std::vector<ticket_ppu_type> m_ppu_timer_event_drop_count;
 		ticket_ppu_type m_ppu_scheduler_finished;
 		ticket_ppu_type m_ppu_mailbox;
-		std::map<Graph::vertex_descriptor, ticket_extmem_type>
+		std::map<signal_flow::Graph::vertex_descriptor, ticket_extmem_type>
 		    m_plasticity_rule_recorded_scratchpad_memory;
 	};
 
@@ -145,9 +145,9 @@ private:
 
 	generator::NeuronResetMask m_neuron_resets;
 	// Optional vertex descriptor of MADC readout if the execution instance contains such
-	std::optional<Graph::vertex_descriptor> m_madc_readout_vertex;
+	std::optional<signal_flow::Graph::vertex_descriptor> m_madc_readout_vertex;
 
-	std::optional<vertex::CADCMembraneReadoutView::Mode> m_cadc_readout_mode;
+	std::optional<signal_flow::vertex::CADCMembraneReadoutView::Mode> m_cadc_readout_mode;
 
 	bool m_has_plasticity_rule{false};
 
@@ -156,7 +156,8 @@ private:
 	 * @param descriptor Vertex descriptor to check for
 	 * @return Boolean value
 	 */
-	bool inputs_available(Graph::vertex_descriptor const descriptor) const SYMBOL_VISIBLE;
+	bool inputs_available(signal_flow::Graph::vertex_descriptor const descriptor) const
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Process single vertex.
@@ -166,7 +167,7 @@ private:
 	 * @param data Data associated with vertex
 	 */
 	template <typename Vertex>
-	void process(Graph::vertex_descriptor const vertex, Vertex const& data);
+	void process(signal_flow::Graph::vertex_descriptor const vertex, Vertex const& data);
 
 	/**
 	 * Get whether input list is complete for the local execution instance.

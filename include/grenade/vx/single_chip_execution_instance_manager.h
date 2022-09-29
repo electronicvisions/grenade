@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/execution_instance.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 
@@ -17,7 +17,7 @@ public:
 	/**
 	 * Get next execution instance.
 	 */
-	coordinate::ExecutionInstance next() SYMBOL_VISIBLE;
+	signal_flow::ExecutionInstance next() SYMBOL_VISIBLE;
 
 	/**
 	 * Get current hemisphere.
@@ -27,11 +27,11 @@ public:
 	/**
 	 * Get next execution instance forcing a change of the execution index.
 	 */
-	coordinate::ExecutionInstance next_index() SYMBOL_VISIBLE;
+	signal_flow::ExecutionInstance next_index() SYMBOL_VISIBLE;
 
 private:
 	halco::hicann_dls::vx::v3::HemisphereOnDLS m_current_hemisphere;
-	coordinate::ExecutionIndex m_current_index;
+	signal_flow::ExecutionIndex m_current_index;
 };
 
 } // namespace grenade::vx

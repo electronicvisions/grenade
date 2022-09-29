@@ -2,15 +2,15 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/event.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/range_split.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input.h"
+#include "grenade/vx/signal_flow/transformation/concatenation.h"
+#include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
 #include "grenade/vx/single_chip_execution_instance_manager.h"
-#include "grenade/vx/transformation/concatenation.h"
-#include "grenade/vx/transformation/mac_spiketrain_generator.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -37,12 +37,12 @@ MAC::Weight::UnsignedWeight MAC::Weight::toInhibitory() const
 	return UnsignedWeight(-std::min(value(), static_cast<value_type>(0)));
 }
 
-Graph::vertex_descriptor MAC::insert_synram(
-    Graph& graph,
+signal_flow::Graph::vertex_descriptor MAC::insert_synram(
+    signal_flow::Graph& graph,
     Weights&& weights,
-    coordinate::ExecutionInstance const& instance,
+    signal_flow::ExecutionInstance const& instance,
     halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
-    Graph::vertex_descriptor const crossbar_input_vertex)
+    signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
 {
 	using namespace haldls::vx::v3;
 	using namespace halco::hicann_dls::vx::v3;
@@ -50,7 +50,7 @@ Graph::vertex_descriptor MAC::insert_synram(
 	auto const x_size = weights.at(0).size();
 	auto const y_size = weights.size() * 2 /* signed */;
 
-	vertex::SynapseArrayView::Columns columns;
+	signal_flow::vertex::SynapseArrayView::Columns columns;
 	columns.reserve(x_size);
 	for (size_t o = 0; o < x_size; ++o) {
 		auto const column = SynapseOnSynapseRow(o);
@@ -61,7 +61,7 @@ Graph::vertex_descriptor MAC::insert_synram(
 	auto const num_padi_bus = std::min(
 	    hate::math::round_up_integer_division(y_size, 2),
 	    static_cast<size_t>(PADIBusOnPADIBusBlock::size));
-	std::vector<Input> padi_bus_vertices;
+	std::vector<signal_flow::Input> padi_bus_vertices;
 	padi_bus_vertices.reserve(num_padi_bus);
 	for (size_t i = 0; i < num_padi_bus; ++i) {
 		CrossbarNodeOnDLS coordinate(
@@ -69,16 +69,16 @@ Graph::vertex_descriptor MAC::insert_synram(
 		CrossbarNode config;
 		config.set_mask(CrossbarNode::neuron_label_type(0b1 << 13));
 		config.set_target(CrossbarNode::neuron_label_type((hemisphere.toEnum() << 13)));
-		vertex::CrossbarNode crossbar_node(coordinate, config);
+		signal_flow::vertex::CrossbarNode crossbar_node(coordinate, config);
 		auto const v1 = graph.add(crossbar_node, instance, {crossbar_input_vertex});
 		padi_bus_vertices.push_back(graph.add(
-		    vertex::PADIBus(vertex::PADIBus::Coordinate(
+		    signal_flow::vertex::PADIBus(signal_flow::vertex::PADIBus::Coordinate(
 		        PADIBusOnPADIBusBlock(i), hemisphere.toPADIBusBlockOnDLS())),
 		    instance, {v1}));
 	}
 
-	vertex::SynapseArrayView::Labels labels(y_size);
-	vertex::SynapseArrayView::Rows rows;
+	signal_flow::vertex::SynapseArrayView::Labels labels(y_size);
+	signal_flow::vertex::SynapseArrayView::Rows rows;
 	rows.reserve(y_size);
 	size_t i = 0;
 	for (auto& l : labels) {
@@ -91,21 +91,21 @@ Graph::vertex_descriptor MAC::insert_synram(
 	// add synapse driver
 	assert(y_size % 2 == 0) /* always without remainder because of signed weights */;
 	auto const num_syndrv = y_size / 2;
-	std::vector<Input> synapse_driver_vertices;
+	std::vector<signal_flow::Input> synapse_driver_vertices;
 	synapse_driver_vertices.reserve(num_syndrv);
 	for (size_t i = 0; i < num_syndrv; ++i) {
 		auto const padi_bus_vertex = padi_bus_vertices.at(i % PADIBusOnPADIBusBlock::size);
-		vertex::SynapseDriver synapse_driver(
+		signal_flow::vertex::SynapseDriver synapse_driver(
 		    SynapseDriverOnDLS(
 		        SynapseDriverOnSynapseDriverBlock(i), hemisphere.toSynapseDriverBlockOnDLS()),
-		    {vertex::SynapseDriver::Config::RowAddressCompareMask(0b11111),
-		     {vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
-		      vertex::SynapseDriver::Config::RowModes::value_type::inhibitory},
+		    {signal_flow::vertex::SynapseDriver::Config::RowAddressCompareMask(0b11111),
+		     {signal_flow::vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
+		      signal_flow::vertex::SynapseDriver::Config::RowModes::value_type::inhibitory},
 		     false});
 		synapse_driver_vertices.push_back(graph.add(synapse_driver, instance, {padi_bus_vertex}));
 	}
 	// add synapse array
-	vertex::SynapseArrayView::Weights unsigned_weights(y_size);
+	signal_flow::vertex::SynapseArrayView::Weights unsigned_weights(y_size);
 	for (size_t i = 0; i < weights.size(); ++i) {
 		unsigned_weights.at(2 * i).reserve(x_size);
 		unsigned_weights.at(2 * i + 1).reserve(x_size);
@@ -115,34 +115,36 @@ Graph::vertex_descriptor MAC::insert_synram(
 		}
 	}
 
-	vertex::SynapseArrayView synapse_array(
+	signal_flow::vertex::SynapseArrayView synapse_array(
 	    hemisphere.toSynramOnDLS(), std::move(rows), columns, std::move(unsigned_weights),
 	    std::move(labels));
 	auto const synapse_array_vertex =
 	    graph.add(std::move(synapse_array), instance, synapse_driver_vertices);
 	// add neurons
-	vertex::NeuronView::Columns nrns;
+	signal_flow::vertex::NeuronView::Columns nrns;
 	nrns.reserve(x_size);
 	for (size_t o = 0; o < x_size; ++o) {
 		auto const nrn = NeuronColumnOnDLS(o);
 		nrns.push_back(nrn);
 	}
-	vertex::NeuronView::Config config{lola::vx::v3::AtomicNeuron::EventRouting::Address(), true};
-	vertex::NeuronView::Configs enable_resets(x_size, config);
-	vertex::NeuronView neurons(
+	signal_flow::vertex::NeuronView::Config config{
+	    lola::vx::v3::AtomicNeuron::EventRouting::Address(), true};
+	signal_flow::vertex::NeuronView::Configs enable_resets(x_size, config);
+	signal_flow::vertex::NeuronView neurons(
 	    std::move(nrns), std::move(enable_resets), hemisphere.toNeuronRowOnDLS());
 	auto const v1 = graph.add(std::move(neurons), instance, {synapse_array_vertex});
 	// add readout
-	vertex::CADCMembraneReadoutView::Sources sources(1);
+	signal_flow::vertex::CADCMembraneReadoutView::Sources sources(1);
 	sources.at(0).resize(
-	    columns.size(), vertex::CADCMembraneReadoutView::Sources::value_type::value_type::membrane);
-	vertex::CADCMembraneReadoutView readout(
-	    std::move(vertex::CADCMembraneReadoutView::Columns({std::move(columns)})),
-	    hemisphere.toSynramOnDLS(), vertex::CADCMembraneReadoutView::Mode::hagen,
+	    columns.size(),
+	    signal_flow::vertex::CADCMembraneReadoutView::Sources::value_type::value_type::membrane);
+	signal_flow::vertex::CADCMembraneReadoutView readout(
+	    std::move(signal_flow::vertex::CADCMembraneReadoutView::Columns({std::move(columns)})),
+	    hemisphere.toSynramOnDLS(), signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen,
 	    std::move(sources));
 	auto const v2 = graph.add(readout, instance, {v1});
 	// add store
-	vertex::DataOutput data_output(ConnectionType::Int8, x_size);
+	signal_flow::vertex::DataOutput data_output(signal_flow::ConnectionType::Int8, x_size);
 	return graph.add(data_output, instance, {v2});
 }
 
@@ -153,10 +155,10 @@ auto get_hemisphere_placement(
     std::vector<RangeSplit::SubRange> const& x_split_ranges,
     std::vector<RangeSplit::SubRange> const& y_split_ranges)
 {
-	auto instance = coordinate::ExecutionInstance();
+	auto instance = signal_flow::ExecutionInstance();
 
 	std::vector<
-	    std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
+	    std::pair<signal_flow::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
 	    hemispheres;
 	for ([[maybe_unused]] auto const& x_range : x_split_ranges) {
 		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
@@ -171,12 +173,12 @@ auto get_placed_ranges(
     std::vector<RangeSplit::SubRange> const& x_split_ranges,
     std::vector<RangeSplit::SubRange> const& y_split_ranges,
     std::vector<
-        std::pair<coordinate::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
+        std::pair<signal_flow::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
         hemispheres)
 {
 	typedef std::pair<RangeSplit::SubRange, RangeSplit::SubRange> XYSubRange;
 	std::unordered_map<
-	    coordinate::ExecutionInstance,
+	    signal_flow::ExecutionInstance,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, XYSubRange>>
 	    placed_ranges;
 	size_t i = 0;
@@ -193,25 +195,26 @@ auto get_placed_ranges(
 }
 
 void set_enable_loopback(
-    Graph& graph,
+    signal_flow::Graph& graph,
     bool const enable,
-    coordinate::ExecutionInstance const& instance,
-    Graph::vertex_descriptor const crossbar_input_vertex)
+    signal_flow::ExecutionInstance const& instance,
+    signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	if (enable) {
-		std::vector<Input> loopback_vertices;
+		std::vector<signal_flow::Input> loopback_vertices;
 		loopback_vertices.reserve(SPL1Address::size);
 		for (size_t i = 0; i < SPL1Address::size; ++i) {
 			CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
 			haldls::vx::v3::CrossbarNode config;
-			vertex::CrossbarNode crossbar_node(coordinate, config);
+			signal_flow::vertex::CrossbarNode crossbar_node(coordinate, config);
 			loopback_vertices.push_back(
 			    graph.add(crossbar_node, instance, {crossbar_input_vertex}));
 		}
-		vertex::CrossbarL2Output l2_output;
+		signal_flow::vertex::CrossbarL2Output l2_output;
 		auto const vl2 = graph.add(l2_output, instance, loopback_vertices);
-		vertex::DataOutput data_output_loopback(ConnectionType::TimedSpikeFromChipSequence, 1);
+		signal_flow::vertex::DataOutput data_output_loopback(
+		    signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
 		graph.add(data_output_loopback, instance, {vl2});
 	}
 }
@@ -240,23 +243,27 @@ void MAC::build_graph()
 
 	auto const placed_ranges = get_placed_ranges(x_split_ranges, y_split_ranges, hemispheres);
 
-	vertex::ExternalInput external_input(ConnectionType::DataUInt5, input_size());
+	signal_flow::vertex::ExternalInput external_input(
+	    signal_flow::ConnectionType::DataUInt5, input_size());
 	auto const external_instance = execution_instance_manager.next_index();
 	m_input_vertex = m_graph.add(external_input, external_instance, {});
 
-	std::unordered_map<coordinate::ExecutionInstance, std::map<HemisphereOnDLS, Input>>
+	std::unordered_map<
+	    signal_flow::ExecutionInstance, std::map<HemisphereOnDLS, signal_flow::Input>>
 	    hemisphere_outputs;
 	for (auto const& [instance, hs] : placed_ranges) {
 		halco::common::typed_array<size_t, HemisphereOnDLS> sizes;
 		sizes.fill(0);
-		std::vector<Input> uint5_inputs;
+		std::vector<signal_flow::Input> uint5_inputs;
 		for (auto const& [hemisphere, xy_range] : hs) {
 			auto const y_size = xy_range.second.size;
 			sizes[hemisphere] = y_size;
 			// Add store from (range subset of ) external data and local load
-			vertex::DataInput external_data_input(ConnectionType::UInt5, y_size);
-			vertex::DataOutput external_data_output(ConnectionType::UInt5, y_size);
-			vertex::DataInput data_input(ConnectionType::UInt5, y_size);
+			signal_flow::vertex::DataInput external_data_input(
+			    signal_flow::ConnectionType::UInt5, y_size);
+			signal_flow::vertex::DataOutput external_data_output(
+			    signal_flow::ConnectionType::UInt5, y_size);
+			signal_flow::vertex::DataInput data_input(signal_flow::ConnectionType::UInt5, y_size);
 			auto const v1 = m_graph.add(
 			    external_data_input, external_instance,
 			    {{m_input_vertex, {xy_range.second.offset, xy_range.second.offset + y_size - 1}}});
@@ -265,19 +272,21 @@ void MAC::build_graph()
 		}
 
 		// Add spiketrain generator, connect to crossbar
-		auto spiketrain_generator = std::make_unique<transformation::MACSpikeTrainGenerator>(
-		    sizes, m_num_sends, m_wait_between_events);
-		Vertex transformation(std::move(vertex::Transformation(std::move(spiketrain_generator))));
+		auto spiketrain_generator =
+		    std::make_unique<signal_flow::transformation::MACSpikeTrainGenerator>(
+		        sizes, m_num_sends, m_wait_between_events);
+		signal_flow::Vertex transformation(
+		    std::move(signal_flow::vertex::Transformation(std::move(spiketrain_generator))));
 		auto const data_input_vertex =
 		    m_graph.add(std::move(transformation), instance, uint5_inputs);
-		vertex::CrossbarL2Input crossbar_l2_input;
-		Graph::vertex_descriptor crossbar_input_vertex =
+		signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
+		signal_flow::Graph::vertex_descriptor crossbar_input_vertex =
 		    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
 
 		// Maybe enable event loopback
 		set_enable_loopback(m_graph, m_enable_loopback, instance, crossbar_input_vertex);
 
-		std::vector<Input> local_output_vertices;
+		std::vector<signal_flow::Input> local_output_vertices;
 		for (auto const& [hemisphere, xy_range] : hs) {
 			auto const x_range = xy_range.first;
 			auto const y_range = xy_range.second;
@@ -290,19 +299,19 @@ void MAC::build_graph()
 			}
 
 			hemisphere_outputs[instance].insert(
-			    {hemisphere, Input(insert_synram(
+			    {hemisphere, signal_flow::Input(insert_synram(
 			                     m_graph, std::move(local_weights), instance, hemisphere,
 			                     crossbar_input_vertex))});
 		}
 	}
 
 	// Add vertical addition of hemispheres
-	std::vector<Graph::vertex_descriptor> output_vertices;
+	std::vector<signal_flow::Graph::vertex_descriptor> output_vertices;
 	size_t i = 0;
 	std::vector<size_t> x_split_sizes;
 	for (auto const& x_range : x_split_ranges) {
 		x_split_sizes.push_back(x_range.size);
-		std::vector<Input> local_hemisphere_outputs;
+		std::vector<signal_flow::Input> local_hemisphere_outputs;
 		size_t j = 0;
 		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
 			auto const [instance, hemisphere] = hemispheres.at(i * y_split_ranges.size() + j);
@@ -315,16 +324,18 @@ void MAC::build_graph()
 			auto const instance = execution_instance_manager.next_index();
 			// add additions
 			// load all data
-			vertex::DataInput data_input(ConnectionType::Int8, x_range.size);
-			std::vector<Input> local_inputs;
+			signal_flow::vertex::DataInput data_input(
+			    signal_flow::ConnectionType::Int8, x_range.size);
+			std::vector<signal_flow::Input> local_inputs;
 			local_inputs.reserve(local_hemisphere_outputs.size());
 			for (auto const vertex : local_hemisphere_outputs) {
 				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
 			}
 			// add all data
-			vertex::Addition addition(x_range.size);
+			signal_flow::vertex::Addition addition(x_range.size);
 			auto const v_add = m_graph.add(addition, instance, local_inputs);
-			vertex::DataOutput data_output(ConnectionType::Int8, x_range.size);
+			signal_flow::vertex::DataOutput data_output(
+			    signal_flow::ConnectionType::Int8, x_range.size);
 			auto const v_out = m_graph.add(data_output, instance, {v_add});
 			output_vertices.push_back(v_out);
 		} else {
@@ -337,19 +348,21 @@ void MAC::build_graph()
 	// Concatenate all outputs
 	auto const instance = execution_instance_manager.next_index();
 	// Load all data
-	std::vector<Input> local_inputs;
+	std::vector<signal_flow::Input> local_inputs;
 	local_inputs.reserve(output_vertices.size());
 	i = 0;
 	for (auto const v : output_vertices) {
-		vertex::DataInput data_input(ConnectionType::Int8, x_split_ranges.at(i).size);
+		signal_flow::vertex::DataInput data_input(
+		    signal_flow::ConnectionType::Int8, x_split_ranges.at(i).size);
 		local_inputs.push_back(m_graph.add(data_input, instance, {v}));
 		i++;
 	}
-	auto concatenation =
-	    std::make_unique<transformation::Concatenation>(ConnectionType::Int8, x_split_sizes);
-	Vertex transformation(std::move(vertex::Transformation(std::move(concatenation))));
+	auto concatenation = std::make_unique<signal_flow::transformation::Concatenation>(
+	    signal_flow::ConnectionType::Int8, x_split_sizes);
+	grenade::vx::signal_flow::Vertex transformation(
+	    std::move(signal_flow::vertex::Transformation(std::move(concatenation))));
 	auto const vc = m_graph.add(std::move(transformation), instance, local_inputs);
-	vertex::DataOutput data_output(ConnectionType::Int8, output_size());
+	signal_flow::vertex::DataOutput data_output(signal_flow::ConnectionType::Int8, output_size());
 	m_output_vertex = m_graph.add(data_output, instance, {vc});
 }
 

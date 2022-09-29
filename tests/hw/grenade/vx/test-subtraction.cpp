@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input.h"
+#include "grenade/vx/signal_flow/vertex.h"
 #include "grenade/vx/types.h"
-#include "grenade/vx/vertex.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -26,17 +26,20 @@ TEST(Subtraction, Single)
 {
 	constexpr size_t size = 256;
 
-	grenade::vx::vertex::ExternalInput external_input(grenade::vx::ConnectionType::DataInt8, size);
+	grenade::vx::signal_flow::vertex::ExternalInput external_input(
+	    grenade::vx::signal_flow::ConnectionType::DataInt8, size);
 
-	grenade::vx::vertex::DataInput data_input(grenade::vx::ConnectionType::Int8, size);
+	grenade::vx::signal_flow::vertex::DataInput data_input(
+	    grenade::vx::signal_flow::ConnectionType::Int8, size);
 
-	grenade::vx::vertex::Subtraction subtraction(size);
+	grenade::vx::signal_flow::vertex::Subtraction subtraction(size);
 
-	grenade::vx::vertex::DataOutput data_output(grenade::vx::ConnectionType::Int8, size);
+	grenade::vx::signal_flow::vertex::DataOutput data_output(
+	    grenade::vx::signal_flow::ConnectionType::Int8, size);
 
-	grenade::vx::Graph g;
+	grenade::vx::signal_flow::Graph g;
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	auto const v1 = g.add(external_input, instance, {});
 	auto const v2 = g.add(data_input, instance, {v1});

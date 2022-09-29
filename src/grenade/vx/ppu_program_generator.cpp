@@ -11,8 +11,8 @@
 namespace grenade::vx {
 
 void PPUProgramGenerator::add(
-    Graph::vertex_descriptor const descriptor,
-    vertex::PlasticityRule const& rule,
+    signal_flow::Graph::vertex_descriptor const descriptor,
+    signal_flow::vertex::PlasticityRule const& rule,
     std::vector<
         std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
         synapses,
@@ -42,7 +42,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 
 			if (plasticity_rule.get_recording()) {
 				kernel << plasticity_rule.get_recorded_memory_definition() << "\n";
-				if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
+				if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
 				        *plasticity_rule.get_recording())) {
 					kernel << "Recording recorded_scratchpad_memory_top_" << i << "["
 					       << plasticity_rule.get_timer().num_periods
@@ -50,7 +50,8 @@ std::vector<std::string> PPUProgramGenerator::done()
 					kernel << "Recording recorded_scratchpad_memory_bot_" << i << "["
 					       << plasticity_rule.get_timer().num_periods
 					       << "] __attribute__((section(\"ext.data.keep\")));\n";
-				} else if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
+				} else if (std::holds_alternative<
+				               signal_flow::vertex::PlasticityRule::RawRecording>(
 				               *plasticity_rule.get_recording())) {
 					kernel << "Recording recorded_scratchpad_memory_top_" << i
 					       << " __attribute__((section(\"ext.data.keep\")));\n";
@@ -125,13 +126,14 @@ std::vector<std::string> PPUProgramGenerator::done()
 			kernel << "auto const b = get_time();\n";
 			kernel << "libnux::vx::mailbox_write_int(b);\n";
 			if (plasticity_rule.get_recording()) {
-				if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
+				if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
 				        *plasticity_rule.get_recording())) {
 					kernel << "plasticity_rule_kernel_" << i
 					       << "(synapse_array_view_handle, neuron_view_handle, ppu == "
 					          "libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
 					       << i << " : recorded_scratchpad_memory_bot_" << i << ");\n";
-				} else if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
+				} else if (std::holds_alternative<
+				               signal_flow::vertex::PlasticityRule::TimedRecording>(
 				               *plasticity_rule.get_recording())) {
 					kernel << "static size_t recorded_scratchpad_memory_period = 0;\n";
 					kernel << "plasticity_rule_kernel_" << i

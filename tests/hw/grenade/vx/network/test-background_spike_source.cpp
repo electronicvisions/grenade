@@ -2,9 +2,6 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
@@ -15,6 +12,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
@@ -98,7 +96,7 @@ void test_background_spike_source_regular(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -136,7 +134,7 @@ void test_background_spike_source_regular(
 
 	// generate input
 	grenade::vx::IODataMap inputs;
-	inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(running_period);
+	inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(running_period);
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -164,7 +162,7 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::JITGraphExecutor executor(std::move(connections));
@@ -189,7 +187,7 @@ void test_background_spike_source_poisson(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::network::BackgroundSpikeSourcePopulation population_background_spike_source{
 	    64,
@@ -234,7 +232,7 @@ void test_background_spike_source_poisson(
 
 		// generate input
 		grenade::vx::IODataMap inputs;
-		inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(running_period);
+		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(running_period);
 
 		// run graph with given inputs and return results
 		auto const result_map =
@@ -280,7 +278,7 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::JITGraphExecutor executor(std::move(connections));

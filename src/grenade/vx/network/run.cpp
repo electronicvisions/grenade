@@ -1,8 +1,8 @@
 #include "grenade/vx/network/run.h"
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 
 namespace grenade::vx::network {
@@ -47,13 +47,13 @@ IODataMap run(
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
-	    coordinate::ExecutionInstance(), config));
+	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
+	    signal_flow::ExecutionInstance(), config));
 
 	JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
-	    std::pair<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>(
-	        coordinate::ExecutionInstance(), std::move(playback_hooks)));
+	    std::pair<signal_flow::ExecutionInstance, ExecutionInstancePlaybackHooks>(
+	        signal_flow::ExecutionInstance(), std::move(playback_hooks)));
 
 	auto ret =
 	    grenade::vx::run(executor, network_graph.get_graph(), inputs, configs, playback_hooks_map);

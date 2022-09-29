@@ -1,7 +1,7 @@
 #pragma once
-#include "grenade/vx/graph.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "haldls/vx/v3/event.h"
 #include "hate/visibility.h"
 #include <iosfwd>

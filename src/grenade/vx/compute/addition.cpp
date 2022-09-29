@@ -1,11 +1,11 @@
 #include "grenade/vx/compute/addition.h"
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input.h"
 #include "halco/common/cerealization_geometry.h"
 #include <cereal/types/vector.hpp>
 
@@ -16,20 +16,25 @@ Addition::Addition(std::vector<Int8> const& other) :
 {
 	using namespace halco::hicann_dls::vx;
 
-	auto const instance = coordinate::ExecutionInstance();
+	auto const instance = signal_flow::ExecutionInstance();
 
 	auto const size = other.size();
 
-	m_input_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
-	m_other_vertex =
-	    m_graph.add(vertex::ExternalInput(ConnectionType::DataInt8, size), instance, {});
-	auto const vi =
-	    m_graph.add(vertex::DataInput(ConnectionType::Int8, size), instance, {m_input_vertex});
-	auto const vo =
-	    m_graph.add(vertex::DataInput(ConnectionType::Int8, size), instance, {m_other_vertex});
-	auto const va = m_graph.add(vertex::Addition(size), instance, {vi, vo});
-	m_output_vertex = m_graph.add(vertex::DataOutput(ConnectionType::Int8, size), instance, {va});
+	m_input_vertex = m_graph.add(
+	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
+	    {});
+	m_other_vertex = m_graph.add(
+	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
+	    {});
+	auto const vi = m_graph.add(
+	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
+	    {m_input_vertex});
+	auto const vo = m_graph.add(
+	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
+	    {m_other_vertex});
+	auto const va = m_graph.add(signal_flow::vertex::Addition(size), instance, {vi, vo});
+	m_output_vertex = m_graph.add(
+	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::Int8, size), instance, {va});
 }
 
 size_t Addition::input_size() const
@@ -50,8 +55,8 @@ std::vector<std::vector<Int8>> Addition::run(
 	using namespace halco::hicann_dls::vx;
 
 	JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<coordinate::ExecutionInstance, lola::vx::v3::Chip>(
-	    coordinate::ExecutionInstance(), config));
+	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
+	    signal_flow::ExecutionInstance(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");
@@ -65,7 +70,7 @@ std::vector<std::vector<Int8>> Addition::run(
 	}
 
 	if (batch_entry_size !=
-	    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
+	    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
 	        .output()
 	        .size) {
 		throw std::runtime_error("Provided inputs size does not match Addition input size.");

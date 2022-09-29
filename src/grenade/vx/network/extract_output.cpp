@@ -106,7 +106,7 @@ extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 		    boost::in_edges(cadc_output_vertex, network_graph.get_graph().get_graph());
 		auto const cadc_vertex =
 		    boost::source(*in_edges.first, network_graph.get_graph().get_graph());
-		auto const& vertex = std::get<vertex::CADCMembraneReadoutView>(
+		auto const& vertex = std::get<signal_flow::vertex::CADCMembraneReadoutView>(
 		    network_graph.get_graph().get_vertex_property(cadc_vertex));
 		auto const& columns = vertex.get_columns();
 		auto const& row = vertex.get_synram().toNeuronRowOnDLS();
@@ -145,7 +145,7 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 	if (!network_graph.get_plasticity_rule_output_vertices().contains(descriptor)) {
 		throw std::runtime_error("Requested plasticity rule isn't recording data.");
 	}
-	Graph::vertex_descriptor const output_vertex =
+	signal_flow::Graph::vertex_descriptor const output_vertex =
 	    network_graph.get_plasticity_rule_output_vertices().at(descriptor);
 	if (!data.data.contains(output_vertex)) {
 		throw std::runtime_error(
@@ -160,18 +160,20 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 	    boost::source(*(in_edges.first), network_graph.get_graph().get_graph());
 
 	auto const vertex_recorded_data =
-	    std::get<vertex::PlasticityRule>(
+	    std::get<signal_flow::vertex::PlasticityRule>(
 	        network_graph.get_graph().get_vertex_property(plasticity_rule_vertex))
 	        .extract_recording_data(output_data);
-	if (std::holds_alternative<vertex::PlasticityRule::RawRecordingData>(vertex_recorded_data)) {
-		return std::get<vertex::PlasticityRule::RawRecordingData>(vertex_recorded_data);
-	} else if (!std::holds_alternative<vertex::PlasticityRule::TimedRecordingData>(
+	if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecordingData>(
+	        vertex_recorded_data)) {
+		return std::get<signal_flow::vertex::PlasticityRule::RawRecordingData>(
+		    vertex_recorded_data);
+	} else if (!std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecordingData>(
 	               vertex_recorded_data)) {
 		throw std::logic_error("Recording data type not implemented.");
 	}
 
 	auto const& vertex_timed_recorded_data =
-	    std::get<vertex::PlasticityRule::TimedRecordingData>(vertex_recorded_data);
+	    std::get<signal_flow::vertex::PlasticityRule::TimedRecordingData>(vertex_recorded_data);
 
 	PlasticityRule::TimedRecordingData recorded_data;
 	recorded_data.data_array = vertex_timed_recorded_data.data_array;

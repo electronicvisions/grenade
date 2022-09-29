@@ -4,8 +4,8 @@
 
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/connection_state_storage.h"
-#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
@@ -16,7 +16,9 @@
 
 namespace grenade::vx {
 
+namespace signal_flow {
 class Graph;
+} // namespace signal_flow
 struct IODataMap;
 class IODataList;
 struct ExecutionInstancePlaybackHooks;
@@ -35,9 +37,9 @@ public:
 
 	static constexpr char name[] = "JITGraphExecutor";
 
-	typedef std::unordered_map<coordinate::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
+	typedef std::unordered_map<signal_flow::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
 
-	typedef std::unordered_map<coordinate::ExecutionInstance, ExecutionInstancePlaybackHooks>
+	typedef std::unordered_map<signal_flow::ExecutionInstance, ExecutionInstancePlaybackHooks>
 	    PlaybackHooks;
 
 	/**
@@ -92,7 +94,7 @@ private:
 	 * Check whether the given graph can be executed.
 	 * @param graph Graph instance
 	 */
-	bool is_executable_on(Graph const& graph);
+	bool is_executable_on(signal_flow::Graph const& graph);
 
 	/**
 	 * Check that graph can be executed.
@@ -100,11 +102,11 @@ private:
 	 * `has_dangling_inputs`.
 	 * @param graph Graph to check
 	 */
-	void check(Graph const& graph);
+	void check(signal_flow::Graph const& graph);
 
 	friend IODataMap run(
 	    JITGraphExecutor& executor,
-	    Graph const& graph,
+	    signal_flow::Graph const& graph,
 	    IODataMap const& input,
 	    ChipConfigs const& initial_config,
 	    PlaybackHooks& playback_hooks);
@@ -122,7 +124,7 @@ private:
  */
 IODataMap run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
@@ -136,7 +138,7 @@ IODataMap run(
  */
 IODataMap run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config) SYMBOL_VISIBLE;
 
@@ -153,7 +155,7 @@ IODataMap run(
  */
 IODataList run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks,
@@ -170,7 +172,7 @@ IODataList run(
  */
 IODataList run(
     JITGraphExecutor& executor,
-    Graph const& graph,
+    signal_flow::Graph const& graph,
     IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     bool only_unconnected_output = true) SYMBOL_VISIBLE;

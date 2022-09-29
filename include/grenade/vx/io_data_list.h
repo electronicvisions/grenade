@@ -9,7 +9,10 @@
 namespace grenade::vx {
 
 struct IODataMap;
+
+namespace signal_flow {
 class Graph;
+} // namespace signal_flow
 
 /**
  * Flat data list used for external data exchange in graph execution.
@@ -31,8 +34,10 @@ struct IODataList
 	 * @param graph Graph to use as reference for vertices
 	 * @param only_unconnected Whether to convert only output vertices without out edges
 	 */
-	void from_output_map(IODataMap const& map, Graph const& graph, bool only_unconnected = true)
-	    SYMBOL_VISIBLE;
+	void from_output_map(
+	    IODataMap const& map,
+	    signal_flow::Graph const& graph,
+	    bool only_unconnected = true) SYMBOL_VISIBLE;
 
 	/**
 	 * Convert from data list to data map with regard to the output vertices of the graph.
@@ -40,21 +45,22 @@ struct IODataList
 	 * @param only_unconnected Whether to convert only output vertices without out edges
 	 * @return Converted Map
 	 */
-	IODataMap to_output_map(Graph const& graph, bool only_unconnected = true) const SYMBOL_VISIBLE;
+	IODataMap to_output_map(signal_flow::Graph const& graph, bool only_unconnected = true) const
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Convert to data list from data map with regard to the input vertices of the graph.
 	 * @param map Map to convert
 	 * @param graph Graph to use as reference for vertices
 	 */
-	void from_input_map(IODataMap const& map, Graph const& graph) SYMBOL_VISIBLE;
+	void from_input_map(IODataMap const& map, signal_flow::Graph const& graph) SYMBOL_VISIBLE;
 
 	/**
 	 * Convert from data list to data map with regard to the input vertices of the graph.
 	 * @param graph Graph to use as reference for vertices
 	 * @return Converted Map
 	 */
-	IODataMap to_input_map(Graph const& graph) const SYMBOL_VISIBLE;
+	IODataMap to_input_map(signal_flow::Graph const& graph) const SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx

@@ -1,6 +1,4 @@
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
@@ -11,6 +9,8 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include <gtest/gtest.h>
@@ -24,7 +24,7 @@ using namespace haldls::vx::v3;
 
 TEST(PlasticityRule, RawRecording)
 {
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -115,7 +115,7 @@ TEST(PlasticityRule, RawRecording)
 
 TEST(PlasticityRule, TimedRecording)
 {
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -526,7 +526,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	using namespace grenade::vx;
 	using namespace grenade::vx::network;
 
-	coordinate::ExecutionInstance instance;
+	signal_flow::ExecutionInstance instance;
 
 	JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();

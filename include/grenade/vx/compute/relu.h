@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-#include "grenade/vx/graph.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/types.h"
 
 namespace cereal {
@@ -48,9 +48,9 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	Graph m_graph{};
-	Graph::vertex_descriptor m_input_vertex{};
-	Graph::vertex_descriptor m_output_vertex{};
+	signal_flow::Graph m_graph{};
+	signal_flow::Graph::vertex_descriptor m_input_vertex{};
+	signal_flow::Graph::vertex_descriptor m_output_vertex{};
 
 	friend struct cereal::access;
 	template <typename Archive>

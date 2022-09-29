@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/projection.h"
-#include "grenade/vx/vertex/plasticity_rule.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include <optional>
@@ -91,33 +91,35 @@ struct GENPYBIND(visible) PlasticityRule
 	 * Raw recording of one scratchpad memory region for all timed invocations of the
 	 * rule. No automated recording of time is performed.
 	 */
-	typedef vertex::PlasticityRule::RawRecording RawRecording GENPYBIND(opaque(false));
+	typedef signal_flow::vertex::PlasticityRule::RawRecording RawRecording GENPYBIND(opaque(false));
 
 	/**
 	 * Recording information for execution of the rule.
 	 * Recording of exclusive scratchpad memory per rule invocation with
 	 * time recording and returned data as time-annotated events.
 	 */
-	typedef vertex::PlasticityRule::TimedRecording TimedRecording GENPYBIND(opaque(false));
+	typedef signal_flow::vertex::PlasticityRule::TimedRecording TimedRecording
+	    GENPYBIND(opaque(false));
 
 	/**
 	 * Recording memory provided to plasticity rule kernel and recorded after
 	 * execution.
 	 */
-	typedef vertex::PlasticityRule::Recording Recording;
+	typedef signal_flow::vertex::PlasticityRule::Recording Recording;
 	std::optional<Recording> recording;
 
 	/**
 	 * Recording data corresponding to a raw recording.
 	 */
-	typedef vertex::PlasticityRule::RawRecordingData RawRecordingData GENPYBIND(opaque(false));
+	typedef signal_flow::vertex::PlasticityRule::RawRecordingData RawRecordingData
+	    GENPYBIND(opaque(false));
 
 	/**
 	 * Extracted recorded data of observables corresponding to timed recording.
 	 */
 	struct TimedRecordingData
 	{
-		typedef vertex::PlasticityRule::TimedRecordingData::Entry Entry;
+		typedef signal_flow::vertex::PlasticityRule::TimedRecordingData::Entry Entry;
 
 		std::map<std::string, std::map<ProjectionDescriptor, Entry>> data_per_synapse;
 		std::map<std::string, std::map<PopulationDescriptor, Entry>> data_per_neuron;

@@ -51,9 +51,9 @@ namespace {
 
 struct HardwareConnectionPath
 {
-	vertex::CrossbarNode const& crossbar_node;
-	vertex::SynapseDriver const& synapse_driver;
-	vertex::SynapseArrayViewSparse const& synapse_array_view;
+	signal_flow::vertex::CrossbarNode const& crossbar_node;
+	signal_flow::vertex::SynapseDriver const& synapse_driver;
+	signal_flow::vertex::SynapseArrayViewSparse const& synapse_array_view;
 	std::vector<size_t> matching_synapses;
 };
 
@@ -74,36 +74,38 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	auto const& graph = network_graph.get_graph();
 
 	hate::Timer timer_extract_vertex_properties;
-	std::vector<std::reference_wrapper<vertex::CrossbarNode const>> crossbar_nodes;
-	std::vector<std::reference_wrapper<vertex::SynapseDriver const>> synapse_drivers;
-	std::vector<std::reference_wrapper<vertex::SynapseArrayViewSparse const>> synapse_array_views;
-	std::vector<std::reference_wrapper<vertex::BackgroundSpikeSource const>>
+	std::vector<std::reference_wrapper<signal_flow::vertex::CrossbarNode const>> crossbar_nodes;
+	std::vector<std::reference_wrapper<signal_flow::vertex::SynapseDriver const>> synapse_drivers;
+	std::vector<std::reference_wrapper<signal_flow::vertex::SynapseArrayViewSparse const>>
+	    synapse_array_views;
+	std::vector<std::reference_wrapper<signal_flow::vertex::BackgroundSpikeSource const>>
 	    background_spike_sources;
 	std::set<NeuronEventOutputOnDLS> active_neuron_event_outputs;
 	for (auto const vertex : boost::make_iterator_range(boost::vertices(graph.get_graph()))) {
-		if (std::holds_alternative<vertex::CrossbarNode>(graph.get_vertex_property(vertex))) {
+		if (std::holds_alternative<signal_flow::vertex::CrossbarNode>(
+		        graph.get_vertex_property(vertex))) {
 			auto const& crossbar_node =
-			    std::get<vertex::CrossbarNode>(graph.get_vertex_property(vertex));
+			    std::get<signal_flow::vertex::CrossbarNode>(graph.get_vertex_property(vertex));
 			if (std::find_if(
 			        crossbar_nodes.begin(), crossbar_nodes.end(), [crossbar_node](auto const& a) {
 				        return a.get() == crossbar_node;
 			        }) == crossbar_nodes.end()) {
 				crossbar_nodes.push_back(crossbar_node);
 			}
-		} else if (std::holds_alternative<vertex::SynapseDriver>(
+		} else if (std::holds_alternative<signal_flow::vertex::SynapseDriver>(
 		               graph.get_vertex_property(vertex))) {
 			auto const& synapse_driver =
-			    std::get<vertex::SynapseDriver>(graph.get_vertex_property(vertex));
+			    std::get<signal_flow::vertex::SynapseDriver>(graph.get_vertex_property(vertex));
 			if (std::find_if(
 			        synapse_drivers.begin(), synapse_drivers.end(),
 			        [synapse_driver](auto const& a) { return a.get() == synapse_driver; }) ==
 			    synapse_drivers.end()) {
 				synapse_drivers.push_back(synapse_driver);
 			}
-		} else if (std::holds_alternative<vertex::SynapseArrayViewSparse>(
+		} else if (std::holds_alternative<signal_flow::vertex::SynapseArrayViewSparse>(
 		               graph.get_vertex_property(vertex))) {
-			auto const& synapse_array_view =
-			    std::get<vertex::SynapseArrayViewSparse>(graph.get_vertex_property(vertex));
+			auto const& synapse_array_view = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+			    graph.get_vertex_property(vertex));
 			if (std::find_if(
 			        synapse_array_views.begin(), synapse_array_views.end(),
 			        [synapse_array_view](auto const& a) {
@@ -111,10 +113,11 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 			        }) == synapse_array_views.end()) {
 				synapse_array_views.push_back(synapse_array_view);
 			}
-		} else if (std::holds_alternative<vertex::BackgroundSpikeSource>(
+		} else if (std::holds_alternative<signal_flow::vertex::BackgroundSpikeSource>(
 		               graph.get_vertex_property(vertex))) {
 			auto const& background_spike_source =
-			    std::get<vertex::BackgroundSpikeSource>(graph.get_vertex_property(vertex));
+			    std::get<signal_flow::vertex::BackgroundSpikeSource>(
+			        graph.get_vertex_property(vertex));
 			if (std::find_if(
 			        background_spike_sources.begin(), background_spike_sources.end(),
 			        [background_spike_source](auto const& a) {
@@ -122,10 +125,11 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 			        }) == background_spike_sources.end()) {
 				background_spike_sources.push_back(background_spike_source);
 			}
-		} else if (std::holds_alternative<vertex::NeuronEventOutputView>(
+		} else if (std::holds_alternative<signal_flow::vertex::NeuronEventOutputView>(
 		               graph.get_vertex_property(vertex))) {
 			auto const& neuron_event_output_view =
-			    std::get<vertex::NeuronEventOutputView>(graph.get_vertex_property(vertex));
+			    std::get<signal_flow::vertex::NeuronEventOutputView>(
+			        graph.get_vertex_property(vertex));
 			for (auto const& [_, ccc] : neuron_event_output_view.get_neurons()) {
 				for (auto const& cc : ccc) {
 					for (auto const& column : cc) {
@@ -142,7 +146,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	hate::Timer timer_check_non_overlapping_vertices;
 	// check that no vertices describe overlapping locations on the hardware
 	{
-		std::set<vertex::CrossbarNode::Coordinate> unique;
+		std::set<signal_flow::vertex::CrossbarNode::Coordinate> unique;
 		for (auto const& crossbar_node : crossbar_nodes) {
 			unique.insert(crossbar_node.get().get_coordinate());
 		}
@@ -151,7 +155,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 		}
 	}
 	{
-		std::set<vertex::SynapseDriver::Coordinate> unique;
+		std::set<signal_flow::vertex::SynapseDriver::Coordinate> unique;
 		for (auto const& synapse_driver : synapse_drivers) {
 			unique.insert(synapse_driver.get().get_coordinate());
 		}
@@ -160,7 +164,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 		}
 	}
 	{
-		std::set<vertex::BackgroundSpikeSource::Coordinate> unique;
+		std::set<signal_flow::vertex::BackgroundSpikeSource::Coordinate> unique;
 		for (auto const& background_spike_source : background_spike_sources) {
 			unique.insert(background_spike_source.get().get_coordinate());
 		}

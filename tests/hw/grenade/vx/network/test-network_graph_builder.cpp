@@ -1,7 +1,5 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -10,6 +8,8 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
@@ -88,10 +88,10 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -143,7 +143,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 			                                        .at(0))})};
 			input_spikes.at(i).push_back(spike);
 		}
-		inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 		    Timer::Value(num * isi));
 	}
 	assert(network_graph.get_event_input_vertex());
@@ -189,10 +189,10 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 
 	// build network
 	grenade::vx::network::NetworkBuilder network_builder;
@@ -249,7 +249,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			                                        .at(0))})};
 			input_spikes.at(i).push_back(spike);
 		}
-		inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 		    Timer::Value(num * isi));
 	}
 	assert(network_graph.get_event_input_vertex());
@@ -298,10 +298,10 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[grenade::vx::coordinate::ExecutionInstance()] = chip_config;
+	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 
 	// construct shuffled list of neurons
 	std::vector<AtomicNeuronOnDLS> all_neurons;
@@ -382,7 +382,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 			                                        .at(0))})};
 			input_spikes.at(0).push_back(spike);
 		}
-		inputs.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 		    Timer::Value(num * isi));
 		assert(network_graph.get_event_input_vertex());
 		inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);

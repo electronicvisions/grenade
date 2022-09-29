@@ -2,10 +2,10 @@
 #include <vector>
 #include <gtest/gtest_prod.h>
 
-#include "grenade/vx/graph.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
 #include "grenade/vx/types.h"
-#include "grenade/vx/vertex/synapse_array_view.h"
 #include "halco/common/geometry.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/synapse_driver.h"
@@ -94,18 +94,18 @@ private:
 	 * @param crossbar_input_vertex Incoming crossbar input vertex to use
 	 * @return Data output vertex to measured membrane potential values
 	 */
-	static Graph::vertex_descriptor insert_synram(
-	    Graph& graph,
+	static signal_flow::Graph::vertex_descriptor insert_synram(
+	    signal_flow::Graph& graph,
 	    Weights&& weights,
-	    coordinate::ExecutionInstance const& instance,
+	    signal_flow::ExecutionInstance const& instance,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
-	    Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
+	    signal_flow::Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
 
 	bool m_enable_loopback{false};
-	Graph m_graph{};
+	signal_flow::Graph m_graph{};
 
-	Graph::vertex_descriptor m_input_vertex{};
-	Graph::vertex_descriptor m_output_vertex{};
+	signal_flow::Graph::vertex_descriptor m_input_vertex{};
+	signal_flow::Graph::vertex_descriptor m_output_vertex{};
 	Weights m_weights{};
 
 	void build_graph() SYMBOL_VISIBLE;

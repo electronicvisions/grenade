@@ -1,6 +1,5 @@
 #include "grenade/vx/execution_instance_builder.h"
 
-#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_config_visitor.h"
 #include "grenade/vx/generator/madc.h"
 #include "grenade/vx/generator/ppu.h"
@@ -9,6 +8,7 @@
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
@@ -43,8 +43,8 @@ std::string name()
 } // namespace
 
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
-    Graph const& graph,
-    coordinate::ExecutionInstance const& execution_instance,
+    signal_flow::Graph const& graph,
+    signal_flow::ExecutionInstance const& execution_instance,
     IODataMap const& input_list,
     IODataMap const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
@@ -90,7 +90,8 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 	    m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex));
 	return std::none_of(vertices.begin(), vertices.end(), [&](auto const& p) {
 		auto const vertex = p.second;
-		if (std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(vertex))) {
+		if (std::holds_alternative<signal_flow::vertex::ExternalInput>(
+		        m_graph.get_vertex_property(vertex))) {
 			if (m_input_list.data.find(vertex) == m_input_list.data.end()) {
 				return true;
 			}
@@ -98,7 +99,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 				return false;
 			}
 			auto const& input_vertex =
-			    std::get<vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
+			    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
 			return !IODataMap::is_match(
 			    m_input_list.data.find(vertex)->second, input_vertex.output());
 		}
@@ -106,7 +107,8 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 	});
 }
 
-bool ExecutionInstanceBuilder::inputs_available(Graph::vertex_descriptor const descriptor) const
+bool ExecutionInstanceBuilder::inputs_available(
+    signal_flow::Graph::vertex_descriptor const descriptor) const
 {
 	auto const edges = boost::make_iterator_range(boost::in_edges(descriptor, m_graph.get_graph()));
 	return std::all_of(edges.begin(), edges.end(), [&](auto const& edge) -> bool {
@@ -118,14 +120,15 @@ bool ExecutionInstanceBuilder::inputs_available(Graph::vertex_descriptor const d
 
 template <typename T>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /* vertex */, T const& /* data */)
+    signal_flow::Graph::vertex_descriptor const /* vertex */, T const& /* data */)
 {
 	// Specialize for types which are not empty
 }
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const /*vertex*/, vertex::NeuronView const& data)
+    signal_flow::Graph::vertex_descriptor const /*vertex*/,
+    signal_flow::vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
@@ -140,7 +143,7 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::CrossbarL2Input const&)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::CrossbarL2Input const&)
 {
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
@@ -152,7 +155,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::CrossbarL2Output const&)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::CrossbarL2Output const&)
 {
 	if (!m_postprocessing) {
 		if (m_event_output_vertex) {
@@ -179,7 +183,8 @@ namespace {
 
 template <typename T>
 std::vector<TimedDataSequence<std::vector<T>>> apply_restriction(
-    std::vector<TimedDataSequence<std::vector<T>>> const& value, PortRestriction const& restriction)
+    std::vector<TimedDataSequence<std::vector<T>>> const& value,
+    signal_flow::PortRestriction const& restriction)
 {
 	std::vector<TimedDataSequence<std::vector<T>>> ret(value.size());
 	for (size_t b = 0; b < ret.size(); ++b) {
@@ -201,7 +206,8 @@ std::vector<TimedDataSequence<std::vector<T>>> apply_restriction(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::DataInput const& /* data */)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::DataInput const& /* data */)
 {
 	using namespace lola::vx::v3;
 	using namespace haldls::vx::v3;
@@ -212,7 +218,8 @@ void ExecutionInstanceBuilder::process(
 	auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 	auto const in_vertex = boost::source(edge, m_graph.get_graph());
 	auto const& input_values =
-	    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
+	    ((std::holds_alternative<signal_flow::vertex::ExternalInput>(
+	         m_graph.get_vertex_property(in_vertex)))
 	         ? m_local_external_data.data.at(in_vertex)
 	         : m_data_output.data.at(in_vertex));
 
@@ -249,7 +256,8 @@ void resize_rectangular(std::vector<std::vector<T>>& data, size_t size_outer, si
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::CADCMembraneReadoutView const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::CADCMembraneReadoutView const& data)
 {
 	// check mode and save
 	if (m_cadc_readout_mode) {
@@ -277,7 +285,7 @@ void ExecutionInstanceBuilder::process(
 		// extract Int8 values
 		std::vector<TimedDataSequence<std::vector<Int8>>> sample_batches(m_batch_entries.size());
 		assert(m_cadc_readout_mode);
-		if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::hagen) {
+		if (*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen) {
 			for (auto& e : sample_batches) {
 				e.resize(1);
 				// TODO: Think about what to do with timing information
@@ -373,7 +381,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::ExternalInput const& /* data */)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::ExternalInput const& /* data */)
 {
 	auto const& input_values = m_input_list.data.at(vertex);
 	m_local_external_data.data.insert({vertex, input_values});
@@ -381,7 +390,7 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::Addition const& data)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::Addition const& data)
 {
 	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
 	for (auto& e : values) {
@@ -416,7 +425,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::Subtraction const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::Subtraction const& data)
 {
 	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
 	for (auto& e : values) {
@@ -484,7 +494,7 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::ArgMax const& data)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::ArgMax const& data)
 {
 	// get in edge
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -533,7 +543,7 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::ReLU const& data)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::ReLU const& data)
 {
 	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
 	for (auto& e : values) {
@@ -558,7 +568,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::ConvertingReLU const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::ConvertingReLU const& data)
 {
 	auto const shift = data.get_shift();
 	std::vector<TimedDataSequence<std::vector<UInt5>>> values(m_input_list.batch_size());
@@ -586,7 +597,7 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::DataOutput const& data)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::DataOutput const& data)
 {
 	// get in edge
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -687,7 +698,7 @@ void ExecutionInstanceBuilder::filter_events(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const&)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::MADCReadoutView const&)
 {
 	if (!m_postprocessing) {
 		if (m_madc_readout_vertex) {
@@ -713,11 +724,12 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::Transformation const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::Transformation const& data)
 {
 	// fill input value
 	auto const inputs = data.inputs();
-	std::vector<vertex::Transformation::Function::Value> value_input;
+	std::vector<signal_flow::vertex::Transformation::Function::Value> value_input;
 	auto edge_it = boost::in_edges(vertex, m_graph.get_graph()).first;
 	for (auto const& port : inputs) {
 		if (m_graph.get_edge_property_map().at(*edge_it)) {
@@ -725,7 +737,8 @@ void ExecutionInstanceBuilder::process(
 		}
 		auto const in_vertex = boost::source(*edge_it, m_graph.get_graph());
 		auto const& input_values =
-		    ((std::holds_alternative<vertex::ExternalInput>(m_graph.get_vertex_property(in_vertex)))
+		    ((std::holds_alternative<signal_flow::vertex::ExternalInput>(
+		         m_graph.get_vertex_property(in_vertex)))
 		         ? m_local_external_data.data.at(in_vertex)
 		         : m_local_data.data.at(in_vertex));
 		if (!IODataMap::is_match(input_values, port)) {
@@ -745,7 +758,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::PlasticityRule const& data)
 {
 	m_has_plasticity_rule = true;
 	if (!m_postprocessing) {
@@ -767,7 +781,7 @@ void ExecutionInstanceBuilder::process(
 		std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
 		for (size_t i = 0; i < values.size(); ++i) {
 			auto& local_values = values.at(i);
-			if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
+			if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
 			        *data.get_recording())) {
 				// TODO: Think about what shall happen with timing info
 				local_values.resize(1);
@@ -791,7 +805,7 @@ void ExecutionInstanceBuilder::process(
 						    Int8(bytes.at(j).get_value().value());
 					}
 				}
-			} else if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
+			} else if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
 			               *data.get_recording())) {
 				local_values.resize(data.get_timer().num_periods);
 				for (auto& e : local_values) {
@@ -1008,7 +1022,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 
 	if (has_cadc_readout) {
 		assert(m_cadc_readout_mode);
-		if ((*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) &&
+		if ((*m_cadc_readout_mode ==
+		     signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) &&
 		    m_has_plasticity_rule) {
 			throw std::runtime_error(
 			    "Periodic CADC readout and plasticity rule execution are mutually exclusive.");
@@ -1029,7 +1044,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	typed_array<std::optional<ExternalPPUMemoryBlockOnFPGA>, PPUOnDLS>
 	    ppu_periodic_cadc_readout_samples_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
-	std::map<Graph::vertex_descriptor, typed_array<ExternalPPUMemoryBlockOnFPGA, PPUOnDLS>>
+	std::map<
+	    signal_flow::Graph::vertex_descriptor, typed_array<ExternalPPUMemoryBlockOnFPGA, PPUOnDLS>>
 	    ppu_plasticity_rule_recorded_scratchpad_memory_coord;
 	if (enable_ppu) {
 		assert(m_ppu_symbols);
@@ -1065,7 +1081,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+			if (*m_cadc_readout_mode ==
+			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
 				ppu_periodic_cadc_readout_samples_coord[PPUOnDLS::top] =
 				    std::get<ExternalPPUMemoryBlockOnFPGA>(
 				        m_ppu_symbols->at("periodic_cadc_samples_top").coordinate);
@@ -1165,7 +1182,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// cadc baseline read
 		if (has_cadc_readout && enable_cadc_baseline) {
 			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::hagen) {
+			if (*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen) {
 				builder.copy_back(blocking_ppu_command_baseline_read);
 			}
 		}
@@ -1179,7 +1196,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// start periodic CADC readout
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+			if (*m_cadc_readout_mode ==
+			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
 					builder.write(
 					    PPUMemoryWordOnDLS(ppu_status_coord, ppu),
@@ -1257,7 +1275,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// read out neuron membranes
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::hagen) {
+			if (*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen) {
 				builder.copy_back(blocking_ppu_command_read);
 				// readout result
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -1269,7 +1287,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// stop periodic CADC readout
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+			if (*m_cadc_readout_mode ==
+			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
 				builder.copy_back(blocking_ppu_command_stop_periodic_read);
 			}
 		}
@@ -1289,7 +1308,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// readout extmem data from periodic CADC readout
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode == vertex::CADCMembraneReadoutView::Mode::periodic) {
+			if (*m_cadc_readout_mode ==
+			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
 					if (!m_ticket_requests[ppu.toHemisphereOnDLS()]) {
 						continue;

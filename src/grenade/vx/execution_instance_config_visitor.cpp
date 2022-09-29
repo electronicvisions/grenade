@@ -1,9 +1,9 @@
 #include "grenade/vx/execution_instance_config_visitor.h"
 
-#include "grenade/vx/execution_instance.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/ppu_program_generator.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
 #include "hate/timer.h"
@@ -19,8 +19,8 @@
 namespace grenade::vx {
 
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
-    Graph const& graph,
-    coordinate::ExecutionInstance const& execution_instance,
+    signal_flow::Graph const& graph,
+    signal_flow::ExecutionInstance const& execution_instance,
     lola::vx::v3::Chip& chip_config) :
     m_graph(graph),
     m_execution_instance(execution_instance),
@@ -72,14 +72,15 @@ ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
 
 template <typename T>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, T const& /* data */)
+    signal_flow::Graph::vertex_descriptor const /* vertex */, T const& /* data */)
 {
 	// Spezialize for types which change static configuration
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::CADCMembraneReadoutView const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::CADCMembraneReadoutView const& data)
 {
 	// Configure neurons
 	for (size_t i = 0; i < data.get_columns().size(); ++i) {
@@ -95,12 +96,13 @@ void ExecutionInstanceConfigVisitor::process(
 
 	m_requires_ppu = true;
 	m_has_periodic_cadc_readout =
-	    data.get_mode() == vertex::CADCMembraneReadoutView::Mode::periodic;
+	    data.get_mode() == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic;
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const, vertex::NeuronEventOutputView const& data)
+    signal_flow::Graph::vertex_descriptor const,
+    signal_flow::vertex::NeuronEventOutputView const& data)
 {
 	for (auto const& [row, columns] : data.get_neurons()) {
 		for (auto const& cs : columns) {
@@ -117,7 +119,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const vertex, vertex::MADCReadoutView const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::MADCReadoutView const& data)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
@@ -158,7 +161,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayView const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::SynapseArrayView const& data)
 {
 	auto& config = m_config;
 	auto const& columns = data.get_columns();
@@ -182,7 +186,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::SynapseArrayViewSparse const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::SynapseArrayViewSparse const& data)
 {
 	auto& config = m_config;
 	auto const& columns = data.get_columns();
@@ -200,7 +205,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::PlasticityRule const& data)
 {
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	// convert the plasticity rule input vertices to their respective on-PPU handles to transfer
@@ -213,11 +219,13 @@ void ExecutionInstanceConfigVisitor::process(
 		// extract on-PPU handles from source vertex properties
 		auto const& in_vertex_property =
 		    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph()));
-		if (std::holds_alternative<vertex::SynapseArrayViewSparse>(in_vertex_property)) {
-			auto const& view = std::get<vertex::SynapseArrayViewSparse>(in_vertex_property);
+		if (std::holds_alternative<signal_flow::vertex::SynapseArrayViewSparse>(
+		        in_vertex_property)) {
+			auto const& view =
+			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(in_vertex_property);
 			synapses.push_back({view.get_synram(), view.toSynapseArrayViewHandle()});
-		} else if (std::holds_alternative<vertex::NeuronView>(in_vertex_property)) {
-			auto const& view = std::get<vertex::NeuronView>(in_vertex_property);
+		} else if (std::holds_alternative<signal_flow::vertex::NeuronView>(in_vertex_property)) {
+			auto const& view = std::get<signal_flow::vertex::NeuronView>(in_vertex_property);
 			neurons.push_back({view.get_row(), view.toNeuronViewHandle()});
 		}
 		// handle setting neuron readout parameters
@@ -241,7 +249,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::SynapseDriver const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::SynapseDriver const& data)
 {
 	auto& synapse_driver_config =
 	    m_config.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
@@ -257,7 +266,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::PADIBus const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::PADIBus const& data)
 {
 	auto const bus = data.get_coordinate();
 	auto& config =
@@ -270,21 +280,23 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::CrossbarNode const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::CrossbarNode const& data)
 {
 	m_config.crossbar.nodes[data.get_coordinate()] = data.get_config();
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const /* vertex */, vertex::BackgroundSpikeSource const& data)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::BackgroundSpikeSource const& data)
 {
 	m_config.background_spike_sources[data.get_coordinate()] = data.get_config();
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    Graph::vertex_descriptor const vertex, vertex::NeuronView const& data)
+    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
@@ -310,16 +322,16 @@ void ExecutionInstanceConfigVisitor::process(
 		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
 			auto const source = boost::source(in_edge, m_graph.get_graph());
-			if (std::holds_alternative<vertex::SynapseArrayView>(
+			if (std::holds_alternative<signal_flow::vertex::SynapseArrayView>(
 			        m_graph.get_vertex_property(source))) {
-				auto const& synapses =
-				    std::get<vertex::SynapseArrayView>(m_graph.get_vertex_property(source));
+				auto const& synapses = std::get<signal_flow::vertex::SynapseArrayView>(
+				    m_graph.get_vertex_property(source));
 				for (auto const& column : synapses.get_columns()) {
 					incoming_synapse_columns.insert(column);
 				}
 			} else {
-				auto const& synapses =
-				    std::get<vertex::SynapseArrayViewSparse>(m_graph.get_vertex_property(source));
+				auto const& synapses = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+				    m_graph.get_vertex_property(source));
 				for (auto const& column : synapses.get_columns()) {
 					incoming_synapse_columns.insert(column);
 				}

@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/connection_type.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/port.h"
+#include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/port.h"
 
 using namespace grenade::vx;
+using namespace grenade::vx::signal_flow;
 
 TEST(IODataMap, General)
 {
@@ -22,12 +23,11 @@ TEST(IODataMap, General)
 	EXPECT_EQ(map.batch_size(), 2);
 	EXPECT_TRUE(map.valid());
 
-	map.runtime[coordinate::ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
+	map.runtime[ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
 	EXPECT_FALSE(map.valid());
 	EXPECT_THROW(map.batch_size(), std::runtime_error);
-	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
-	    runtime;
-	runtime[coordinate::ExecutionInstance()] =
+	std::unordered_map<ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>> runtime;
+	runtime[ExecutionInstance()] =
 	    std::vector{haldls::vx::v3::Timer::Value(0), haldls::vx::v3::Timer::Value(1)};
 	map.runtime = runtime;
 	EXPECT_TRUE(map.valid());
@@ -55,9 +55,8 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.data.contains(1));
 	EXPECT_EQ(map.data.at(1), data_1);
 	EXPECT_EQ(map.runtime, runtime);
-	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
-	    runtime_2;
-	runtime_2[coordinate::ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
+	std::unordered_map<ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>> runtime_2;
+	runtime_2[ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
 	map_2.runtime = runtime_2;
 	map.merge(map_2);
 	EXPECT_EQ(map.runtime, runtime);

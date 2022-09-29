@@ -58,8 +58,8 @@ bool contains_capmem(std::vector<halco::hicann_dls::vx::OmnibusAddress> const& a
 ExecutionInstanceNode::ExecutionInstanceNode(
     IODataMap& data_map,
     IODataMap const& input_data_map,
-    Graph const& graph,
-    coordinate::ExecutionInstance const& execution_instance,
+    signal_flow::Graph const& graph,
+    signal_flow::ExecutionInstance const& execution_instance,
     lola::vx::v3::Chip const& initial_config,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,

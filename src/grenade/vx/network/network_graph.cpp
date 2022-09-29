@@ -17,34 +17,36 @@ std::shared_ptr<Network> const& NetworkGraph::get_network() const
 	return m_network;
 }
 
-Graph const& NetworkGraph::get_graph() const
+signal_flow::Graph const& NetworkGraph::get_graph() const
 {
 	return m_graph;
 }
 
-std::optional<Graph::vertex_descriptor> NetworkGraph::get_event_input_vertex() const
+std::optional<signal_flow::Graph::vertex_descriptor> NetworkGraph::get_event_input_vertex() const
 {
 	return m_event_input_vertex;
 }
 
-std::optional<Graph::vertex_descriptor> NetworkGraph::get_event_output_vertex() const
+std::optional<signal_flow::Graph::vertex_descriptor> NetworkGraph::get_event_output_vertex() const
 {
 	return m_event_output_vertex;
 }
 
-std::optional<Graph::vertex_descriptor> NetworkGraph::get_madc_sample_output_vertex() const
+std::optional<signal_flow::Graph::vertex_descriptor> NetworkGraph::get_madc_sample_output_vertex()
+    const
 {
 	return m_madc_sample_output_vertex;
 }
 
-std::vector<Graph::vertex_descriptor> NetworkGraph::get_cadc_sample_output_vertex() const
+std::vector<signal_flow::Graph::vertex_descriptor> NetworkGraph::get_cadc_sample_output_vertex()
+    const
 {
 	return m_cadc_sample_output_vertex;
 }
 
 std::map<
     ProjectionDescriptor,
-    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
+    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>> const&
 NetworkGraph::get_synapse_vertices() const
 {
 	return m_synapse_vertices;
@@ -52,13 +54,13 @@ NetworkGraph::get_synapse_vertices() const
 
 std::map<
     PopulationDescriptor,
-    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
+    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>> const&
 NetworkGraph::get_neuron_vertices() const
 {
 	return m_neuron_vertices;
 }
 
-std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> const&
+std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
 NetworkGraph::get_plasticity_rule_output_vertices() const
 {
 	return m_plasticity_rule_output_vertices;
@@ -140,8 +142,8 @@ bool NetworkGraph::valid() const
 		    pop.neurons.begin(), pop.neurons.end());
 		std::set<AtomicNeuronOnDLS> hardware_network_neurons;
 		for (auto const& [hemisphere, vertex_descriptor] : m_neuron_vertices.at(descriptor)) {
-			auto const& vertex =
-			    std::get<vertex::NeuronView>(m_graph.get_vertex_property(vertex_descriptor));
+			auto const& vertex = std::get<signal_flow::vertex::NeuronView>(
+			    m_graph.get_vertex_property(vertex_descriptor));
 			auto const row = vertex.get_row();
 			if (row.toHemisphereOnDLS() != hemisphere) {
 				LOG4CXX_ERROR(
@@ -170,8 +172,8 @@ bool NetworkGraph::valid() const
 		}
 		auto const& pop = std::get<Population>(population);
 		for (auto const& [_, vertex_descriptor] : m_neuron_vertices.at(descriptor)) {
-			auto const& vertex =
-			    std::get<vertex::NeuronView>(m_graph.get_vertex_property(vertex_descriptor));
+			auto const& vertex = std::get<signal_flow::vertex::NeuronView>(
+			    m_graph.get_vertex_property(vertex_descriptor));
 			auto const row = vertex.get_row();
 			auto const& configs = vertex.get_configs();
 			auto const& columns = vertex.get_columns();
@@ -235,7 +237,7 @@ bool NetworkGraph::valid() const
 				return false;
 			}
 			auto const& vertex =
-			    std::get<vertex::BackgroundSpikeSource>(m_graph.get_vertex_property(
+			    std::get<signal_flow::vertex::BackgroundSpikeSource>(m_graph.get_vertex_property(
 			        m_background_spike_source_vertices.at(descriptor).at(hemisphere)));
 			if (vertex.get_coordinate().toPADIBusOnDLS() !=
 			    PADIBusOnDLS(pop.coordinate.at(hemisphere), hemisphere.toPADIBusBlockOnDLS())) {
@@ -298,7 +300,7 @@ bool NetworkGraph::valid() const
 		size_t label_entry = 0;
 		for (auto const& [hemisphere, padi_bus] : pop.coordinate) {
 			auto const& vertex =
-			    std::get<vertex::BackgroundSpikeSource>(m_graph.get_vertex_property(
+			    std::get<signal_flow::vertex::BackgroundSpikeSource>(m_graph.get_vertex_property(
 			        m_background_spike_source_vertices.at(descriptor).at(hemisphere)));
 			for (size_t i = 0; i < pop.size; ++i) {
 				auto expected_label = m_spike_labels.at(descriptor).at(i).at(label_entry);
@@ -345,7 +347,7 @@ bool NetworkGraph::valid() const
 			std::map<SynapseRowOnSynram, Projection::ReceptorType> receptor_type_per_row;
 			for (auto const in_edge : boost::make_iterator_range(
 			         boost::in_edges(vertex_descriptor, m_graph.get_graph()))) {
-				auto const& synapse_driver = std::get<vertex::SynapseDriver>(
+				auto const& synapse_driver = std::get<signal_flow::vertex::SynapseDriver>(
 				    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph())));
 				auto const& coordinate = synapse_driver.get_coordinate();
 				auto const& config = synapse_driver.get_config();
@@ -375,7 +377,7 @@ bool NetworkGraph::valid() const
 					}
 				}
 			}
-			auto const& synapse_array_view = std::get<vertex::SynapseArrayViewSparse>(
+			auto const& synapse_array_view = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
 			    m_graph.get_vertex_property(vertex_descriptor));
 			if (synapse_array_view.get_synram().toHemisphereOnDLS() != hemisphere) {
 				LOG4CXX_ERROR(
@@ -384,11 +386,11 @@ bool NetworkGraph::valid() const
 				return false;
 			}
 			auto const neuron_row = synapse_array_view.get_synram().toNeuronRowOnDLS();
-			vertex::SynapseArrayViewSparse::Synapses const synapses(
+			signal_flow::vertex::SynapseArrayViewSparse::Synapses const synapses(
 			    synapse_array_view.get_synapses().begin(), synapse_array_view.get_synapses().end());
-			vertex::SynapseArrayViewSparse::Columns const columns(
+			signal_flow::vertex::SynapseArrayViewSparse::Columns const columns(
 			    synapse_array_view.get_columns().begin(), synapse_array_view.get_columns().end());
-			vertex::SynapseArrayViewSparse::Rows const rows(
+			signal_flow::vertex::SynapseArrayViewSparse::Rows const rows(
 			    synapse_array_view.get_rows().begin(), synapse_array_view.get_rows().end());
 			size_t index_on_hemisphere = 0;
 			for (size_t i = 0; i < projection.connections.size(); ++i) {
@@ -482,8 +484,9 @@ bool NetworkGraph::valid() const
 		}
 		for (auto const& descriptor : plasticity_rule.projections) {
 			for (auto const& [hemisphere, vertex_descriptor] : m_synapse_vertices.at(descriptor)) {
-				auto const& synapse_array_view = std::get<vertex::SynapseArrayViewSparse>(
-				    m_graph.get_vertex_property(vertex_descriptor));
+				auto const& synapse_array_view =
+				    std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+				        m_graph.get_vertex_property(vertex_descriptor));
 				std::vector<std::pair<
 				    halco::hicann_dls::vx::v3::SynapseRowOnSynram,
 				    halco::hicann_dls::vx::v3::SynapseOnSynapseRow>>
@@ -533,8 +536,8 @@ NetworkGraph::PlacedConnection NetworkGraph::get_placed_connection(
 	}
 
 	auto const vertex_descriptor = m_synapse_vertices.at(descriptor).at(hemisphere);
-	auto const& synapse_array_view_sparse =
-	    std::get<vertex::SynapseArrayViewSparse>(m_graph.get_vertex_property(vertex_descriptor));
+	auto const& synapse_array_view_sparse = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+	    m_graph.get_vertex_property(vertex_descriptor));
 	assert(synapse_array_view_sparse.get_synram().toHemisphereOnDLS() == hemisphere);
 
 	auto const rows = synapse_array_view_sparse.get_rows();

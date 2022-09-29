@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "hate/timer.h"
 #include "lola/vx/v3/chip.h"
 #include <future>
@@ -15,7 +15,7 @@
 
 TEST(JITGraphExecutor, Empty)
 {
-	grenade::vx::Graph g;
+	grenade::vx::signal_flow::Graph g;
 
 	grenade::vx::JITGraphExecutor executor;
 
@@ -53,12 +53,12 @@ TEST(JITGraphExecutor, DifferentialConfig)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::IODataMap input_map;
-	input_map.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 	    haldls::vx::Timer::Value(100));
 
 	grenade::vx::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::vx::coordinate::ExecutionInstance(), lola::vx::v3::Chip()}};
-	auto& config = initial_config.at(grenade::vx::coordinate::ExecutionInstance());
+	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
+	auto& config = initial_config.at(grenade::vx::signal_flow::ExecutionInstance());
 
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.DifferentialConfig");
 	{
@@ -114,12 +114,12 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::IODataMap input_map;
-	input_map.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 	    haldls::vx::Timer::Value(100));
 
 	grenade::vx::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::vx::coordinate::ExecutionInstance(), lola::vx::v3::Chip()}};
-	auto& config = initial_config.at(grenade::vx::coordinate::ExecutionInstance());
+	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
+	auto& config = initial_config.at(grenade::vx::signal_flow::ExecutionInstance());
 
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.NoDifferentialConfig");
 	{
@@ -172,11 +172,11 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::IODataMap input_map;
-	input_map.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 	    haldls::vx::Timer::Value(10000 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 
 	grenade::vx::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::vx::coordinate::ExecutionInstance(), lola::vx::v3::Chip()}};
+	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
 
 	std::vector<std::future<grenade::vx::IODataMap>> results;
 	constexpr size_t num_concurrent = 100;

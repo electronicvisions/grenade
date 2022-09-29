@@ -1,7 +1,5 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/network.h"
@@ -11,6 +9,8 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
@@ -88,7 +88,7 @@ TEST(CADCRecording, General)
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::JITGraphExecutor executor(std::move(connections));
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = chip_config;

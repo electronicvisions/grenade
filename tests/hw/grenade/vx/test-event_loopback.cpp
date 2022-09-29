@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance.h"
-#include "grenade/vx/graph.h"
-#include "grenade/vx/input.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/event.h"
@@ -26,24 +26,25 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
     grenade::vx::JITGraphExecutor& executor,
     std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
 {
-	grenade::vx::vertex::ExternalInput external_input(
-	    grenade::vx::ConnectionType::DataTimedSpikeSequence, 1);
+	grenade::vx::signal_flow::vertex::ExternalInput external_input(
+	    grenade::vx::signal_flow::ConnectionType::DataTimedSpikeSequence, 1);
 
-	grenade::vx::vertex::DataInput data_input(grenade::vx::ConnectionType::TimedSpikeSequence, 1);
+	grenade::vx::signal_flow::vertex::DataInput data_input(
+	    grenade::vx::signal_flow::ConnectionType::TimedSpikeSequence, 1);
 
-	grenade::vx::vertex::CrossbarL2Input crossbar_l2_input;
+	grenade::vx::signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
 
-	grenade::vx::vertex::CrossbarNode crossbar_node(
+	grenade::vx::signal_flow::vertex::CrossbarNode crossbar_node(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8 + node.toEnum()), node.toCrossbarOutputOnDLS()),
 	    haldls::vx::v3::CrossbarNode());
 
-	grenade::vx::vertex::CrossbarL2Output crossbar_output;
-	grenade::vx::vertex::DataOutput data_output(
-	    grenade::vx::ConnectionType::TimedSpikeFromChipSequence, 1);
+	grenade::vx::signal_flow::vertex::CrossbarL2Output crossbar_output;
+	grenade::vx::signal_flow::vertex::DataOutput data_output(
+	    grenade::vx::signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
 
-	grenade::vx::Graph g;
+	grenade::vx::signal_flow::Graph g;
 
-	grenade::vx::coordinate::ExecutionInstance instance;
+	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	auto const v1 = g.add(external_input, instance, {});
 	auto const v2 = g.add(data_input, instance, {v1});

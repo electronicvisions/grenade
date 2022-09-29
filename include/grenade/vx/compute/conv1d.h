@@ -80,7 +80,7 @@ private:
 	size_t m_in_channels{};
 	size_t m_out_channels{};
 	size_t m_stride{};
-	Graph m_graph{};
+	signal_flow::Graph m_graph{};
 
 	MAC m_mac{};
 

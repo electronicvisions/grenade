@@ -46,11 +46,11 @@ NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph)
 	for (auto const d :
 	     boost::make_iterator_range(boost::vertices(network_graph.get_graph().get_graph()))) {
 		auto const& vertex_property = network_graph.get_graph().get_vertex_property(d);
-		if (!std::holds_alternative<vertex::SynapseDriver>(vertex_property)) {
+		if (!std::holds_alternative<signal_flow::vertex::SynapseDriver>(vertex_property)) {
 			continue;
 		}
 		used_synapse_drivers.insert(
-		    std::get<vertex::SynapseDriver>(vertex_property).get_coordinate());
+		    std::get<signal_flow::vertex::SynapseDriver>(vertex_property).get_coordinate());
 	}
 	statistics.m_num_synapse_drivers = used_synapse_drivers.size();
 	statistics.m_synapse_driver_usage =
