@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -81,7 +82,6 @@ struct VertexConcept
 	/*
 	 * Vertices which are allowed connections between different execution instances are to set
 	 * `can_connect_different_execution_instances` to true.
-	 * TODO: this is rather a ConnectionType property, right?
 	 */
 	template <typename V, typename = void>
 	struct has_can_connect_different_execution_instances : std::false_type
@@ -104,7 +104,7 @@ struct VertexConcept
 	/**
 	 * In addition connections between vertices can be restricted via:
 	 *     supports_input_from(InputVertexT const& input, std::optional<PortRestriction> const&)
-	 * This default to true if it is not specialized. TODO: find out how to test this.
+	 * This defaults to true if it is not specialized.
 	 */
 };
 

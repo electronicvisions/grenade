@@ -1,6 +1,4 @@
 #pragma once
-#include <variant>
-
 #include "grenade/vx/vertex/addition.h"
 #include "grenade/vx/vertex/argmax.h"
 #include "grenade/vx/vertex/background_spike_source.h"
@@ -24,6 +22,7 @@
 #include "grenade/vx/vertex/synapse_driver.h"
 #include "grenade/vx/vertex/transformation.h"
 #include "grenade/vx/vertex_concept.h"
+#include <variant>
 
 namespace grenade::vx {
 
