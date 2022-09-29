@@ -1,15 +1,20 @@
 #include "grenade/vx/backend/run.h"
 
 #include "grenade/vx/backend/connection.h"
-#include "halco/hicann-dls/vx/v3/coordinates.h"
+#include "halco/common/iter_all.h"
+#include "halco/hicann-dls/vx/v3/barrier.h"
+#include "halco/hicann-dls/vx/v3/fpga.h"
+#include "halco/hicann-dls/vx/v3/highspeed_link.h"
 #include "haldls/vx/arq.h"
+#include "haldls/vx/fpga.h"
 #include "haldls/vx/phy.h"
 #include "haldls/vx/v3/barrier.h"
-#include "hate/timer.h"
 #include "stadls/vx/v3/playback_program.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 #include "stadls/vx/v3/run.h"
+#include <algorithm>
 #include <sstream>
+#include <vector>
 #include <log4cxx/logger.h>
 
 namespace {
