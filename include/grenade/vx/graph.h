@@ -41,7 +41,7 @@ struct Input;
 /**
  * Placed computation graph.
  *
- * A vertex represent a unit which processes data.
+ * A vertex represents a unit which processes data.
  * An edge represents the data flow.
  *
  * Vertices are physically and temporally placed on a specific ExecutionInstance.
@@ -60,16 +60,25 @@ public:
 	typedef detail::vertex_descriptor vertex_descriptor;
 	typedef detail::edge_descriptor edge_descriptor;
 
+	/** Edge properties indexed by edge descriptor. */
 	typedef std::unordered_map<edge_descriptor, std::optional<PortRestriction>>
 	    edge_property_map_type;
+
+	/** Map between execution instance graph vertex descriptor and execution instance. */
 	typedef boost::
 	    bimap<vertex_descriptor, boost::bimaps::unordered_set_of<coordinate::ExecutionInstance>>
 	        execution_instance_map_type;
-	// TODO: maybe make vertex descriptors of the two graphs unique?
+
+	/**
+	 * Map between descriptors of vertices and descriptor of execution instance graph vertex.
+	 * An execution instance graph vertex might relate to multiple vertices.
+	 */
 	typedef boost::bimap<
 	    boost::bimaps::set_of<vertex_descriptor>,
 	    boost::bimaps::multiset_of<vertex_descriptor>>
 	    vertex_descriptor_map_type;
+
+	/** Vertex properties indexed by vertex descriptor. */
 	typedef std::vector<std::shared_ptr<Vertex>> vertex_property_map_type;
 
 	/**
@@ -188,11 +197,6 @@ public:
 	vertex_descriptor_map_type const& get_vertex_descriptor_map() const
 	    GENPYBIND(hidden) SYMBOL_VISIBLE;
 
-	typedef std::map<
-	    coordinate::ExecutionIndex,
-	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::vector<Graph::vertex_descriptor>>>
-	    ordered_vertices_type;
-
 	/**
 	 * Get whether the underlying execution instance graph is acyclic.
 	 * This is a necessary requirement for executability.
@@ -200,6 +204,12 @@ public:
 	 */
 	bool is_acyclic_execution_instance_graph() const GENPYBIND(hidden);
 
+	/**
+	 * Ostream operator of graph.
+	 * Prints graph topology in graphviz' dot format.
+	 * Vertices are in the format `Type(descriptor)`, which allows identification of referenced
+	 * vertices.
+	 */
 	GENPYBIND(stringstream)
 	friend std::ostream& operator<<(std::ostream& os, Graph const& graph) SYMBOL_VISIBLE;
 
