@@ -4,8 +4,6 @@
 #include "grenade/vx/graph_representation.h"
 #include "grenade/vx/port_restriction.h"
 #include "grenade/vx/vertex.h"
-#include "halco/common/typed_array.h"
-#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include <cstddef>
 #include <iosfwd>
@@ -18,8 +16,6 @@
 #include <boost/bimap/multiset_of.hpp>
 #include <boost/bimap/set_of.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/smart_ptr/local_shared_ptr.hpp>
 
 namespace cereal {
 struct access;
