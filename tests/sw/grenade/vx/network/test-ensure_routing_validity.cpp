@@ -607,9 +607,7 @@ void test_routing(std::shared_ptr<Network> const& network)
 		auto const routing_result = grenade::vx::network::build_routing(network, options);
 		// check if network is valid
 		[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
-		std::cout << "y" << std::endl;
 	} catch (UnsuccessfulRouting const&) {
-		std::cout << "n" << std::endl;
 	}
 }
 
