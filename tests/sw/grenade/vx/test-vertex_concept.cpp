@@ -81,4 +81,5 @@ TEST(VertexConcept, General)
 	EXPECT_THROW(VertexConcept<IncorrectInputs>{}, std::logic_error);
 	EXPECT_THROW(VertexConcept<IncorrectVariadicInput>{}, std::logic_error);
 	EXPECT_THROW(VertexConcept<IncorrectCanConnectDifferentExecutionInstances>{}, std::logic_error);
+	EXPECT_NO_THROW(VertexConcept<Correct>{});
 }
