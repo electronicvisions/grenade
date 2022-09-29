@@ -24,7 +24,6 @@ struct SynapseArrayView;
 
 /**
  * A view of neuron circuits.
- * TODO: add properties
  */
 struct NeuronView
 {

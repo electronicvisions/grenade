@@ -88,7 +88,6 @@ public:
 	 * Add vertex on specified execution instance with specified inputs.
 	 * No checks are performed against whether the section of specified chip instance is already
 	 * used.
-	 * TODO: Do we want this and thereby have a separate resource manager?
 	 * TODO: We might want to have a more fancy vertex descriptor return type
 	 * Perform checks for:
 	 *  - connection between vertex types is allowed
@@ -109,7 +108,6 @@ public:
 	/**
 	 * Add vertex by reference on specified execution instance with specified inputs.
 	 * This is to be used to update input relations.
-	 * TODO: Do we want this and thereby have a separate resource manager?
 	 * TODO: We might want to have a more fancy vertex descriptor return type
 	 * Perform checks for:
 	 *  - connection between vertex types is allowed
