@@ -66,5 +66,15 @@ void ExecutionInstance::serialize(Archive& ar, std::uint32_t const)
 
 } // namespace grenade::vx::coordinate
 
+namespace std {
+
+size_t hash<grenade::vx::coordinate::ExecutionInstance>::operator()(
+    grenade::vx::coordinate::ExecutionInstance const& t) const
+{
+	return grenade::vx::coordinate::hash_value(t);
+}
+
+} // namespace std
+
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::coordinate::ExecutionInstance)
 CEREAL_CLASS_VERSION(grenade::vx::coordinate::ExecutionInstance, 0)

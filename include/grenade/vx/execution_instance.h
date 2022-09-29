@@ -75,10 +75,7 @@ HALCO_GEOMETRY_HASH_CLASS(grenade::vx::coordinate::ExecutionIndex)
 template <>
 struct hash<grenade::vx::coordinate::ExecutionInstance>
 {
-	size_t operator()(grenade::vx::coordinate::ExecutionInstance const& t) const
-	{
-		return grenade::vx::coordinate::hash_value(t);
-	}
+	size_t operator()(grenade::vx::coordinate::ExecutionInstance const& t) const SYMBOL_VISIBLE;
 };
 
 } // namespace std
