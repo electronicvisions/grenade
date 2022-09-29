@@ -1,10 +1,19 @@
 #pragma once
-#include "grenade/vx/backend/connection.h"
 #include "hate/visibility.h"
 #include "stadls/vx/run_time_info.h"
-#include "stadls/vx/v3/playback_program.h"
+
+namespace stadls::vx {
+struct PlaybackProgram;
+
+namespace v3 {
+using PlaybackProgram = stadls::vx::PlaybackProgram;
+} // namespace v3
+
+} // namespace stadls::vx
 
 namespace grenade::vx::backend {
+
+struct Connection;
 
 /**
  * Execute given playback program using the given connection.

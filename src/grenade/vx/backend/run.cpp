@@ -1,10 +1,12 @@
 #include "grenade/vx/backend/run.h"
 
+#include "grenade/vx/backend/connection.h"
 #include "halco/hicann-dls/vx/v3/coordinates.h"
 #include "haldls/vx/arq.h"
 #include "haldls/vx/phy.h"
 #include "haldls/vx/v3/barrier.h"
 #include "hate/timer.h"
+#include "stadls/vx/v3/playback_program.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 #include "stadls/vx/v3/run.h"
 #include <sstream>
