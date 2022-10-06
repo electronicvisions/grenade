@@ -2,10 +2,15 @@
 
 namespace grenade::vx {
 
-IODataMap::IODataMap() : data(), runtime(), mutex(std::make_unique<std::mutex>()) {}
+IODataMap::IODataMap() :
+    data(), runtime(), execution_time_info(), mutex(std::make_unique<std::mutex>())
+{}
 
 IODataMap::IODataMap(IODataMap&& other) :
-    data(std::move(other.data)), runtime(std::move(other.runtime)), mutex(std::move(other.mutex))
+    data(std::move(other.data)),
+    runtime(std::move(other.runtime)),
+    execution_time_info(std::move(other.execution_time_info)),
+    mutex(std::move(other.mutex))
 {
 	other.mutex = std::make_unique<std::mutex>();
 }
@@ -14,6 +19,7 @@ IODataMap& IODataMap::operator=(IODataMap&& other)
 {
 	data = std::move(other.data);
 	runtime = std::move(other.runtime);
+	execution_time_info = std::move(other.execution_time_info);
 	mutex = std::move(other.mutex);
 	other.mutex = std::make_unique<std::mutex>();
 	return *this;
@@ -24,6 +30,12 @@ void IODataMap::merge(IODataMap&& other)
 	std::unique_lock<std::mutex> lock(*mutex);
 	data.merge(other.data);
 	runtime.merge(other.runtime);
+	if (execution_time_info) {
+		execution_time_info->merge(*(other.execution_time_info));
+	} else {
+		execution_time_info = std::move(other.execution_time_info);
+		other.execution_time_info.reset();
+	}
 }
 
 void IODataMap::merge(IODataMap& other)
@@ -36,6 +48,7 @@ void IODataMap::clear()
 	std::unique_lock<std::mutex> lock(*mutex);
 	data.clear();
 	runtime.clear();
+	execution_time_info.reset();
 }
 
 bool IODataMap::empty() const

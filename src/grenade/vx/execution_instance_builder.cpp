@@ -781,6 +781,7 @@ IODataMap ExecutionInstanceBuilder::post_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
+	std::chrono::nanoseconds total_realtime_duration{0};
 	for (auto const& batch_entry : m_batch_entries) {
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
 			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
@@ -820,7 +821,19 @@ IODataMap ExecutionInstanceBuilder::post_process()
 				                   << mailbox.to_string());
 			}
 		}
+		if (batch_entry.m_ticket_events_begin && batch_entry.m_ticket_events_end) {
+			total_realtime_duration += std::chrono::nanoseconds(static_cast<size_t>(
+			    static_cast<double>(
+			        batch_entry.m_ticket_events_end->get_fpga_time().value() -
+			        batch_entry.m_ticket_events_begin->get_fpga_time().value()) /
+			    static_cast<double>(haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us) *
+			    1000.));
+		}
 	}
+	ExecutionTimeInfo execution_time_info;
+	execution_time_info.realtime_duration_per_execution_instance[m_execution_instance] =
+	    total_realtime_duration;
+	m_local_data_output.execution_time_info = execution_time_info;
 
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
@@ -836,6 +849,7 @@ IODataMap ExecutionInstanceBuilder::post_process()
 		    m_graph.get_vertex_property(vertex));
 	}
 	m_postprocessing = false;
+
 	return std::move(m_local_data_output);
 }
 

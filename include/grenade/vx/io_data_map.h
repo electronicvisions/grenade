@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/event.h"
 #include "grenade/vx/execution_instance.h"
+#include "grenade/vx/execution_time_info.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/graph_representation.h"
 #include "grenade/vx/port.h"
@@ -10,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <variant>
 
@@ -52,6 +54,11 @@ struct GENPYBIND(visible) IODataMap
 	 */
 	std::unordered_map<coordinate::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
 	    runtime;
+
+	/**
+	 * Optional time information of performed execution to be filled by executor.
+	 */
+	std::optional<ExecutionTimeInfo> execution_time_info;
 
 	IODataMap() SYMBOL_VISIBLE;
 

@@ -3,6 +3,7 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/execution_instance_node.h"
+#include "grenade/vx/execution_time_info.h"
 #include "grenade/vx/graph.h"
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
@@ -238,12 +239,17 @@ IODataMap run(
 	start.try_put(tbb::flow::continue_msg());
 	execution_graph.wait_for_all();
 
-	std::chrono::nanoseconds total_time(timer.get_ns());
+	ExecutionTimeInfo execution_time_info;
+	execution_time_info.execution_duration = std::chrono::nanoseconds(timer.get_ns());
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
-	LOG4CXX_INFO(logger, "run(): Executed graph in " << hate::to_string(total_time) << ".");
+	LOG4CXX_INFO(
+	    logger, "run(): Executed graph in "
+	                << hate::to_string(execution_time_info.execution_duration) << ".");
 	for (auto const& [dls, e] : executor.m_connections) {
 		auto const connection_time_info_difference =
 		    e.get_time_info() - connection_time_info_begin.at(dls);
+		execution_time_info.execution_duration_per_hardware[dls] =
+		    connection_time_info_difference.execution_duration;
 		LOG4CXX_INFO(
 		    logger, "run(): Chip at "
 		                << dls << " spent "
@@ -251,8 +257,14 @@ IODataMap run(
 		                << " in execution, which is "
 		                << (static_cast<double>(
 		                        connection_time_info_difference.execution_duration.count()) /
-		                    static_cast<double>(total_time.count()) * 100.)
+		                    static_cast<double>(execution_time_info.execution_duration.count()) *
+		                    100.)
 		                << " % of total graph execution time.");
+	}
+	if (output_activation_map.execution_time_info) {
+		output_activation_map.execution_time_info->merge(execution_time_info);
+	} else {
+		output_activation_map.execution_time_info = execution_time_info;
 	}
 
 	return output_activation_map;
