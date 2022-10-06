@@ -3,6 +3,7 @@
 #include "grenade/vx/graph.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/population.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <optional>
@@ -59,7 +60,7 @@ struct GENPYBIND(visible) NetworkGraph
 	 */
 	typedef std::map<
 	    PopulationDescriptor,
-	    std::vector<std::vector<std::optional<haldls::vx::v3::SpikeLabel>>>>
+	    std::vector<std::vector<std::optional<halco::hicann_dls::vx::v3::SpikeLabel>>>>
 	    SpikeLabels;
 	GENPYBIND(getter_for(spike_labels))
 	SpikeLabels const& get_spike_labels() const SYMBOL_VISIBLE;

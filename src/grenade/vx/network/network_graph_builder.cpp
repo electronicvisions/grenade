@@ -1157,7 +1157,7 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			    connection_result.internal_neuron_labels.at(descriptor);
 			for (size_t i = 0; i < population.neurons.size(); ++i) {
 				if (local_neuron_labels.at(i)) {
-					haldls::vx::v3::SpikeLabel spike_label;
+					halco::hicann_dls::vx::v3::SpikeLabel spike_label;
 					spike_label.set_neuron_event_output(
 					    population.neurons.at(i).toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
 					spike_label.set_spl1_address(SPL1Address(
@@ -1182,7 +1182,7 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 			    connection_result.background_spike_source_labels.at(descriptor);
 			for (auto const& [hemisphere, base_label] : local_labels) {
 				for (size_t k = 0; k < population.size; ++k) {
-					haldls::vx::v3::SpikeLabel label;
+					halco::hicann_dls::vx::v3::SpikeLabel label;
 					label.set_neuron_label(NeuronLabel(base_label + k));
 					local_spike_labels.at(k).push_back(label);
 				}

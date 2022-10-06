@@ -306,7 +306,7 @@ RoutingBuilder::get_external_sources(
 	return std::pair{external_sources, descriptors};
 }
 
-std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel>
+std::map<std::pair<PopulationDescriptor, size_t>, halco::hicann_dls::vx::v3::SpikeLabel>
 RoutingBuilder::get_internal_labels(
     std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
     SourceOnPADIBusManager::Partition const& partition,
@@ -315,7 +315,7 @@ RoutingBuilder::get_internal_labels(
 	// The label consists of the label found by the routing and the synapse label.
 	// The latter is assigned linearly here, since its assignment does not have any influence on the
 	// later steps, it only has to be unambiguous.
-	std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> labels;
+	std::map<std::pair<PopulationDescriptor, size_t>, halco::hicann_dls::vx::v3::SpikeLabel> labels;
 	for (size_t i = 0; i < partition.internal.size(); ++i) {
 		auto const local_label = allocations.at(i).label;
 		auto const& local_sources = partition.internal.at(i).sources;
@@ -323,9 +323,9 @@ RoutingBuilder::get_internal_labels(
 			auto const local_index = local_sources.at(k);
 			auto const& local_descriptor = descriptors.at(local_index);
 			assert(!labels.contains(local_descriptor));
-			haldls::vx::v3::SpikeLabel label;
+			halco::hicann_dls::vx::v3::SpikeLabel label;
 			label.set_row_select_address(haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
-			label.set_synapse_label(haldls::vx::SynapseLabelValue(k));
+			label.set_synapse_label(halco::hicann_dls::vx::SynapseLabel(k));
 			labels[local_descriptor] = label;
 		}
 	}
@@ -334,7 +334,7 @@ RoutingBuilder::get_internal_labels(
 
 std::map<
     std::pair<PopulationDescriptor, size_t>,
-    std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>>
+    std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 RoutingBuilder::get_background_labels(
     std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
     std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
@@ -346,7 +346,7 @@ RoutingBuilder::get_background_labels(
 	// later steps, it only has to be unambiguous.
 	std::map<
 	    std::pair<PopulationDescriptor, size_t>,
-	    std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>>
+	    std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	    labels;
 	for (size_t i = 0; i < partition.background.size(); ++i) {
 		auto const local_label = allocations.at(partition.internal.size() + i).label;
@@ -360,21 +360,22 @@ RoutingBuilder::get_background_labels(
 			assert(
 			    !labels.contains(local_descriptor) ||
 			    !labels.at(local_descriptor).contains(hemisphere));
-			haldls::vx::v3::SpikeLabel label;
+			halco::hicann_dls::vx::v3::SpikeLabel label;
 			label.set_row_select_address(haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
-			label.set_synapse_label(haldls::vx::SynapseLabelValue(k));
+			label.set_synapse_label(halco::hicann_dls::vx::SynapseLabel(k));
 			labels[local_descriptor][hemisphere] = label;
 		}
 	}
 	return labels;
 }
 
-std::
-    map<std::pair<PopulationDescriptor, size_t>, std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>>
-    RoutingBuilder::get_external_labels(
-        std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
-        SourceOnPADIBusManager::Partition const& partition,
-        std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const
+std::map<
+    std::pair<PopulationDescriptor, size_t>,
+    std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
+RoutingBuilder::get_external_labels(
+    std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
+    SourceOnPADIBusManager::Partition const& partition,
+    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const
 {
 	// The label consists of the label found by the routing, the synapse label and the static label
 	// part used for filtering in the crossbar. The synapse label is assigned linearly here, since
@@ -382,7 +383,8 @@ std::
 	// The static label part used for crossbar filtering is aligned to the requirements in
 	// apply_crossbar_internal().
 	std::map<
-	    std::pair<PopulationDescriptor, size_t>, std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>>
+	    std::pair<PopulationDescriptor, size_t>,
+	    std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	    labels;
 	for (size_t i = 0; i < partition.external.size(); ++i) {
 		auto const& local_allocation =
@@ -394,11 +396,11 @@ std::
 			auto const local_index = local_sources.at(k);
 			auto const& local_descriptor = descriptors.at(local_index);
 			for (auto const& [padi_bus, _] : targets) {
-				haldls::vx::v3::SpikeLabel label;
+				halco::hicann_dls::vx::v3::SpikeLabel label;
 				label.set_neuron_label(NeuronLabel(padi_bus.toPADIBusBlockOnDLS().value() << 13));
 				label.set_row_select_address(
 				    haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
-				label.set_synapse_label(haldls::vx::SynapseLabelValue(k));
+				label.set_synapse_label(halco::hicann_dls::vx::SynapseLabel(k));
 				label.set_spl1_address(SPL1Address(padi_bus.toPADIBusOnPADIBusBlock().value()));
 				labels[local_descriptor][padi_bus] = label;
 			}
@@ -409,13 +411,14 @@ std::
 
 std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_source_labels(
     RoutingConstraints const& constraints,
-    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> const& internal,
+    std::map<std::pair<PopulationDescriptor, size_t>, halco::hicann_dls::vx::v3::SpikeLabel> const&
+        internal,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>> const& background,
+        std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& background,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>> const& external,
+        std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& external,
     Network const& network,
     Result& result) const
 {
@@ -456,7 +459,7 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
 			// Find the root of the label, i.e. without the lower bits depending on the actual
 			// single neuron source.
-			std::map<HemisphereOnDLS, std::set<haldls::vx::v3::SpikeLabel>> local_labels;
+			std::map<HemisphereOnDLS, std::set<halco::hicann_dls::vx::v3::SpikeLabel>> local_labels;
 			auto const size = std::get<BackgroundSpikeSourcePopulation>(population).size;
 			for (size_t i = 0; i < size; ++i) {
 				if (!background.contains(std::pair{descriptor, i})) {
@@ -467,11 +470,14 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 				} else {
 					for (auto [hemisphere, label] : background.at(std::pair{descriptor, i})) {
 						if (size <= 64) {
-							label = haldls::vx::v3::SpikeLabel(label.value() & 0b1111111111000000);
+							label = halco::hicann_dls::vx::v3::SpikeLabel(
+							    label.value() & 0b1111111111000000);
 						} else if (size > 64 && size <= 128) {
-							label = haldls::vx::v3::SpikeLabel(label.value() & 0b1111111110000000);
+							label = halco::hicann_dls::vx::v3::SpikeLabel(
+							    label.value() & 0b1111111110000000);
 						} else if (size > 128) {
-							label = haldls::vx::v3::SpikeLabel(label.value() & 0b1111111100000000);
+							label = halco::hicann_dls::vx::v3::SpikeLabel(
+							    label.value() & 0b1111111100000000);
 						} else {
 							throw std::logic_error("Impossible background source population size.");
 						}
@@ -490,18 +496,18 @@ std::vector<std::pair<PopulationDescriptor, size_t>> RoutingBuilder::apply_sourc
 		}
 	}
 	// all unset labels can be uniquely assigned now
-	std::set<haldls::vx::v3::SpikeLabel> set_labels;
+	std::set<halco::hicann_dls::vx::v3::SpikeLabel> set_labels;
 	for (auto const& [_, label] : internal) {
 		set_labels.insert(label);
 	}
 	for (auto const& [descriptor, index] : unset_labels) {
 		auto const& neuron =
 		    std::get<Population>(network.populations.at(descriptor)).neurons.at(index);
-		haldls::vx::v3::SpikeLabel label;
+		halco::hicann_dls::vx::v3::SpikeLabel label;
 		label.set_neuron_event_output(neuron.toNeuronColumnOnDLS().toNeuronEventOutputOnDLS());
 		bool success = false;
 		for (auto const neuron_backend_address_out :
-		     iter_all<haldls::vx::NeuronBackendAddressOut>()) {
+		     iter_all<halco::hicann_dls::vx::NeuronBackendAddressOut>()) {
 			label.set_neuron_backend_address_out(neuron_backend_address_out);
 			if (!set_labels.contains(label)) {
 				auto& local_labels = result.internal_neuron_labels[descriptor];
@@ -732,14 +738,14 @@ RoutingBuilder::place_routed_connections(
 
 void RoutingBuilder::apply_routed_connections(
     std::map<std::pair<ProjectionDescriptor, size_t>, PlacedConnection> const& placed_connections,
-    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> const&
+    std::map<std::pair<PopulationDescriptor, size_t>, halco::hicann_dls::vx::v3::SpikeLabel> const&
         internal_labels,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<HemisphereOnDLS, haldls::vx::v3::SpikeLabel>> const& background_labels,
+        std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& background_labels,
     std::map<
         std::pair<PopulationDescriptor, size_t>,
-        std::map<PADIBusOnDLS, haldls::vx::v3::SpikeLabel>> const& external_labels,
+        std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& external_labels,
 
     Network const& network,
     Result& result) const

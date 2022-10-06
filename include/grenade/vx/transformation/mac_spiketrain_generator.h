@@ -3,6 +3,7 @@
 #include "grenade/vx/vertex/transformation.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/timer.h"
@@ -53,7 +54,7 @@ private:
 	 * @param value Activation value to send
 	 * @return SpikeLabel value if activation value is larger than zero
 	 */
-	static std::optional<haldls::vx::v3::SpikeLabel> get_spike_label(
+	static std::optional<halco::hicann_dls::vx::v3::SpikeLabel> get_spike_label(
 	    halco::hicann_dls::vx::v3::SynapseDriverOnDLS const& driver,
 	    UInt5 const value) SYMBOL_VISIBLE;
 

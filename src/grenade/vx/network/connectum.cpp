@@ -2,6 +2,7 @@
 
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/network_graph.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 #include "hate/timer.h"
 #include <functional>
 #include <ostream>
@@ -211,7 +212,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	auto const process_path = [&connectum](
 	                              HardwareConnectionPath const& path,
 	                              std::pair<PopulationDescriptor, size_t> const& descriptor,
-	                              haldls::vx::v3::SpikeLabel const& label) {
+	                              halco::hicann_dls::vx::v3::SpikeLabel const& label) {
 		auto const neuron_label = label.get_neuron_label();
 		auto const target = path.crossbar_node.get_config().get_target();
 		auto const mask = path.crossbar_node.get_config().get_mask();

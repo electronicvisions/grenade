@@ -8,6 +8,7 @@
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 #include "haldls/vx/v3/systime.h"
 #include "logging_ctrl.h"
 #include "lola/vx/v3/chip.h"
@@ -84,7 +85,7 @@ TEST(JITGraphExecutor, EventLoopback)
 	for (size_t b = 1; b < max_batch_size; ++b) {
 		for (auto const output : iter_all<CrossbarL2OutputOnDLS>()) {
 			for (auto const address : iter_all<SPL1Address>()) {
-				haldls::vx::v3::SpikeLabel label;
+				halco::hicann_dls::vx::v3::SpikeLabel label;
 				label.set_spl1_address(address);
 				std::vector<grenade::vx::TimedSpikeSequence> inputs(b);
 				for (auto& in : inputs) {

@@ -2,6 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "haldls/vx/v3/event.h"
@@ -43,8 +44,9 @@ struct GENPYBIND(visible) RoutingResult
 	/**
 	 * Spike label corresponding to each neuron in a external population.
 	 */
-	typedef std::map<PopulationDescriptor, std::vector<std::vector<haldls::vx::v3::SpikeLabel>>>
-	    ExternalSpikeLabels;
+	typedef std::
+	    map<PopulationDescriptor, std::vector<std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
+	        ExternalSpikeLabels;
 	ExternalSpikeLabels external_spike_labels;
 
 	/**

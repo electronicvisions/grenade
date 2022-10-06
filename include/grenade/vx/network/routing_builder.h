@@ -9,6 +9,7 @@
 #include "grenade/vx/network/source_on_padi_bus_manager.h"
 #include "grenade/vx/network/synapse_driver_on_dls_manager.h"
 #include "halco/common/typed_array.h"
+#include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
@@ -100,7 +101,7 @@ private:
 	        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
 	    Network const& network) const;
 
-	std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel>
+	std::map<std::pair<PopulationDescriptor, size_t>, halco::hicann_dls::vx::v3::SpikeLabel>
 	get_internal_labels(
 	    std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
 	    SourceOnPADIBusManager::Partition const& partition,
@@ -108,7 +109,7 @@ private:
 
 	std::map<
 	    std::pair<PopulationDescriptor, size_t>,
-	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::SpikeLabel>>
+	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	get_background_labels(
 	    std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
 	    std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
@@ -117,7 +118,7 @@ private:
 
 	std::map<
 	    std::pair<PopulationDescriptor, size_t>,
-	    std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, haldls::vx::v3::SpikeLabel>>
+	    std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	get_external_labels(
 	    std::vector<std::pair<PopulationDescriptor, size_t>> const& descriptors,
 	    SourceOnPADIBusManager::Partition const& partition,
@@ -125,16 +126,19 @@ private:
 
 	std::vector<std::pair<PopulationDescriptor, size_t>> apply_source_labels(
 	    RoutingConstraints const& constraints,
-	    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> const&
-	        internal,
 	    std::map<
 	        std::pair<PopulationDescriptor, size_t>,
-	        std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::SpikeLabel>> const&
-	        background,
+	        halco::hicann_dls::vx::v3::SpikeLabel> const& internal,
 	    std::map<
 	        std::pair<PopulationDescriptor, size_t>,
-	        std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, haldls::vx::v3::SpikeLabel>> const&
-	        external,
+	        std::map<
+	            halco::hicann_dls::vx::v3::HemisphereOnDLS,
+	            halco::hicann_dls::vx::v3::SpikeLabel>> const& background,
+	    std::map<
+	        std::pair<PopulationDescriptor, size_t>,
+	        std::map<
+	            halco::hicann_dls::vx::v3::PADIBusOnDLS,
+	            halco::hicann_dls::vx::v3::SpikeLabel>> const& external,
 	    Network const& network,
 	    Result& result) const;
 
@@ -188,16 +192,19 @@ private:
 	void apply_routed_connections(
 	    std::map<std::pair<ProjectionDescriptor, size_t>, PlacedConnection> const&
 	        placed_connections,
-	    std::map<std::pair<PopulationDescriptor, size_t>, haldls::vx::v3::SpikeLabel> const&
-	        internal_labels,
 	    std::map<
 	        std::pair<PopulationDescriptor, size_t>,
-	        std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::SpikeLabel>> const&
-	        background_labels,
+	        halco::hicann_dls::vx::v3::SpikeLabel> const& internal_labels,
 	    std::map<
 	        std::pair<PopulationDescriptor, size_t>,
-	        std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, haldls::vx::v3::SpikeLabel>> const&
-	        external_labels,
+	        std::map<
+	            halco::hicann_dls::vx::v3::HemisphereOnDLS,
+	            halco::hicann_dls::vx::v3::SpikeLabel>> const& background_labels,
+	    std::map<
+	        std::pair<PopulationDescriptor, size_t>,
+	        std::map<
+	            halco::hicann_dls::vx::v3::PADIBusOnDLS,
+	            halco::hicann_dls::vx::v3::SpikeLabel>> const& external_labels,
 	    Network const& network,
 	    Result& result) const;
 

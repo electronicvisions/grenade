@@ -1,5 +1,7 @@
 #include "grenade/vx/network/extract_output.h"
 
+#include "halco/hicann-dls/vx/v3/event.h"
+
 namespace grenade::vx::network {
 
 std::vector<
@@ -12,7 +14,8 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 		    data.batch_size());
 	}
 	// generate reverse lookup table from spike label to neuron coordinate
-	std::map<haldls::vx::v3::SpikeLabel, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> label_lookup;
+	std::map<halco::hicann_dls::vx::v3::SpikeLabel, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
+	    label_lookup;
 	assert(network_graph.get_network());
 	for (auto const& [descriptor, neurons] : network_graph.get_spike_labels()) {
 		if (!std::holds_alternative<Population>(

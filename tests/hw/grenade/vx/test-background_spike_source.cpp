@@ -7,6 +7,7 @@
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/types.h"
+#include "halco/hicann-dls/vx/event.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
 #include "logging_ctrl.h"
