@@ -13,6 +13,8 @@ struct GENPYBIND(visible) ExecutionInstancePlaybackHooks
 	ExecutionInstancePlaybackHooks(
 	    stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
 	    stadls::vx::v3::PlaybackProgramBuilder& pre_realtime,
+	    stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_begin,
+	    stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_end,
 	    stadls::vx::v3::PlaybackProgramBuilder& post_realtime) SYMBOL_VISIBLE;
 	ExecutionInstancePlaybackHooks(ExecutionInstancePlaybackHooks const&) = delete;
 	ExecutionInstancePlaybackHooks(ExecutionInstancePlaybackHooks&&) = default;
@@ -21,6 +23,8 @@ struct GENPYBIND(visible) ExecutionInstancePlaybackHooks
 
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) pre_static_config;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) pre_realtime;
+	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) inside_realtime_begin;
+	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) inside_realtime_end;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) post_realtime;
 };
 

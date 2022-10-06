@@ -859,6 +859,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		PlaybackProgramBuilder builder;
 		builder.merge_back(m_playback_hooks.pre_static_config);
 		builder.merge_back(m_playback_hooks.pre_realtime);
+		builder.merge_back(m_playback_hooks.inside_realtime_begin);
+		builder.merge_back(m_playback_hooks.inside_realtime_end);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
 		return {m_chunked_program, false, false};
@@ -964,9 +966,10 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 	}
 
-	// get whether any of {pre,post}_realtime hooks are present
+	// get whether any of {pre,post}_realtime or inside_realtime_{begin,end} hooks are present
 	bool const has_hook_around_realtime =
-	    !m_playback_hooks.pre_realtime.empty() || !m_playback_hooks.post_realtime.empty();
+	    !m_playback_hooks.pre_realtime.empty() || !m_playback_hooks.inside_realtime_begin.empty() ||
+	    !m_playback_hooks.inside_realtime_end.empty() || !m_playback_hooks.post_realtime.empty();
 
 	// arm MADC
 	if (m_madc_readout_vertex) {
@@ -1067,6 +1070,13 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			builder.write(TimerOnDLS(), Timer());
 		}
+		// insert inside_realtime_begin hook
+		if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
+			builder.merge_back(std::move(m_playback_hooks.inside_realtime_begin));
+		} else {
+			builder.copy_back(m_playback_hooks.inside_realtime_begin);
+		}
+		// insert events of realtime section
 		if (m_event_input_vertex) {
 			generator::TimedSpikeSequence event_generator(
 			    std::get<std::vector<TimedSpikeSequence>>(
@@ -1083,6 +1093,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
+		}
+		// insert inside_realtime_end hook
+		if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
+			builder.merge_back(std::move(m_playback_hooks.inside_realtime_end));
+		} else {
+			builder.copy_back(m_playback_hooks.inside_realtime_end);
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
