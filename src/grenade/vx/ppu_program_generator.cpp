@@ -190,18 +190,13 @@ std::vector<std::string> PPUProgramGenerator::done()
 		       << ">, uint32_t> periodic_cadc_samples_bot "
 		          "__attribute__((section(\"ext.data\")));\n";
 		source << "\n";
-		source << "void perform_periodic_read()\n";
-		source << "{\n";
+		source << "void perform_periodic_read_recording(size_t const offset) {\n";
 		source << "using namespace libnux::vx;\n";
 		source << "auto& local_periodic_cadc_samples = "
 		          "std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
 		          "periodic_cadc_samples_top);\n";
-		source << "uint32_t offset = 0;\n";
-		source << "uint32_t size = 0;\n";
-		source << "status = grenade::vx::ppu::Status::inside_periodic_read;\n";
-		source << "while (status != grenade::vx::ppu::Status::stop_periodic_read) {\n";
 		source << "if (offset >= local_periodic_cadc_samples.size()) {\n";
-		source << "  continue;\n";
+		source << "  return;\n";
 		source << "}\n";
 		source << "uint64_t const time = libnux::vx::now();\n";
 		source << "// clang-format off\n";
@@ -225,6 +220,18 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << ");\n";
 		source << "local_periodic_cadc_samples[offset].first = time;\n";
 		source << "// clang-format on\n";
+		source << "}\n";
+		source << "void perform_periodic_read()\n";
+		source << "{\n";
+		source << "__vector uint8_t read[2];\n";
+		source << "using namespace libnux::vx;\n";
+		source << "uint32_t offset = 0;\n";
+		source << "uint32_t size = 0;\n";
+		source << "// instruction cache warming\n";
+		source << "perform_periodic_read_recording(offset);\n";
+		source << "status = grenade::vx::ppu::Status::inside_periodic_read;\n";
+		source << "while (status != grenade::vx::ppu::Status::stop_periodic_read) {\n";
+		source << "perform_periodic_read_recording(offset);\n";
 		source << "offset++;\n";
 		source << "size++;\n";
 		source << "}\n";
