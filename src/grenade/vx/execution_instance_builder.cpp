@@ -304,23 +304,23 @@ void ExecutionInstanceBuilder::process(
 				auto const local_block =
 				    m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]->get();
 
-				constexpr size_t local_block_size_expectation =
-				    ppu_vector_alignment /* num samples */ +
-				    (num_cadc_samples_in_extmem * (ppu_vector_alignment /* sample time stamp */ +
-				                                   2 * ppu_vector_alignment /* sample values */));
-				if (local_block_size_expectation != local_block.size()) {
-					throw std::logic_error(
-					    "Periodic CADC readout samples memory size (" +
-					    std::to_string(local_block.size()) + ") doesn't match expectation(" +
-					    std::to_string(local_block_size_expectation) + ").");
-				}
-
+				uint32_t const local_block_size_expectation =
+				    (local_block.size() - ppu_vector_alignment /* num samples */) /
+				    (ppu_vector_alignment /* sample time stamp */ +
+				     2 * ppu_vector_alignment /* sample values */);
 				// get number of samples
 				uint32_t num_samples = 0;
 				for (size_t i = 0; i < 4; ++i) {
 					num_samples |= static_cast<uint32_t>(local_block.at(i).get_value().value())
 					               << (3 - i) * CHAR_BIT;
 				}
+				if (num_samples > local_block_size_expectation) {
+					auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+					LOG4CXX_WARN(
+					    logger, "Less CADC samples read-out than recorded during execution.");
+				}
+				num_samples = std::min(num_samples, local_block_size_expectation);
+
 				size_t offset = ppu_vector_alignment;
 				// get samples
 				auto& samples = sample_batches.at(batch_index);
@@ -1163,8 +1163,35 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 						continue;
 					}
 					assert(ppu_periodic_cadc_readout_samples_coord[ppu]);
-					batch_entry.m_extmem_result[ppu] =
-					    builder.read(*ppu_periodic_cadc_readout_samples_coord[ppu]);
+
+					// calculate aproximate number of expected samples
+					size_t expected_size = 0;
+					// lower bound on sample duration -> upper bound on sample rate
+					size_t const approx_sample_duration =
+					    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
+					// get experiment duration either via runtime or via last spike time
+					if (!m_local_external_data.runtime.empty()) {
+						expected_size =
+						    m_local_external_data.runtime.at(m_execution_instance).at(b) /
+						    approx_sample_duration;
+					} else if (m_event_input_vertex) {
+						auto const& spikes = std::get<std::vector<TimedSpikeSequence>>(
+						                         m_local_data.data.at(*m_event_input_vertex))
+						                         .at(b);
+						if (!spikes.empty()) {
+							expected_size = spikes.back().time / approx_sample_duration;
+						}
+					}
+					// add a sample as constant margin for error
+					expected_size += 1;
+					// cap at maximal possible amount of samples
+					expected_size = std::min(expected_size, static_cast<size_t>(100));
+
+					batch_entry.m_extmem_result[ppu] = builder.read(ExternalPPUMemoryBlockOnFPGA(
+					    ppu_periodic_cadc_readout_samples_coord[ppu]->toMin(),
+					    ExternalPPUMemoryByteOnFPGA(
+					        ppu_periodic_cadc_readout_samples_coord[ppu]->toMin() + 128 +
+					        ((256 + 128) * expected_size) - 1)));
 				}
 			}
 		}
