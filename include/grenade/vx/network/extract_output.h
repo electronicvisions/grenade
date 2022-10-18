@@ -6,6 +6,11 @@
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "haldls/vx/v3/systime.h"
 
+#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
+#include "hate/timer.h"
+#include <log4cxx/logger.h>
+#endif
+
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
 namespace network {
@@ -59,6 +64,9 @@ GENPYBIND_MANUAL({
 	    [convert_ms](
 	        grenade::vx::IODataMap const& data,
 	        grenade::vx::network::NetworkGraph const& network_graph) {
+		    hate::Timer timer;
+		    static auto logger =
+		        log4cxx::Logger::getLogger("pygrenade.network.extract_neuron_spikes");
 		    auto const spikes = grenade::vx::network::extract_neuron_spikes(data, network_graph);
 		    std::vector<std::map<int, pybind11::array_t<double>>> ret(spikes.size());
 		    for (size_t b = 0; b < spikes.size(); ++b) {
@@ -71,11 +79,14 @@ GENPYBIND_MANUAL({
 				    ret.at(b)[neuron.toEnum().value()] = pytimes;
 			    }
 		    }
+		    LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		    return ret;
 	    };
 	auto const extract_madc_samples = [convert_ms](
 	                                      grenade::vx::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
+		hate::Timer timer;
+		static auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
 		auto const samples = grenade::vx::network::extract_madc_samples(data, network_graph);
 		std::vector<std::pair<pybind11::array_t<float>, pybind11::array_t<int>>> ret(
 		    samples.size());
@@ -90,11 +101,14 @@ GENPYBIND_MANUAL({
 			}
 			ret.at(b) = std::make_pair(times, values);
 		}
+		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;
 	};
 	auto const extract_cadc_samples = [convert_ms](
 	                                      grenade::vx::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
+		hate::Timer timer;
+		static auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_cadc_samples");
 		auto const samples = grenade::vx::network::extract_cadc_samples(data, network_graph);
 		std::vector<
 		    std::tuple<pybind11::array_t<float>, pybind11::array_t<int>, pybind11::array_t<int>>>
@@ -118,6 +132,7 @@ GENPYBIND_MANUAL({
 			}
 			ret.at(b) = std::make_tuple(times, neurons, values);
 		}
+		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;
 	};
 	parent.def(

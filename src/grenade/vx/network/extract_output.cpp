@@ -1,6 +1,8 @@
 #include "grenade/vx/network/extract_output.h"
 
 #include "halco/hicann-dls/vx/v3/event.h"
+#include "hate/timer.h"
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::network {
 
@@ -8,6 +10,8 @@ std::vector<
     std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<haldls::vx::v3::ChipTime>>>
 extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 {
+	hate::Timer timer;
+	static auto logger = log4cxx::Logger::getLogger("grenade.network.extract_neuron_spikes");
 	if (!network_graph.get_event_output_vertex()) {
 		return std::vector<std::map<
 		    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<haldls::vx::v3::ChipTime>>>(
@@ -49,6 +53,7 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 			}
 		}
 	}
+	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 	return ret;
 }
 
@@ -56,6 +61,8 @@ std::vector<
     std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 {
+	hate::Timer timer;
+	static auto logger = log4cxx::Logger::getLogger("grenade.network.extract_madc_samples");
 	if (!network_graph.get_madc_sample_output_vertex()) {
 		std::vector<std::vector<
 		    std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
@@ -75,6 +82,7 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 			local_ret.push_back({sample.chip_time, sample.value});
 		}
 	}
+	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 	return ret;
 }
 
@@ -82,6 +90,8 @@ std::vector<std::vector<
     std::tuple<haldls::vx::v3::ChipTime, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, Int8>>>
 extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 {
+	hate::Timer timer;
+	static auto logger = log4cxx::Logger::getLogger("grenade.network.extract_cadc_samples");
 	// convert samples
 	std::vector<std::vector<
 	    std::tuple<haldls::vx::v3::ChipTime, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, Int8>>>
@@ -118,6 +128,7 @@ extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 	for (auto& batch : ret) {
 		std::sort(batch.begin(), batch.end());
 	}
+	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 	return ret;
 }
 
