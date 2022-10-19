@@ -266,7 +266,7 @@ IODataMap run(
 	} else {
 		output_activation_map.execution_time_info = execution_time_info;
 	}
-
+	output_activation_map.runtime = input.runtime;
 	return output_activation_map;
 }
 
