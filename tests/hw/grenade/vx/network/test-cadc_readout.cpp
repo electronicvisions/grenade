@@ -142,10 +142,14 @@ TEST(CADCRecording, General)
 	        result_map.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
+	std::set<grenade::vx::Int8> unique_values;
 	for (size_t i = 0; i < result.size(); ++i) {
 		auto const& samples = result.at(i);
 		for (auto const& sample : samples) {
 			EXPECT_EQ(sample.data.size(), cadc_recording.neurons.size());
+			for (auto const& e : sample.data) {
+				unique_values.insert(e);
+			}
 		}
 		// CADC sampling shall take between one and seven us
 		EXPECT_GE(
@@ -155,4 +159,5 @@ TEST(CADCRecording, General)
 		    samples.size(),
 		    inputs.runtime.at(instance).at(i) / Timer::Value::fpga_clock_cycles_per_us);
 	}
+	EXPECT_GT(unique_values.size(), 1);
 }
