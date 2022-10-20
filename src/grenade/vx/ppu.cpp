@@ -366,6 +366,22 @@ Compiler::compile(std::vector<std::string> sources)
 			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
 		}
 	}
+	if (logger->isTraceEnabled()) {
+		ret = std::system(("powerpc-ppu-objdump -Mnux -d " +
+		                   std::string(temporary.get_path() / "program.bin") + " > " +
+		                   std::string(temporary.get_path() / "objdump_log") + " 2>&1")
+		                      .c_str());
+		{
+			std::stringstream log;
+			{
+				log << std::ifstream(temporary.get_path() / "objdump_log").rdbuf();
+			}
+			if (ret != 0) {
+				throw std::runtime_error("Objdump failed:\n" + log.str());
+			}
+			LOG4CXX_TRACE(logger, "compile(): Objdump:\n" << log.str());
+		}
+	}
 	lola::vx::v3::PPUElfFile elf_file(temporary.get_path() / "program.bin");
 	return {elf_file.read_symbols(), elf_file.read_program()};
 }
