@@ -129,7 +129,7 @@ TEST(CADCRecording, General)
 
 	grenade::vx::IODataMap inputs;
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 100));
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 400));
+	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 150));
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -151,10 +151,10 @@ TEST(CADCRecording, General)
 				unique_values.insert(e);
 			}
 		}
-		// CADC sampling shall take between one and seven us
+		// CADC sampling shall take between one and two us
 		EXPECT_GE(
 		    samples.size(),
-		    inputs.runtime.at(instance).at(i) / Timer::Value::fpga_clock_cycles_per_us / 7);
+		    inputs.runtime.at(instance).at(i) / Timer::Value::fpga_clock_cycles_per_us / 2);
 		EXPECT_LE(
 		    samples.size(),
 		    inputs.runtime.at(instance).at(i) / Timer::Value::fpga_clock_cycles_per_us);

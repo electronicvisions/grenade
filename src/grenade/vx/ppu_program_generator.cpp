@@ -193,7 +193,6 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "void perform_periodic_read()\n";
 		source << "{\n";
 		source << "using namespace libnux::vx;\n";
-		source << "__vector uint8_t read[2];\n";
 		source << "auto& local_periodic_cadc_samples = "
 		          "std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
 		          "periodic_cadc_samples_top);\n";
@@ -207,14 +206,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "uint64_t const time = libnux::vx::now();\n";
 		source << "// clang-format off\n";
 		source << "asm volatile(\n";
-		source << "\"fxvinx %[d0], %[ca_base], %[i]\\n\"\n";
-		source << "\"fxvinx %[d1], %[cab_base], %[j]\\n\"\n";
-		source << "\"fxvoutx %[d0], %[b0], %[i]\\n\"\n";
-		source << "\"fxvoutx %[d1], %[b1], %[i]\\n\"\n";
-		source << ":\n";
-		source << "  [d0] \"=&qv\" (read[0]),\n";
-		source << "  [d1] \"=&qv\" (read[1])\n";
-		source << ":";
+		source << "\"fxvinx 0, %[ca_base], %[i]\\n\"\n";
+		source << "\"fxvinx 1, %[cab_base], %[j]\\n\"\n";
+		source << "\"fxvoutx 0, %[b0], %[i]\\n\"\n";
+		source << "\"fxvoutx 1, %[b1], %[i]\\n\"\n";
+		source << "::\n";
 		source << "  [b0] \"b\" (GlobalAddress::from_global(0, "
 		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even_"
 		          "columns)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
@@ -225,7 +221,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "  [cab_base] \"r\" (dls_causal_base|dls_buffer_enable_mask),\n";
 		source << "  [i] \"r\" (uint32_t(0)),\n";
 		source << "  [j] \"r\" (uint32_t(1))\n";
-		source << ": /* no clobber */\n";
+		source << ": \"qv0\", \"qv1\"\n";
 		source << ");\n";
 		source << "local_periodic_cadc_samples[offset].first = time;\n";
 		source << "// clang-format on\n";
@@ -234,12 +230,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "}\n";
 		source << "std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : "
 		          "periodic_cadc_samples_top) = size;\n";
-		source << "asm volatile(\"fxvinx %[d0], %[b0], %[i]\\n\"\n";
+		source << "asm volatile(\"fxvinx 0, %[b0], %[i]\\n\"\n";
 		source << "             \"sync\\n\"\n";
-		source << "             : [d0] \"=qv\"(read[0])\n";
-		source << "             : [b0] "
+		source << "             :: [b0] "
 		          "\"r\"(dls_extmem_base), [i] \"r\"(uint32_t(0))\n";
-		source << "             : \"memory\");\n";
+		source << "             : \"qv0\", \"memory\");\n";
 		source << "}";
 		sources.push_back(source.str());
 	}
