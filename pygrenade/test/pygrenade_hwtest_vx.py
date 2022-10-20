@@ -91,8 +91,6 @@ class HwTestPygrenadeVx(unittest.TestCase):
                 inputs)
 
     @staticmethod
-    @unittest.skip("Periodic CADC readout not possible until data placement "
-                   + "in extmem is implemented.")
     def test_cadc_readout(enable_spikes: bool = True):
         batch_size = 2
         int_pop_size = 3
