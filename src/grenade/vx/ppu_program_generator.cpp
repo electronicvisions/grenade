@@ -174,6 +174,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "#include \"grenade/vx/ppu/status.h\"\n";
 		source << "#include \"libnux/vx/dls.h\"\n";
 		source << "#include \"libnux/vx/vector.h\"\n";
+		source << "#include \"libnux/vx/globaladdress.h\"\n";
 		source << "#include \"libnux/vx/time.h\"\n";
 		source << "#include <array>\n";
 		source << "#include <tuple>\n";
@@ -214,8 +215,12 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "  [d0] \"=&qv\" (read[0]),\n";
 		source << "  [d1] \"=&qv\" (read[1])\n";
 		source << ":";
-		source << "  [b0] \"b\" (&local_periodic_cadc_samples[offset].second.even_columns),\n";
-		source << "  [b1] \"b\" (&local_periodic_cadc_samples[offset].second.odd_columns),\n";
+		source << "  [b0] \"b\" (GlobalAddress::from_global(0, "
+		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even_"
+		          "columns)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
+		source << "  [b1] \"b\" (GlobalAddress::from_global(0, "
+		          "reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd_"
+		          "columns)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),\n";
 		source << "  [ca_base] \"r\" (dls_causal_base),\n";
 		source << "  [cab_base] \"r\" (dls_causal_base|dls_buffer_enable_mask),\n";
 		source << "  [i] \"r\" (uint32_t(0)),\n";
