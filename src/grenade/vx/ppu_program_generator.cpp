@@ -198,6 +198,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "if (offset >= local_periodic_cadc_samples.size()) {\n";
 		source << "  return;\n";
 		source << "}\n";
+		source << "// synchronize time-stamp and CADC readout\n";
+		source << "asm volatile(\n";
+		source << "\"sync\\n\"\n";
+		source << ":::\n";
+		source << ");\n";
 		source << "uint64_t const time = libnux::vx::now();\n";
 		source << "// clang-format off\n";
 		source << "asm volatile(\n";
