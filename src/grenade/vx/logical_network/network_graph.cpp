@@ -27,4 +27,9 @@ NetworkGraph::ProjectionTranslation const& NetworkGraph::get_projection_translat
 	return m_projection_translation;
 }
 
+NetworkGraph::PlasticityRuleTranslation const& NetworkGraph::get_plasticity_rule_translation() const
+{
+	return m_plasticity_rule_translation;
+}
+
 } // namespace grenade::vx::logical_network

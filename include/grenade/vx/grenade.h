@@ -18,6 +18,7 @@
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/network/run.h"
 
+#include "grenade/vx/logical_network/extract_output.h"
 #include "grenade/vx/logical_network/generate_input.h"
 #include "grenade/vx/logical_network/network.h"
 #include "grenade/vx/logical_network/network_builder.h"

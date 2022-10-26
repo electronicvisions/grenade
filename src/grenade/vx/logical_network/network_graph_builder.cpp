@@ -201,6 +201,7 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 	}
 
 	// add plasticity rules
+	NetworkGraph::PlasticityRuleTranslation plasticity_rule_translation;
 	for (auto const& [d, plasticity_rule] : network->plasticity_rules) {
 		network::PlasticityRule hardware_plasticity_rule;
 		for (auto const& d : plasticity_rule.projections) {
@@ -213,7 +214,8 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 		hardware_plasticity_rule.timer = plasticity_rule.timer;
 		hardware_plasticity_rule.enable_requires_one_source_per_row_in_order =
 		    plasticity_rule.enable_requires_one_source_per_row_in_order;
-		builder.add(hardware_plasticity_rule);
+		hardware_plasticity_rule.recording = plasticity_rule.recording;
+		plasticity_rule_translation[d] = builder.add(hardware_plasticity_rule);
 	}
 
 	NetworkGraph result;
@@ -222,6 +224,7 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 	result.m_population_translation = population_translation;
 	result.m_neuron_translation = neuron_translation;
 	result.m_projection_translation = projection_translation;
+	result.m_plasticity_rule_translation = plasticity_rule_translation;
 	return result;
 }
 

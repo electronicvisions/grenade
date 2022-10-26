@@ -49,12 +49,19 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(projection_translation))
 	ProjectionTranslation const& get_projection_translation() const SYMBOL_VISIBLE;
 
+	/** Translation between logical and hardware populations. */
+	typedef std::map<PlasticityRuleDescriptor, network::PlasticityRuleDescriptor>
+	    PlasticityRuleTranslation;
+	GENPYBIND(getter_for(plasticity_rule_translation))
+	PlasticityRuleTranslation const& get_plasticity_rule_translation() const SYMBOL_VISIBLE;
+
 private:
 	std::shared_ptr<Network> m_network;
 	std::shared_ptr<network::Network> m_hardware_network;
 	PopulationTranslation m_population_translation;
 	NeuronTranslation m_neuron_translation;
 	ProjectionTranslation m_projection_translation;
+	PlasticityRuleTranslation m_plasticity_rule_translation;
 
 	friend NetworkGraph build_network_graph(std::shared_ptr<Network> const& network);
 };

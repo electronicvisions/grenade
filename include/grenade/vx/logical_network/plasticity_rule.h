@@ -39,6 +39,60 @@ struct GENPYBIND(visible) PlasticityRule
 	 */
 	bool enable_requires_one_source_per_row_in_order{false};
 
+	/*
+	 * Recording information for execution of the rule.
+	 * Raw recording of one scratchpad memory region for all timed invokations of the
+	 * rule. No automated recording of time is performed.
+	 */
+	typedef network::PlasticityRule::RawRecording RawRecording;
+
+	/**
+	 * Recording information for execution of the rule.
+	 * Recording of exclusive scratchpad memory per rule invokation with
+	 * time recording and returned data as time-annotated events.
+	 */
+	typedef network::PlasticityRule::TimedRecording TimedRecording;
+
+	/**
+	 * Recording memory provided to plasticity rule kernel and recorded after
+	 * execution.
+	 */
+	typedef network::PlasticityRule::Recording Recording;
+	std::optional<Recording> recording;
+
+	/**
+	 * Recording data corresponding to a raw recording.
+	 */
+	typedef network::PlasticityRule::RawRecordingData RawRecordingData;
+
+	/**
+	 * Extracted recorded data of observables corresponding to timed recording.
+	 */
+	struct TimedRecordingData
+	{
+		/**
+		 * Recording per logical synapse, where for each sample the outer dimension of the data are
+		 * the logical synapses of the projection and the inner dimension are the performed
+		 * recordings of the corresponding hardware synapse(s).
+		 */
+		typedef std::variant<
+		    std::vector<TimedDataSequence<std::vector<std::vector<int8_t>>>>,
+		    std::vector<TimedDataSequence<std::vector<std::vector<uint8_t>>>>,
+		    std::vector<TimedDataSequence<std::vector<std::vector<int16_t>>>>,
+		    std::vector<TimedDataSequence<std::vector<std::vector<uint16_t>>>>>
+		    EntryPerSynapse;
+
+		typedef network::PlasticityRule::TimedRecordingData::Entry EntryArray;
+
+		std::map<std::string, std::map<ProjectionDescriptor, EntryPerSynapse>> data_per_synapse;
+		std::map<std::string, EntryArray> data_array;
+	};
+
+	/**
+	 * Recorded data.
+	 */
+	typedef std::variant<RawRecordingData, TimedRecordingData> RecordingData;
+
 	PlasticityRule() = default;
 
 	bool operator==(PlasticityRule const& other) const SYMBOL_VISIBLE;
@@ -59,10 +113,26 @@ struct GENPYBIND(inline_base("*")) PlasticityRuleDescriptor
 
 } // namespace logical_network
 
+GENPYBIND(postamble, tag(grenade_vx))
 GENPYBIND_MANUAL({
 	parent.attr("logical_network").attr("PlasticityRule").attr("Timer") =
 	    parent.attr("PlasticityRule").attr("Timer");
+	parent.attr("logical_network").attr("PlasticityRule").attr("RawRecording") =
+	    parent.attr("PlasticityRule").attr("RawRecording");
+	parent.attr("logical_network").attr("PlasticityRule").attr("TimedRecording") =
+	    parent.attr("PlasticityRule").attr("TimedRecording");
+	parent.attr("logical_network").attr("PlasticityRule").attr("RawRecordingData") =
+	    parent.attr("PlasticityRule").attr("RawRecordingData");
 })
+
+typedef TimedData<std::vector<std::vector<int8_t>>> _SingleEntryPerSynapseInt8
+    GENPYBIND(opaque(false));
+typedef TimedData<std::vector<std::vector<uint8_t>>> _SingleEntryPerSynapseUInt8
+    GENPYBIND(opaque(false));
+typedef TimedData<std::vector<std::vector<int16_t>>> _SingleEntryPerSynapseInt16
+    GENPYBIND(opaque(false));
+typedef TimedData<std::vector<std::vector<uint16_t>>> _SingleEntryPerSynapseUInt16
+    GENPYBIND(opaque(false));
 
 } // namespace grenade::vx
 

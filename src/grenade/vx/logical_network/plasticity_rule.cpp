@@ -10,7 +10,8 @@ bool PlasticityRule::operator==(PlasticityRule const& other) const
 {
 	return projections == other.projections && kernel == other.kernel && timer == other.timer &&
 	       enable_requires_one_source_per_row_in_order ==
-	           other.enable_requires_one_source_per_row_in_order;
+	           other.enable_requires_one_source_per_row_in_order &&
+	       recording == other.recording;
 }
 
 bool PlasticityRule::operator!=(PlasticityRule const& other) const
@@ -31,6 +32,13 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule const& plasticity_rule
 	ss << "\tenable_requires_one_source_per_row_in_order: " << std::boolalpha
 	   << plasticity_rule.enable_requires_one_source_per_row_in_order << "\n";
 	os << ss.str();
+	os << "\trecording: ";
+	if (plasticity_rule.recording) {
+		std::visit([&](auto const& recording) { os << recording; }, *plasticity_rule.recording);
+	} else {
+		os << "disabled";
+	}
+	os << "\n";
 	os << ")";
 	return os;
 }

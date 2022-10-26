@@ -11,7 +11,7 @@
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
-namespace logical_network {
+namespace logical_network GENPYBIND_MODULE {
 
 /**
  * Extract spikes corresponding to neurons in the network.
@@ -27,6 +27,21 @@ extract_neuron_spikes(
     IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
+
+/**
+ * Extract to be recorded observable data of a plasticity rule.
+ * @param data Data containing observables
+ * @param network_graph Network graph to use for hardware to logical network translation
+ * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the
+ * observables
+ * @param descriptor Descriptor to plasticity rule to extract observable data for
+ * @return Observable data per batch entry
+ */
+PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
+    IODataMap const& data,
+    NetworkGraph const& network_graph,
+    network::NetworkGraph const& hardware_network_graph,
+    PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;
 
 } // namespace logical_network
 
