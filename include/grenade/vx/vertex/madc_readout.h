@@ -10,7 +10,7 @@
 #include <optional>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -61,7 +61,7 @@ private:
 	Coord m_coord{};
 	Config m_config{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

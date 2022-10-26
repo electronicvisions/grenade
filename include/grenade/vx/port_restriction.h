@@ -6,7 +6,7 @@
 #include <optional>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -57,7 +57,7 @@ private:
 	size_t m_min{0};
 	size_t m_max{0};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

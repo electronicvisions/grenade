@@ -11,7 +11,7 @@
 #include <gtest/gtest_prod.h>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 class MACSpikeTrainGenerator_get_spike_label_Test;
@@ -63,7 +63,7 @@ private:
 	size_t m_num_sends{};
 	haldls::vx::Timer::Value m_wait_between_events{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

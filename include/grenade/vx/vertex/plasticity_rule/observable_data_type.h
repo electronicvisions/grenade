@@ -5,7 +5,7 @@
 #include <ostream>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx::vertex::plasticity_rule {
@@ -36,7 +36,7 @@ struct ObservableDataType
 	}
 
 private:
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive&)
 	{}

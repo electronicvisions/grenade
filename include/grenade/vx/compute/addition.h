@@ -5,7 +5,7 @@
 #include "grenade/vx/types.h"
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace lola::vx::v3 {
@@ -54,7 +54,7 @@ private:
 	Graph::vertex_descriptor m_output_vertex{};
 	std::vector<Int8> m_other{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

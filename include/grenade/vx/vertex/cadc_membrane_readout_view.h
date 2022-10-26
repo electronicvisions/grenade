@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -86,7 +86,7 @@ private:
 
 	void check(Columns const& columns, Sources const& sources) SYMBOL_VISIBLE;
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

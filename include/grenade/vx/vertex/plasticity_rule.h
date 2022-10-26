@@ -17,7 +17,7 @@
 #include <vector>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -59,7 +59,7 @@ struct PlasticityRule
 		friend std::ostream& operator<<(std::ostream& os, Timer const& timer) SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t version);
 	};
@@ -85,7 +85,7 @@ struct PlasticityRule
 		    SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t version);
 	};
@@ -162,7 +162,7 @@ struct PlasticityRule
 			    std::ostream& os, ObservablePerSynapse const& observable) SYMBOL_VISIBLE;
 
 		private:
-			friend class cereal::access;
+			friend struct cereal::access;
 			template <typename Archive>
 			void serialize(Archive& ar, std::uint32_t version);
 		};
@@ -216,7 +216,7 @@ struct PlasticityRule
 			    SYMBOL_VISIBLE;
 
 		private:
-			friend class cereal::access;
+			friend struct cereal::access;
 			template <typename Archive>
 			void serialize(Archive& ar, std::uint32_t version);
 		};
@@ -241,7 +241,7 @@ struct PlasticityRule
 		    SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t version);
 	};
@@ -307,7 +307,7 @@ struct PlasticityRule
 		    SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t version);
 	};
@@ -396,7 +396,7 @@ private:
 	std::vector<SynapseViewShape> m_synapse_view_shapes;
 	std::optional<Recording> m_recording;
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

@@ -17,9 +17,9 @@
 namespace grenade::vx {
 
 class Graph;
-class IODataMap;
+struct IODataMap;
 class IODataList;
-class ExecutionInstancePlaybackHooks;
+struct ExecutionInstancePlaybackHooks;
 class JITGraphExecutor;
 
 /**

@@ -13,7 +13,7 @@
 #include "lola/vx/v3/synapse.h"
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace lola::vx::v3 {
@@ -113,7 +113,7 @@ private:
 	size_t m_num_sends{};
 	haldls::vx::v3::Timer::Value m_wait_between_events{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx::transformation {
@@ -33,7 +33,7 @@ private:
 	ConnectionType m_type{};
 	std::vector<size_t> m_sizes{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

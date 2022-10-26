@@ -84,8 +84,7 @@ GENPYBIND_MANUAL({
 		    std::vector<std::map<int, pybind11::array_t<double>>> ret(spikes.size());
 		    for (size_t b = 0; b < spikes.size(); ++b) {
 			    for (auto const& [neuron, times] : spikes.at(b)) {
-				    pybind11::array_t<double> pytimes(
-				        {static_cast<pybind11::ssize_t>(times.size())});
+				    pybind11::array_t<double> pytimes(static_cast<pybind11::ssize_t>(times.size()));
 				    for (size_t i = 0; i < times.size(); ++i) {
 					    pytimes.mutable_at(i) = convert_ms(times.at(i));
 				    }
@@ -105,8 +104,8 @@ GENPYBIND_MANUAL({
 		    samples.size());
 		for (size_t b = 0; b < samples.size(); ++b) {
 			auto const madc_samples = samples.at(b);
-			pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(madc_samples.size())});
-			pybind11::array_t<int> values({static_cast<pybind11::ssize_t>(madc_samples.size())});
+			pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(madc_samples.size()));
 			for (size_t i = 0; i < madc_samples.size(); ++i) {
 				auto const& sample = madc_samples.at(i);
 				times.mutable_at(i) = convert_ms(sample.first);
@@ -134,9 +133,9 @@ GENPYBIND_MANUAL({
 				    pybind11::array_t<int>(0));
 				continue;
 			}
-			pybind11::array_t<float> times({static_cast<pybind11::ssize_t>(cadc_samples.size())});
-			pybind11::array_t<int> neurons({static_cast<pybind11::ssize_t>(cadc_samples.size())});
-			pybind11::array_t<int> values({static_cast<pybind11::ssize_t>(cadc_samples.size())});
+			pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> neurons(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(cadc_samples.size()));
 			for (size_t i = 0; i < cadc_samples.size(); ++i) {
 				auto const& sample = cadc_samples.at(i);
 				times.mutable_at(i) = convert_ms(std::get<0>(sample));

@@ -12,7 +12,7 @@
 #include <boost/range/iterator_range.hpp>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx::vertex {
@@ -97,7 +97,7 @@ private:
 	    Rows const& rows, Columns const& columns, Weights const& weights, Labels const& labels)
 	    SYMBOL_VISIBLE;
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

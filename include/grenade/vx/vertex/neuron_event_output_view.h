@@ -8,7 +8,7 @@
 #include <optional>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -64,7 +64,7 @@ struct NeuronEventOutputView
 private:
 	Neurons m_neurons{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

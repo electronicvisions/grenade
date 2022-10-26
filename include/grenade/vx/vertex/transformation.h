@@ -10,7 +10,7 @@
 #include <vector>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx::vertex {
@@ -80,7 +80,7 @@ struct Transformation
 private:
 	std::unique_ptr<Function> m_function{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

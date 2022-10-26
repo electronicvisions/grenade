@@ -12,7 +12,7 @@
 #include <boost/range/iterator_range.hpp>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx::ppu {
@@ -43,7 +43,7 @@ struct SynapseArrayViewSparse
 		bool operator!=(Synapse const& other) const SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t);
 	};
@@ -107,7 +107,7 @@ private:
 
 	void check(Rows const& rows, Columns const& columns, Synapses const& synapses) SYMBOL_VISIBLE;
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

@@ -9,7 +9,7 @@
 #include <iosfwd>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -46,7 +46,7 @@ struct SynapseDriver
 		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t);
 	};
@@ -87,7 +87,7 @@ private:
 	Coordinate m_coordinate{};
 	Config m_config{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

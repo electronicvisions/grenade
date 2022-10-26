@@ -9,7 +9,7 @@
 #include <optional>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx::vertex {
@@ -45,7 +45,7 @@ private:
 	size_t m_size{};
 	ConnectionType m_input_type{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

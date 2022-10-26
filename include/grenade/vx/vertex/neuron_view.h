@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -44,7 +44,7 @@ struct NeuronView
 		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
 
 	private:
-		friend class cereal::access;
+		friend struct cereal::access;
 		template <typename Archive>
 		void serialize(Archive& ar, std::uint32_t version);
 	};
@@ -86,7 +86,7 @@ private:
 	Configs m_configs{};
 	Row m_row{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

@@ -8,7 +8,7 @@
 #include <iosfwd>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace
 
 namespace grenade::vx::vertex {
@@ -41,7 +41,7 @@ struct ReLU
 private:
 	size_t m_size{};
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };

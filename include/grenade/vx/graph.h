@@ -22,7 +22,7 @@
 #include <boost/smart_ptr/local_shared_ptr.hpp>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace hate {
@@ -259,7 +259,7 @@ private:
 	    Vertex&& vertex,
 	    std::vector<Input> inputs) SYMBOL_VISIBLE;
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void load(Archive& ar, std::uint32_t);
 	template <typename Archive>

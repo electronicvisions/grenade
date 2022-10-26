@@ -10,7 +10,7 @@
 #include <iosfwd>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx {
@@ -61,7 +61,7 @@ struct BackgroundSpikeSource
 	Coordinate const& get_coordinate() const SYMBOL_VISIBLE;
 
 private:
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 

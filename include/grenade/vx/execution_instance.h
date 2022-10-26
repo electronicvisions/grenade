@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 namespace cereal {
-class access;
+struct access;
 } // namespace cereal
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
@@ -60,7 +60,7 @@ private:
 	ExecutionIndex m_execution_index;
 	halco::hicann_dls::vx::v3::DLSGlobal m_dls_global;
 
-	friend class cereal::access;
+	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };
