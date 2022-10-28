@@ -69,12 +69,14 @@ TemporaryDirectory::TemporaryDirectory(std::string directory_template)
 	m_path = tmp;
 }
 
-std::string get_include_paths()
+namespace {
+
+std::string get_include_path(
+    std::string const& name, std::filesystem::path const& location_during_build)
 {
 	// assume, that include paths are found under:
-	// - after install: PATH/../include
-	// - during build:  PATH/../../libnux/include, PATH/../../grenade/include,
-	// PATH/../../hate/include
+	// - after install: PATH/../<location_after_install>
+	// - during build:  PATH/../<location_during_build>
 	// TODO (Issue #3990): Implement properly without magic assumptions
 	char const* env_path = std::getenv("PATH");
 	if (!env_path) {
@@ -90,44 +92,50 @@ std::string get_include_paths()
 			std::filesystem::path fp(p);
 			fp = fp.parent_path();
 			fp /= "include";
-			if (std::filesystem::exists(fp / "libnux") && std::filesystem::exists(fp / "grenade") &&
-			    std::filesystem::exists(fp / "hate")) {
-				return "-I" + std::string(fp);
+			if (std::filesystem::exists(fp / name)) {
+				return "-I" + static_cast<std::string>(fp);
 			}
 		}
 		{
-			std::filesystem::path fp_libnux(p);
-			fp_libnux = fp_libnux.parent_path();
-			fp_libnux = fp_libnux.parent_path();
-			fp_libnux /= "libnux";
-			fp_libnux /= "include";
-			std::filesystem::path fp_grenade(p);
-			fp_grenade = fp_grenade.parent_path();
-			fp_grenade = fp_grenade.parent_path();
-			fp_grenade /= "grenade";
-			fp_grenade /= "include";
-			std::filesystem::path fp_hate(p);
-			fp_hate = fp_hate.parent_path();
-			fp_hate = fp_hate.parent_path();
-			fp_hate /= "hate";
-			fp_hate /= "include";
-			if (std::filesystem::exists(fp_libnux / "libnux") &&
-			    std::filesystem::exists(fp_grenade / "grenade") &&
-			    std::filesystem::exists(fp_hate / "hate")) {
-				return "-I" + static_cast<std::string>(fp_libnux) + " -I" +
-				       static_cast<std::string>(fp_grenade) + " -I" +
-				       static_cast<std::string>(fp_hate);
+			std::filesystem::path fp(p);
+			fp = fp.parent_path().parent_path();
+			fp /= name;
+			fp /= location_during_build;
+			if (std::filesystem::exists(fp / name)) {
+				return "-I" + static_cast<std::string>(fp);
 			}
 		}
 	}
-	throw std::runtime_error("Include paths not found.");
+	throw std::runtime_error("Include path for " + name + " not found.");
 }
 
-std::string get_library_paths()
+} // namespace
+
+std::string get_include_paths()
+{
+	std::set<std::string> include_paths;
+	include_paths.insert(get_include_path("libnux", "include"));
+	include_paths.insert(get_include_path("grenade", "include"));
+	include_paths.insert(get_include_path("hate", "include"));
+	include_paths.insert(get_include_path("haldls", "include"));
+	include_paths.insert(get_include_path("fisch", "include"));
+	include_paths.insert(get_include_path("halco", "include"));
+	include_paths.insert(get_include_path("rant", ""));
+	include_paths.insert(get_include_path("pywrap", "src"));
+	include_paths.insert(get_include_path("boost", ""));
+	return hate::join_string(include_paths, " ");
+}
+
+namespace {
+
+std::string get_library_path(
+    std::string const& name,
+    std::filesystem::path const& location_after_install,
+    std::filesystem::path const& location_during_build)
 {
 	// assume, that include paths are found under:
-	// - after install: PATH/../lib
-	// - during build:  PATH/../libnux
+	// - after install: PATH/../<location_after_install>
+	// - during build:  PATH/../<location_during_build>
 	// TODO (Issue #3990): Implement properly without magic assumptions
 	char const* env_path = std::getenv("PATH");
 	if (!env_path) {
@@ -142,21 +150,36 @@ std::string get_library_paths()
 		{
 			std::filesystem::path fp(p);
 			fp = fp.parent_path();
-			fp /= "lib";
-			if (std::filesystem::exists(fp / "libnux_vx_v3.a")) {
-				return "-L" + std::string(fp);
+			fp /= location_after_install;
+			if (std::filesystem::exists(fp / name)) {
+				return "-L" + static_cast<std::string>(fp);
 			}
 		}
 		{
-			std::filesystem::path fp_libnux(p);
-			fp_libnux = fp_libnux.parent_path();
-			fp_libnux /= "libnux";
-			if (std::filesystem::exists(fp_libnux / "libnux_vx_v3.a")) {
-				return "-L" + static_cast<std::string>(fp_libnux);
+			std::filesystem::path fp(p);
+			fp = fp.parent_path();
+			fp /= location_during_build;
+			if (std::filesystem::exists(fp / name)) {
+				return "-L" + static_cast<std::string>(fp);
 			}
 		}
 	}
-	throw std::runtime_error("Library paths not found.");
+	throw std::runtime_error("Library path for " + name + " not found.");
+}
+
+} // namespace
+
+std::string get_library_paths()
+{
+	std::set<std::string> library_paths;
+	library_paths.insert(get_library_path("libnux_vx_v3.a", "lib", "libnux"));
+	library_paths.insert(
+	    get_library_path("libfisch_ppu_vx.a", std::filesystem::path("lib") / "ppu", "fisch"));
+	library_paths.insert(
+	    get_library_path("libhaldls_ppu_vx_v3.a", std::filesystem::path("lib") / "ppu", "haldls"));
+	library_paths.insert(get_library_path(
+	    "libhalco_hicann_dls_ppu_vx_v3.a", std::filesystem::path("lib") / "ppu", "halco"));
+	return hate::join_string(library_paths, " ");
 }
 
 std::string get_linker_file(std::string const& name)

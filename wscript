@@ -81,7 +81,7 @@ def build(bld):
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
         use = ['grenade_inc', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB'],
-        depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'nux_vx_v3', 'nux_runtime_vx_v3.o'] if bld.env.have_ppu_toolchain else [],
+        depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
 
