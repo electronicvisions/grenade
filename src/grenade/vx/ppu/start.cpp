@@ -1,5 +1,6 @@
 #include "grenade/vx/ppu/extmem.h"
 #include "grenade/vx/ppu/status.h"
+#include "grenade/vx/ppu/stopped.h"
 #include "libnux/vx/v3/correlation.h"
 #include "libnux/vx/v3/dls.h"
 #include "libnux/vx/v3/mailbox.h"
@@ -21,6 +22,7 @@ volatile __vector uint8_t neuron_reset_mask[dls_num_vectors_per_row];
 volatile Status status = Status::initial;
 // input: PPU location
 volatile PPUOnDLS ppu;
+volatile Stopped stopped = Stopped::no;
 
 void scheduling();
 
@@ -28,6 +30,7 @@ void perform_periodic_read();
 
 int start()
 {
+	stopped = Stopped::no;
 	mailbox_write_string("inside start\n");
 	__vector int8_t baseline_read[dls_num_vectors_per_row];
 	for (size_t i = 0; i < dls_num_vectors_per_row; ++i) {
@@ -90,5 +93,6 @@ int start()
 	}
 
 	status = Status::idle;
+	stopped = Stopped::yes;
 	return 0;
 }

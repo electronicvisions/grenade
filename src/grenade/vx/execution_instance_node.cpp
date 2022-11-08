@@ -6,6 +6,7 @@
 #include "grenade/vx/backend/run.h"
 #include "grenade/vx/execution_instance_config_visitor.h"
 #include "grenade/vx/ppu/status.h"
+#include "grenade/vx/ppu/stopped.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/omnibus_constants.h"
 #include "haldls/vx/v3/timer.h"
@@ -123,20 +124,23 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// stop PPUs
 		auto const ppu_status_coord =
 		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate).toMin();
+		auto const ppu_stopped_coord =
+		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("stopped").coordinate).toMin();
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
 			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::stop)));
 			schedule_out_replacement_builder.write(
 			    PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
 		}
-		// poll for completion by waiting until PPU is asleep
+		// poll for completion by waiting until PPU is stopped
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
 			PollingOmnibusBlockConfig config;
-			config.set_address(
-			    PPUStatusRegister::read_addresses<PollingOmnibusBlockConfig::Address>(
-			        ppu.toPPUStatusRegisterOnDLS())
-			        .at(0));
-			config.set_target(PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(true)));
-			config.set_mask(PollingOmnibusBlockConfig::Value(0x00000001));
+			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+			                       PPUMemoryWordOnDLS(ppu_stopped_coord, ppu))
+			                       .at(0));
+			config.set_target(
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Stopped::yes)));
+			config.set_mask(
+			    PollingOmnibusBlockConfig::Value(PollingOmnibusBlockConfig::Value::max));
 			schedule_out_replacement_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
 			schedule_out_replacement_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			schedule_out_replacement_builder.block_until(
