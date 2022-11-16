@@ -109,7 +109,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
         ext_pop_descr = network_builder.add(ext_pop)
 
         cadc_recording = grenade.CADCRecording()
-        recorded_neurons = list()
+        recorded_neurons = []
         for nrn_id in range(int_pop_size):
             recorded_neurons.append(
                 grenade.CADCRecording.Neuron(
