@@ -153,3 +153,60 @@ TEST(build_routing, DenseInOrder)
 	auto network = builder.done();
 	EXPECT_NO_THROW(grenade::vx::network::build_routing(network));
 }
+
+TEST(build_routing, I100H64O3)
+{
+	NetworkBuilder builder;
+
+	ExternalPopulation population_input(100);
+	auto const population_input_descriptor = builder.add(population_input);
+
+	Population population_hidden;
+	population_hidden.enable_record_spikes.resize(64, false);
+	for (size_t i = 0; i < population_hidden.enable_record_spikes.size(); ++i) {
+		population_hidden.neurons.push_back(AtomicNeuronOnDLS(Enum(i)));
+	}
+	auto const population_hidden_descriptor = builder.add(population_hidden);
+
+	Population population_output(
+	    {AtomicNeuronOnDLS(Enum(256)), AtomicNeuronOnDLS(Enum(257)), AtomicNeuronOnDLS(Enum(258))},
+	    {true, true, true});
+	auto const population_output_descriptor = builder.add(population_output);
+
+	Projection projection_excitatory_ih(
+	    Projection::ReceptorType::excitatory, {}, population_input_descriptor,
+	    population_hidden_descriptor);
+	Projection projection_inhibitory_ih(
+	    Projection::ReceptorType::inhibitory, {}, population_input_descriptor,
+	    population_hidden_descriptor);
+	for (size_t i = 0; i < population_input.size; ++i) {
+		for (size_t h = 0; h < population_hidden.neurons.size(); ++h) {
+			projection_excitatory_ih.connections.push_back(
+			    Projection::Connection{i, h, Projection::Connection::Weight()});
+			projection_inhibitory_ih.connections.push_back(
+			    Projection::Connection{i, h, Projection::Connection::Weight()});
+		}
+	}
+	builder.add(projection_excitatory_ih);
+	builder.add(projection_inhibitory_ih);
+
+	Projection projection_excitatory_ho(
+	    Projection::ReceptorType::excitatory, {}, population_hidden_descriptor,
+	    population_output_descriptor);
+	Projection projection_inhibitory_ho(
+	    Projection::ReceptorType::inhibitory, {}, population_hidden_descriptor,
+	    population_output_descriptor);
+	for (size_t h = 0; h < population_hidden.neurons.size(); ++h) {
+		for (size_t o = 0; o < population_output.neurons.size(); ++o) {
+			projection_excitatory_ho.connections.push_back(
+			    Projection::Connection{h, o, Projection::Connection::Weight()});
+			projection_inhibitory_ho.connections.push_back(
+			    Projection::Connection{h, o, Projection::Connection::Weight()});
+		}
+	}
+	builder.add(projection_excitatory_ho);
+	builder.add(projection_inhibitory_ho);
+
+	auto network = builder.done();
+	EXPECT_NO_THROW(grenade::vx::network::build_routing(network));
+}

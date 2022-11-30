@@ -145,10 +145,18 @@ struct SourceOnPADIBusManager
 		friend std::ostream& operator<<(std::ostream& os, Partition const& config) SYMBOL_VISIBLE;
 	};
 
+	typedef std::map<
+	    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
+	    std::set<halco::hicann_dls::vx::v3::HemisphereOnDLS>>
+	    DisabledInternalRoutes;
+
 	/**
 	 * Construct manager.
+	 * @param disabled_internal_routes Disabled routes between internal sources and targets, which
+	 * should never be used and required
 	 */
-	SourceOnPADIBusManager() SYMBOL_VISIBLE;
+	SourceOnPADIBusManager(DisabledInternalRoutes const& disabled_internal_routes = {})
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Partition sources into allocation requests for projected-on synapse drivers.
@@ -165,6 +173,8 @@ struct SourceOnPADIBusManager
 
 private:
 	log4cxx::LoggerPtr m_logger;
+
+	DisabledInternalRoutes m_disabled_internal_routes;
 };
 
 } // namespace grenade::vx::network

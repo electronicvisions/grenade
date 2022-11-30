@@ -89,6 +89,7 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 RoutingBuilder::RoutingBuilder() : m_logger(log4cxx::Logger::getLogger("grenade.RoutingBuilder")) {}
 
 void RoutingBuilder::route_internal_crossbar(
+    SourceOnPADIBusManager::DisabledInternalRoutes& disabled_internal_routes,
     RoutingConstraints const& constraints,
     typed_array<RoutingConstraints::PADIBusConstraints, PADIBusOnDLS>& padi_bus_constraints,
     Result& result) const
@@ -110,6 +111,8 @@ void RoutingBuilder::route_internal_crossbar(
 				result.crossbar_nodes[CrossbarNodeOnDLS(
 				    neuron_event_output.toCrossbarInputOnDLS(), padi_bus.toCrossbarOutputOnDLS())] =
 				    haldls::vx::v3::CrossbarNode::drop_all;
+				disabled_internal_routes[neuron_event_output].insert(
+				    padi_bus.toPADIBusBlockOnDLS().toHemisphereOnDLS());
 				LOG4CXX_DEBUG(
 				    m_logger, "route_internal_crossbar(): Disabled crossbar node for "
 				                  << neuron_event_output << " onto " << padi_bus << ".");
@@ -898,7 +901,8 @@ RoutingResult RoutingBuilder::route(
 	auto padi_bus_constraints = constraints.get_padi_bus_constraints();
 
 	// route internal crossbar nodes between neurons
-	route_internal_crossbar(constraints, padi_bus_constraints, result);
+	SourceOnPADIBusManager::DisabledInternalRoutes disabled_internal_routes;
+	route_internal_crossbar(disabled_internal_routes, constraints, padi_bus_constraints, result);
 
 	// get sources
 	auto const [internal_sources, internal_descriptors] =
@@ -909,7 +913,7 @@ RoutingResult RoutingBuilder::route(
 	    get_external_sources(constraints, padi_bus_constraints, network);
 
 	// partition sources on PADI-busses
-	SourceOnPADIBusManager source_manager;
+	SourceOnPADIBusManager source_manager(disabled_internal_routes);
 	auto const maybe_source_partition =
 	    source_manager.solve(internal_sources, background_sources, external_sources);
 	if (!maybe_source_partition) {

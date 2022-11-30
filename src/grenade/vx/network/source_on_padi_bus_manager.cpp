@@ -94,8 +94,10 @@ std::ostream& operator<<(std::ostream& os, SourceOnPADIBusManager::Partition con
 	return os;
 }
 
-SourceOnPADIBusManager::SourceOnPADIBusManager() :
-    m_logger(log4cxx::Logger::getLogger("grenade.SourceOnPADIBusManager"))
+SourceOnPADIBusManager::SourceOnPADIBusManager(
+    DisabledInternalRoutes const& disabled_internal_routes) :
+    m_logger(log4cxx::Logger::getLogger("grenade.SourceOnPADIBusManager")),
+    m_disabled_internal_routes(disabled_internal_routes)
 {}
 
 std::optional<SourceOnPADIBusManager::Partition> SourceOnPADIBusManager::solve(
@@ -289,6 +291,30 @@ std::optional<SourceOnPADIBusManager::Partition> SourceOnPADIBusManager::solve(
 			        split_internal_sources_per_padi_bus[backend_block][padi_bus], padi_bus,
 			        backend_block, split_internal_num_synapse_drivers[backend_block]);
 			for (size_t i = 0; i < allocation_requests_internal.size(); ++i) {
+				// filter-out disabled internal routes
+				NeuronEventOutputOnDLS neuron_event_output(
+				    NeuronEventOutputOnNeuronBackendBlock(padi_bus), backend_block);
+				if (m_disabled_internal_routes.contains(neuron_event_output)) {
+					for (auto const& disabled_hemisphere :
+					     m_disabled_internal_routes.at(neuron_event_output)) {
+						PADIBusOnDLS padi_bus_on_dls(
+						    padi_bus, disabled_hemisphere.toPADIBusBlockOnDLS());
+						if (allocation_requests_internal.at(i).shapes.contains(padi_bus_on_dls)) {
+							if (std::any_of(
+							        allocation_requests_internal.at(i)
+							            .shapes.at(padi_bus_on_dls)
+							            .begin(),
+							        allocation_requests_internal.at(i)
+							            .shapes.at(padi_bus_on_dls)
+							            .end(),
+							        [](auto const& shape) { return shape.size != 0; })) {
+								throw std::runtime_error(
+								    "Requiring event transfer across disabled internal route.");
+							}
+							allocation_requests_internal.at(i).shapes.erase(padi_bus_on_dls);
+						}
+					}
+				}
 				if (allocation_requests_internal.size() > 1) {
 					allocation_requests_internal.at(i).dependent_label_group.emplace(
 					    dependent_label_group);

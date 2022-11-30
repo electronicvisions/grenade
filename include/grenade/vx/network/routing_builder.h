@@ -66,6 +66,7 @@ struct RoutingBuilder
 
 private:
 	void route_internal_crossbar(
+	    SourceOnPADIBusManager::DisabledInternalRoutes& disabled_internal_routes,
 	    RoutingConstraints const& constraints,
 	    halco::common::typed_array<
 	        RoutingConstraints::PADIBusConstraints,
