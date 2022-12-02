@@ -25,6 +25,10 @@ std::ostream& operator<<(std::ostream& os, ExecutionTimeInfo const& info)
 	for (auto const& [dls, duration] : info.execution_duration_per_hardware) {
 		os << "\t\t" << dls << ": " << hate::to_string(duration) << "\n";
 	}
+	os << "\trealtime_duration_per_execution_instance:\n";
+	for (auto const& [instance, duration] : info.realtime_duration_per_execution_instance) {
+		os << "\t\t" << instance << ": " << hate::to_string(duration) << "\n";
+	}
 	os << ")";
 	return os;
 }
