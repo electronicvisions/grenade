@@ -61,7 +61,7 @@ TEST(PlasticityRule, RawRecording)
 	kernel << "using namespace grenade::vx::ppu;\n";
 	kernel << "using namespace libnux::vx;\n";
 	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
-	          "std::array<PPUOnDLS, 1> synrams, Recording& recording)\n";
+	          "Recording& recording)\n";
 	kernel << "{\n";
 	kernel << "  for (size_t i = 0; i < recording.memory.size(); ++i) {\n";
 	kernel << "    recording.memory[i] = i;\n";
@@ -218,8 +218,8 @@ TEST(PlasticityRule, TimedRecording)
 		kernel << "using namespace grenade::vx::ppu;\n";
 		kernel << "using namespace libnux::vx;\n";
 		kernel << "template <size_t N>\n";
-		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, N>&, "
-		          "std::array<PPUOnDLS, N>, Recording& recording)\n";
+		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, N>&, Recording& "
+		          "recording)\n";
 		kernel << "{\n";
 		kernel << "\tstatic size_t period = 0;\n";
 
@@ -451,7 +451,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 		kernel << "using namespace grenade::vx::ppu;\n";
 		kernel << "using namespace libnux::vx;\n";
 		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
-		          "std::array<PPUOnDLS, 1> synrams, Recording& recording)\n";
+		          "Recording& recording)\n";
 		kernel << "{\n";
 		kernel << "  auto w = synapses[0].get_weights(0);\n";
 		if (set_weight) {

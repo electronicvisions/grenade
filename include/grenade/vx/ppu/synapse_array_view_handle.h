@@ -22,6 +22,11 @@ struct SynapseArrayViewHandle
 
 #ifdef __ppu__
 	/**
+	 * Hemisphere location information.
+	 */
+	libnux::vx::PPUOnDLS hemisphere;
+
+	/**
 	 * Row values with even values in [0,128), odd values in [128,256).
 	 */
 	typedef libnux::vx::vector_row_t Row;

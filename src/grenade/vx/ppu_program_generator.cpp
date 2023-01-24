@@ -70,6 +70,8 @@ std::vector<std::string> PPUProgramGenerator::done()
 			for (auto const& [synram, synapse_array_view_handle] : synapses) {
 				kernel << "[](){\n";
 				kernel << "grenade::vx::ppu::SynapseArrayViewHandle synapse_array_view_handle;\n";
+				kernel << "synapse_array_view_handle.hemisphere = libnux::vx::PPUOnDLS("
+				       << synram.value() << ");\n";
 				kernel << "synapse_array_view_handle.column_mask = 0;\n";
 				for (size_t j = 0; j < 256; ++j) {
 					if (synapse_array_view_handle.columns.test(j)) {
@@ -82,17 +84,6 @@ std::vector<std::string> PPUProgramGenerator::done()
 				}
 				kernel << "return synapse_array_view_handle;\n";
 				kernel << "}()";
-				if (l != synapses.size() - 1) {
-					kernel << ",";
-				}
-				kernel << "\n";
-				l++;
-			}
-			kernel << "};\n";
-			kernel << "std::array<libnux::vx::PPUOnDLS, " << synapses.size() << "> synrams = {\n";
-			l = 0;
-			for (auto const& [synram, synapse_array_view_handle] : synapses) {
-				kernel << "libnux::vx::PPUOnDLS(" << synram.value() << ")";
 				if (l != synapses.size() - 1) {
 					kernel << ",";
 				}
@@ -113,14 +104,14 @@ std::vector<std::string> PPUProgramGenerator::done()
 				if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
 				        *plasticity_rule.get_recording())) {
 					kernel << "plasticity_rule_kernel_" << i
-					       << "(synapse_array_view_handle, synrams, ppu == "
+					       << "(synapse_array_view_handle, ppu == "
 					          "libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
 					       << i << " : recorded_scratchpad_memory_bot_" << i << ");\n";
 				} else if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
 				               *plasticity_rule.get_recording())) {
 					kernel << "static size_t recorded_scratchpad_memory_period = 0;\n";
 					kernel << "plasticity_rule_kernel_" << i
-					       << "(synapse_array_view_handle, synrams, "
+					       << "(synapse_array_view_handle, "
 					          "(ppu == libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
 					       << i << " : recorded_scratchpad_memory_bot_" << i
 					       << ")[recorded_scratchpad_memory_period]"
@@ -138,8 +129,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 				kernel << "libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_bot_" << i
 				       << ");\n";
 			} else {
-				kernel << "plasticity_rule_kernel_" << i
-				       << "(synapse_array_view_handle, synrams);\n";
+				kernel << "plasticity_rule_kernel_" << i << "(synapse_array_view_handle);\n";
 			}
 			kernel << "libnux::vx::mailbox_write_string(\" d: \");\n";
 			kernel << "libnux::vx::mailbox_write_int(get_time() - b);\n";

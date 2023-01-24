@@ -34,7 +34,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 
 	kernel << "template <size_t N>\n";
 	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, N>& synapses, "
-	          "std::array<PPUOnDLS, N> synrams, Recording& recording)\n";
+	          "Recording& recording)\n";
 	kernel << "{\n";
 
 	kernel << "  recording.time = now() - time_origin;\n";
@@ -42,8 +42,8 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 	if (m_observables.contains(Observable::weights)) {
 		kernel << "        {\n";
 		kernel << "          hate::for_each([&](auto& "
-		          "weights_per_synapse_view, auto& synapse, auto const& synram) {\n";
-		kernel << "            if (synram == ppu) {\n";
+		          "weights_per_synapse_view, auto& synapse) {\n";
+		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              size_t row = 0;\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
 		kernel << "                if (synapse.rows.test(i)) {\n";
@@ -62,16 +62,15 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
-		kernel << "          }, recording.weights, synapses, synrams);\n";
+		kernel << "          }, recording.weights, synapses);\n";
 		kernel << "        }\n";
 	}
 	if (m_observables.contains(Observable::correlation_causal) &&
 	    !m_observables.contains(Observable::correlation_acausal)) {
 		kernel << "        {\n";
 		kernel << "          hate::for_each("
-		          "[&](auto& correlation_causal_per_synapse_view, auto const& synapse, "
-		          "auto const& synram) {\n";
-		kernel << "            if (synram == ppu) {\n";
+		          "[&](auto& correlation_causal_per_synapse_view, auto const& synapse) {\n";
+		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              size_t row = 0;\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
 		kernel << "                if (synapse.rows.test(i)) {\n";
@@ -94,16 +93,15 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
-		kernel << "          }, recording.correlation_causal, synapses, synrams);\n";
+		kernel << "          }, recording.correlation_causal, synapses);\n";
 		kernel << "        }\n";
 	}
 	if (!m_observables.contains(Observable::correlation_causal) &&
 	    m_observables.contains(Observable::correlation_acausal)) {
 		kernel << "        {\n";
 		kernel << "          hate::for_each("
-		          "[&](auto& correlation_acausal_per_synapse_view, auto const& synapse, "
-		          "auto const& synram) {\n";
-		kernel << "            if (synram == ppu) {\n";
+		          "[&](auto& correlation_acausal_per_synapse_view, auto const& synapse) {\n";
+		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              size_t row = 0;\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
 		kernel << "                if (synapse.rows.test(i)) {\n";
@@ -126,7 +124,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
-		kernel << "          }, recording.correlation_acausal, synapses, synrams);\n";
+		kernel << "          }, recording.correlation_acausal, synapses);\n";
 		kernel << "        }\n";
 	}
 	if (m_observables.contains(Observable::correlation_causal) &&
@@ -134,9 +132,8 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "        {\n";
 		kernel << "          hate::for_each("
 		          "[&](auto& correlation_causal_per_synapse_view, auto& "
-		          "correlation_acausal_per_synapse_view, auto const& synapse, "
-		          "auto const& synram) {\n";
-		kernel << "            if (synram == ppu) {\n";
+		          "correlation_acausal_per_synapse_view, auto const& synapse) {\n";
+		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              size_t row = 0;\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
 		kernel << "                if (synapse.rows.test(i)) {\n";
@@ -167,7 +164,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "              }\n";
 		kernel << "            }\n";
 		kernel << "          }, recording.correlation_causal, recording.correlation_acausal, "
-		          "synapses, synrams);\n";
+		          "synapses);\n";
 		kernel << "        }\n";
 	}
 
