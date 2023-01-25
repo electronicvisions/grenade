@@ -41,14 +41,14 @@ struct GENPYBIND(visible) PlasticityRule
 
 	/*
 	 * Recording information for execution of the rule.
-	 * Raw recording of one scratchpad memory region for all timed invokations of the
+	 * Raw recording of one scratchpad memory region for all timed invocations of the
 	 * rule. No automated recording of time is performed.
 	 */
 	typedef network::PlasticityRule::RawRecording RawRecording;
 
 	/**
 	 * Recording information for execution of the rule.
-	 * Recording of exclusive scratchpad memory per rule invokation with
+	 * Recording of exclusive scratchpad memory per rule invocation with
 	 * time recording and returned data as time-annotated events.
 	 */
 	typedef network::PlasticityRule::TimedRecording TimedRecording;

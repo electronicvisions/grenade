@@ -91,7 +91,7 @@ TEST(network_InputGenerator, General)
 		}
 	};
 
-	// iterate all permutations of add() invokations
+	// iterate all permutations of add() invocations
 	std::vector<size_t> range{0, 1, 2};
 	do {
 		for (auto const& i : range) {

@@ -6,7 +6,7 @@ In addition, `ExternalPopulation`s allow feeding-in external spike trains and `B
 Given such a `Network`, an automated routing algorithm called via `RoutingResult build_routing(Network)` solves the correspondence between abstract synapses and hardware entities as well as the configuration of the routing entities in the event paths.
 
 A `NetworkGraph` can then be constructed in a canonical way containing the network and the hardware `Graph` representation of it with incorporation of the routing result via `NetworkGraph build_network_graph(Network, RoutingResult)`.
-When the network changed but no new routing invokation is necessary, which can be checked via `requires_routing(Network old, Network new)`, the network graph can be updated via `update_network_graph(NetworkGraph& old, Network new)`.
+When the network changed but no new routing invocation is necessary, which can be checked via `requires_routing(Network old, Network new)`, the network graph can be updated via `update_network_graph(NetworkGraph& old, Network new)`.
 
 The network graph can be executed via `IODataMap run(JITGraphExecutor&, Chip, NetworkGraph, IODataMap)`, where an executor is required, a chip configuration describes all non-routing-specific configuration and the supplied `IODataMap` contains the spike-trains of the external populations.
 

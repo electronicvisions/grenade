@@ -24,7 +24,7 @@ struct Connection;
 
 /**
  * Content of a execution node.
- * On invokation a node preprocesses a local part of the graph, builds a playback program for
+ * On invocation a node preprocesses a local part of the graph, builds a playback program for
  * execution, executes it and postprocesses result data.
  * Execution is triggered by an incoming message.
  */

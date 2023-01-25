@@ -255,7 +255,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// generate static configuration
 		base_builder.write(ChipOnDLS(), config);
 		has_capmem_changes = true;
-	} else if (connection_state_storage.current_config_words.empty() /* first invokation */) {
+	} else if (connection_state_storage.current_config_words.empty() /* first invocation */) {
 		typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
 		haldls::vx::visit_preorder(
 		    config, ChipOnDLS(),
