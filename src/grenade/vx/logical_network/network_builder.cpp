@@ -255,6 +255,35 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 			}
 		}
 	}
+	// check that plasticity rule target population readout settings don't contradict madc recording
+	for (auto const& [_, plasticity_rule] : m_plasticity_rules) {
+		for (auto const& target_population : plasticity_rule.populations) {
+			auto const& population_neurons =
+			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
+			if (target_population.descriptor != madc_recording.population) {
+				continue;
+			}
+			for (size_t j = 0; j < population_neurons.size(); ++j) {
+				if (j != madc_recording.neuron_on_population) {
+					continue;
+				}
+				for (auto const& [compartment, denmems] :
+				     target_population.neuron_readout_sources.at(j)) {
+					if (compartment != madc_recording.compartment_on_neuron) {
+						continue;
+					}
+					for (size_t k = 0; k < denmems.size(); ++k) {
+						if (k == madc_recording.atomic_neuron_on_compartment && denmems.at(k) &&
+						    *denmems.at(k) != madc_recording.source) {
+							throw std::runtime_error(
+							    "PlasticityRule neuron readout source doesn't match "
+							    "MADC recording source for same neuron.");
+						}
+					}
+				}
+			}
+		}
+	}
 	m_madc_recording = madc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
 }
@@ -309,6 +338,73 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 		if (!m_projections.contains(d)) {
 			throw std::runtime_error(
 			    "PlasticityRule projection descriptor not present in network.");
+		}
+	}
+
+	// check that target populations exist and are on-chip
+	for (auto const& d : plasticity_rule.populations) {
+		if (!m_populations.contains(d.descriptor)) {
+			throw std::runtime_error(
+			    "PlasticityRule population descriptor not present in network.");
+		}
+		if (!std::holds_alternative<Population>(m_populations.at(d.descriptor))) {
+			throw std::runtime_error("PlasticityRule population not on chip.");
+		}
+	}
+
+	// check that target population readout options match population shape
+	for (auto const& d : plasticity_rule.populations) {
+		auto const& population = std::get<Population>(m_populations.at(d.descriptor));
+		auto const& readout_sources = d.neuron_readout_sources;
+		if (population.neurons.size() != readout_sources.size()) {
+			throw std::runtime_error("PlasticityRule population neuron readout source count "
+			                         "doesn't match population neuron count.");
+		}
+		for (size_t i = 0; i < population.neurons.size(); ++i) {
+			auto const& neuron = population.neurons.at(i).coordinate.get_placed_compartments();
+			if (readout_sources.at(i).size() != neuron.size()) {
+				throw std::runtime_error(
+				    "PlasticityRule population neuron readout source compartment count "
+				    "doesn't match population neuron compartment count.");
+			}
+			for (auto const& [compartment, denmem_coords] : neuron) {
+				if (!readout_sources.at(i).contains(compartment) ||
+				    readout_sources.at(i).at(compartment).size() != denmem_coords.size()) {
+					throw std::runtime_error(
+					    "PlasticityRule population neuron readout source compartments "
+					    "don't match population neuron compartments.");
+				}
+			}
+		}
+	}
+
+	// check that target population readout settings don't contradict madc recording
+	if (m_madc_recording) {
+		for (auto const& target_population : plasticity_rule.populations) {
+			auto const& population_neurons =
+			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
+			if (target_population.descriptor != m_madc_recording->population) {
+				continue;
+			}
+			for (size_t j = 0; j < population_neurons.size(); ++j) {
+				if (j != m_madc_recording->neuron_on_population) {
+					continue;
+				}
+				for (auto const& [compartment, denmems] :
+				     target_population.neuron_readout_sources.at(j)) {
+					if (compartment != m_madc_recording->compartment_on_neuron) {
+						continue;
+					}
+					for (size_t k = 0; k < denmems.size(); ++k) {
+						if (k == m_madc_recording->atomic_neuron_on_compartment && denmems.at(k) &&
+						    *denmems.at(k) != m_madc_recording->source) {
+							throw std::runtime_error(
+							    "PlasticityRule neuron readout source doesn't match "
+							    "MADC recording source for same neuron.");
+						}
+					}
+				}
+			}
 		}
 	}
 

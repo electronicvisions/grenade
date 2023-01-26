@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/port.h"
+#include "grenade/vx/ppu/neuron_view_handle.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
@@ -63,6 +64,11 @@ struct NeuronView
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Configs const& get_configs() const SYMBOL_VISIBLE;
 	Row const& get_row() const SYMBOL_VISIBLE;
+
+	/**
+	 * Convert to neuron view handle for PPU programs.
+	 */
+	ppu::NeuronViewHandle toNeuronViewHandle() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = true;
 	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;

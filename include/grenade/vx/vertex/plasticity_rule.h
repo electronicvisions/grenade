@@ -2,11 +2,13 @@
 #include "grenade/vx/connection_type.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/port.h"
+#include "grenade/vx/vertex/neuron_view.h"
 #include "grenade/vx/vertex/plasticity_rule/observable_data_type.h"
 #include "halco/common/geometry.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
+#include "haldls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include <array>
 #include <cstddef>
@@ -168,6 +170,76 @@ struct PlasticityRule
 		};
 
 		/**
+		 * Observable with a single data entry per neuron.
+		 * Used for e.g. membrane potential measurements
+		 */
+		struct ObservablePerNeuron
+		{
+			struct Type
+			{
+				struct GENPYBIND(inline_base("*")) Int8
+				    : plasticity_rule::ObservableDataType<int8_t, Int8>
+				{
+					constexpr static char GENPYBIND(hidden)
+					    on_ppu_type[] = "libnux::vx::VectorRowFracSat8";
+				};
+				constexpr static Int8 int8{};
+
+				struct GENPYBIND(inline_base("*")) UInt8
+				    : plasticity_rule::ObservableDataType<uint8_t, UInt8>
+				{
+					constexpr static char GENPYBIND(hidden)
+					    on_ppu_type[] = "libnux::vx::VectorRowMod8";
+				};
+				constexpr static UInt8 uint8{};
+
+				struct GENPYBIND(inline_base("*")) Int16
+				    : plasticity_rule::ObservableDataType<int16_t, Int16>
+				{
+					constexpr static char GENPYBIND(hidden)
+					    on_ppu_type[] = "libnux::vx::VectorRowFracSat16";
+				};
+				constexpr static Int16 int16{};
+
+				struct GENPYBIND(inline_base("*")) UInt16
+				    : plasticity_rule::ObservableDataType<uint16_t, UInt16>
+				{
+					constexpr static char GENPYBIND(hidden)
+					    on_ppu_type[] = "libnux::vx::VectorRowMod16";
+				};
+				constexpr static UInt16 uint16{};
+			};
+			typedef std::variant<Type::Int8, Type::UInt8, Type::Int16, Type::UInt16> TypeVariant;
+			TypeVariant type;
+
+			enum class Layout
+			{
+				complete_row, /** Record complete row of values. This is fast, but inefficient
+				                  memory-wise, since independent of the number of active columns in
+				                  the neuron view the complete row is stored. The memory provided
+				                  per row is of type libnux::vx::VectorRow{Mod,FracSat}{8,16} for
+				                  type {u,}{int_}{8,16}. */
+				packed_active_columns /** Record only active columns of neuron view. This is
+				                         efficient memory-wise, but slow, since the values are
+				                         stored sequentially per neuron. The memory provided per
+				                         row is of type std::array<{u,}{int_}{8,16}_t, num_columns>
+				                         for type {u,}{int_}{8,16}. */
+			} layout = Layout::complete_row;
+
+			bool operator==(ObservablePerNeuron const& other) const SYMBOL_VISIBLE;
+			bool operator!=(ObservablePerNeuron const& other) const SYMBOL_VISIBLE;
+
+			GENPYBIND(stringstream)
+			friend std::ostream& operator<<(std::ostream& os, ObservablePerNeuron const& observable)
+			    SYMBOL_VISIBLE;
+
+		private:
+			friend struct cereal::access;
+			template <typename Archive>
+			void serialize(Archive& ar, std::uint32_t version);
+		};
+
+		/**
 		 * Observable with array of values of configurable size.
 		 * Used for e.g. neuron firing rates.
 		 */
@@ -224,7 +296,7 @@ struct PlasticityRule
 		/**
 		 * Observable type specification.
 		 */
-		typedef std::variant<ObservablePerSynapse, ObservableArray> Observable;
+		typedef std::variant<ObservablePerSynapse, ObservablePerNeuron, ObservableArray> Observable;
 
 		/**
 		 * Map of named observables with type information.
@@ -276,6 +348,7 @@ struct PlasticityRule
 		    Entry;
 
 		std::map<std::string, std::vector<Entry>> data_per_synapse;
+		std::map<std::string, std::vector<Entry>> data_per_neuron;
 		std::map<std::string, Entry> data_array;
 	};
 
@@ -312,6 +385,44 @@ struct PlasticityRule
 		void serialize(Archive& ar, std::uint32_t version);
 	};
 
+	/**
+	 * Shape of a single neuron view to be altered.
+	 */
+	struct NeuronViewShape
+	{
+		/**
+		 * Location of columns.
+		 * This information is needed for extraction of timed recording observables and measurement
+		 * settings.
+		 */
+		NeuronView::Columns columns;
+		/**
+		 * Row of neurons.
+		 * This information is required for extraction of timed recording observables and
+		 * measurement settings.
+		 */
+		NeuronView::Row row;
+
+		typedef lola::vx::v3::AtomicNeuron::Readout::Source NeuronReadoutSource;
+		/**
+		 * Readout source specification per neuron used for static configuration such that the
+		 * plasticity rule can read the specified signal.
+		 */
+		std::vector<std::optional<NeuronReadoutSource>> neuron_readout_sources;
+
+		bool operator==(NeuronViewShape const& other) const SYMBOL_VISIBLE;
+		bool operator!=(NeuronViewShape const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, NeuronViewShape const& recording)
+		    SYMBOL_VISIBLE;
+
+	private:
+		friend struct cereal::access;
+		template <typename Archive>
+		void serialize(Archive& ar, std::uint32_t version);
+	};
+
 	PlasticityRule() = default;
 
 	/**
@@ -319,6 +430,7 @@ struct PlasticityRule
 	 * @param kernel Kernel to apply
 	 * @param timer Timer to use
 	 * @param synapse_view_shapes Shapes of synapse views to alter
+	 * @param neuron_view_shapes Shapes of neuron views to alter
 	 * @param recording Optional recording providing memory for the plasticity rule to store
 	 * information during execution.
 	 */
@@ -326,6 +438,7 @@ struct PlasticityRule
 	    std::string kernel,
 	    Timer const& timer,
 	    std::vector<SynapseViewShape> const& synapse_view_shapes,
+	    std::vector<NeuronViewShape> const& neuron_view_shapes,
 	    std::optional<Recording> const& recording) SYMBOL_VISIBLE;
 
 	/**
@@ -374,6 +487,7 @@ struct PlasticityRule
 	std::string const& get_kernel() const SYMBOL_VISIBLE;
 	Timer const& get_timer() const SYMBOL_VISIBLE;
 	std::vector<SynapseViewShape> const& get_synapse_view_shapes() const SYMBOL_VISIBLE;
+	std::vector<NeuronViewShape> const& get_neuron_view_shapes() const SYMBOL_VISIBLE;
 	std::optional<Recording> get_recording() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
@@ -387,6 +501,10 @@ struct PlasticityRule
 	    SynapseArrayView const& input,
 	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
 
+	bool supports_input_from(
+	    NeuronView const& input,
+	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
+
 	bool operator==(PlasticityRule const& other) const SYMBOL_VISIBLE;
 	bool operator!=(PlasticityRule const& other) const SYMBOL_VISIBLE;
 
@@ -394,6 +512,7 @@ private:
 	std::string m_kernel;
 	Timer m_timer;
 	std::vector<SynapseViewShape> m_synapse_view_shapes;
+	std::vector<NeuronViewShape> m_neuron_view_shapes;
 	std::optional<Recording> m_recording;
 
 	friend struct cereal::access;
@@ -405,6 +524,10 @@ std::ostream& operator<<(
     std::ostream& os,
     PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow const& layout)
     SYMBOL_VISIBLE;
+
+std::ostream& operator<<(
+    std::ostream& os,
+    PlasticityRule::TimedRecording::ObservablePerNeuron::Layout const& layout) SYMBOL_VISIBLE;
 
 } // vertex
 

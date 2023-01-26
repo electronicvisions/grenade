@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/graph.h"
+#include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "grenade/vx/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
@@ -20,7 +21,10 @@ public:
 	    vertex::PlasticityRule const& rule,
 	    std::vector<
 	        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
-	        synapses) SYMBOL_VISIBLE;
+	        synapses,
+	    std::vector<
+	        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>> const&
+	        neurons) SYMBOL_VISIBLE;
 
 	std::vector<std::string> done() SYMBOL_VISIBLE;
 
@@ -30,8 +34,8 @@ private:
 	std::vector<std::tuple<
 	    Graph::vertex_descriptor,
 	    vertex::PlasticityRule,
-	    std::vector<
-	        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>>>
+	    std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
+	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
 	    m_plasticity_rules;
 };
 

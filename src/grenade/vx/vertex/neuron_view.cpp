@@ -40,6 +40,15 @@ NeuronView::Row const& NeuronView::get_row() const
 	return m_row;
 }
 
+ppu::NeuronViewHandle NeuronView::toNeuronViewHandle() const
+{
+	ppu::NeuronViewHandle result;
+	for (auto const& column : m_columns) {
+		result.columns.set(column.value());
+	}
+	return result;
+}
+
 std::array<Port, 1> NeuronView::inputs() const
 {
 	return {Port(m_columns.size(), ConnectionType::SynapticInput)};

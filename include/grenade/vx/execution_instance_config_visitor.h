@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/graph.h"
+#include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "grenade/vx/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -57,8 +58,8 @@ private:
 	std::vector<std::tuple<
 	    Graph::vertex_descriptor,
 	    vertex::PlasticityRule,
-	    std::vector<
-	        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>>>
+	    std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
+	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
 	    m_plasticity_rules;
 
 	/**

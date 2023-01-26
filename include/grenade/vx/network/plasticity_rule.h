@@ -24,6 +24,35 @@ struct GENPYBIND(visible) PlasticityRule
 	std::vector<ProjectionDescriptor> projections{};
 
 	/**
+	 * Population handle parameters.
+	 */
+	struct PopulationHandle
+	{
+		typedef lola::vx::v3::AtomicNeuron::Readout::Source NeuronReadoutSource;
+
+		/**
+		 * Descriptor of population.
+		 */
+		PopulationDescriptor descriptor;
+		/**
+		 * Readout source specification per neuron used for static configuration such that the
+		 * plasticity rule can read the specified signal.
+		 */
+		std::vector<std::optional<NeuronReadoutSource>> neuron_readout_sources;
+
+		bool operator==(PopulationHandle const& other) const SYMBOL_VISIBLE;
+		bool operator!=(PopulationHandle const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, PopulationHandle const& population)
+		    SYMBOL_VISIBLE;
+	};
+	/**
+	 * List of populations this rule has access to.
+	 */
+	std::vector<PopulationHandle> populations;
+
+	/**
 	 * Plasticity rule kernel to be compiled into the PPU program.
 	 */
 	std::string kernel{};
@@ -91,6 +120,7 @@ struct GENPYBIND(visible) PlasticityRule
 		typedef vertex::PlasticityRule::TimedRecordingData::Entry Entry;
 
 		std::map<std::string, std::map<ProjectionDescriptor, Entry>> data_per_synapse;
+		std::map<std::string, std::map<PopulationDescriptor, Entry>> data_per_neuron;
 		std::map<std::string, Entry> data_array;
 	};
 

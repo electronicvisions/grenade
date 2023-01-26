@@ -203,14 +203,39 @@ void ExecutionInstanceConfigVisitor::process(
     Graph::vertex_descriptor const vertex, vertex::PlasticityRule const& data)
 {
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
+	// convert the plasticity rule input vertices to their respective on-PPU handles to transfer
+	// onto the PPUs
 	std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>
 	    synapses;
+	std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>
+	    neurons;
 	for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-		auto const& view = std::get<vertex::SynapseArrayViewSparse>(
-		    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph())));
-		synapses.push_back({view.get_synram(), view.toSynapseArrayViewHandle()});
+		// extract on-PPU handles from source vertex properties
+		auto const& in_vertex_property =
+		    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph()));
+		if (std::holds_alternative<vertex::SynapseArrayViewSparse>(in_vertex_property)) {
+			auto const& view = std::get<vertex::SynapseArrayViewSparse>(in_vertex_property);
+			synapses.push_back({view.get_synram(), view.toSynapseArrayViewHandle()});
+		} else if (std::holds_alternative<vertex::NeuronView>(in_vertex_property)) {
+			auto const& view = std::get<vertex::NeuronView>(in_vertex_property);
+			neurons.push_back({view.get_row(), view.toNeuronViewHandle()});
+		}
+		// handle setting neuron readout parameters
+		for (auto const& neuron_view : data.get_neuron_view_shapes()) {
+			for (size_t i = 0; i < neuron_view.columns.size(); ++i) {
+				if (neuron_view.neuron_readout_sources.at(i)) {
+					auto& atomic_neuron =
+					    m_config.neuron_block
+					        .atomic_neurons[halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
+					            neuron_view.columns.at(i), neuron_view.row)];
+					atomic_neuron.readout.source = *neuron_view.neuron_readout_sources.at(i);
+					atomic_neuron.readout.enable_amplifier = true;
+				}
+			}
+		}
 	}
-	m_plasticity_rules.push_back({vertex, data, std::move(synapses)});
+	// store on-PPU handles for later PPU source code generation
+	m_plasticity_rules.push_back({vertex, data, std::move(synapses), std::move(neurons)});
 	m_requires_ppu = true;
 }
 
@@ -355,8 +380,8 @@ ExecutionInstanceConfigVisitor::operator()()
 		PPUMemoryBlockOnPPU ppu_status_coord;
 		{
 			PPUProgramGenerator ppu_program_generator;
-			for (auto const& [descriptor, rule, synapses] : m_plasticity_rules) {
-				ppu_program_generator.add(descriptor, rule, synapses);
+			for (auto const& [descriptor, rule, synapses, neurons] : m_plasticity_rules) {
+				ppu_program_generator.add(descriptor, rule, synapses, neurons);
 			}
 			ppu_program_generator.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
 			CachingCompiler compiler;

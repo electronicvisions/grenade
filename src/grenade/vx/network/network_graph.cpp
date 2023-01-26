@@ -50,6 +50,14 @@ NetworkGraph::get_synapse_vertices() const
 	return m_synapse_vertices;
 }
 
+std::map<
+    PopulationDescriptor,
+    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
+NetworkGraph::get_neuron_vertices() const
+{
+	return m_neuron_vertices;
+}
+
 std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> const&
 NetworkGraph::get_plasticity_rule_output_vertices() const
 {

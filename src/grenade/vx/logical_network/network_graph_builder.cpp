@@ -210,6 +210,18 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 			    projection_descriptor_translation.at(d).begin(),
 			    projection_descriptor_translation.at(d).end());
 		}
+		for (auto const& d : plasticity_rule.populations) {
+			network::PlasticityRule::PopulationHandle hardware_handle;
+			hardware_handle.descriptor = population_translation.at(d.descriptor);
+			for (auto const& neuron : d.neuron_readout_sources) {
+				for (auto const& [_, denmems] : neuron) {
+					hardware_handle.neuron_readout_sources.insert(
+					    hardware_handle.neuron_readout_sources.end(), denmems.begin(),
+					    denmems.end());
+				}
+			}
+			hardware_plasticity_rule.populations.push_back(hardware_handle);
+		}
 		hardware_plasticity_rule.kernel = plasticity_rule.kernel;
 		hardware_plasticity_rule.timer = plasticity_rule.timer;
 		hardware_plasticity_rule.enable_requires_one_source_per_row_in_order =

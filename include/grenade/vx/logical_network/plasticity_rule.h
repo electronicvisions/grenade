@@ -4,6 +4,7 @@
 #include "grenade/vx/network/plasticity_rule.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
+#include <map>
 #include <string>
 #include <vector>
 
@@ -21,6 +22,35 @@ struct GENPYBIND(visible) PlasticityRule
 	 * All projections are required to be dense and in order.
 	 */
 	std::vector<ProjectionDescriptor> projections{};
+
+	/**
+	 * Population handle parameters.
+	 */
+	struct PopulationHandle
+	{
+		typedef lola::vx::v3::AtomicNeuron::Readout::Source NeuronReadoutSource;
+
+		/**
+		 * Descriptor of population.
+		 */
+		PopulationDescriptor descriptor;
+		/**
+		 * Readout source specification per neuron circuit used for static configuration such that
+		 * the plasticity rule can read the specified signal.
+		 */
+		std::vector<std::map<
+		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		    std::vector<std::optional<NeuronReadoutSource>>>>
+		    neuron_readout_sources;
+
+		bool operator==(PopulationHandle const& other) const SYMBOL_VISIBLE;
+		bool operator!=(PopulationHandle const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, PopulationHandle const& population)
+		    SYMBOL_VISIBLE;
+	};
+	std::vector<PopulationHandle> populations;
 
 	/**
 	 * Plasticity rule kernel to be compiled into the PPU program.

@@ -23,9 +23,40 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::Timer const& timer)
 	return os;
 }
 
+bool PlasticityRule::PopulationHandle::operator==(
+    PlasticityRule::PopulationHandle const& other) const
+{
+	return descriptor == other.descriptor && neuron_readout_sources == other.neuron_readout_sources;
+}
+
+bool PlasticityRule::PopulationHandle::operator!=(
+    PlasticityRule::PopulationHandle const& other) const
+{
+	return !(*this == other);
+}
+
+std::ostream& operator<<(std::ostream& os, PlasticityRule::PopulationHandle const& population)
+{
+	os << "PopulationHandle(\n";
+	os << "\tdescriptor: " << population.descriptor << "\n";
+	os << "\tneuron_readout_sources:\n";
+	for (auto const& readout_source : population.neuron_readout_sources) {
+		os << "\t\t";
+		if (readout_source) {
+			os << *readout_source;
+		} else {
+			os << "unset";
+		}
+		os << "\n";
+	}
+	os << ")";
+	return os;
+}
+
 bool PlasticityRule::operator==(PlasticityRule const& other) const
 {
-	return projections == other.projections && kernel == other.kernel && timer == other.timer &&
+	return projections == other.projections && populations == other.populations &&
+	       kernel == other.kernel && timer == other.timer &&
 	       enable_requires_one_source_per_row_in_order ==
 	           other.enable_requires_one_source_per_row_in_order &&
 	       recording == other.recording;
@@ -42,6 +73,12 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule const& plasticity_rule
 	os << "\tprojections:\n";
 	for (auto const& d : plasticity_rule.projections) {
 		os << "\t\t" << d << "\n";
+	}
+	os << "\tpopulations:\n";
+	for (auto const& d : plasticity_rule.populations) {
+		std::stringstream ss;
+		ss << d;
+		os << hate::indent(ss.str(), "\t\t") << "\n";
 	}
 	os << "\tkernel: \n" << hate::indent(plasticity_rule.kernel, "\t\t") << "\n";
 	os << "\t" << plasticity_rule.timer << "\n";

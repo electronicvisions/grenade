@@ -19,6 +19,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 	std::stringstream kernel;
 
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
 	kernel << "#include \"libnux/vx/location.h\"\n";
 	kernel << "#include \"libnux/vx/correlation.h\"\n";
 	kernel << "#include \"libnux/vx/vector_convert.h\"\n";
@@ -34,6 +35,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 
 	kernel << "template <size_t N>\n";
 	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, N>& synapses, "
+	          "std::array<NeuronViewHandle, 0>&, "
 	          "Recording& recording)\n";
 	kernel << "{\n";
 

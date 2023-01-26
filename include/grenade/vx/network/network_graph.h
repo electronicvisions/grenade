@@ -60,6 +60,13 @@ struct GENPYBIND(visible) NetworkGraph
 	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
 	get_synapse_vertices() const SYMBOL_VISIBLE;
 
+	/** Vertex descriptors of neuron views. */
+	GENPYBIND(getter_for(neuron_vertices))
+	std::map<
+	    PopulationDescriptor,
+	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, Graph::vertex_descriptor>> const&
+	get_neuron_vertices() const SYMBOL_VISIBLE;
+
 	/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory. */
 	GENPYBIND(getter_for(plasticity_rule_output_vertices))
 	std::map<PlasticityRuleDescriptor, Graph::vertex_descriptor> const&

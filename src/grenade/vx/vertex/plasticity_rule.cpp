@@ -98,6 +98,35 @@ std::ostream& operator<<(
 	return os;
 }
 
+bool PlasticityRule::TimedRecording::ObservablePerNeuron::operator==(
+    ObservablePerNeuron const& other) const
+{
+	return (type == other.type) && (layout == other.layout);
+}
+
+bool PlasticityRule::TimedRecording::ObservablePerNeuron::operator!=(
+    ObservablePerNeuron const& other) const
+{
+	return !(*this == other);
+}
+
+template <typename Archive>
+void PlasticityRule::TimedRecording::ObservablePerNeuron::serialize(
+    Archive& ar, std::uint32_t const)
+{
+	ar(type);
+	ar(layout);
+}
+
+std::ostream& operator<<(
+    std::ostream& os, PlasticityRule::TimedRecording::ObservablePerNeuron const& observable)
+{
+	os << "ObservablePerNeuron(type: ";
+	std::visit([&os](auto const& type) { os << type; }, observable.type);
+	os << ", layout: " << observable.layout << ")";
+	return os;
+}
+
 bool PlasticityRule::TimedRecording::ObservableArray::operator==(ObservableArray const& other) const
 {
 	return (type == other.type) && (size == other.size);
@@ -176,14 +205,57 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::SynapseViewShape cons
 	return os;
 }
 
+bool PlasticityRule::NeuronViewShape::operator==(NeuronViewShape const& other) const
+{
+	return (columns.size() == other.columns.size()) && row == other.row &&
+	       neuron_readout_sources == other.neuron_readout_sources;
+}
+
+bool PlasticityRule::NeuronViewShape::operator!=(NeuronViewShape const& other) const
+{
+	return !(*this == other);
+}
+
+template <typename Archive>
+void PlasticityRule::NeuronViewShape::serialize(Archive& ar, std::uint32_t const)
+{
+	ar(columns);
+	ar(row);
+	ar(neuron_readout_sources);
+}
+
+std::ostream& operator<<(std::ostream& os, PlasticityRule::NeuronViewShape const& shape)
+{
+	os << "NeuronViewShape(\n";
+	os << "\tcolumns:\n";
+	for (auto const& column : shape.columns) {
+		os << "\t\t" << column << "\n";
+	}
+	os << "\tneuron_readout_sources:\n";
+	for (auto const& readout_source : shape.neuron_readout_sources) {
+		os << "\t\t";
+		if (readout_source) {
+			os << *readout_source;
+		} else {
+			os << "unset";
+		}
+		os << "\n";
+	}
+	os << "\trow: " << shape.row << "\n";
+	os << ")";
+	return os;
+}
+
 PlasticityRule::PlasticityRule(
     std::string kernel,
     Timer const& timer,
     std::vector<SynapseViewShape> const& synapse_view_shapes,
+    std::vector<NeuronViewShape> const& neuron_view_shapes,
     std::optional<Recording> const& recording) :
     m_kernel(std::move(kernel)),
     m_timer(timer),
     m_synapse_view_shapes(synapse_view_shapes),
+    m_neuron_view_shapes(neuron_view_shapes),
     m_recording(recording)
 {}
 
@@ -238,6 +310,38 @@ size_t PlasticityRule::get_recorded_scratchpad_memory_size() const
 					        }
 				        }
 			        },
+			        [&](TimedRecording::ObservablePerNeuron const& observable) {
+				        switch (observable.layout) {
+					        case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+						        size_t const element_size = std::visit(
+						            [](auto t) {
+							            return sizeof(typename decltype(t)::ElementType);
+						            },
+						            observable.type);
+						        size = hate::math::round_up_to_multiple(size, 128);
+						        size += m_neuron_view_shapes.size() * element_size *
+						                halco::hicann_dls::vx::v3::NeuronColumnOnDLS::size;
+						        break;
+					        }
+					        case TimedRecording::ObservablePerNeuron::Layout::
+					            packed_active_columns: {
+						        size_t const element_size = std::visit(
+						            [](auto t) {
+							            return sizeof(typename decltype(t)::ElementType);
+						            },
+						            observable.type);
+						        size = hate::math::round_up_to_multiple(size, element_size);
+						        for (auto const& neuron_view_shape : m_neuron_view_shapes) {
+							        size += neuron_view_shape.columns.size() * element_size;
+						        }
+						        break;
+					        }
+					        default: {
+						        throw std::logic_error(
+						            "Observable per neuron layout not implemented.");
+					        }
+				        }
+			        },
 			        [&](TimedRecording::ObservableArray const& observable) {
 				        size_t const element_size = std::visit(
 				            [](auto t) { return sizeof(typename decltype(t)::ElementType); },
@@ -267,7 +371,10 @@ size_t PlasticityRule::get_recorded_scratchpad_memory_alignment() const
 			has_vector = has_vector ||
 			             (std::holds_alternative<TimedRecording::ObservablePerSynapse>(type) &&
 			              (std::get<TimedRecording::ObservablePerSynapse>(type).layout_per_row ==
-			               TimedRecording::ObservablePerSynapse::LayoutPerRow::complete_rows));
+			               TimedRecording::ObservablePerSynapse::LayoutPerRow::complete_rows)) ||
+			             (std::holds_alternative<TimedRecording::ObservablePerNeuron>(type) &&
+			              (std::get<TimedRecording::ObservablePerNeuron>(type).layout ==
+			               TimedRecording::ObservablePerNeuron::Layout::complete_row));
 		}
 		if (has_vector) {
 			// TODO: replace by constant
@@ -371,6 +478,63 @@ std::string PlasticityRule::get_recorded_memory_definition() const
 			    return ss.str();
 		    };
 
+		auto const print_observable_per_neuron_type =
+		    [](TimedRecording::ObservablePerNeuron const& observable,
+		       NeuronViewShape neuron_view_shape) {
+			    std::stringstream ss;
+			    switch (observable.layout) {
+				    case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+					    ss << "libnux::vx::VectorRow";
+					    std::visit(
+					        hate::overloaded{
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int8 const&) {
+						            ss << "FracSat8";
+					            },
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt8 const&) {
+						            ss << "Mod8";
+					            },
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int16 const&) {
+						            ss << "FracSat16";
+					            },
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt16 const&) {
+						            ss << "Mod16";
+					            },
+					            [](auto const&) {
+						            throw std::logic_error("Observable array type unknown.");
+					            }},
+					        observable.type);
+					    break;
+				    }
+				    case TimedRecording::ObservablePerNeuron::Layout::packed_active_columns: {
+					    ss << "std::array<";
+					    std::visit(
+					        hate::overloaded{
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int8 const&) {
+						            ss << "int8_t";
+					            },
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt8 const&) {
+						            ss << "uint8_t";
+					            },
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::Int16 const&) {
+						            ss << "int16_t";
+					            },
+					            [&ss](TimedRecording::ObservablePerNeuron::Type::UInt16 const&) {
+						            ss << "uint16_t";
+					            },
+					            [](auto const&) {
+						            throw std::logic_error("Observable array type unknown.");
+					            }},
+					        observable.type);
+					    ss << ", " << neuron_view_shape.columns.size() << ">";
+					    break;
+				    }
+				    default: {
+					    throw std::logic_error("Unknown layout per row.");
+				    }
+			    }
+			    return ss.str();
+		    };
+
 		std::stringstream ss;
 		ss << "#include <array>\n";
 		ss << "#include <tuple>\n";
@@ -396,6 +560,17 @@ std::string PlasticityRule::get_recorded_memory_definition() const
 				        }
 				        ss << hate::join_string(
 				            synapse_view_entries.begin(), synapse_view_entries.end(), ", ");
+				        ss << ">";
+			        },
+			        [&](TimedRecording::ObservablePerNeuron const& observable) {
+				        ss << "std::tuple<";
+				        std::vector<std::string> neuron_view_entries;
+				        for (auto const& neuron_view_shape : m_neuron_view_shapes) {
+					        neuron_view_entries.push_back(
+					            print_observable_per_neuron_type(observable, neuron_view_shape));
+				        }
+				        ss << hate::join_string(
+				            neuron_view_entries.begin(), neuron_view_entries.end(), ", ");
 				        ss << ">";
 			        },
 			        [](auto const&) {
@@ -454,6 +629,23 @@ std::pair<size_t, size_t> PlasticityRule::get_recorded_memory_data_interval() co
 				        default: {
 					        throw std::logic_error(
 					            "Observable per synapse layout per row not implemented.");
+				        }
+			        }
+		        },
+		        [&](TimedRecording::ObservablePerNeuron const& observable) {
+			        switch (observable.layout) {
+				        case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+					        return std::pair<size_t, size_t>{
+					            128, get_recorded_scratchpad_memory_size()};
+					        break;
+				        }
+				        case TimedRecording::ObservablePerNeuron::Layout::packed_active_columns: {
+					        return std::pair<size_t, size_t>{
+					            sizeof(uint64_t), get_recorded_scratchpad_memory_size()};
+					        break;
+				        }
+				        default: {
+					        throw std::logic_error("Observable per neuron layout not implemented.");
 				        }
 			        }
 		        },
@@ -520,6 +712,36 @@ PlasticityRule::get_recorded_memory_timed_data_intervals() const
 				        default: {
 					        throw std::logic_error(
 					            "Observable per synapse layout per row not implemented.");
+				        }
+			        }
+		        },
+		        [&](TimedRecording::ObservablePerNeuron const& observable) {
+			        switch (observable.layout) {
+				        case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+					        size_t const element_size = std::visit(
+					            [](auto t) { return sizeof(typename decltype(t)::ElementType); },
+					            observable.type);
+					        begin = hate::math::round_up_to_multiple(begin, 128);
+					        ret[name].first = begin - absolute_begin;
+					        begin += m_neuron_view_shapes.size() * element_size *
+					                 halco::hicann_dls::vx::v3::NeuronColumnOnDLS::size;
+					        ret.at(name).second = begin - absolute_begin;
+					        break;
+				        }
+				        case TimedRecording::ObservablePerNeuron::Layout::packed_active_columns: {
+					        size_t const element_size = std::visit(
+					            [](auto t) { return sizeof(typename decltype(t)::ElementType); },
+					            observable.type);
+					        begin = hate::math::round_up_to_multiple(begin, element_size);
+					        ret[name].first = begin - absolute_begin;
+					        for (auto const& neuron_view_shape : m_neuron_view_shapes) {
+						        begin += neuron_view_shape.columns.size() * element_size;
+					        }
+					        ret.at(name).second = begin - absolute_begin;
+					        break;
+				        }
+				        default: {
+					        throw std::logic_error("Observable per neuron layout not implemented.");
 				        }
 			        }
 		        },
@@ -701,6 +923,116 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		}
 	};
 
+	auto const extract_observable_per_neuron_complete_row = [&]([[maybe_unused]] auto const& type,
+	                                                            auto const& name) {
+		auto& data_per_neuron = observable_data.data_per_neuron[name];
+		data_per_neuron.resize(m_neuron_view_shapes.size());
+		// iterate in reversed order because std::tuple memory
+		// layout is last element first
+		size_t neuron_view_offset = 0;
+		for (int neuron_view = data_per_neuron.size() - 1; neuron_view >= 0; --neuron_view) {
+			auto const& neuron_view_shape = m_neuron_view_shapes.at(neuron_view);
+			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
+			std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+			size_t local_neuron_view_offset = 0;
+			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
+				auto& local_batch_values = batch_values.at(batch);
+				auto const& local_data = data.at(batch);
+				local_batch_values.resize(local_data.size());
+				size_t sample_local_neuron_view_offset = 0;
+				for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
+					auto& local_sample = local_batch_values.at(sample);
+					auto& local_data_sample = local_data.at(sample);
+					local_sample.chip_time = local_data_sample.chip_time;
+					local_sample.fpga_time = local_data_sample.fpga_time;
+					local_sample.data.resize(neuron_view_shape.columns.size());
+					for (size_t neuron = 0; neuron < local_sample.data.size(); ++neuron) {
+						size_t const ppu_offset =
+						    neuron_view_shape.row.value() ? local_data_sample.data.size() / 2 : 0;
+						size_t const column_parity_offset =
+						    (neuron_view_shape.columns.at(neuron % neuron_view_shape.columns.size())
+						         .value() %
+						     2) *
+						    halco::hicann_dls::vx::v3::SynapseOnSynapseRow::size / 2;
+						size_t const column_in_parity_offset =
+						    neuron_view_shape.columns.at(neuron % neuron_view_shape.columns.size())
+						        .value() /
+						    2;
+						size_t const total_offset =
+						    (sizeof(ElementType) *
+						     (column_parity_offset + column_in_parity_offset)) +
+						    timed_data_intervals.at(name).first + ppu_offset;
+						local_sample.data.at(neuron) = static_cast<ElementType>(
+						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
+						        .value());
+						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
+							local_sample.data.at(neuron) |=
+							    (static_cast<ElementType>(
+							         local_data_sample.data.at(total_offset + byte).value())
+							     << (CHAR_BIT * (byte + 1)));
+						}
+					}
+					sample_local_neuron_view_offset +=
+					    sizeof(ElementType) * neuron_view_shape.columns.size();
+				}
+				local_neuron_view_offset += sample_local_neuron_view_offset /
+				                            (batch_values.size() * local_batch_values.size());
+			}
+			neuron_view_offset += local_neuron_view_offset;
+			data_per_neuron.at(neuron_view) = batch_values;
+		}
+	};
+
+	auto const extract_observable_per_neuron_packed_active_columns = [&](auto const& type,
+	                                                                     auto const& name) {
+		auto& data_per_neuron = observable_data.data_per_neuron[name];
+		data_per_neuron.resize(m_neuron_view_shapes.size());
+		// iterate in reversed order because std::tuple memory
+		// layout is last element first
+		size_t neuron_view_offset = 0;
+		for (int neuron_view = data_per_neuron.size() - 1; neuron_view >= 0; --neuron_view) {
+			auto const& neuron_view_shape = m_neuron_view_shapes.at(neuron_view);
+			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
+			std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+			size_t local_neuron_view_offset = 0;
+			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
+				auto& local_batch_values = batch_values.at(batch);
+				auto const& local_data = data.at(batch);
+				local_batch_values.resize(local_data.size());
+				size_t sample_local_neuron_view_offset = 0;
+				for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
+					auto& local_sample = local_batch_values.at(sample);
+					auto& local_data_sample = local_data.at(sample);
+					size_t const ppu_offset =
+					    neuron_view_shape.row.value() ? local_data_sample.data.size() / 2 : 0;
+					local_sample.chip_time = local_data_sample.chip_time;
+					local_sample.fpga_time = local_data_sample.fpga_time;
+					local_sample.data.resize(neuron_view_shape.columns.size());
+					for (size_t neuron = 0; neuron < local_sample.data.size(); ++neuron) {
+						size_t const total_offset = (sizeof(ElementType) * neuron) +
+						                            timed_data_intervals.at(name).first +
+						                            ppu_offset + neuron_view_offset;
+						local_sample.data.at(neuron) = static_cast<ElementType>(
+						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
+						        .value());
+						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
+							local_sample.data.at(neuron) |=
+							    (static_cast<ElementType>(
+							         local_data_sample.data.at(total_offset + byte).value())
+							     << (CHAR_BIT * (byte + 1)));
+						}
+					}
+					sample_local_neuron_view_offset +=
+					    sizeof(ElementType) * local_sample.data.size();
+				}
+				local_neuron_view_offset += sample_local_neuron_view_offset /
+				                            (batch_values.size() * local_batch_values.size());
+			}
+			neuron_view_offset += local_neuron_view_offset;
+			data_per_neuron.at(neuron_view) = batch_values;
+		}
+	};
+
 	auto const extract_observable_array = [&](auto const& type, size_t const size,
 	                                          auto const& name) {
 		auto& data_array = observable_data.data_array[name];
@@ -817,6 +1149,72 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 			        }
 		        },
 		        [this, &observable_data, data, name, &timed_data_intervals,
+		         extract_observable_per_neuron_complete_row,
+		         extract_observable_per_neuron_packed_active_columns](
+		            TimedRecording::ObservablePerNeuron const& observable) {
+			        switch (observable.layout) {
+				        case TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+					        std::visit(
+					            hate::overloaded{
+					                [&](TimedRecording::ObservablePerNeuron::Type::Int8 const&
+					                        type) {
+						                extract_observable_per_neuron_complete_row(type, name);
+					                },
+					                [&](TimedRecording::ObservablePerNeuron::Type::UInt8 const&
+					                        type) {
+						                extract_observable_per_neuron_complete_row(type, name);
+					                },
+					                [&](TimedRecording::ObservablePerNeuron::Type::Int16 const&
+					                        type) {
+						                extract_observable_per_neuron_complete_row(type, name);
+					                },
+					                [&](TimedRecording::ObservablePerNeuron::Type::UInt16 const&
+					                        type) {
+						                extract_observable_per_neuron_complete_row(type, name);
+					                },
+					                [](auto const&) {
+						                throw std::logic_error(
+						                    "Observable per neuron type not implemented.");
+					                }},
+					            observable.type);
+					        break;
+				        }
+				        case TimedRecording::ObservablePerNeuron::Layout::packed_active_columns: {
+					        std::visit(
+					            hate::overloaded{
+					                [&](TimedRecording::ObservablePerNeuron::Type::Int8 const&
+					                        type) {
+						                extract_observable_per_neuron_packed_active_columns(
+						                    type, name);
+					                },
+					                [&](TimedRecording::ObservablePerNeuron::Type::UInt8 const&
+					                        type) {
+						                extract_observable_per_neuron_packed_active_columns(
+						                    type, name);
+					                },
+					                [&](TimedRecording::ObservablePerNeuron::Type::Int16 const&
+					                        type) {
+						                extract_observable_per_neuron_packed_active_columns(
+						                    type, name);
+					                },
+					                [&](TimedRecording::ObservablePerNeuron::Type::UInt16 const&
+					                        type) {
+						                extract_observable_per_neuron_packed_active_columns(
+						                    type, name);
+					                },
+					                [](auto const&) {
+						                throw std::logic_error(
+						                    "Observable per neuron type not implemented.");
+					                }},
+					            observable.type);
+					        break;
+				        }
+				        default: {
+					        throw std::logic_error("Unknown layout.");
+				        }
+			        }
+		        },
+		        [this, &observable_data, data, name, &timed_data_intervals,
 		         extract_observable_array](TimedRecording::ObservableArray const& observable) {
 			        std::visit(
 			            hate::overloaded{
@@ -861,6 +1259,11 @@ std::vector<PlasticityRule::SynapseViewShape> const& PlasticityRule::get_synapse
 	return m_synapse_view_shapes;
 }
 
+std::vector<PlasticityRule::NeuronViewShape> const& PlasticityRule::get_neuron_view_shapes() const
+{
+	return m_neuron_view_shapes;
+}
+
 std::optional<PlasticityRule::Recording> PlasticityRule::get_recording() const
 {
 	return m_recording;
@@ -871,6 +1274,9 @@ std::vector<Port> PlasticityRule::inputs() const
 	std::vector<Port> ret;
 	for (auto const& shape : m_synapse_view_shapes) {
 		ret.push_back(Port(shape.columns.size(), ConnectionType::SynapticInput));
+	}
+	for (auto const& shape : m_neuron_view_shapes) {
+		ret.push_back(Port(shape.columns.size(), ConnectionType::MembraneVoltage));
 	}
 	return ret;
 }
@@ -900,6 +1306,12 @@ bool PlasticityRule::supports_input_from(
 	return !restriction;
 }
 
+bool PlasticityRule::supports_input_from(
+    NeuronView const& /*input*/, std::optional<PortRestriction> const& restriction) const
+{
+	return !restriction;
+}
+
 bool PlasticityRule::operator==(PlasticityRule const& other) const
 {
 	return (m_kernel == other.m_kernel) && (m_timer == other.m_timer) &&
@@ -918,6 +1330,7 @@ void PlasticityRule::serialize(Archive& ar, std::uint32_t const)
 	ar(m_kernel);
 	ar(m_timer);
 	ar(m_synapse_view_shapes);
+	ar(m_neuron_view_shapes);
 	ar(m_recording);
 }
 
@@ -939,9 +1352,25 @@ std::ostream& operator<<(
 	}
 }
 
+std::ostream& operator<<(
+    std::ostream& os, PlasticityRule::TimedRecording::ObservablePerNeuron::Layout const& layout)
+{
+	switch (layout) {
+		case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::complete_row: {
+			return (os << "complete_row");
+		}
+		case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::packed_active_columns: {
+			return (os << "packed_active_columns");
+		}
+		default: {
+			throw std::logic_error("Unknown layout.");
+		}
+	}
+}
+
 } // namespace grenade::vx::vertex
 
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::PlasticityRule::Timer)
 EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::vertex::PlasticityRule)
 CEREAL_CLASS_VERSION(grenade::vx::vertex::PlasticityRule::Timer, 0)
-CEREAL_CLASS_VERSION(grenade::vx::vertex::PlasticityRule, 2)
+CEREAL_CLASS_VERSION(grenade::vx::vertex::PlasticityRule, 3)

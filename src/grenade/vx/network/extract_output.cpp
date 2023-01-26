@@ -195,7 +195,7 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 				for (size_t i = 0; i < local_record.size(); ++i) {
 					local_record.at(i).resize(local_result.at(i).size());
 					for (size_t s = 0; s < local_record.at(i).size(); ++s) {
-						// FIXME: make array over hemispheres
+						// TODO: make array over hemispheres
 						local_record.at(i).at(s).chip_time = local_result.at(i).at(s).chip_time;
 						local_record.at(i).at(s).fpga_time = local_result.at(i).at(s).fpga_time;
 						local_record.at(i).at(s).data.resize(network_graph.get_network()
@@ -215,6 +215,43 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 		}
 	};
 
+	auto const extract_observable_per_neuron = [&](auto const& type, auto const& name) {
+		typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
+		for (size_t p = 0; auto const& population : plasticity_rule.populations) {
+			recorded_data.data_per_neuron[name][population.descriptor] =
+			    std::vector<TimedDataSequence<std::vector<ElementType>>>{};
+			auto& local_record = std::get<std::vector<TimedDataSequence<std::vector<ElementType>>>>(
+			    recorded_data.data_per_neuron.at(name).at(population.descriptor));
+			size_t neuron_view_offset = 0;
+			for ([[maybe_unused]] auto const& _ :
+			     network_graph.get_neuron_vertices().at(population.descriptor)) {
+				auto const& local_result =
+				    std::get<std::vector<TimedDataSequence<std::vector<ElementType>>>>(
+				        vertex_timed_recorded_data.data_per_neuron.at(name).at(p));
+				local_record.resize(local_result.size());
+				for (size_t i = 0; i < local_record.size(); ++i) {
+					local_record.at(i).resize(local_result.at(i).size());
+					for (size_t s = 0; s < local_record.at(i).size(); ++s) {
+						// TODO: make array over hemispheres
+						local_record.at(i).at(s).chip_time = local_result.at(i).at(s).chip_time;
+						local_record.at(i).at(s).fpga_time = local_result.at(i).at(s).fpga_time;
+						local_record.at(i).at(s).data.resize(
+						    std::get<Population>(
+						        network_graph.get_network()->populations.at(population.descriptor))
+						        .neurons.size());
+						for (size_t c = 0; c < local_result.at(i).at(s).data.size(); ++c) {
+							local_record.at(i).at(s).data.at(c + neuron_view_offset) =
+							    local_result.at(i).at(s).data.at(c);
+						}
+					}
+				}
+				if (local_result.size() && local_result.at(0).size()) {
+					neuron_view_offset += local_result.at(0).at(0).data.size();
+				}
+				p++;
+			}
+		}
+	};
 
 	for (auto const& [name, obsv] :
 	     std::get<network::PlasticityRule::TimedRecording>(*plasticity_rule.recording)
@@ -224,6 +261,11 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 		        [&](PlasticityRule::TimedRecording::ObservablePerSynapse const& observable) {
 			        std::visit(
 			            [&](auto const& type) { extract_observable_per_synapse(type, name); },
+			            observable.type);
+		        },
+		        [&](PlasticityRule::TimedRecording::ObservablePerNeuron const& observable) {
+			        std::visit(
+			            [&](auto const& type) { extract_observable_per_neuron(type, name); },
 			            observable.type);
 		        },
 		        [&](PlasticityRule::TimedRecording::ObservableArray const&) {

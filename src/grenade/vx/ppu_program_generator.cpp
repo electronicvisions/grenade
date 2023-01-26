@@ -15,9 +15,11 @@ void PPUProgramGenerator::add(
     vertex::PlasticityRule const& rule,
     std::vector<
         std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
-        synapses)
+        synapses,
+    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>> const&
+        neurons)
 {
-	m_plasticity_rules.push_back({descriptor, rule, synapses});
+	m_plasticity_rules.push_back({descriptor, rule, synapses, neurons});
 }
 
 std::vector<std::string> PPUProgramGenerator::done()
@@ -33,7 +35,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 	std::vector<std::string> sources;
 	// plasticity rules
 	{
-		for (auto const& [i, plasticity_rule, synapses] : m_plasticity_rules) {
+		for (auto const& [i, plasticity_rule, synapses, neurons] : m_plasticity_rules) {
 			std::stringstream kernel;
 			auto kernel_str = plasticity_rule.get_kernel();
 			std::string const kernel_name("PLASTICITY_RULE_KERNEL");
@@ -91,6 +93,28 @@ std::vector<std::string> PPUProgramGenerator::done()
 				l++;
 			}
 			kernel << "};\n";
+			kernel << "std::array<grenade::vx::ppu::NeuronViewHandle, " << neurons.size()
+			       << "> neuron_view_handle = {\n";
+			l = 0;
+			for (auto const& [row, neuron_view_handle] : neurons) {
+				kernel << "[](){\n";
+				kernel << "grenade::vx::ppu::NeuronViewHandle neuron_view_handle;\n";
+				kernel << "neuron_view_handle.hemisphere = libnux::vx::PPUOnDLS(" << row.value()
+				       << ");\n";
+				for (size_t j = 0; j < 256; ++j) {
+					if (neuron_view_handle.columns.test(j)) {
+						kernel << "neuron_view_handle.columns.set(" << j << ");\n";
+					}
+				}
+				kernel << "return neuron_view_handle;\n";
+				kernel << "}()";
+				if (l != neurons.size() - 1) {
+					kernel << ",";
+				}
+				kernel << "\n";
+				l++;
+			}
+			kernel << "};\n";
 			kernel << "} // namespace\n";
 			kernel << "#include \"libnux/vx/helper.h\"\n";
 			kernel << "#include \"libnux/vx/mailbox.h\"\n";
@@ -104,14 +128,14 @@ std::vector<std::string> PPUProgramGenerator::done()
 				if (std::holds_alternative<vertex::PlasticityRule::RawRecording>(
 				        *plasticity_rule.get_recording())) {
 					kernel << "plasticity_rule_kernel_" << i
-					       << "(synapse_array_view_handle, ppu == "
+					       << "(synapse_array_view_handle, neuron_view_handle, ppu == "
 					          "libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
 					       << i << " : recorded_scratchpad_memory_bot_" << i << ");\n";
 				} else if (std::holds_alternative<vertex::PlasticityRule::TimedRecording>(
 				               *plasticity_rule.get_recording())) {
 					kernel << "static size_t recorded_scratchpad_memory_period = 0;\n";
 					kernel << "plasticity_rule_kernel_" << i
-					       << "(synapse_array_view_handle, "
+					       << "(synapse_array_view_handle, neuron_view_handle, "
 					          "(ppu == libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_"
 					       << i << " : recorded_scratchpad_memory_bot_" << i
 					       << ")[recorded_scratchpad_memory_period]"
@@ -129,7 +153,8 @@ std::vector<std::string> PPUProgramGenerator::done()
 				kernel << "libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_bot_" << i
 				       << ");\n";
 			} else {
-				kernel << "plasticity_rule_kernel_" << i << "(synapse_array_view_handle);\n";
+				kernel << "plasticity_rule_kernel_" << i
+				       << "(synapse_array_view_handle, neuron_view_handle);\n";
 			}
 			kernel << "libnux::vx::mailbox_write_string(\" d: \");\n";
 			kernel << "libnux::vx::mailbox_write_int(get_time() - b);\n";
@@ -161,11 +186,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "volatile uint32_t runtime;\n";
 		source << "volatile uint32_t scheduler_event_drop_count;\n";
 		source << "uint64_t time_origin = 0;\n";
-		for (auto const& [i, _, __] : m_plasticity_rules) {
+		for (auto const& [i, _, __, ___] : m_plasticity_rules) {
 			source << "extern Timer timer_" << i << ";\n";
 			source << "volatile uint32_t timer_" << i << "_event_drop_count;\n";
 		}
-		for (auto const& [i, _, __] : m_plasticity_rules) {
+		for (auto const& [i, _, __, ___] : m_plasticity_rules) {
 			source << "extern void plasticity_rule_" << i << "();\n";
 			source << "extern Service_Function<" << i << ", &plasticity_rule_" << i << "> service_"
 			       << i << ";\n";
@@ -175,7 +200,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "auto timers = std::tie(";
 		{
 			std::vector<std::string> s;
-			for (auto const& [i, _, __] : m_plasticity_rules) {
+			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
 				s.push_back("timer_" + std::to_string(i));
 			}
 			source << hate::join_string(s.begin(), s.end(), ",\n") << ");\n";
@@ -183,7 +208,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "auto services = std::tie(";
 		{
 			std::vector<std::string> s;
-			for (auto const& [i, _, __] : m_plasticity_rules) {
+			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
 				s.push_back("service_" + std::to_string(i));
 			}
 			source << hate::join_string(s.begin(), s.end(), ",\n") << ");\n";
@@ -196,7 +221,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 			source << "auto current = get_time();\n";
 			source << "time_origin = libnux::vx::now();\n";
 			source << "SchedulerSignallerTimer timer(current, current + runtime);\n";
-			for (auto const& [i, _, __] : m_plasticity_rules) {
+			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
 				source << "timer_" << i << ".set_first_deadline(current + timer_" << i
 				       << ".get_first_deadline());\n";
 			}
@@ -205,7 +230,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 			source << "libnux::vx::mailbox_write_string(\"\\n\");\n";
 			source << "scheduler.execute(timer, services, timers);\n";
 			source << "scheduler_event_drop_count = scheduler.get_dropped_events_count();\n";
-			for (auto const& [i, _, __] : m_plasticity_rules) {
+			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
 				source << "timer_" << i << "_event_drop_count = timer_" << i
 				       << ".get_missed_count();\n";
 			}

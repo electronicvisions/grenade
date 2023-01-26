@@ -57,10 +57,12 @@ TEST(PlasticityRule, RawRecording)
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
 	kernel << "#include \"libnux/vx/location.h\"\n";
 	kernel << "using namespace grenade::vx::ppu;\n";
 	kernel << "using namespace libnux::vx;\n";
 	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
+	          "std::array<NeuronViewHandle, 0>& neurons, "
 	          "Recording& recording)\n";
 	kernel << "{\n";
 	kernel << "  for (size_t i = 0; i < recording.memory.size(); ++i) {\n";
@@ -144,6 +146,7 @@ TEST(PlasticityRule, TimedRecording)
 		std::uniform_int_distribution num_projection_distribution(1, 3);
 		size_t const num_projections = num_projection_distribution(rng);
 		std::vector<grenade::vx::network::ProjectionDescriptor> projection_descriptors;
+		std::vector<grenade::vx::network::PlasticityRule::PopulationHandle> population_descriptors;
 		for (size_t p = 0; p < num_projections; ++p) {
 			std::uniform_int_distribution neuron_distribution(1, 3);
 
@@ -199,6 +202,10 @@ TEST(PlasticityRule, TimedRecording)
 			    std::move(projection_connections), population_descriptor_s,
 			    population_descriptor_t};
 			projection_descriptors.push_back(network_builder.add(projection));
+			grenade::vx::network::PlasticityRule::PopulationHandle population_handle_t;
+			population_handle_t.descriptor = population_descriptor_t;
+			population_handle_t.neuron_readout_sources.resize(population_t.neurons.size());
+			population_descriptors.push_back(population_handle_t);
 		}
 
 		grenade::vx::network::PlasticityRule plasticity_rule;
@@ -210,83 +217,162 @@ TEST(PlasticityRule, TimedRecording)
 		plasticity_rule.timer.num_periods = num_periods_distribution(rng);
 
 		plasticity_rule.projections = projection_descriptors;
+		plasticity_rule.populations = population_descriptors;
 
 		std::stringstream kernel;
 		kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+		kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
 		kernel << "#include \"libnux/vx/location.h\"\n";
 		kernel << "#include \"hate/tuple.h\"\n";
 		kernel << "using namespace grenade::vx::ppu;\n";
 		kernel << "using namespace libnux::vx;\n";
-		kernel << "template <size_t N>\n";
-		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, N>&, Recording& "
+		kernel << "template <size_t N, size_t M>\n";
+		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, N>&, "
+		          "std::array<NeuronViewHandle, M>&, Recording& "
 		          "recording)\n";
 		kernel << "{\n";
 		kernel << "\tstatic size_t period = 0;\n";
 
+		// generate random timed recording
 		grenade::vx::network::PlasticityRule::TimedRecording recording;
+		// select number of observables
 		std::uniform_int_distribution num_observable_distribution(1, 3);
 		size_t const num_observables = num_observable_distribution(rng);
+		// generate observables
 		for (size_t i = 0; i < num_observables; ++i) {
-			if (std::bernoulli_distribution{}(rng)) {
-				recording.observables["observable_" + std::to_string(i)] =
-				    grenade::vx::network::PlasticityRule::TimedRecording::ObservableArray{
-				        grenade::vx::network::PlasticityRule::TimedRecording::ObservableArray::
-				            Type::int8,
-				        std::uniform_int_distribution<size_t>(1, 15)(rng)};
-				kernel << "\trecording.observable_" << i << ".fill(" << i << ");\n";
-			} else {
-				auto obsv =
-				    grenade::vx::network::PlasticityRule::TimedRecording::ObservablePerSynapse{
-				        grenade::vx::network::PlasticityRule::TimedRecording::ObservablePerSynapse::
-				            Type::int8,
-				        std::bernoulli_distribution{}(rng)
-				            ? grenade::vx::network::PlasticityRule::TimedRecording::
-				                  ObservablePerSynapse::LayoutPerRow::complete_rows
-				            : grenade::vx::network::PlasticityRule::TimedRecording::
-				                  ObservablePerSynapse::LayoutPerRow::packed_active_columns};
-				switch (std::uniform_int_distribution{0, 3}(rng)) {
-					case 0: {
-						obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
-						    ObservablePerSynapse::Type::int8;
-						break;
-					}
-					case 1: {
-						obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
-						    ObservablePerSynapse::Type::uint8;
-						break;
-					}
-					case 2: {
-						obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
-						    ObservablePerSynapse::Type::int16;
-						break;
-					}
-					case 3: {
-						obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
-						    ObservablePerSynapse::Type::uint16;
-						break;
-					}
-					default: {
-						throw std::logic_error("Unknown observable type");
-					}
+			// select which type of observable to generate
+			// 0: ObservableArray, 1: ObservablePerSynapse, 2: ObservablePerNeuron
+			switch (std::uniform_int_distribution(0, 2)(rng)) {
+				case 0: { // ObservableArray
+					// select observable size
+					recording.observables["observable_" + std::to_string(i)] =
+					    grenade::vx::network::PlasticityRule::TimedRecording::ObservableArray{
+					        grenade::vx::network::PlasticityRule::TimedRecording::ObservableArray::
+					            Type::int8,
+					        std::uniform_int_distribution<size_t>(1, 15)(rng)};
+					// set its value from the PPU to i
+					kernel << "\trecording.observable_" << i << ".fill(" << i << ");\n";
+					break;
 				}
-				recording.observables["observable_" + std::to_string(i)] = obsv;
-				kernel << "\thate::for_each([](auto& rec) { ";
-				switch (obsv.layout_per_row) {
-					case grenade::vx::network::PlasticityRule::TimedRecording::
-					    ObservablePerSynapse::LayoutPerRow::complete_rows: {
-						kernel << "for (auto& row: rec) { row = " << i << "; } },\n";
-						break;
+				case 1: { // ObservablePerSynapse
+					// select memory layout per row
+					auto obsv =
+					    grenade::vx::network::PlasticityRule::TimedRecording::ObservablePerSynapse{
+					        grenade::vx::network::PlasticityRule::TimedRecording::
+					            ObservablePerSynapse::Type::int8,
+					        std::bernoulli_distribution{}(rng)
+					            ? grenade::vx::network::PlasticityRule::TimedRecording::
+					                  ObservablePerSynapse::LayoutPerRow::complete_rows
+					            : grenade::vx::network::PlasticityRule::TimedRecording::
+					                  ObservablePerSynapse::LayoutPerRow::packed_active_columns};
+					// select data type
+					switch (std::uniform_int_distribution{0, 3}(rng)) {
+						case 0: { // int8
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerSynapse::Type::int8;
+							break;
+						}
+						case 1: { // uint8
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerSynapse::Type::uint8;
+							break;
+						}
+						case 2: { // int16
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerSynapse::Type::int16;
+							break;
+						}
+						case 3: { // uint16
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerSynapse::Type::uint16;
+							break;
+						}
+						default: {
+							throw std::logic_error("Unknown observable type");
+						}
 					}
-					case grenade::vx::network::PlasticityRule::TimedRecording::
-					    ObservablePerSynapse::LayoutPerRow::packed_active_columns: {
-						kernel << "for (auto& row: rec) { row.fill(" << i << "); } },\n";
-						break;
+					recording.observables["observable_" + std::to_string(i)] = obsv;
+					// set its value from the PPU to i
+					kernel << "\thate::for_each([](auto& rec) { ";
+					switch (obsv.layout_per_row) {
+						case grenade::vx::network::PlasticityRule::TimedRecording::
+						    ObservablePerSynapse::LayoutPerRow::complete_rows: {
+							kernel << "for (auto& row: rec) { row = " << i << "; } },\n";
+							break;
+						}
+						case grenade::vx::network::PlasticityRule::TimedRecording::
+						    ObservablePerSynapse::LayoutPerRow::packed_active_columns: {
+							kernel << "for (auto& row: rec) { row.fill(" << i << "); } },\n";
+							break;
+						}
+						default: {
+							throw std::logic_error("Layout per row unknown.");
+						}
 					}
-					default: {
-						throw std::logic_error("Layout per row unknown.");
-					}
+					kernel << "\trecording.observable_" << i << ");\n";
+					break;
 				}
-				kernel << "\trecording.observable_" << i << ");\n";
+				case 2: { // ObservablePerNeuron
+					// select memory layout
+					auto obsv =
+					    grenade::vx::network::PlasticityRule::TimedRecording::ObservablePerNeuron{
+					        grenade::vx::network::PlasticityRule::TimedRecording::
+					            ObservablePerNeuron::Type::int8,
+					        std::bernoulli_distribution{}(rng)
+					            ? grenade::vx::network::PlasticityRule::TimedRecording::
+					                  ObservablePerNeuron::Layout::complete_row
+					            : grenade::vx::network::PlasticityRule::TimedRecording::
+					                  ObservablePerNeuron::Layout::packed_active_columns};
+					// select data type
+					switch (std::uniform_int_distribution{0, 3}(rng)) {
+						case 0: { // int8
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerNeuron::Type::int8;
+							break;
+						}
+						case 1: { // uint8
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerNeuron::Type::uint8;
+							break;
+						}
+						case 2: { // int16
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerNeuron::Type::int16;
+							break;
+						}
+						case 3: { // uint16
+							obsv.type = grenade::vx::network::PlasticityRule::TimedRecording::
+							    ObservablePerNeuron::Type::uint16;
+							break;
+						}
+						default: {
+							throw std::logic_error("Unknown observable type");
+						}
+					}
+					recording.observables["observable_" + std::to_string(i)] = obsv;
+					// set its value from the PPU to i
+					kernel << "\thate::for_each([](auto& rec) { ";
+					switch (obsv.layout) {
+						case grenade::vx::network::PlasticityRule::TimedRecording::
+						    ObservablePerNeuron::Layout::complete_row: {
+							kernel << "rec = " << i << ";\n";
+							break;
+						}
+						case grenade::vx::network::PlasticityRule::TimedRecording::
+						    ObservablePerNeuron::Layout::packed_active_columns: {
+							kernel << "rec.fill(" << i << ");\n";
+							break;
+						}
+						default: {
+							throw std::logic_error("Layout unknown.");
+						}
+					}
+					kernel << "\t}, recording.observable_" << i << ");\n";
+					break;
+				}
+				default: {
+					throw std::logic_error("Unknown observable case.");
+				}
 			}
 		}
 
@@ -386,6 +472,46 @@ TEST(PlasticityRule, TimedRecording)
 				            },
 				            obsv.type);
 			        },
+			        [&](grenade::vx::network::PlasticityRule::TimedRecording::
+			                ObservablePerNeuron const& obsv) {
+				        EXPECT_TRUE(timed_recording_data.data_per_neuron.contains(name));
+				        auto const& data_entry_variant =
+				            timed_recording_data.data_per_neuron.at(name);
+				        std::visit(
+				            [&](auto type) {
+					            EXPECT_EQ(
+					                data_entry_variant.size(), plasticity_rule.populations.size());
+					            for (size_t p = 0; p < plasticity_rule.populations.size(); ++p) {
+						            auto const& data_entry =
+						                std::get<std::vector<grenade::vx::TimedDataSequence<
+						                    std::vector<typename decltype(type)::ElementType>>>>(
+						                    data_entry_variant.at(
+						                        plasticity_rule.populations.at(p).descriptor));
+						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
+						            for (size_t i = 0; i < data_entry.size(); ++i) {
+							            auto const& samples = data_entry.at(i);
+							            EXPECT_EQ(
+							                samples.size(), plasticity_rule.timer.num_periods);
+							            for (size_t time = 0; auto const& sample : samples) {
+								            EXPECT_EQ(sample.chip_time, time);
+								            EXPECT_EQ(
+								                sample.data.size(),
+								                std::get<grenade::vx::network::Population>(
+								                    network->populations.at(
+								                        plasticity_rule.populations.at(p)
+								                            .descriptor))
+								                    .neurons.size());
+								            for (size_t i = 0; i < sample.data.size(); ++i) {
+									            EXPECT_EQ(static_cast<int>(sample.data.at(i)), j)
+									                << name;
+								            }
+								            time++;
+							            }
+						            }
+					            }
+				            },
+				            obsv.type);
+			        },
 			        [](auto const&) {
 				        throw std::logic_error("Observable type not implemented.");
 			        }},
@@ -447,10 +573,12 @@ TEST(PlasticityRule, ExecutorInitialState)
 
 		std::stringstream kernel;
 		kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+		kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
 		kernel << "#include \"libnux/vx/location.h\"\n";
 		kernel << "using namespace grenade::vx::ppu;\n";
 		kernel << "using namespace libnux::vx;\n";
 		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
+		          "std::array<NeuronViewHandle, 0>&, "
 		          "Recording& recording)\n";
 		kernel << "{\n";
 		kernel << "  auto w = synapses[0].get_weights(0);\n";

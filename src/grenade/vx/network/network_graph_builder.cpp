@@ -142,7 +142,8 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		        vertex::PlasticityRule::Timer::Value(new_rule.timer.start.value()),
 		        vertex::PlasticityRule::Timer::Value(new_rule.timer.period.value()),
 		        new_rule.timer.num_periods},
-		    old_rule.get_synapse_view_shapes(), new_rule.recording);
+		    old_rule.get_synapse_view_shapes(), old_rule.get_neuron_view_shapes(),
+		    new_rule.recording);
 		network_graph.m_graph.update_and_relocate(vertex_descriptor, std::move(vertex), inputs);
 	};
 
@@ -1121,13 +1122,24 @@ void NetworkGraphBuilder::add_plasticity_rules(
 				    synapse_view.get_synram().toHemisphereOnDLS()});
 			}
 		}
+		std::vector<vertex::PlasticityRule::NeuronViewShape> neuron_view_shapes;
+		for (auto const& d : plasticity_rule.populations) {
+			for (auto const& [_, p] : resources.populations.at(d.descriptor).neurons) {
+				inputs.push_back({p});
+				auto const& neuron_view =
+				    std::get<vertex::NeuronView>(graph.get_vertex_property(p));
+				neuron_view_shapes.push_back(vertex::PlasticityRule::NeuronViewShape{
+				    neuron_view.get_columns(), neuron_view.get_row(), d.neuron_readout_sources});
+			}
+		}
 		vertex::PlasticityRule vertex(
 		    plasticity_rule.kernel,
 		    vertex::PlasticityRule::Timer{
 		        vertex::PlasticityRule::Timer::Value(plasticity_rule.timer.start.value()),
 		        vertex::PlasticityRule::Timer::Value(plasticity_rule.timer.period.value()),
 		        plasticity_rule.timer.num_periods},
-		    std::move(synapse_view_shapes), plasticity_rule.recording);
+		    std::move(synapse_view_shapes), std::move(neuron_view_shapes),
+		    plasticity_rule.recording);
 		auto const output = vertex.output();
 		auto const plasticity_rule_descriptor = graph.add(std::move(vertex), instance, inputs);
 		resources.plasticity_rules[descriptor] = plasticity_rule_descriptor;
