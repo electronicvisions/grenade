@@ -84,29 +84,35 @@ std::string get_include_path(
 	}
 	std::istringstream path(env_path);
 	std::string p;
+	std::vector<std::string> include_paths;
 	while (std::getline(path, p, ':')) {
 		if (p == "") {
 			continue;
 		}
 		{
 			std::filesystem::path fp(p);
-			fp = fp.parent_path();
-			fp /= "include";
-			if (std::filesystem::exists(fp / name)) {
-				return "-I" + static_cast<std::string>(fp);
+			if (fp.parent_path().filename() == "build") {
+				fp = fp.parent_path().parent_path();
+				fp /= name;
+				fp /= location_during_build;
+				if (std::filesystem::exists(fp / name)) {
+					include_paths.push_back("-I" + static_cast<std::string>(fp));
+				}
 			}
 		}
 		{
 			std::filesystem::path fp(p);
-			fp = fp.parent_path().parent_path();
-			fp /= name;
-			fp /= location_during_build;
+			fp = fp.parent_path();
+			fp /= "include";
 			if (std::filesystem::exists(fp / name)) {
-				return "-I" + static_cast<std::string>(fp);
+				include_paths.push_back("-I" + static_cast<std::string>(fp));
 			}
 		}
 	}
-	throw std::runtime_error("Include path for " + name + " not found.");
+	if (include_paths.empty()) {
+		throw std::runtime_error("Include path for " + name + " not found.");
+	}
+	return hate::join_string(include_paths, " ");
 }
 
 } // namespace
