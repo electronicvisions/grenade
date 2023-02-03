@@ -133,6 +133,10 @@ typedef TimedData<std::vector<std::vector<int16_t>>> _SingleEntryPerSynapseInt16
     GENPYBIND(opaque(false));
 typedef TimedData<std::vector<std::vector<uint16_t>>> _SingleEntryPerSynapseUInt16
     GENPYBIND(opaque(false));
+typedef TimedData<std::vector<int8_t>> _ArrayEntryInt8 GENPYBIND(opaque(false));
+typedef TimedData<std::vector<uint8_t>> _ArrayEntryUInt8 GENPYBIND(opaque(false));
+typedef TimedData<std::vector<int16_t>> _ArrayEntryInt16 GENPYBIND(opaque(false));
+typedef TimedData<std::vector<uint16_t>> _ArrayEntryUInt16 GENPYBIND(opaque(false));
 
 } // namespace grenade::vx
 
