@@ -30,10 +30,10 @@ struct GENPYBIND(visible) RoutingResult
 	 */
 	struct PlacedConnection
 	{
-		lola::vx::v3::SynapseMatrix::Weight const weight;
-		lola::vx::v3::SynapseMatrix::Label const label;
-		halco::hicann_dls::vx::v3::SynapseRowOnDLS const synapse_row;
-		halco::hicann_dls::vx::v3::SynapseOnSynapseRow const synapse_on_row;
+		lola::vx::v3::SynapseMatrix::Weight weight;
+		lola::vx::v3::SynapseMatrix::Label label;
+		halco::hicann_dls::vx::v3::SynapseRowOnDLS synapse_row;
+		halco::hicann_dls::vx::v3::SynapseOnSynapseRow synapse_on_row;
 
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
