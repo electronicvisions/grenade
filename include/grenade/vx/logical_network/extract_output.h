@@ -45,6 +45,27 @@ extract_madc_samples(
     network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
 
 /**
+ * Extract CADC samples to be recorded for a network.
+ * @param data Data containing CADC samples
+ * @param network_graph Network graph to use for matching of logical to hardware neurons
+ * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the CADC
+ * samples
+ * @return Time-series CADC sample data per batch entry. Samples are sorted by their ChipTime per
+ * batch-entry and contain their corresponding location alongside the ADC value.
+ */
+std::vector<std::vector<std::tuple<
+    haldls::vx::v3::ChipTime,
+    PopulationDescriptor,
+    size_t,
+    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+    size_t,
+    Int8>>>
+extract_cadc_samples(
+    IODataMap const& data,
+    NetworkGraph const& network_graph,
+    network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
+
+/**
  * Extract to be recorded observable data of a plasticity rule.
  * @param data Data containing observables
  * @param network_graph Network graph to use for hardware to logical network translation

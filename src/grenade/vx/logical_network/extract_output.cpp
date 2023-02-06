@@ -76,6 +76,64 @@ extract_madc_samples(
 }
 
 
+std::vector<std::vector<std::tuple<
+    haldls::vx::v3::ChipTime,
+    PopulationDescriptor,
+    size_t,
+    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+    size_t,
+    Int8>>>
+extract_cadc_samples(
+    IODataMap const& data,
+    NetworkGraph const& network_graph,
+    network::NetworkGraph const& hardware_network_graph)
+{
+	auto const hardware_samples = network::extract_cadc_samples(data, hardware_network_graph);
+
+	std::vector<std::vector<std::tuple<
+	    haldls::vx::v3::ChipTime, PopulationDescriptor, size_t,
+	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t, Int8>>>
+	    ret(hardware_samples.size());
+
+	std::map<
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
+	    std::tuple<
+	        PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+	        size_t>>
+	    location_lookup;
+
+	assert(network_graph.get_network());
+	if (!network_graph.get_network()->cadc_recording) {
+		return ret;
+	}
+	for (auto const& neuron : network_graph.get_network()->cadc_recording->neurons) {
+		auto const atomic_neuron =
+		    std::get<Population>(network_graph.get_network()->populations.at(neuron.population))
+		        .neurons.at(neuron.neuron_on_population)
+		        .coordinate.get_placed_compartments()
+		        .at(neuron.compartment_on_neuron)
+		        .at(neuron.atomic_neuron_on_compartment);
+		location_lookup[atomic_neuron] = std::tuple{
+		    neuron.population, neuron.neuron_on_population, neuron.compartment_on_neuron,
+		    neuron.atomic_neuron_on_compartment};
+	}
+
+	for (size_t b = 0; b < hardware_samples.size(); ++b) {
+		auto const& local_hardware_samples = hardware_samples.at(b);
+		auto& local_ret = ret.at(b);
+
+		for (auto const& hardware_sample : local_hardware_samples) {
+			auto const& [population, neuron_on_population, compartment_on_neuron, atomic_neuron_on_compartment] =
+			    location_lookup.at(std::get<1>(hardware_sample));
+			local_ret.push_back(std::tuple{
+			    std::get<0>(hardware_sample), population, neuron_on_population,
+			    compartment_on_neuron, atomic_neuron_on_compartment, std::get<2>(hardware_sample)});
+		}
+	}
+	return ret;
+}
+
+
 namespace {
 
 template <typename T>
