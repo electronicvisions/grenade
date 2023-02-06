@@ -30,6 +30,21 @@ extract_neuron_spikes(
     network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
 
 /**
+ * Extract MADC samples to be recorded for a network.
+ * @param data Data containing MADC samples
+ * @param network_graph Network graph to use for matching of logical to hardware neurons
+ * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the MADC
+ * samples
+ * @return Time-series MADC sample data per batch entry
+ */
+std::vector<
+    std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
+extract_madc_samples(
+    IODataMap const& data,
+    NetworkGraph const& network_graph,
+    network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
+
+/**
  * Extract to be recorded observable data of a plasticity rule.
  * @param data Data containing observables
  * @param network_graph Network graph to use for hardware to logical network translation

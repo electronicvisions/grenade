@@ -65,6 +65,17 @@ extract_neuron_spikes(
 }
 
 
+std::vector<
+    std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
+extract_madc_samples(
+    IODataMap const& data,
+    NetworkGraph const& /* network_graph */,
+    network::NetworkGraph const& hardware_network_graph)
+{
+	return network::extract_madc_samples(data, hardware_network_graph);
+}
+
+
 namespace {
 
 template <typename T>
