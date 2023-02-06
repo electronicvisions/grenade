@@ -17,7 +17,8 @@ namespace logical_network GENPYBIND_MODULE {
  * Extract spikes corresponding to neurons in the network.
  * Spikes which don't correspond to a neuron in the network are ignored.
  * @param data Data containing spike labels
- * @param network_graph Network graph to use for matching of spike labels to neurons
+ * @param network_graph Network graph to use for matching of logical to hardware neurons
+ * @param hardware_network_graph Network graph to use for matching of spike labels to neurons
  * @return Time-series neuron spike data per batch entry
  */
 std::vector<std::map<
