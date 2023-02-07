@@ -77,15 +77,66 @@ void extract_plasticity_rule_recording_data_per_synapse(
     size_t const batch_size,
     size_t const hardware_index,
     size_t const index,
-    std::vector<TimedDataSequence<std::vector<T>>> const& dd)
+    std::vector<TimedDataSequence<std::vector<T>>> const& local_hardware_data)
 {
 	if (!local_logical_data.contains(descriptor)) {
-		std::vector<TimedDataSequence<std::vector<std::vector<T>>>> logical_dd(batch_size);
-		for (auto& batch : logical_dd) {
+		std::vector<TimedDataSequence<std::vector<std::vector<T>>>> logical_local_hardware_data(
+		    batch_size);
+		for (auto& batch : logical_local_hardware_data) {
 			batch.resize(num_periods);
 			for (auto& sample : batch) {
 				sample.data.resize(
 				    network_graph.get_network()->projections.at(descriptor).connections.size());
+			}
+			for (size_t b = 0; b < local_hardware_data.size(); ++b) {
+				for (size_t s = 0; s < local_hardware_data.at(b).size(); ++s) {
+					auto& local_logical_local_hardware_data =
+					    logical_local_hardware_data.at(b).at(s);
+					auto& local_local_hardware_data = local_hardware_data.at(b).at(s);
+					local_logical_local_hardware_data.chip_time =
+					    local_local_hardware_data.chip_time;
+					local_logical_local_hardware_data.fpga_time =
+					    local_local_hardware_data.fpga_time;
+				}
+			}
+		}
+		local_logical_data[descriptor] = logical_local_hardware_data;
+	}
+	auto& logical_local_hardware_data =
+	    std::get<std::vector<TimedDataSequence<std::vector<std::vector<T>>>>>(
+	        local_logical_data.at(descriptor));
+	for (size_t b = 0; b < local_hardware_data.size(); ++b) {
+		for (size_t s = 0; s < local_hardware_data.at(b).size(); ++s) {
+			auto& local_logical_local_hardware_data = logical_local_hardware_data.at(b).at(s);
+			auto& local_local_hardware_data = local_hardware_data.at(b).at(s);
+			local_logical_local_hardware_data.data.at(index).push_back(
+			    local_local_hardware_data.data.at(hardware_index));
+		}
+	}
+}
+
+template <typename T>
+void extract_plasticity_rule_recording_data_per_neuron(
+    std::map<PopulationDescriptor, PlasticityRule::TimedRecordingData::EntryPerNeuron>&
+        local_logical_data,
+    size_t const num_periods,
+    PopulationDescriptor const& descriptor,
+    size_t const batch_size,
+    std::vector<
+        std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<size_t>>> const&
+        neuron_translation,
+    std::vector<TimedDataSequence<std::vector<T>>> const& dd)
+{
+	if (!local_logical_data.contains(descriptor)) {
+		// dimension (outer to inner): batch, time, neuron_on_population, compartment_on_neuron,
+		// atomic_neuron_on_compartment
+		std::vector<TimedDataSequence<std::vector<
+		    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>
+		    logical_dd(batch_size);
+		for (auto& batch : logical_dd) {
+			batch.resize(num_periods);
+			for (auto& sample : batch) {
+				sample.data.resize(neuron_translation.size());
 			}
 			for (size_t b = 0; b < dd.size(); ++b) {
 				for (size_t s = 0; s < dd.at(b).size(); ++s) {
@@ -98,13 +149,23 @@ void extract_plasticity_rule_recording_data_per_synapse(
 		}
 		local_logical_data[descriptor] = logical_dd;
 	}
-	auto& logical_dd = std::get<std::vector<TimedDataSequence<std::vector<std::vector<T>>>>>(
+	auto& logical_dd = std::get<std::vector<TimedDataSequence<std::vector<
+	    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>>(
 	    local_logical_data.at(descriptor));
 	for (size_t b = 0; b < dd.size(); ++b) {
 		for (size_t s = 0; s < dd.at(b).size(); ++s) {
 			auto& local_logical_dd = logical_dd.at(b).at(s);
 			auto& local_dd = dd.at(b).at(s);
-			local_logical_dd.data.at(index).push_back(local_dd.data.at(hardware_index));
+			for (size_t neuron = 0; neuron < neuron_translation.size(); ++neuron) {
+				auto& neuron_data = local_logical_dd.data.at(neuron);
+				for (auto const& [compartment, atomic_neuron_indices] :
+				     neuron_translation.at(neuron)) {
+					auto& compartment_data = neuron_data[compartment];
+					for (auto const& atomic_neuron_index : atomic_neuron_indices) {
+						compartment_data.push_back(local_dd.data.at(atomic_neuron_index));
+					}
+				}
+			}
 		}
 	}
 }
@@ -123,13 +184,15 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 
 	auto const batch_size = data.batch_size();
 
-	return std::visit(
-	    hate::overloaded{
-	        [](network::PlasticityRule::RawRecordingData const& data)
-	            -> PlasticityRule::RecordingData { return data; },
-	        [batch_size, descriptor,
-	         network_graph](network::PlasticityRule::TimedRecordingData const& data)
-	            -> PlasticityRule::RecordingData {
+	auto const convert_raw =
+	    [](network::PlasticityRule::RawRecordingData const& data) -> PlasticityRule::RecordingData {
+		return data;
+	};
+
+	auto const convert_timed = [batch_size, descriptor, network_graph](
+	                               network::PlasticityRule::TimedRecordingData const& data)
+	    -> PlasticityRule::
+	        RecordingData {
 		        PlasticityRule::TimedRecordingData logical_data;
 		        for (auto const& logical_proj :
 		             network_graph.get_network()->plasticity_rules.at(descriptor).projections) {
@@ -158,10 +221,30 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 				        }
 			        }
 		        }
+		        for (auto const& logical_pop :
+		             network_graph.get_network()->plasticity_rules.at(descriptor).populations) {
+			        for (auto const& [name, d] : data.data_per_neuron) {
+				        auto& local_logical_data = logical_data.data_per_neuron[name];
+				        auto const& neuron_translation =
+				            network_graph.get_neuron_translation().at(logical_pop.descriptor);
+				        auto const extractor = [&](auto const& dd) {
+					        extract_plasticity_rule_recording_data_per_neuron(
+					            local_logical_data,
+					            network_graph.get_network()
+					                ->plasticity_rules.at(descriptor)
+					                .timer.num_periods,
+					            logical_pop.descriptor, batch_size, neuron_translation, dd);
+				        };
+				        std::visit(
+				            extractor, d.at(network_graph.get_population_translation().at(
+				                           logical_pop.descriptor)));
+			        }
+		        }
 		        logical_data.data_array = data.data_array;
 		        return logical_data;
-	        }},
-	    hardware_data);
+	        };
+
+	return std::visit(hate::overloaded{convert_raw, convert_timed}, hardware_data);
 }
 
 } // namespace grenade::vx::logical_network

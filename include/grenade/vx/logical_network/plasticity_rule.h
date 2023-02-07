@@ -112,9 +112,30 @@ struct GENPYBIND(visible) PlasticityRule
 		    std::vector<TimedDataSequence<std::vector<std::vector<uint16_t>>>>>
 		    EntryPerSynapse;
 
+		/**
+		 * Recording per logical neuron, where for each sample the outer dimension of the data are
+		 * the logical neurons of the population and the inner dimensions are the performed
+		 * recordings of the corresponding hardware neuron(s) per compartment.
+		 */
+		typedef std::variant<
+		    std::vector<TimedDataSequence<std::vector<std::map<
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		        std::vector<int8_t>>>>>,
+		    std::vector<TimedDataSequence<std::vector<std::map<
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		        std::vector<uint8_t>>>>>,
+		    std::vector<TimedDataSequence<std::vector<std::map<
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		        std::vector<int16_t>>>>>,
+		    std::vector<TimedDataSequence<std::vector<std::map<
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		        std::vector<uint16_t>>>>>>
+		    EntryPerNeuron;
+
 		typedef network::PlasticityRule::TimedRecordingData::Entry EntryArray;
 
 		std::map<std::string, std::map<ProjectionDescriptor, EntryPerSynapse>> data_per_synapse;
+		std::map<std::string, std::map<PopulationDescriptor, EntryPerNeuron>> data_per_neuron;
 		std::map<std::string, EntryArray> data_array;
 	};
 
@@ -167,6 +188,19 @@ typedef TimedData<std::vector<int8_t>> _ArrayEntryInt8 GENPYBIND(opaque(false));
 typedef TimedData<std::vector<uint8_t>> _ArrayEntryUInt8 GENPYBIND(opaque(false));
 typedef TimedData<std::vector<int16_t>> _ArrayEntryInt16 GENPYBIND(opaque(false));
 typedef TimedData<std::vector<uint16_t>> _ArrayEntryUInt16 GENPYBIND(opaque(false));
+
+typedef TimedData<std::vector<
+    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<int8_t>>>>
+    _SingleEntryPerNeuronInt8 GENPYBIND(opaque(false));
+typedef TimedData<std::vector<
+    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint8_t>>>>
+    _SingleEntryPerNeuronUInt8 GENPYBIND(opaque(false));
+typedef TimedData<std::vector<
+    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<int16_t>>>>
+    _SingleEntryPerNeuronInt16 GENPYBIND(opaque(false));
+typedef TimedData<std::vector<
+    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint16_t>>>>
+    _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false));
 
 } // namespace grenade::vx
 
