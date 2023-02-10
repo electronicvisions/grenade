@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/ppu/status.h"
+#include "grenade/vx/ppu/detail/status.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
@@ -23,7 +23,7 @@ struct BlockingPPUCommand
 	 */
 	BlockingPPUCommand(
 	    halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& coord,
-	    grenade::vx::ppu::Status const status) :
+	    grenade::vx::ppu::detail::Status const status) :
 	    m_coord(coord), m_status(status)
 	{}
 
@@ -34,7 +34,7 @@ protected:
 
 private:
 	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_coord;
-	grenade::vx::ppu::Status m_status;
+	grenade::vx::ppu::detail::Status m_status;
 };
 
 } // namespace grenade::vx::generator

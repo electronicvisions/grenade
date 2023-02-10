@@ -2,7 +2,7 @@
 
 #include "grenade/vx/execution_instance.h"
 #include "grenade/vx/ppu.h"
-#include "grenade/vx/ppu/status.h"
+#include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/ppu_program_generator.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"

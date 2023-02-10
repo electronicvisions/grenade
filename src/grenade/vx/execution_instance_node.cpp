@@ -5,8 +5,8 @@
 #include "grenade/vx/backend/connection.h"
 #include "grenade/vx/backend/run.h"
 #include "grenade/vx/execution_instance_config_visitor.h"
-#include "grenade/vx/ppu/status.h"
-#include "grenade/vx/ppu/stopped.h"
+#include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/ppu/detail/stopped.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/omnibus_constants.h"
 #include "haldls/vx/v3/timer.h"
@@ -127,7 +127,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		auto const ppu_stopped_coord =
 		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("stopped").coordinate).toMin();
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::stop)));
+			PPUMemoryWord config(
+			    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::stop)));
 			schedule_out_replacement_builder.write(
 			    PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
 		}
@@ -138,7 +139,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			                       PPUMemoryWordOnDLS(ppu_stopped_coord, ppu))
 			                       .at(0));
 			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Stopped::yes)));
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Stopped::yes)));
 			config.set_mask(
 			    PollingOmnibusBlockConfig::Value(PollingOmnibusBlockConfig::Value::max));
 			schedule_out_replacement_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
@@ -226,7 +227,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
 			                       .at(0));
 			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
 			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
 			trigger_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
 			trigger_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);

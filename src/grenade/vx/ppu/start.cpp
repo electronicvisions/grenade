@@ -1,6 +1,6 @@
-#include "grenade/vx/ppu/extmem.h"
-#include "grenade/vx/ppu/status.h"
-#include "grenade/vx/ppu/stopped.h"
+#include "grenade/vx/ppu/detail/extmem.h"
+#include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/ppu/detail/stopped.h"
 #include "libnux/vx/v3/correlation.h"
 #include "libnux/vx/v3/dls.h"
 #include "libnux/vx/v3/mailbox.h"
@@ -11,7 +11,7 @@
 #include "libnux/vx/v3/vector_math.h"
 #include <s2pp.h>
 
-using namespace grenade::vx::ppu;
+using namespace grenade::vx::ppu::detail;
 using namespace libnux::vx::v3;
 
 // output: cadc measurement

@@ -7,8 +7,8 @@
 #include "grenade/vx/generator/timed_spike_sequence.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
-#include "grenade/vx/ppu/extmem.h"
-#include "grenade/vx/ppu/status.h"
+#include "grenade/vx/ppu/detail/extmem.h"
+#include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/types.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
@@ -900,8 +900,9 @@ IODataMap ExecutionInstanceBuilder::post_process()
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
 			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
 			if (scheduler_finished) {
-				auto const value = ppu::Status(scheduler_finished->get().at(0).get_value().value());
-				if (value != ppu::Status::idle) {
+				auto const value =
+				    ppu::detail::Status(scheduler_finished->get().at(0).get_value().value());
+				if (value != ppu::detail::Status::idle) {
 					LOG4CXX_ERROR(
 					    logger, "On-PPU scheduler didn't finish operation (" << ppu << ").");
 				}
@@ -1077,30 +1078,32 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// generate playback snippets for PPU command polling
 		blocking_ppu_command_baseline_read =
 		    stadls::vx::generate(
-		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::baseline_read))
+		        generator::BlockingPPUCommand(ppu_status_coord, ppu::detail::Status::baseline_read))
 		        .builder;
 		blocking_ppu_command_reset_neurons =
 		    stadls::vx::generate(
-		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::reset_neurons))
+		        generator::BlockingPPUCommand(ppu_status_coord, ppu::detail::Status::reset_neurons))
 		        .builder;
 		blocking_ppu_command_read =
-		    stadls::vx::generate(generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::read))
+		    stadls::vx::generate(
+		        generator::BlockingPPUCommand(ppu_status_coord, ppu::detail::Status::read))
 		        .builder;
 		blocking_ppu_command_stop_periodic_read =
-		    stadls::vx::generate(
-		        generator::BlockingPPUCommand(ppu_status_coord, ppu::Status::stop_periodic_read))
+		    stadls::vx::generate(generator::BlockingPPUCommand(
+		                             ppu_status_coord, ppu::detail::Status::stop_periodic_read))
 		        .builder;
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
 			ppu_command_scheduler.write(
 			    PPUMemoryWordOnDLS(ppu_status_coord, ppu),
-			    PPUMemoryWord(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::scheduler))));
+			    PPUMemoryWord(
+			        PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::scheduler))));
 
 			PollingOmnibusBlockConfig config;
 			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
 			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
 			                       .at(0));
 			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
 			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
 			wait_for_ppu_command_idle.write(PollingOmnibusBlockConfigOnFPGA(), config);
 			wait_for_ppu_command_idle.block_until(BarrierOnFPGA(), Barrier::omnibus);
@@ -1181,7 +1184,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					builder.write(
 					    PPUMemoryWordOnDLS(ppu_status_coord, ppu),
 					    PPUMemoryWord(PPUMemoryWord::Value(
-					        static_cast<uint32_t>(ppu::Status::periodic_read))));
+					        static_cast<uint32_t>(ppu::detail::Status::periodic_read))));
 				}
 				// poll for completion by waiting until PPU is asleep
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -1190,7 +1193,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
 					                       .at(0));
 					config.set_target(PollingOmnibusBlockConfig::Value(
-					    static_cast<uint32_t>(ppu::Status::inside_periodic_read)));
+					    static_cast<uint32_t>(ppu::detail::Status::inside_periodic_read)));
 					config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
 					builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
 					builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
@@ -1388,7 +1391,8 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	if (enable_ppu) {
 		PlaybackProgramBuilder builder;
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(ppu::Status::stop)));
+			PPUMemoryWord config(
+			    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::stop)));
 			builder.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
 		}
 		// poll for completion by waiting until PPU is asleep

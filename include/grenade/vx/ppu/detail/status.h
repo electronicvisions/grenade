@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace grenade::vx::ppu {
+namespace grenade::vx::ppu::detail {
 
 enum class Status : uint32_t
 {
@@ -17,4 +17,4 @@ enum class Status : uint32_t
 	scheduler
 };
 
-} // namespace grenade::vx::ppu
+} // namespace grenade::vx::ppu::detail

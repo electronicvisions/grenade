@@ -30,7 +30,7 @@ PlaybackGeneratorReturn<BlockingPPUCommand::Result> BlockingPPUCommand::generate
 		                       PPUMemoryWordOnDLS(m_coord, ppu))
 		                       .at(0));
 		config.set_target(
-		    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::Status::idle)));
+		    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
 		config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
 		builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);

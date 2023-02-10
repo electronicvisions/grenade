@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace grenade::vx::ppu {
+namespace grenade::vx::ppu::detail {
 
 enum class Stopped : uint32_t
 {
@@ -9,4 +9,4 @@ enum class Stopped : uint32_t
 	yes
 };
 
-} // namespace grenade::vx::ppu
+} // namespace grenade::vx::ppu::detail

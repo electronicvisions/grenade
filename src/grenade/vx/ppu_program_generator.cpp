@@ -243,7 +243,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		size_t const num_samples = has_periodic_cadc_readout ? num_cadc_samples_in_extmem : 0;
 
 		std::stringstream source;
-		source << "#include \"grenade/vx/ppu/status.h\"\n";
+		source << "#include \"grenade/vx/ppu/detail/status.h\"\n";
 		source << "#include \"libnux/vx/dls.h\"\n";
 		source << "#include \"libnux/vx/vector.h\"\n";
 		source << "#include \"libnux/vx/globaladdress.h\"\n";
@@ -252,7 +252,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "#include <tuple>\n";
 		source << "\n";
 		source << "extern volatile libnux::vx::PPUOnDLS ppu;\n";
-		source << "extern volatile grenade::vx::ppu::Status status;\n";
+		source << "extern volatile grenade::vx::ppu::detail::Status status;\n";
 		source << "std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, "
 		       << num_samples
 		       << ">, uint32_t> periodic_cadc_samples_top "
@@ -305,8 +305,8 @@ std::vector<std::string> PPUProgramGenerator::done()
 		source << "uint32_t size = 0;\n";
 		source << "// instruction cache warming\n";
 		source << "perform_periodic_read_recording(offset);\n";
-		source << "status = grenade::vx::ppu::Status::inside_periodic_read;\n";
-		source << "while (status != grenade::vx::ppu::Status::stop_periodic_read) {\n";
+		source << "status = grenade::vx::ppu::detail::Status::inside_periodic_read;\n";
+		source << "while (status != grenade::vx::ppu::detail::Status::stop_periodic_read) {\n";
 		source << "perform_periodic_read_recording(offset);\n";
 		source << "offset++;\n";
 		source << "size++;\n";
