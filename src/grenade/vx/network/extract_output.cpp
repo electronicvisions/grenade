@@ -12,7 +12,7 @@ std::vector<
 extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
-	static auto logger = log4cxx::Logger::getLogger("grenade.network.extract_neuron_spikes");
+	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_neuron_spikes");
 	if (!network_graph.get_event_output_vertex()) {
 		return std::vector<std::map<
 		    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<haldls::vx::v3::ChipTime>>>(
@@ -63,7 +63,7 @@ std::vector<
 extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
-	static auto logger = log4cxx::Logger::getLogger("grenade.network.extract_madc_samples");
+	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_madc_samples");
 	if (!network_graph.get_madc_sample_output_vertex()) {
 		std::vector<std::vector<
 		    std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
@@ -92,7 +92,7 @@ std::vector<std::vector<
 extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
-	static auto logger = log4cxx::Logger::getLogger("grenade.network.extract_cadc_samples");
+	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_cadc_samples");
 	// convert samples
 	std::vector<std::vector<
 	    std::tuple<haldls::vx::v3::ChipTime, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, Int8>>>

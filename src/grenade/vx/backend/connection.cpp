@@ -48,7 +48,7 @@ Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& i
     m_expected_link_notification_count(halco::hicann_dls::vx::v3::PhyConfigFPGAOnDLS::size),
     m_init(m_connection)
 {
-	static log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.backend.Connection");
+	log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.backend.Connection");
 	using namespace stadls::vx;
 	using namespace stadls::vx::v3;
 	using namespace haldls::vx::v3;

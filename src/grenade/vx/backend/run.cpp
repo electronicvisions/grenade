@@ -118,7 +118,7 @@ using namespace halco::hicann_dls::vx::v3;
 
 stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram& program)
 {
-	static log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
+	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 	stadls::vx::RunTimeInfo ret;
 	try {
 		ret = stadls::vx::v3::run(connection.m_connection, program);
