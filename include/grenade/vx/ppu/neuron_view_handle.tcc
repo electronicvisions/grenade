@@ -1,10 +1,13 @@
 #pragma once
 #ifdef __ppu__
 #include "halco/hicann-dls/vx/v3/neuron.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
 #include "haldls/vx/v3/neuron.h"
+#include "libnux/vx/correlation.h"
 #include "stadls/vx/v3/ppu/read.h"
 #include "stadls/vx/v3/ppu/write.h"
 
+extern volatile libnux::vx::PPUOnDLS ppu;
 
 namespace grenade::vx::ppu {
 
@@ -74,6 +77,21 @@ inline NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
 		return detail::get_rate_counters<true>(*this);
 	}
 	return detail::get_rate_counters<false>(*this);
+}
+
+inline NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts()
+{
+	if (::ppu != hemisphere) {
+		exit(1);
+	}
+	// set switch row to neuron CADC readout on causal channel
+	libnux::vx::set_row_via_vector(
+	    libnux::vx::VectorRowMod8(0b00100000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
+	    libnux::vx::dls_weight_base);
+
+	Row ret;
+	libnux::vx::get_causal_correlation(&ret.even.data, &ret.odd.data, 0);
+	return ret;
 }
 
 } // namespace grenade::vx::ppu

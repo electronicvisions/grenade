@@ -40,6 +40,15 @@ struct NeuronViewHandle
 	 * @param reset Whether to reset the counters directly after read-out
 	 */
 	Row get_rate_counters(bool reset);
+
+	/**
+	 * Get analog readouts via CADC.
+	 * The source of the readout (membrane, adaptation, {exc,inh}_synin) depends on the per-neuron
+	 * settings. Alters switch row such that neuron state can be recorded.
+	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere
+	 * @returns Analog readout values without column masking
+	 */
+	Row get_analog_readouts();
 #endif
 };
 
