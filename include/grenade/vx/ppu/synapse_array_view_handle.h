@@ -33,11 +33,20 @@ struct SynapseArrayViewHandle
 
 	/**
 	 * Get weight values of specified row.
+	 * @param index_row Index of row to get weights for
+	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere or wrong row
+	 * not present in the handle.
+	 * @returns Weight values of requested row without column masking
 	 */
 	Row get_weights(size_t index_row);
 
 	/**
 	 * Set weight values of specified row.
+	 * Only the columns present in the handle are updated.
+	 * @param value Weight values to set
+	 * @param index_row Index of row to set weights for
+	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere or wrong row
+	 * not present in rows.
 	 */
 	void set_weights(Row const& value, size_t index_row);
 #endif

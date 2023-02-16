@@ -656,10 +656,14 @@ TEST(PlasticityRule, ExecutorInitialState)
 		kernel << "#include \"libnux/vx/location.h\"\n";
 		kernel << "using namespace grenade::vx::ppu;\n";
 		kernel << "using namespace libnux::vx;\n";
+		kernel << "extern volatile PPUOnDLS ppu;\n";
 		kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
 		          "std::array<NeuronViewHandle, 0>&, "
 		          "Recording& recording)\n";
 		kernel << "{\n";
+		kernel << "  if (synapses[0].hemisphere != ppu) {\n";
+		kernel << "    return;\n";
+		kernel << "  }\n";
 		kernel << "  auto w = synapses[0].get_weights(0);\n";
 		if (set_weight) {
 			kernel << "  w = " << static_cast<int>(weight_32.value()) << ";\n";
