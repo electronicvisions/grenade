@@ -70,6 +70,11 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::RawRecording const& r
 	return os;
 }
 
+PlasticityRule::TimedRecording::ObservablePerSynapse::ObservablePerSynapse(
+    TypeVariant const& type, LayoutPerRow const& layout_per_row) :
+    type(type), layout_per_row(layout_per_row)
+{}
+
 bool PlasticityRule::TimedRecording::ObservablePerSynapse::operator==(
     ObservablePerSynapse const& other) const
 {
@@ -99,6 +104,11 @@ std::ostream& operator<<(
 	return os;
 }
 
+PlasticityRule::TimedRecording::ObservablePerNeuron::ObservablePerNeuron(
+    TypeVariant const& type, Layout const& layout) :
+    type(type), layout(layout)
+{}
+
 bool PlasticityRule::TimedRecording::ObservablePerNeuron::operator==(
     ObservablePerNeuron const& other) const
 {
@@ -127,6 +137,11 @@ std::ostream& operator<<(
 	os << ", layout: " << observable.layout << ")";
 	return os;
 }
+
+PlasticityRule::TimedRecording::ObservableArray::ObservableArray(
+    TypeVariant const& type, size_t const size) :
+    type(type), size(size)
+{}
 
 bool PlasticityRule::TimedRecording::ObservableArray::operator==(ObservableArray const& other) const
 {

@@ -145,7 +145,7 @@ struct PlasticityRule
 				constexpr static UInt16 uint16{};
 			};
 			typedef std::variant<Type::Int8, Type::UInt8, Type::Int16, Type::UInt16> TypeVariant;
-			TypeVariant type;
+			TypeVariant type = Type::int8;
 
 			enum class LayoutPerRow
 			{
@@ -160,6 +160,10 @@ struct PlasticityRule
 				                         row is of type std::array<{u,}{int_}{8,16}_t, num_columns>
 				                         for type {u,}{int_}{8,16}. */
 			} layout_per_row = LayoutPerRow::complete_rows;
+
+			ObservablePerSynapse() = default;
+			ObservablePerSynapse(TypeVariant const& type, LayoutPerRow const& layout_per_row)
+			    SYMBOL_VISIBLE;
 
 			bool operator==(ObservablePerSynapse const& other) const SYMBOL_VISIBLE;
 			bool operator!=(ObservablePerSynapse const& other) const SYMBOL_VISIBLE;
@@ -215,7 +219,7 @@ struct PlasticityRule
 				constexpr static UInt16 uint16{};
 			};
 			typedef std::variant<Type::Int8, Type::UInt8, Type::Int16, Type::UInt16> TypeVariant;
-			TypeVariant type;
+			TypeVariant type = Type::int8;
 
 			enum class Layout
 			{
@@ -230,6 +234,10 @@ struct PlasticityRule
 				                         row is of type std::array<{u,}{int_}{8,16}_t, num_columns>
 				                         for type {u,}{int_}{8,16}. */
 			} layout = Layout::complete_row;
+
+			ObservablePerNeuron() = default;
+			ObservablePerNeuron(TypeVariant const& type, Layout const& layout_per_row)
+			    SYMBOL_VISIBLE;
 
 			bool operator==(ObservablePerNeuron const& other) const SYMBOL_VISIBLE;
 			bool operator!=(ObservablePerNeuron const& other) const SYMBOL_VISIBLE;
@@ -281,9 +289,12 @@ struct PlasticityRule
 				constexpr static UInt16 uint16{};
 			};
 			typedef std::variant<Type::Int8, Type::UInt8, Type::Int16, Type::UInt16> TypeVariant;
-			TypeVariant type;
+			TypeVariant type = Type::int8;
 
-			size_t size;
+			size_t size = 0;
+
+			ObservableArray() = default;
+			ObservableArray(TypeVariant const& type, size_t size) SYMBOL_VISIBLE;
 
 			bool operator==(ObservableArray const& other) const SYMBOL_VISIBLE;
 			bool operator!=(ObservableArray const& other) const SYMBOL_VISIBLE;
