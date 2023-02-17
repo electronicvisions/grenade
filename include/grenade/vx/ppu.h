@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -76,6 +77,36 @@ struct Compiler
 {
 	static constexpr auto name = "powerpc-ppu-g++";
 
+	/**
+	 * PPU program result of compilation.
+	 */
+	struct Program
+	{
+		/** Program symbols. */
+		lola::vx::v3::PPUElfFile::symbols_type symbols;
+
+		/** Program memory image. */
+		lola::vx::v3::PPUElfFile::Memory memory;
+
+		/**
+		 * Optional readelf -a output of program.
+		 * Generation is performed for loglevel debug.
+		 */
+		std::optional<std::string> readelf;
+
+		/**
+		 * Optional objdump -d output of program.
+		 * Generation is performed for loglevel trace.
+		 */
+		std::optional<std::string> objdump;
+
+		/**
+		 * Optional stack size output of functions of program.
+		 * Generation is performed for loglevel debug.
+		 */
+		std::optional<std::string> stack_sizes;
+	};
+
 	Compiler() SYMBOL_VISIBLE;
 
 	std::vector<std::string> options_before_source = {
@@ -130,8 +161,7 @@ struct Compiler
 	/**
 	 * Compile sources into target program.
 	 */
-	std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory> compile(
-	    std::vector<std::string> sources) SYMBOL_VISIBLE;
+	Program compile(std::vector<std::string> sources) SYMBOL_VISIBLE;
 };
 
 
@@ -148,12 +178,6 @@ struct CachingCompiler : public Compiler
 	 */
 	struct ProgramCache
 	{
-		/**
-		 * Program information comprised of the symbols and memory image.
-		 */
-		typedef std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory>
-		    Program;
-
 		/**
 		 * Sources used for compilation of program serving as hash source into the cache.
 		 */
@@ -182,8 +206,7 @@ struct CachingCompiler : public Compiler
 	/**
 	 * Compile sources into target program or return from cache if already compiled.
 	 */
-	std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory> compile(
-	    std::vector<std::string> sources) SYMBOL_VISIBLE;
+	Program compile(std::vector<std::string> sources) SYMBOL_VISIBLE;
 
 private:
 	static ProgramCache& get_program_cache();

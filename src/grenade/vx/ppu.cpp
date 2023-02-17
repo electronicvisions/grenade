@@ -324,8 +324,7 @@ TemporaryDirectory::~TemporaryDirectory()
 
 Compiler::Compiler() {}
 
-std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory>
-Compiler::compile(std::vector<std::string> sources)
+Compiler::Program Compiler::compile(std::vector<std::string> sources)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
 	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
@@ -370,6 +369,7 @@ Compiler::compile(std::vector<std::string> sources)
 		throw std::runtime_error("Compilation failed:\n" + log.str());
 	}
 	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
+	Program program;
 	if (logger->isDebugEnabled()) {
 		ret = std::system(("powerpc-ppu-readelf -a " +
 		                   std::string(temporary.get_path() / "program.bin") + " > " +
@@ -383,6 +383,7 @@ Compiler::compile(std::vector<std::string> sources)
 			if (ret != 0) {
 				throw std::runtime_error("Readelf failed:\n" + log.str());
 			}
+			program.readelf = log.str();
 			LOG4CXX_DEBUG(logger, "compile(): Readelf:\n" << log.str());
 		}
 		{
@@ -391,6 +392,7 @@ Compiler::compile(std::vector<std::string> sources)
 				auto path = std::filesystem::path(source_path).replace_extension("su");
 				log << std::ifstream(path).rdbuf();
 			}
+			program.stack_sizes = log.str();
 			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
 		}
 	}
@@ -407,11 +409,14 @@ Compiler::compile(std::vector<std::string> sources)
 			if (ret != 0) {
 				throw std::runtime_error("Objdump failed:\n" + log.str());
 			}
+			program.objdump = log.str();
 			LOG4CXX_TRACE(logger, "compile(): Objdump:\n" << log.str());
 		}
 	}
 	lola::vx::v3::PPUElfFile elf_file(temporary.get_path() / "program.bin");
-	return {elf_file.read_symbols(), elf_file.read_program()};
+	program.symbols = elf_file.read_symbols();
+	program.memory = elf_file.read_program();
+	return program;
 }
 
 
@@ -436,8 +441,7 @@ CachingCompiler::ProgramCache& CachingCompiler::get_program_cache()
 	return data;
 }
 
-std::pair<lola::vx::v3::PPUElfFile::symbols_type, lola::vx::v3::PPUElfFile::Memory>
-CachingCompiler::compile(std::vector<std::string> sources)
+CachingCompiler::Program CachingCompiler::compile(std::vector<std::string> sources)
 {
 	auto& program_cache = get_program_cache();
 	std::lock_guard lock(program_cache.data_mutex);
