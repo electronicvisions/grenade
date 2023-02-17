@@ -387,9 +387,8 @@ Compiler::compile(std::vector<std::string> sources)
 		}
 		{
 			std::stringstream log;
-			for (auto const& source : sources) {
-				auto path = temporary.get_path() /
-				            std::filesystem::path(source).replace_extension("su").filename();
+			for (auto const& source_path : source_paths) {
+				auto path = std::filesystem::path(source_path).replace_extension("su");
 				log << std::ifstream(path).rdbuf();
 			}
 			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
