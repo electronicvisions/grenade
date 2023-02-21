@@ -181,7 +181,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 {
-	static log4cxx::LoggerPtr logger =
+	log4cxx::LoggerPtr logger =
 	    log4cxx::Logger::getLogger("grenade.NetworkBuilderTest.FeedForwardAllToAll");
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();

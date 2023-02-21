@@ -25,7 +25,7 @@ void PPUProgramGenerator::add(
 std::vector<std::string> PPUProgramGenerator::done()
 {
 	hate::Timer timer;
-	static log4cxx::LoggerPtr const logger =
+	log4cxx::LoggerPtr const logger =
 	    log4cxx::Logger::getLogger("grenade.PPUProgramGenerator.done()");
 
 	using namespace halco::common;

@@ -76,7 +76,7 @@ TEST(update_network_graph, ProjectionOnBothHemispheres)
  */
 TEST(build_network_graph, GranularitySweep)
 {
-	static log4cxx::LoggerPtr logger =
+	log4cxx::LoggerPtr logger =
 	    log4cxx::Logger::getLogger("grenade.build_network_graph.GranularitySweep");
 	for (size_t num_pops = 1; num_pops <= NeuronColumnOnDLS::size; num_pops *= 2) {
 		auto const neuron_per_pop = NeuronColumnOnDLS::size / num_pops;

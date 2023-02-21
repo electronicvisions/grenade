@@ -360,7 +360,7 @@ void ExecutionInstanceConfigVisitor::pre_process()
 std::tuple<lola::vx::v3::Chip&, std::optional<lola::vx::v3::PPUElfFile::symbols_type>>
 ExecutionInstanceConfigVisitor::operator()()
 {
-	static log4cxx::LoggerPtr const logger =
+	log4cxx::LoggerPtr const logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigBuilder.generate()");
 
 	using namespace halco::common;
