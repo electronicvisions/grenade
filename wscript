@@ -64,7 +64,7 @@ def build(bld):
 
     bld.install_files(
         dest = '${PREFIX}/',
-        files = bld.path.ant_glob('include/grenade/vx/ppu/*.(h)'),
+        files = bld.path.ant_glob('include/grenade/vx/ppu/**/*.(h)'),
         name = 'grenade_vx_ppu_header',
         relative_trick = True
     )
