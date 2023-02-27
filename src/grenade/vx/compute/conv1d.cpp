@@ -1,12 +1,12 @@
 #include "grenade/vx/compute/conv1d.h"
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/event.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -70,7 +70,7 @@ void Conv1d::build_mac(Weights&& weights)
 	m_mac = MAC(std::move(mac_weights), m_num_sends, m_wait_between_events, m_enable_loopback);
 }
 
-std::vector<std::vector<Int8>> Conv1d::run(
+std::vector<std::vector<signal_flow::Int8>> Conv1d::run(
     Activations const& inputs,
     lola::vx::v3::Chip const& config,
     execution::JITGraphExecutor& executor) const
@@ -107,7 +107,7 @@ std::vector<std::vector<Int8>> Conv1d::run(
 
 	auto const mac_output = m_mac.run(mac_inputs, config, executor);
 
-	std::vector<std::vector<Int8>> output(inputs.size());
+	std::vector<std::vector<signal_flow::Int8>> output(inputs.size());
 	for (size_t b = 0; b < output.size(); ++b) {
 		auto& local = output.at(b);
 		local.resize(m_out_channels * num);

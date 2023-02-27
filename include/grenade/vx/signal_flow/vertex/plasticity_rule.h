@@ -1,6 +1,6 @@
 #pragma once
-#include "grenade/vx/event.h"
 #include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule/observable_data_type.h"
@@ -24,10 +24,9 @@ struct access;
 
 namespace grenade::vx {
 
-struct Int8;
-
 namespace signal_flow {
 
+struct Int8;
 struct PortRestriction;
 
 namespace vertex {
@@ -335,7 +334,7 @@ struct PlasticityRule
 		 * Data with outer dimension being batch entries and inner dimension being the data per
 		 * batch entry.
 		 */
-		std::vector<std::vector<Int8>> data;
+		std::vector<std::vector<signal_flow::Int8>> data;
 	};
 
 	/**
@@ -344,10 +343,10 @@ struct PlasticityRule
 	struct TimedRecordingData
 	{
 		typedef std::variant<
-		    std::vector<TimedDataSequence<std::vector<int8_t>>>,
-		    std::vector<TimedDataSequence<std::vector<uint8_t>>>,
-		    std::vector<TimedDataSequence<std::vector<int16_t>>>,
-		    std::vector<TimedDataSequence<std::vector<uint16_t>>>>
+		    std::vector<signal_flow::TimedDataSequence<std::vector<int8_t>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<uint8_t>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<int16_t>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<uint16_t>>>>
 		    Entry;
 
 		std::map<std::string, std::vector<Entry>> data_per_synapse;
@@ -479,13 +478,14 @@ struct PlasticityRule
 	/**
 	 * Extract data corresponding to performed recording.
 	 * For RawRecording return the raw data, for TimedRecording extract observables of timed
-	 * recording from raw data. This method is to be used after successful execution of a graph
+	 * recording from raw data. This method is to be used after successful execution of aa graph
 	 * incorporating this vertex instance.
 	 * @throws std::runtime_error On data not matching expectation
 	 * @param data Raw data to extract recording from
 	 */
 	RecordingData extract_recording_data(
-	    std::vector<TimedDataSequence<std::vector<Int8>>> const& data) const SYMBOL_VISIBLE;
+	    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data)
+	    const SYMBOL_VISIBLE;
 
 	std::string const& get_kernel() const SYMBOL_VISIBLE;
 	Timer const& get_timer() const SYMBOL_VISIBLE;

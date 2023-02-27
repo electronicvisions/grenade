@@ -1,11 +1,11 @@
 #pragma once
-#include "grenade/vx/event.h"
-#include "grenade/vx/execution_time_info.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/port.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
 #include <map>
@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <variant>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
 
 /**
  * Data map used for external data exchange in graph execution.
@@ -138,4 +138,4 @@ struct ConstantReferenceIODataMap
 	void clear() SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

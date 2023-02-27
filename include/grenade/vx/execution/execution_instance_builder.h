@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "grenade/vx/execution/generator/neuron_reset_mask.h"
-#include "grenade/vx/execution_instance_playback_hooks.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
 #include "haldls/vx/v3/synapse_driver.h"
@@ -44,10 +44,10 @@ public:
 	ExecutionInstanceBuilder(
 	    signal_flow::Graph const& graph,
 	    signal_flow::ExecutionInstance const& execution_instance,
-	    IODataMap const& input_list,
-	    IODataMap const& data_output,
+	    signal_flow::IODataMap const& input_list,
+	    signal_flow::IODataMap const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	/**
 	 * Preprocess by single visit of all local vertices.
@@ -70,9 +70,9 @@ public:
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
 	 * This resets the internal state of the builder to be ready for the next time step.
-	 * @return IODataMap of locally computed results
+	 * @return signal_flow::IODataMap of locally computed results
 	 */
-	IODataMap post_process() SYMBOL_VISIBLE;
+	signal_flow::IODataMap post_process() SYMBOL_VISIBLE;
 	void post_process(signal_flow::Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
 	/**
@@ -84,14 +84,14 @@ public:
 private:
 	signal_flow::Graph const& m_graph;
 	signal_flow::ExecutionInstance m_execution_instance;
-	IODataMap const& m_input_list;
-	IODataMap const& m_data_output;
+	signal_flow::IODataMap const& m_input_list;
+	signal_flow::IODataMap const& m_data_output;
 
-	ConstantReferenceIODataMap m_local_external_data;
+	signal_flow::ConstantReferenceIODataMap m_local_external_data;
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
-	ExecutionInstancePlaybackHooks& m_playback_hooks;
+	signal_flow::ExecutionInstancePlaybackHooks& m_playback_hooks;
 
 	std::vector<signal_flow::Graph::vertex_descriptor> m_post_vertices;
 
@@ -102,8 +102,8 @@ private:
 
 	bool m_postprocessing;
 
-	IODataMap m_local_data;
-	IODataMap m_local_data_output;
+	signal_flow::IODataMap m_local_data;
+	signal_flow::IODataMap m_local_data_output;
 
 	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ticket_request_type;

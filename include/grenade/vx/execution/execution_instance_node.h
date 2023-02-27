@@ -4,9 +4,9 @@
 
 #include "grenade/vx/execution/connection_state_storage.h"
 #include "grenade/vx/execution/execution_instance_builder.h"
-#include "grenade/vx/execution_instance_playback_hooks.h"
-#include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 
@@ -30,26 +30,26 @@ struct Connection;
 struct ExecutionInstanceNode
 {
 	ExecutionInstanceNode(
-	    IODataMap& data_map,
-	    IODataMap const& input_data_map,
+	    signal_flow::IODataMap& data_map,
+	    signal_flow::IODataMap const& input_data_map,
 	    signal_flow::Graph const& graph,
 	    signal_flow::ExecutionInstance const& execution_instance,
 	    lola::vx::v3::Chip const& initial_config,
 	    backend::Connection& connection,
 	    ConnectionStateStorage& connection_state_storage,
-	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
 private:
-	IODataMap& data_map;
-	IODataMap const& input_data_map;
+	signal_flow::IODataMap& data_map;
+	signal_flow::IODataMap const& input_data_map;
 	signal_flow::Graph const& graph;
 	signal_flow::ExecutionInstance execution_instance;
 	lola::vx::v3::Chip const& initial_config;
 	backend::Connection& connection;
 	ConnectionStateStorage& connection_state_storage;
-	ExecutionInstancePlaybackHooks& playback_hooks;
+	signal_flow::ExecutionInstancePlaybackHooks& playback_hooks;
 	log4cxx::LoggerPtr logger;
 };
 

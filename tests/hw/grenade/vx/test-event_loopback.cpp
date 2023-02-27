@@ -2,11 +2,11 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "haldls/vx/v3/systime.h"
@@ -21,10 +21,11 @@ using namespace halco::hicann_dls::vx::v3;
 using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 
-std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
+std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>
+test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
     grenade::vx::execution::JITGraphExecutor& executor,
-    std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
+    std::vector<grenade::vx::signal_flow::TimedSpikeSequence> const& inputs)
 {
 	grenade::vx::signal_flow::vertex::ExternalInput external_input(
 	    grenade::vx::signal_flow::ConnectionType::DataTimedSpikeSequence, 1);
@@ -54,7 +55,7 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	auto const v6 = g.add(data_output, instance, {v5});
 
 	// fill graph inputs
-	grenade::vx::IODataMap input_list;
+	grenade::vx::signal_flow::IODataMap input_list;
 	input_list.data[v1] = inputs;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
@@ -67,10 +68,12 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 
 	EXPECT_TRUE(result_map.data.find(v6) != result_map.data.end());
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(result_map.data.at(v6))
+	    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
+	        result_map.data.at(v6))
 	        .size(),
 	    inputs.size());
-	return std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(result_map.data.at(v6));
+	return std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
+	    result_map.data.at(v6));
 }
 
 TEST(JITGraphExecutor, EventLoopback)
@@ -88,12 +91,12 @@ TEST(JITGraphExecutor, EventLoopback)
 			for (auto const address : iter_all<SPL1Address>()) {
 				halco::hicann_dls::vx::v3::SpikeLabel label;
 				label.set_spl1_address(address);
-				std::vector<grenade::vx::TimedSpikeSequence> inputs(b);
+				std::vector<grenade::vx::signal_flow::TimedSpikeSequence> inputs(b);
 				for (auto& in : inputs) {
 					for (intmax_t i = 0; i < 1000; ++i) {
-						in.push_back(grenade::vx::TimedSpike{
-						    grenade::vx::TimedSpike::Time(i * 10),
-						    grenade::vx::TimedSpike::Payload(
+						in.push_back(grenade::vx::signal_flow::TimedSpike{
+						    grenade::vx::signal_flow::TimedSpike::Time(i * 10),
+						    grenade::vx::signal_flow::TimedSpike::Payload(
 						        haldls::vx::v3::SpikePack1ToChip({label}))});
 					}
 				}

@@ -1,6 +1,6 @@
-#include "grenade/vx/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 
-namespace grenade::vx {
+namespace grenade::vx::signal_flow {
 
 ExecutionInstancePlaybackHooks::ExecutionInstancePlaybackHooks(
     stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
@@ -15,4 +15,4 @@ ExecutionInstancePlaybackHooks::ExecutionInstancePlaybackHooks(
     post_realtime(std::move(post_realtime))
 {}
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

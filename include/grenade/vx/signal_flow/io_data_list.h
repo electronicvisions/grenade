@@ -1,18 +1,15 @@
 #pragma once
-#include "grenade/vx/event.h"
-#include "grenade/vx/io_data_map.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/event.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "hate/visibility.h"
 #include <list>
 #include <vector>
 
-namespace grenade::vx {
+namespace grenade::vx::signal_flow {
 
-struct IODataMap;
-
-namespace signal_flow {
 class Graph;
-} // namespace signal_flow
+struct IODataMap;
 
 /**
  * Flat data list used for external data exchange in graph execution.
@@ -63,4 +60,4 @@ struct IODataList
 	IODataMap to_input_map(signal_flow::Graph const& graph) const SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

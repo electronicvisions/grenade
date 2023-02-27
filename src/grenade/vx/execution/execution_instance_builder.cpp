@@ -4,12 +4,12 @@
 #include "grenade/vx/execution/generator/madc.h"
 #include "grenade/vx/execution/generator/ppu.h"
 #include "grenade/vx/execution/generator/timed_spike_sequence.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
 #include "haldls/vx/v3/fpga.h"
@@ -45,10 +45,10 @@ std::string name()
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::Graph const& graph,
     signal_flow::ExecutionInstance const& execution_instance,
-    IODataMap const& input_list,
-    IODataMap const& data_output,
+    signal_flow::IODataMap const& input_list,
+    signal_flow::IODataMap const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-    ExecutionInstancePlaybackHooks& playback_hooks) :
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_input_list(input_list),
@@ -100,7 +100,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 			}
 			auto const& input_vertex =
 			    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
-			return !IODataMap::is_match(
+			return !signal_flow::IODataMap::is_match(
 			    m_input_list.data.find(vertex)->second, input_vertex.output());
 		}
 		return false;
@@ -182,11 +182,11 @@ void ExecutionInstanceBuilder::process(
 namespace {
 
 template <typename T>
-std::vector<TimedDataSequence<std::vector<T>>> apply_restriction(
-    std::vector<TimedDataSequence<std::vector<T>>> const& value,
+std::vector<signal_flow::TimedDataSequence<std::vector<T>>> apply_restriction(
+    std::vector<signal_flow::TimedDataSequence<std::vector<T>>> const& value,
     signal_flow::PortRestriction const& restriction)
 {
-	std::vector<TimedDataSequence<std::vector<T>>> ret(value.size());
+	std::vector<signal_flow::TimedDataSequence<std::vector<T>>> ret(value.size());
 	for (size_t b = 0; b < ret.size(); ++b) {
 		auto& local_ret = ret.at(b);
 		auto const& local_value = value.at(b);
@@ -223,12 +223,12 @@ void ExecutionInstanceBuilder::process(
 	         ? m_local_external_data.data.at(in_vertex)
 	         : m_data_output.data.at(in_vertex));
 
-	auto const maybe_apply_restriction = [&](auto const& d) -> IODataMap::Entry {
+	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::IODataMap::Entry {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
-		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
-		    std::vector<TimedDataSequence<std::vector<Int8>>>>
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			auto const port_restriction = m_graph.get_edge_property_map().at(edge);
@@ -282,8 +282,9 @@ void ExecutionInstanceBuilder::process(
 		// results need hardware execution
 		m_post_vertices.push_back(vertex);
 	} else { // post-hw-run processing
-		// extract Int8 values
-		std::vector<TimedDataSequence<std::vector<Int8>>> sample_batches(m_batch_entries.size());
+		// extract signal_flow::Int8 values
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> sample_batches(
+		    m_batch_entries.size());
 		assert(m_cadc_readout_mode);
 		if (*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen) {
 			for (auto& e : sample_batches) {
@@ -302,7 +303,7 @@ void ExecutionInstanceBuilder::process(
 				size_t i = 0;
 				for (auto const& column_collection : columns) {
 					for (auto const& column : column_collection) {
-						samples.at(i) = Int8(values[column.toNeuronColumnOnDLS()]);
+						samples.at(i) = signal_flow::Int8(values[column.toNeuronColumnOnDLS()]);
 						i++;
 					}
 				}
@@ -356,9 +357,9 @@ void ExecutionInstanceBuilder::process(
 					for (size_t j = 0; auto const& column_collection : columns) {
 						for (auto const& column : column_collection) {
 							local_samples.data.at(j) =
-							    Int8(local_block.at(offset + get_index(column.value()))
-							             .get_value()
-							             .value());
+							    signal_flow::Int8(local_block.at(offset + get_index(column.value()))
+							                          .get_value()
+							                          .value());
 							j++;
 						}
 					}
@@ -392,7 +393,8 @@ template <>
 void ExecutionInstanceBuilder::process(
     signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::Addition const& data)
 {
-	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> values(
+	    m_input_list.batch_size());
 	for (auto& e : values) {
 		// TODO: Think about what shall happen with timing info and when multiple events are present
 		e.resize(1);
@@ -404,7 +406,8 @@ void ExecutionInstanceBuilder::process(
 	for (size_t j = 0; j < values.size(); ++j) {
 		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
 			auto const& local_data =
-			    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+			    std::get<
+			        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 			        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
 			        .at(j);
 			assert(local_data.size() == 1);
@@ -416,7 +419,7 @@ void ExecutionInstanceBuilder::process(
 		// restrict to range [-128,127]
 		std::transform(
 		    tmps.begin(), tmps.end(), values.at(j).at(0).data.begin(), [](auto const tmp) {
-			    return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+			    return signal_flow::Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
 		    });
 		std::fill(tmps.begin(), tmps.end(), 0);
 	}
@@ -428,7 +431,8 @@ void ExecutionInstanceBuilder::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::Subtraction const& data)
 {
-	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> values(
+	    m_input_list.batch_size());
 	for (auto& e : values) {
 		// TODO: Think about what shall happen with timing info and when multiple events are present
 		e.resize(1);
@@ -442,7 +446,8 @@ void ExecutionInstanceBuilder::process(
 			{
 				auto const in_edge = *in_edges.first;
 				auto const& local_data =
-				    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+				    std::get<std::vector<
+				        signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 				        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
 				        .at(j);
 				assert(local_data.size() == 1);
@@ -464,7 +469,8 @@ void ExecutionInstanceBuilder::process(
 			for (auto const in_edge :
 			     boost::make_iterator_range(in_edges.first + 1, in_edges.second)) {
 				auto const& local_data =
-				    std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
+				    std::get<std::vector<
+				        signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 				        m_local_data.data.at(boost::source(in_edge, m_graph.get_graph())))
 				        .at(j);
 				assert(local_data.size() == 1);
@@ -485,7 +491,7 @@ void ExecutionInstanceBuilder::process(
 		// restrict to range [-128,127]
 		std::transform(
 		    tmps.begin(), tmps.end(), values.at(j).at(0).data.begin(), [](auto const tmp) {
-			    return Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
+			    return signal_flow::Int8(std::min(std::max(tmp, intmax_t(-128)), intmax_t(127)));
 		    });
 		std::fill(tmps.begin(), tmps.end(), 0);
 	}
@@ -506,7 +512,8 @@ void ExecutionInstanceBuilder::process(
 		    !local_data.size() ||
 		    (local_data.front().size() &&
 		     (data.inputs().front().size == local_data.front().at(0).data.size())));
-		std::vector<TimedDataSequence<std::vector<UInt32>>> tmps(local_data.size());
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> tmps(
+		    local_data.size());
 		assert(data.output().size == 1);
 		for (auto& t : tmps) {
 			// TODO: Think about what shall happen with timing info and when multiple events are
@@ -516,7 +523,7 @@ void ExecutionInstanceBuilder::process(
 		}
 		size_t i = 0;
 		for (auto const& entry : local_data) {
-			tmps.at(i).at(0).data.at(0) = UInt32(std::distance(
+			tmps.at(i).at(0).data.at(0) = signal_flow::UInt32(std::distance(
 			    entry.at(0).data.begin(),
 			    std::max_element(entry.at(0).data.begin(), entry.at(0).data.end())));
 			i++;
@@ -527,9 +534,9 @@ void ExecutionInstanceBuilder::process(
 	auto const visitor = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
-		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
-		    std::vector<TimedDataSequence<std::vector<Int8>>>>
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			compute(d);
@@ -545,7 +552,8 @@ template <>
 void ExecutionInstanceBuilder::process(
     signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::ReLU const& data)
 {
-	std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> values(
+	    m_input_list.batch_size());
 	for (auto& e : values) {
 		// TODO: Think about what shall happen with timing info and when multiple events are present
 		e.resize(1);
@@ -555,12 +563,13 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
-		auto const& d = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
-		                    m_local_data.data.at(source))
-		                    .at(j);
+		auto const& d =
+		    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+		        m_local_data.data.at(source))
+		        .at(j);
 		assert(d.size() == 1);
 		for (size_t i = 0; i < data.output().size; ++i) {
-			values.at(j).at(0).data.at(i) = std::max(d.at(0).data.at(i), Int8(0));
+			values.at(j).at(0).data.at(i) = std::max(d.at(0).data.at(i), signal_flow::Int8(0));
 		}
 	}
 	m_local_data.data[vertex] = values;
@@ -572,7 +581,8 @@ void ExecutionInstanceBuilder::process(
     signal_flow::vertex::ConvertingReLU const& data)
 {
 	auto const shift = data.get_shift();
-	std::vector<TimedDataSequence<std::vector<UInt5>>> values(m_input_list.batch_size());
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>> values(
+	    m_input_list.batch_size());
 	for (auto& e : values) {
 		// TODO: Think about what shall happen with timing info and when multiple events are present
 		e.resize(1);
@@ -582,14 +592,16 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const source = boost::source(*(in_edges.first), m_graph.get_graph());
 	for (size_t j = 0; j < values.size(); ++j) {
-		auto const& d = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
-		                    m_local_data.data.at(source))
-		                    .at(j);
+		auto const& d =
+		    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+		        m_local_data.data.at(source))
+		        .at(j);
 		assert(d.size() == 1);
 		for (size_t i = 0; i < data.output().size; ++i) {
-			values.at(j).at(0).data.at(i) = UInt5(std::min(
-			    static_cast<UInt5::value_type>(std::max(d.at(0).data.at(i), Int8(0)) >> shift),
-			    UInt5::max));
+			values.at(j).at(0).data.at(i) = signal_flow::UInt5(std::min(
+			    static_cast<signal_flow::UInt5::value_type>(
+			        std::max(d.at(0).data.at(i), signal_flow::Int8(0)) >> shift),
+			    signal_flow::UInt5::max));
 		}
 	}
 	m_local_data.data[vertex] = values;
@@ -604,12 +616,12 @@ void ExecutionInstanceBuilder::process(
 	auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 	auto const& local_data = m_local_data.data.at(boost::source(in_edge, m_graph.get_graph()));
 	// maybe apply port restriction
-	auto const maybe_apply_restriction = [&](auto const& d) -> IODataMap::Entry {
+	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::IODataMap::Entry {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
-		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
-		    std::vector<TimedDataSequence<std::vector<Int8>>>>
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
@@ -621,7 +633,7 @@ void ExecutionInstanceBuilder::process(
 	};
 	auto const maybe_restricted_local_data = std::visit(maybe_apply_restriction, local_data);
 	// check size match only for first because we know that the data map is valid
-	assert(IODataMap::is_match(maybe_restricted_local_data, data.output()));
+	assert(signal_flow::IODataMap::is_match(maybe_restricted_local_data, data.output()));
 	m_local_data_output.data[vertex] = maybe_restricted_local_data;
 }
 
@@ -741,7 +753,7 @@ void ExecutionInstanceBuilder::process(
 		         m_graph.get_vertex_property(in_vertex)))
 		         ? m_local_external_data.data.at(in_vertex)
 		         : m_local_data.data.at(in_vertex));
-		if (!IODataMap::is_match(input_values, port)) {
+		if (!signal_flow::IODataMap::is_match(input_values, port)) {
 			throw std::runtime_error("Data size does not match expectation.");
 		}
 		value_input.push_back(input_values);
@@ -750,7 +762,7 @@ void ExecutionInstanceBuilder::process(
 	// execute transformation
 	auto const value_output = data.apply(value_input);
 	// process output value
-	if (!IODataMap::is_match(value_output, data.output())) {
+	if (!signal_flow::IODataMap::is_match(value_output, data.output())) {
 		throw std::runtime_error("Data size does not match expectation.");
 	}
 	m_local_data.data[vertex] = value_output;
@@ -778,7 +790,8 @@ void ExecutionInstanceBuilder::process(
 		if (!data.get_recording()) {
 			return;
 		}
-		std::vector<TimedDataSequence<std::vector<Int8>>> values(m_input_list.batch_size());
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> values(
+		    m_input_list.batch_size());
 		for (size_t i = 0; i < values.size(); ++i) {
 			auto& local_values = values.at(i);
 			if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
@@ -802,7 +815,7 @@ void ExecutionInstanceBuilder::process(
 					size_t const offset = ppu ? local_values.at(0).data.size() / 2 : 0;
 					for (size_t j = 0; j < bytes.size(); ++j) {
 						local_values.at(0).data.at(offset + j) =
-						    Int8(bytes.at(j).get_value().value());
+						    signal_flow::Int8(bytes.at(j).get_value().value());
 					}
 				}
 			} else if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
@@ -860,12 +873,12 @@ void ExecutionInstanceBuilder::process(
 						local_values.at(period).chip_time = haldls::vx::v3::ChipTime(time / 2);
 						for (size_t j = 0; j < local_values.at(period).data.size() / 2 /** PPUs */;
 						     ++j) {
-							local_values.at(period).data.at(offset + j) =
-							    Int8(bytes
-							             .at(period_offset +
-							                 data.get_recorded_memory_data_interval().first + j)
-							             .get_value()
-							             .value());
+							local_values.at(period).data.at(offset + j) = signal_flow::Int8(
+							    bytes
+							        .at(period_offset +
+							            data.get_recorded_memory_data_interval().first + j)
+							        .get_value()
+							        .value());
 						}
 					}
 				}
@@ -905,7 +918,7 @@ void ExecutionInstanceBuilder::pre_process()
 	}
 }
 
-IODataMap ExecutionInstanceBuilder::post_process()
+signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
@@ -959,7 +972,7 @@ IODataMap ExecutionInstanceBuilder::post_process()
 			    1000.));
 		}
 	}
-	ExecutionTimeInfo execution_time_info;
+	signal_flow::ExecutionTimeInfo execution_time_info;
 	execution_time_info.realtime_duration_per_execution_instance[m_execution_instance] =
 	    total_realtime_duration;
 	m_local_data_output.execution_time_info = execution_time_info;
@@ -1243,7 +1256,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		// insert events of realtime section
 		if (m_event_input_vertex) {
 			generator::TimedSpikeSequence event_generator(
-			    std::get<std::vector<TimedSpikeSequence>>(
+			    std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 			        m_local_data.data.at(*m_event_input_vertex))
 			        .at(b));
 			auto [builder_events, _] = stadls::vx::generate(event_generator);
@@ -1327,7 +1340,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 						    m_local_external_data.runtime.at(m_execution_instance).at(b) /
 						    approx_sample_duration;
 					} else if (m_event_input_vertex) {
-						auto const& spikes = std::get<std::vector<TimedSpikeSequence>>(
+						auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 						                         m_local_data.data.at(*m_event_input_vertex))
 						                         .at(b);
 						if (!spikes.empty()) {

@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/port.h"
 
-using namespace grenade::vx;
+using namespace grenade::vx::signal_flow;
 using namespace grenade::vx::signal_flow;
 
 TEST(IODataMap, General)

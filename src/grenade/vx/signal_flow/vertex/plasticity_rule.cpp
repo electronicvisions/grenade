@@ -2,8 +2,8 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
-#include "grenade/vx/types.h"
 #include "halco/common/cerealization_geometry.h"
 #include "halco/common/cerealization_typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
@@ -762,7 +762,7 @@ PlasticityRule::get_recorded_memory_timed_data_intervals() const
 }
 
 PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
-    std::vector<TimedDataSequence<std::vector<Int8>>> const& data) const
+    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data) const
 {
 	if (!m_recording) {
 		throw std::runtime_error("Observable extraction only possible when recording is present.");
@@ -813,7 +813,8 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int synapse_view = data_per_synapse.size() - 1; synapse_view >= 0; --synapse_view) {
 			auto const& synapse_view_shape = m_synapse_view_shapes.at(synapse_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			    data.size());
 			size_t local_synapse_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
 				auto& local_batch_values = batch_values.at(batch);
@@ -881,7 +882,8 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int synapse_view = data_per_synapse.size() - 1; synapse_view >= 0; --synapse_view) {
 			auto const& synapse_view_shape = m_synapse_view_shapes.at(synapse_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			    data.size());
 			size_t local_synapse_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
 				auto& local_batch_values = batch_values.at(batch);
@@ -933,7 +935,8 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int neuron_view = data_per_neuron.size() - 1; neuron_view >= 0; --neuron_view) {
 			auto const& neuron_view_shape = m_neuron_view_shapes.at(neuron_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			    data.size());
 			size_t local_neuron_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
 				auto& local_batch_values = batch_values.at(batch);
@@ -993,7 +996,8 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int neuron_view = data_per_neuron.size() - 1; neuron_view >= 0; --neuron_view) {
 			auto const& neuron_view_shape = m_neuron_view_shapes.at(neuron_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			    data.size());
 			size_t local_neuron_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
 				auto& local_batch_values = batch_values.at(batch);
@@ -1037,7 +1041,8 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 	                                          auto const& name) {
 		auto& data_array = observable_data.data_array[name];
 		typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-		std::vector<TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
+		std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+		    data.size());
 		for (size_t batch = 0; batch < batch_values.size(); ++batch) {
 			auto& local_batch_values = batch_values.at(batch);
 			auto const& local_data = data.at(batch);

@@ -2,11 +2,11 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/event.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
@@ -73,7 +73,7 @@ inline void test_background_spike_source_regular(
 	auto const v3 = g.add(crossbar_output, instance, crossbar_nodes);
 	auto const v4 = g.add(data_output, instance, {v3});
 
-	grenade::vx::IODataMap input_list;
+	grenade::vx::signal_flow::IODataMap input_list;
 	input_list.runtime[instance].push_back(running_period);
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
@@ -86,9 +86,9 @@ inline void test_background_spike_source_regular(
 
 	EXPECT_TRUE(result_map.data.find(v4) != result_map.data.end());
 
-	auto const spikes =
-	    std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(result_map.data.at(v4))
-	        .at(0);
+	auto const spikes = std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
+	                        result_map.data.at(v4))
+	                        .at(0);
 
 	typed_array<size_t, BackgroundSpikeSourceOnDLS> expected_labels_count;
 	expected_labels_count.fill(0);

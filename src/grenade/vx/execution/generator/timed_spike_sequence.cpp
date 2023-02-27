@@ -17,11 +17,12 @@ stadls::vx::v3::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSe
 	using namespace halco::hicann_dls::vx::v3;
 
 	// approx. 10ms in biological time deemed high enough to warn the user something is wrong
-	TimedSpike::Time const max_delay(TimedSpike::Time::fpga_clock_cycles_per_us * 10);
+	signal_flow::TimedSpike::Time const max_delay(
+	    signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us * 10);
 	PlaybackProgramBuilder builder;
 
 	builder.write(TimerOnDLS(), Timer());
-	TimedSpike::Time current_time(0);
+	signal_flow::TimedSpike::Time current_time(0);
 	for (auto const& event : m_values) {
 		if (event.time > current_time) {
 			current_time = event.time;
@@ -37,7 +38,7 @@ stadls::vx::v3::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSe
 			    builder.write(typename container_type::coordinate_type(), p);
 		    },
 		    event.payload);
-		current_time = TimedSpike::Time(current_time + 1);
+		current_time = signal_flow::TimedSpike::Time(current_time + 1);
 	}
 
 	return {std::move(builder), hate::Nil{}};

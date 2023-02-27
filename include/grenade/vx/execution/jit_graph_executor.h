@@ -4,8 +4,8 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/connection_state_storage.h"
-#include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
@@ -14,17 +14,12 @@
 #include "pyhxcomm/common/managed_connection.h"
 #endif
 
-namespace grenade::vx {
-
+namespace grenade::vx::signal_flow {
 struct IODataMap;
 class IODataList;
 struct ExecutionInstancePlaybackHooks;
-
-namespace signal_flow {
 class Graph;
-} // namespace signal_flow
-
-} // namespace grenade::vx
+} // namespace grenade::v::signal_flowx
 
 namespace grenade::vx::execution {
 
@@ -45,8 +40,9 @@ public:
 
 	typedef std::unordered_map<signal_flow::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
 
-	typedef std::unordered_map<signal_flow::ExecutionInstance, ExecutionInstancePlaybackHooks>
-	    PlaybackHooks;
+	typedef std::
+	    unordered_map<signal_flow::ExecutionInstance, signal_flow::ExecutionInstancePlaybackHooks>
+	        PlaybackHooks;
 
 	/**
 	 * Construct executor with active connections from environment.
@@ -110,10 +106,10 @@ private:
 	 */
 	void check(signal_flow::Graph const& graph);
 
-	friend IODataMap run(
+	friend signal_flow::IODataMap run(
 	    JITGraphExecutor& executor,
 	    signal_flow::Graph const& graph,
-	    IODataMap const& input,
+	    signal_flow::IODataMap const& input,
 	    ChipConfigs const& initial_config,
 	    PlaybackHooks& playback_hooks);
 };
@@ -128,10 +124,10 @@ private:
  * @param playback_hooks Map of playback sequence collections to be inserted at specified
  * execution instances
  */
-IODataMap run(
+signal_flow::IODataMap run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataMap const& input,
+    signal_flow::IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
@@ -142,10 +138,10 @@ IODataMap run(
  * @param input List of input values to use
  * @param initial_config Map of initial configuration
  */
-IODataMap run(
+signal_flow::IODataMap run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataMap const& input,
+    signal_flow::IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config) SYMBOL_VISIBLE;
 
 /**
@@ -159,10 +155,10 @@ IODataMap run(
  * @param only_unconnected_output Whether to return only values to output vertices without out
  * edges
  */
-IODataList run(
+signal_flow::IODataList run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataList const& input,
+    signal_flow::IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks,
     bool only_unconnected_output = true) SYMBOL_VISIBLE;
@@ -176,10 +172,10 @@ IODataList run(
  * @param only_unconnected_output Whether to return only values to output vertices without out
  * edges
  */
-IODataList run(
+signal_flow::IODataList run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataList const& input,
+    signal_flow::IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     bool only_unconnected_output = true) SYMBOL_VISIBLE;
 

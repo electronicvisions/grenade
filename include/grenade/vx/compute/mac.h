@@ -4,8 +4,8 @@
 
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
-#include "grenade/vx/types.h"
 #include "halco/common/geometry.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/synapse_driver.h"
@@ -54,7 +54,7 @@ public:
 
 	typedef std::vector<std::vector<Weight>> Weights;
 	/** Activations with batch as outer dimension and weight row size as inner dimension. */
-	typedef std::vector<std::vector<UInt5>> Activations;
+	typedef std::vector<std::vector<signal_flow::UInt5>> Activations;
 
 	MAC() = default;
 
@@ -78,7 +78,7 @@ public:
 	 * @param executor Executor backend to use
 	 * @return Resulting accumulated membrane potentials
 	 */
-	std::vector<std::vector<Int8>> run(
+	std::vector<std::vector<signal_flow::Int8>> run(
 	    Activations const& inputs,
 	    lola::vx::v3::Chip const& config,
 	    execution::JITGraphExecutor& executor) const SYMBOL_VISIBLE;

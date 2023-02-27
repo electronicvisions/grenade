@@ -11,7 +11,7 @@
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include <gtest/gtest.h>
 #include <log4cxx/logger.h>
@@ -140,7 +140,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	auto const routing_result = grenade::vx::network::build_routing(network);
 	auto const network_graph = grenade::vx::network::build_network_graph(network, routing_result);
 
-	grenade::vx::IODataMap inputs;
+	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
@@ -162,7 +162,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	EXPECT_EQ(recorded_data.data_per_synapse.at("weights").size(), 5 /* #projections */);
 	for (auto const& [descriptor, ws] : recorded_data.data_per_synapse.at("weights")) {
 		auto const& weights =
-		    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<int8_t>>>>(ws);
+		    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<std::vector<int8_t>>>>(
+		        ws);
 		EXPECT_EQ(weights.size(), inputs.batch_size());
 		for (size_t i = 0; i < weights.size(); ++i) {
 			auto const& samples = weights.at(i);

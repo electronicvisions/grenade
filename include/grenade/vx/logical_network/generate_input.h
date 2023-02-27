@@ -1,10 +1,10 @@
 #pragma once
-#include "grenade/vx/event.h"
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/logical_network/network_graph.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/signal_flow/event.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 
 namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
 
@@ -18,21 +18,22 @@ public:
 	    network::NetworkGraph const& hardware_network_graph,
 	    size_t batch_size = 1) SYMBOL_VISIBLE;
 
-	void add(std::vector<TimedSpike::Time> const& times, PopulationDescriptor population)
-	    SYMBOL_VISIBLE;
-
 	void add(
-	    std::vector<std::vector<TimedSpike::Time>> const& times,
+	    std::vector<signal_flow::TimedSpike::Time> const& times,
 	    PopulationDescriptor population) SYMBOL_VISIBLE;
 
 	void add(
-	    std::vector<std::vector<std::vector<TimedSpike::Time>>> const& times,
+	    std::vector<std::vector<signal_flow::TimedSpike::Time>> const& times,
+	    PopulationDescriptor population) SYMBOL_VISIBLE;
+
+	void add(
+	    std::vector<std::vector<std::vector<signal_flow::TimedSpike::Time>>> const& times,
 	    PopulationDescriptor population) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		auto const convert_ms = [](float const t) {
-			return grenade::vx::TimedSpike::Time(
-			    std::llround(t * 1000. * grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us));
+			return grenade::vx::signal_flow::TimedSpike::Time(std::llround(
+			    t * 1000. * grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
 		};
 		parent.def(
 		    "add",
@@ -40,7 +41,8 @@ public:
 		        GENPYBIND_PARENT_TYPE& self,
 		        std::vector<std::vector<std::vector<float>>> const& times,
 		        grenade::vx::logical_network::PopulationDescriptor const population) {
-			    std::vector<std::vector<std::vector<grenade::vx::TimedSpike::Time>>> gtimes;
+			    std::vector<std::vector<std::vector<grenade::vx::signal_flow::TimedSpike::Time>>>
+			        gtimes;
 			    gtimes.resize(times.size());
 			    for (size_t b = 0; auto& gt_b : gtimes) {
 				    gt_b.resize(times.at(b).size());
@@ -63,7 +65,7 @@ public:
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self, std::vector<float> const& times,
 		        grenade::vx::logical_network::PopulationDescriptor const population) {
-			    std::vector<grenade::vx::TimedSpike::Time> gtimes;
+			    std::vector<grenade::vx::signal_flow::TimedSpike::Time> gtimes;
 			    gtimes.reserve(times.size());
 			    std::transform(times.begin(), times.end(), std::back_inserter(gtimes), convert_ms);
 			    self.add(gtimes, population);
@@ -74,7 +76,7 @@ public:
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self, std::vector<std::vector<float>> const& times,
 		        grenade::vx::logical_network::PopulationDescriptor const population) {
-			    std::vector<std::vector<grenade::vx::TimedSpike::Time>> gtimes;
+			    std::vector<std::vector<grenade::vx::signal_flow::TimedSpike::Time>> gtimes;
 			    gtimes.resize(times.size());
 			    for (size_t i = 0; auto& gt : gtimes) {
 				    gt.reserve(times.at(i).size());
@@ -90,7 +92,7 @@ public:
 		    parent->py::arg("times"), parent->py::arg("population"));
 	})
 
-	IODataMap done() SYMBOL_VISIBLE;
+	signal_flow::IODataMap done() SYMBOL_VISIBLE;
 
 private:
 	network::InputGenerator m_input_generator;

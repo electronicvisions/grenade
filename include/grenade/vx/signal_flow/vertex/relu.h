@@ -14,7 +14,7 @@ struct access;
 namespace grenade::vx::signal_flow::vertex {
 
 /**
- * ReLU of multiple inputs of Int8 data type.
+ * ReLU of multiple inputs of signal_flow::Int8 data type.
  */
 struct ReLU
 {

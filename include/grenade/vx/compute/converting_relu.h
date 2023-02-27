@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 
 namespace cereal {
 struct access;
@@ -21,7 +21,8 @@ class JITGraphExecutor;
 namespace compute {
 
 /**
- * Compute a rectified linear unit operation converting from Int8 to UInt5.
+ * Compute a rectified linear unit operation converting from signal_flow::Int8 to
+ * signal_flow::UInt5.
  */
 class ConvertingReLU
 {
@@ -32,7 +33,7 @@ public:
 	 * Create single ConvertingReLU compute graph wrapper.
 	 * @param size Size of operation
 	 * @param shift Power-of-two (bitshift) scaling parameter before clamping, i.e. saturation to
-	 *        UInt5 value range
+	 *        signal_flow::UInt5 value range
 	 */
 	ConvertingReLU(size_t size, uint32_t shift) SYMBOL_VISIBLE;
 
@@ -43,8 +44,8 @@ public:
 	 * @param executor Executor backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<UInt5>> run(
-	    std::vector<std::vector<Int8>> const& inputs,
+	std::vector<std::vector<signal_flow::UInt5>> run(
+	    std::vector<std::vector<signal_flow::Int8>> const& inputs,
 	    lola::vx::v3::Chip const& config,
 	    execution::JITGraphExecutor& executor) const SYMBOL_VISIBLE;
 

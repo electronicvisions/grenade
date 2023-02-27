@@ -2,11 +2,11 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/execution_instance_node.h"
-#include "grenade/vx/execution_time_info.h"
-#include "grenade/vx/io_data_list.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/io_data_list.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -143,20 +143,20 @@ void JITGraphExecutor::check(signal_flow::Graph const& graph)
 }
 
 
-IODataMap run(
+signal_flow::IODataMap run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataMap const& input,
+    signal_flow::IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config)
 {
 	JITGraphExecutor::PlaybackHooks empty;
 	return run(executor, graph, input, initial_config, empty);
 }
 
-IODataMap run(
+signal_flow::IODataMap run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataMap const& input,
+    signal_flow::IODataMap const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -179,7 +179,7 @@ IODataMap run(
 	    nodes;
 
 	// global data map
-	IODataMap output_activation_map;
+	signal_flow::IODataMap output_activation_map;
 
 	// build execution nodes
 	for (auto const vertex :
@@ -212,7 +212,7 @@ IODataMap run(
 	start.try_put(tbb::flow::continue_msg());
 	execution_graph.wait_for_all();
 
-	ExecutionTimeInfo execution_time_info;
+	signal_flow::ExecutionTimeInfo execution_time_info;
 	execution_time_info.execution_duration = std::chrono::nanoseconds(timer.get_ns());
 	if (output_activation_map.execution_time_info) {
 		output_activation_map.execution_time_info->merge(execution_time_info);
@@ -241,10 +241,10 @@ IODataMap run(
 	return output_activation_map;
 }
 
-IODataList run(
+signal_flow::IODataList run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataList const& input,
+    signal_flow::IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     bool only_unconnected_output)
 {
@@ -252,17 +252,17 @@ IODataList run(
 	return run(executor, graph, input, initial_config, empty, only_unconnected_output);
 }
 
-IODataList run(
+signal_flow::IODataList run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    IODataList const& input,
+    signal_flow::IODataList const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks,
     bool only_unconnected_output)
 {
 	auto const output_map =
 	    run(executor, graph, input.to_input_map(graph), initial_config, playback_hooks);
-	IODataList output;
+	signal_flow::IODataList output;
 	output.from_output_map(output_map, graph, only_unconnected_output);
 	return output;
 }

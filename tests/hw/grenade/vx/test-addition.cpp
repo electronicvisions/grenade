@@ -2,12 +2,12 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex.h"
-#include "grenade/vx/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -53,14 +53,14 @@ TEST(Addition, Single)
 	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	// fill graph inputs
-	grenade::vx::IODataMap input_list;
-	std::vector<grenade::vx::Int8> inputs(size);
+	grenade::vx::signal_flow::IODataMap input_list;
+	std::vector<grenade::vx::signal_flow::Int8> inputs(size);
 	for (intmax_t i = -128; i < 127; ++i) {
-		inputs.at(i + 128) = grenade::vx::Int8(i);
+		inputs.at(i + 128) = grenade::vx::signal_flow::Int8(i);
 	}
-	input_list.data[v1] =
-	    std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>{
-	        {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), inputs}}};
+	input_list.data[v1] = std::vector<
+	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>{
+	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), inputs}}};
 
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
@@ -73,19 +73,19 @@ TEST(Addition, Single)
 
 	EXPECT_TRUE(result_map.data.find(v4) != result_map.data.end());
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
-	        result_map.data.at(v4))
+	    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
+	        std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
 	        .size(),
 	    1);
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
-	        result_map.data.at(v4))
+	    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
+	        std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
 	        .at(0)
 	        .size(),
 	    1);
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
-	        result_map.data.at(v4))
+	    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
+	        std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
 	        .at(0)
 	        .at(0)
 	        .data.size(),
@@ -95,9 +95,8 @@ TEST(Addition, Single)
 		    static_cast<uint8_t>(
 		        std::min(std::max(intmax_t(2 * i), intmax_t(-128)), intmax_t(127))),
 		    static_cast<uint8_t>(
-		        std::get<
-		            std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
-		            result_map.data.at(v4))
+		        std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
+		            std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
 		            .at(0)
 		            .at(0)
 		            .data.at(i + 128)));

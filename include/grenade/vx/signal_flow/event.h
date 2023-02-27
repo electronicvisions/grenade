@@ -9,10 +9,10 @@
 #include <variant>
 #include <vector>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
 
 /**
- * Timed to-chip spike.
+ * signal_flow::Timed to-chip spike.
  */
 struct GENPYBIND(visible) TimedSpike
 {
@@ -68,6 +68,6 @@ struct TimedData
 template <typename T>
 using TimedDataSequence = std::vector<TimedData<T>>;
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow
 
-#include "grenade/vx/event.tcc"
+#include "grenade/vx/signal_flow/event.tcc"

@@ -52,13 +52,16 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 	halco::common::typed_array<std::vector<halco::hicann_dls::vx::v3::SpikeLabel>, HemisphereOnDLS>
 	    labels;
 
-	std::vector<std::reference_wrapper<std::vector<TimedDataSequence<std::vector<UInt5>>> const>>
+	std::vector<std::reference_wrapper<
+	    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>> const>>
 	    uvalue;
 	for (auto const& v : value) {
-		uvalue.push_back(std::get<std::vector<TimedDataSequence<std::vector<UInt5>>>>(v));
+		uvalue.push_back(
+		    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>>(
+		        v));
 	}
 
-	std::vector<TimedSpikeSequence> events(batch_size);
+	std::vector<signal_flow::TimedSpikeSequence> events(batch_size);
 
 	for (size_t batch = 0; batch < batch_size; ++batch) {
 		// reserve labels
@@ -101,7 +104,7 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 		local_events.reserve(labels_max.size() * m_num_sends);
 		// add events from back to unsure equal time between last event and readout
 		// for both hemispheres
-		TimedSpike::Time time(labels_max.size() * m_wait_between_events * m_num_sends);
+		signal_flow::TimedSpike::Time time(labels_max.size() * m_wait_between_events * m_num_sends);
 		// add 2-packed events (both hemispheres)
 		size_t const labels_min_size = labels_min.size();
 		size_t const labels_max_size = labels_max.size();
@@ -110,16 +113,16 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 			auto const label_min = labels_min[n % labels_min_size];
 			auto const label_max = labels_max[n % labels_max_size];
 			SpikePack2ToChip const payload(SpikePack2ToChip::labels_type{label_min, label_max});
-			local_events.push_back(TimedSpike{time, payload});
-			time = TimedSpike::Time(time - m_wait_between_events);
+			local_events.push_back(signal_flow::TimedSpike{time, payload});
+			time = signal_flow::TimedSpike::Time(time - m_wait_between_events);
 		}
 		// add 1-packed left events (hemisphere with more events)
 		size_t const one_hemisphere = labels_max_size * m_num_sends;
 		for (size_t n = both_hemispheres; n < one_hemisphere; ++n) {
 			auto const label = labels_max[n % labels_max_size];
 			SpikePack1ToChip const payload(SpikePack1ToChip::labels_type{label});
-			local_events.push_back(TimedSpike{time, payload});
-			time = TimedSpike::Time(time - m_wait_between_events);
+			local_events.push_back(signal_flow::TimedSpike{time, payload});
+			time = signal_flow::TimedSpike::Time(time - m_wait_between_events);
 		}
 
 		// clear labels
@@ -136,7 +139,7 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 }
 
 std::optional<halco::hicann_dls::vx::v3::SpikeLabel> MACSpikeTrainGenerator::get_spike_label(
-    halco::hicann_dls::vx::v3::SynapseDriverOnDLS const& driver, UInt5 const value)
+    halco::hicann_dls::vx::v3::SynapseDriverOnDLS const& driver, signal_flow::UInt5 const value)
 {
 	if (value == 0) {
 		return std::nullopt;
@@ -144,7 +147,7 @@ std::optional<halco::hicann_dls::vx::v3::SpikeLabel> MACSpikeTrainGenerator::get
 	using namespace halco::hicann_dls::vx::v3;
 	auto const synapse_driver = driver.toSynapseDriverOnSynapseDriverBlock();
 	auto const spl1_address = synapse_driver % PADIBusOnPADIBusBlock::size;
-	auto const synapse_label = ((UInt5::max - value.value()) + 1);
+	auto const synapse_label = ((signal_flow::UInt5::max - value.value()) + 1);
 	auto const row_select = synapse_driver / PADIBusOnPADIBusBlock::size;
 	auto const h = (static_cast<size_t>(driver.toSynapseDriverBlockOnDLS()) << 13);
 	return halco::hicann_dls::vx::v3::SpikeLabel(

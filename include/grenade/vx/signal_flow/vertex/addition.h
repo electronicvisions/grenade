@@ -14,7 +14,7 @@ struct access;
 namespace grenade::vx::signal_flow::vertex {
 
 /**
- * Addition of multiple inputs of Int8 data type.
+ * Addition of multiple inputs of signal_flow::Int8 data type.
  */
 struct Addition
 {

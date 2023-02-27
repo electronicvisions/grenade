@@ -9,42 +9,42 @@ namespace grenade::vx::network {
 
 using namespace halco::hicann_dls::vx::v3;
 
-IODataMap run(
+signal_flow::IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs)
+    signal_flow::IODataMap const& inputs)
 {
-	ExecutionInstancePlaybackHooks empty;
+	signal_flow::ExecutionInstancePlaybackHooks empty;
 	return run(connection, config, network_graph, inputs, empty);
 }
 
-IODataMap run(
+signal_flow::IODataMap run(
     execution::backend::Connection& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs)
+    signal_flow::IODataMap const& inputs)
 {
-	ExecutionInstancePlaybackHooks empty;
+	signal_flow::ExecutionInstancePlaybackHooks empty;
 	return run(connection, config, network_graph, inputs, empty);
 }
 
-IODataMap run(
+signal_flow::IODataMap run(
     execution::JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs)
+    signal_flow::IODataMap const& inputs)
 {
-	ExecutionInstancePlaybackHooks empty;
+	signal_flow::ExecutionInstancePlaybackHooks empty;
 	return run(executor, config, network_graph, inputs, empty);
 }
 
-IODataMap run(
+signal_flow::IODataMap run(
     execution::JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs,
-    ExecutionInstancePlaybackHooks& playback_hooks)
+    signal_flow::IODataMap const& inputs,
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	execution::JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
@@ -52,7 +52,7 @@ IODataMap run(
 
 	execution::JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
-	    std::pair<signal_flow::ExecutionInstance, ExecutionInstancePlaybackHooks>(
+	    std::pair<signal_flow::ExecutionInstance, signal_flow::ExecutionInstancePlaybackHooks>(
 	        signal_flow::ExecutionInstance(), std::move(playback_hooks)));
 
 	auto ret =
@@ -61,12 +61,12 @@ IODataMap run(
 	return ret;
 }
 
-IODataMap run(
+signal_flow::IODataMap run(
     execution::backend::Connection& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs,
-    ExecutionInstancePlaybackHooks& playback_hooks)
+    signal_flow::IODataMap const& inputs,
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	std::map<DLSGlobal, execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
@@ -78,12 +78,12 @@ IODataMap run(
 	return ret;
 }
 
-IODataMap run(
+signal_flow::IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs,
-    ExecutionInstancePlaybackHooks& playback_hooks)
+    signal_flow::IODataMap const& inputs,
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	execution::backend::Connection backend_connection(std::move(connection));
 

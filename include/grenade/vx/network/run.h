@@ -1,9 +1,9 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "hate/visibility.h"
 #include "hxcomm/vx/connection_variant.h"
 
@@ -28,11 +28,11 @@ namespace network {
  * @param inputs Inputs to use
  * @return Run time information
  */
-IODataMap run(
+signal_flow::IODataMap run(
     execution::JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs) SYMBOL_VISIBLE;
+    signal_flow::IODataMap const& inputs) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graph and fetch results.
@@ -43,11 +43,11 @@ IODataMap run(
  * @param inputs Inputs to use
  * @return Run time information
  */
-IODataMap run(
+signal_flow::IODataMap run(
     execution::backend::Connection& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs) SYMBOL_VISIBLE;
+    signal_flow::IODataMap const& inputs) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graph and fetch results.
@@ -58,11 +58,11 @@ IODataMap run(
  * @param inputs Inputs to use
  * @return Run time information
  */
-IODataMap run(
+signal_flow::IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs) SYMBOL_VISIBLE;
+    signal_flow::IODataMap const& inputs) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graph and fetch results.
@@ -74,12 +74,12 @@ IODataMap run(
  * @param playback_hooks Optional playback sequences to inject
  * @return Run time information
  */
-IODataMap run(
+signal_flow::IODataMap run(
     execution::JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs,
-    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+    signal_flow::IODataMap const& inputs,
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graph and fetch results.
@@ -91,12 +91,12 @@ IODataMap run(
  * @param playback_hooks Optional playback sequences to inject
  * @return Run time information
  */
-IODataMap run(
+signal_flow::IODataMap run(
     execution::backend::Connection& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs,
-    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+    signal_flow::IODataMap const& inputs,
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graph and fetch results.
@@ -108,12 +108,12 @@ IODataMap run(
  * @param playback_hooks Optional playback sequences to inject
  * @return Run time information
  */
-IODataMap run(
+signal_flow::IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
-    IODataMap const& inputs,
-    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+    signal_flow::IODataMap const& inputs,
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
@@ -152,8 +152,9 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		m.def(
 		    "run",
 		    [](T& conn, lola::vx::v3::Chip const& config, NetworkGraph const& network_graph,
-		       IODataMap const& inputs,
-		       ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
+		       signal_flow::IODataMap const& inputs,
+		       signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
+		        -> signal_flow::IODataMap {
 			    ConnectionAcquisor acquisor(conn);
 			    return run(acquisor.connection, config, network_graph, inputs, playback_hooks);
 		    },
@@ -162,7 +163,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		m.def(
 		    "run",
 		    [](T& conn, lola::vx::v3::Chip const& config, NetworkGraph const& network_graph,
-		       IODataMap const& inputs) -> IODataMap {
+		       signal_flow::IODataMap const& inputs) -> signal_flow::IODataMap {
 			    ConnectionAcquisor acquisor(conn);
 			    return run(acquisor.connection, config, network_graph, inputs);
 		    },
@@ -184,7 +185,8 @@ GENPYBIND_MANUAL({
 	    "run",
 	    [](::pyhxcomm::Handle<execution::backend::Connection>& conn,
 	       lola::vx::v3::Chip const& config, network::NetworkGraph const& network_graph,
-	       IODataMap const& inputs, ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
+	       signal_flow::IODataMap const& inputs,
+	       signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) -> signal_flow::IODataMap {
 		    return network::run(conn.get(), config, network_graph, inputs, playback_hooks);
 	    },
 	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
@@ -193,7 +195,7 @@ GENPYBIND_MANUAL({
 	    "run",
 	    [](::pyhxcomm::Handle<execution::backend::Connection>& conn,
 	       lola::vx::v3::Chip const& config, network::NetworkGraph const& network_graph,
-	       IODataMap const& inputs) -> IODataMap {
+	       signal_flow::IODataMap const& inputs) -> signal_flow::IODataMap {
 		    return network::run(conn.get(), config, network_graph, inputs);
 	    },
 	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
@@ -202,8 +204,8 @@ GENPYBIND_MANUAL({
 	parent.def(
 	    "run",
 	    [](::pyhxcomm::Handle<execution::JITGraphExecutor>& conn, lola::vx::v3::Chip const& config,
-	       network::NetworkGraph const& network_graph, IODataMap const& inputs,
-	       ExecutionInstancePlaybackHooks& playback_hooks) -> IODataMap {
+	       network::NetworkGraph const& network_graph, signal_flow::IODataMap const& inputs,
+	       signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) -> signal_flow::IODataMap {
 		    return network::run(conn.get(), config, network_graph, inputs, playback_hooks);
 	    },
 	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
@@ -211,7 +213,8 @@ GENPYBIND_MANUAL({
 	parent.def(
 	    "run",
 	    [](::pyhxcomm::Handle<execution::JITGraphExecutor>& conn, lola::vx::v3::Chip const& config,
-	       network::NetworkGraph const& network_graph, IODataMap const& inputs) -> IODataMap {
+	       network::NetworkGraph const& network_graph,
+	       signal_flow::IODataMap const& inputs) -> signal_flow::IODataMap {
 		    return network::run(conn.get(), config, network_graph, inputs);
 	    },
 	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),

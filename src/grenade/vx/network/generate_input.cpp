@@ -10,12 +10,12 @@ InputGenerator::InputGenerator(NetworkGraph const& network_graph, size_t batch_s
 	if (!m_network_graph.get_event_input_vertex()) {
 		throw std::runtime_error("Network graph does not feature an event input vertex.");
 	}
-	std::vector<TimedSpikeSequence> spike_batch(batch_size);
+	std::vector<signal_flow::TimedSpikeSequence> spike_batch(batch_size);
 	m_data.data.insert({*m_network_graph.get_event_input_vertex(), spike_batch});
 }
 
 void InputGenerator::add(
-    std::vector<TimedSpike::Time> const& times, PopulationDescriptor const population)
+    std::vector<signal_flow::TimedSpike::Time> const& times, PopulationDescriptor const population)
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
@@ -29,19 +29,19 @@ void InputGenerator::add(
 
 	auto const& neurons = m_network_graph.get_spike_labels().at(population);
 
-	TimedSpikeSequence batch_entry;
+	signal_flow::TimedSpikeSequence batch_entry;
 	batch_entry.reserve(times.size() * neurons.size());
 	for (auto const time : times) {
 		for (auto const& neuron : neurons) {
 			for (auto const& label : neuron) {
 				assert(label);
-				batch_entry.push_back(grenade::vx::TimedSpike{
+				batch_entry.push_back(grenade::vx::signal_flow::TimedSpike{
 				    time, haldls::vx::v3::SpikePack1ToChip(
 				              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 			}
 		}
 	}
-	auto& spike_batch = std::get<std::vector<TimedSpikeSequence>>(
+	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
 		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
@@ -49,7 +49,8 @@ void InputGenerator::add(
 }
 
 void InputGenerator::add(
-    std::vector<std::vector<TimedSpike::Time>> const& times, PopulationDescriptor const population)
+    std::vector<std::vector<signal_flow::TimedSpike::Time>> const& times,
+    PopulationDescriptor const population)
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
@@ -73,7 +74,7 @@ void InputGenerator::add(
 		size += ts.size();
 	}
 
-	TimedSpikeSequence batch_entry;
+	signal_flow::TimedSpikeSequence batch_entry;
 	batch_entry.reserve(size);
 	for (size_t i = 0; i < times.size(); ++i) {
 		// Exit early if neuron is not connected to any other neuron
@@ -101,13 +102,13 @@ void InputGenerator::add(
 		for (auto const time : times.at(i)) {
 			for (auto const label : labels) {
 				assert(label);
-				batch_entry.push_back(grenade::vx::TimedSpike{
+				batch_entry.push_back(grenade::vx::signal_flow::TimedSpike{
 				    time, haldls::vx::v3::SpikePack1ToChip(
 				              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 			}
 		}
 	}
-	auto& spike_batch = std::get<std::vector<TimedSpikeSequence>>(
+	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
 		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
@@ -115,7 +116,7 @@ void InputGenerator::add(
 }
 
 void InputGenerator::add(
-    std::vector<std::vector<std::vector<TimedSpike::Time>>> const& times,
+    std::vector<std::vector<std::vector<signal_flow::TimedSpike::Time>>> const& times,
     PopulationDescriptor const population)
 {
 	// Exit early if population is not connected to any other population
@@ -131,7 +132,7 @@ void InputGenerator::add(
 	auto const& neurons = m_network_graph.get_spike_labels().at(population);
 
 	assert(
-	    times.size() == std::get<std::vector<TimedSpikeSequence>>(
+	    times.size() == std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 	                        m_data.data.at(*m_network_graph.get_event_input_vertex()))
 	                        .size());
 	for (size_t b = 0; b < times.size(); ++b) {
@@ -142,7 +143,7 @@ void InputGenerator::add(
 			    "Times number of neurons does not match expected number from spike labels.");
 		}
 
-		auto& data_spikes = std::get<std::vector<TimedSpikeSequence>>(
+		auto& data_spikes = std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 		                        m_data.data.at(*m_network_graph.get_event_input_vertex()))
 		                        .at(b);
 
@@ -178,7 +179,7 @@ void InputGenerator::add(
 			for (auto const time : batch_times.at(i)) {
 				for (auto const label : labels) {
 					assert(label);
-					data_spikes.push_back(grenade::vx::TimedSpike{
+					data_spikes.push_back(grenade::vx::signal_flow::TimedSpike{
 					    time, haldls::vx::v3::SpikePack1ToChip(
 					              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 				}
@@ -187,18 +188,18 @@ void InputGenerator::add(
 	}
 }
 
-IODataMap InputGenerator::done()
+signal_flow::IODataMap InputGenerator::done()
 {
 	assert(m_network_graph.get_event_input_vertex());
-	auto& spikes = std::get<std::vector<TimedSpikeSequence>>(
+	auto& spikes = std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
 	for (auto& batch : spikes) {
 		std::stable_sort(batch.begin(), batch.end(), [](auto const& a, auto const& b) {
 			return a.time < b.time;
 		});
 	}
-	IODataMap ret;
-	std::vector<TimedSpikeSequence> spike_batch(m_data.batch_size());
+	signal_flow::IODataMap ret;
+	std::vector<signal_flow::TimedSpikeSequence> spike_batch(m_data.batch_size());
 	assert(m_network_graph.get_event_input_vertex());
 	ret.data.insert({*m_network_graph.get_event_input_vertex(), spike_batch});
 	std::swap(ret, m_data);

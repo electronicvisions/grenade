@@ -1,9 +1,9 @@
-#include "grenade/vx/execution_time_info.h"
+#include "grenade/vx/signal_flow/execution_time_info.h"
 
 #include "hate/timer.h"
 #include <ostream>
 
-namespace grenade::vx {
+namespace grenade::vx::signal_flow {
 
 void ExecutionTimeInfo::merge(ExecutionTimeInfo& other)
 {
@@ -43,4 +43,4 @@ std::ostream& operator<<(std::ostream& os, ExecutionTimeInfo const& info)
 	return os;
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

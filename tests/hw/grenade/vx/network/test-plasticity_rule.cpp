@@ -11,7 +11,7 @@
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include <gtest/gtest.h>
 #include <log4cxx/logger.h>
@@ -78,7 +78,7 @@ TEST(PlasticityRule, RawRecording)
 	auto const routing_result = grenade::vx::network::build_routing(network);
 	auto const network_graph = grenade::vx::network::build_network_graph(network, routing_result);
 
-	grenade::vx::IODataMap inputs;
+	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
 
@@ -96,10 +96,10 @@ TEST(PlasticityRule, RawRecording)
 	EXPECT_EQ(network_graph.get_plasticity_rule_output_vertices().size(), 1);
 	EXPECT_TRUE(
 	    network_graph.get_plasticity_rule_output_vertices().contains(plasticity_rule_descriptor));
-	auto const result =
-	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
-	        result_map.data.at(network_graph.get_plasticity_rule_output_vertices().at(
-	            plasticity_rule_descriptor)));
+	auto const result = std::get<std::vector<
+	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	    result_map.data.at(
+	        network_graph.get_plasticity_rule_output_vertices().at(plasticity_rule_descriptor)));
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
@@ -120,7 +120,7 @@ TEST(PlasticityRule, TimedRecording)
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	grenade::vx::IODataMap inputs;
+	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime[instance].push_back(
 	    Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 10000));
 	inputs.runtime[instance].push_back(
@@ -413,10 +413,10 @@ TEST(PlasticityRule, TimedRecording)
 				        auto const& data_entry_variant = timed_recording_data.data_array.at(name);
 				        std::visit(
 				            [&](auto type) {
-					            auto const& data_entry =
-					                std::get<std::vector<grenade::vx::TimedDataSequence<
+					            auto const& data_entry = std::get<
+					                std::vector<grenade::vx::signal_flow::TimedDataSequence<
 					                    std::vector<typename decltype(type)::ElementType>>>>(
-					                    data_entry_variant);
+					                data_entry_variant);
 					            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 					            for (size_t i = 0; i < data_entry.size(); ++i) {
 						            auto const& samples = data_entry.at(i);
@@ -444,11 +444,10 @@ TEST(PlasticityRule, TimedRecording)
 					            EXPECT_EQ(
 					                data_entry_variant.size(), plasticity_rule.projections.size());
 					            for (size_t p = 0; p < plasticity_rule.projections.size(); ++p) {
-						            auto const& data_entry =
-						                std::get<std::vector<grenade::vx::TimedDataSequence<
+						            auto const& data_entry = std::get<
+						                std::vector<grenade::vx::signal_flow::TimedDataSequence<
 						                    std::vector<typename decltype(type)::ElementType>>>>(
-						                    data_entry_variant.at(
-						                        plasticity_rule.projections.at(p)));
+						                data_entry_variant.at(plasticity_rule.projections.at(p)));
 						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
@@ -482,11 +481,11 @@ TEST(PlasticityRule, TimedRecording)
 					            EXPECT_EQ(
 					                data_entry_variant.size(), plasticity_rule.populations.size());
 					            for (size_t p = 0; p < plasticity_rule.populations.size(); ++p) {
-						            auto const& data_entry =
-						                std::get<std::vector<grenade::vx::TimedDataSequence<
+						            auto const& data_entry = std::get<
+						                std::vector<grenade::vx::signal_flow::TimedDataSequence<
 						                    std::vector<typename decltype(type)::ElementType>>>>(
-						                    data_entry_variant.at(
-						                        plasticity_rule.populations.at(p).descriptor));
+						                data_entry_variant.at(
+						                    plasticity_rule.populations.at(p).descriptor));
 						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
@@ -531,7 +530,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	IODataMap inputs;
+	signal_flow::IODataMap inputs;
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
@@ -611,9 +610,10 @@ TEST(PlasticityRule, ExecutorInitialState)
 		assert(network_graph.get_plasticity_rule_output_vertices().size());
 		assert(network_graph.get_plasticity_rule_output_vertices().contains(
 		    plasticity_rule_descriptor));
-		auto const result = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
-		    result_map.data.at(network_graph.get_plasticity_rule_output_vertices().at(
-		        plasticity_rule_descriptor)));
+		auto const result =
+		    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+		        result_map.data.at(network_graph.get_plasticity_rule_output_vertices().at(
+		            plasticity_rule_descriptor)));
 		assert(result.size() == inputs.batch_size());
 		assert(result.at(0).size() == plasticity_rule.timer.num_periods);
 		return static_cast<int>(result.at(0).at(0).data.at(0));

@@ -1,8 +1,8 @@
-#include "grenade/vx/event.h"
+#include "grenade/vx/signal_flow/event.h"
 
 #include "stadls/vx/v3/playback_program_builder.h"
 
-namespace grenade::vx {
+namespace grenade::vx::signal_flow {
 
 TimedSpike::TimedSpike(Time const& time, Payload const& payload) : time(time), payload(payload) {}
 
@@ -24,4 +24,4 @@ std::ostream& operator<<(std::ostream& os, TimedSpike const& spike)
 	return os;
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

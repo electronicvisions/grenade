@@ -2,12 +2,12 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_list.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/io_data_list.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "hate/timer.h"
 #include "lola/vx/v3/chip.h"
 #include <future>
@@ -21,12 +21,12 @@ TEST(JITGraphExecutor, Empty)
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config;
 
-	grenade::vx::IODataMap input_map;
+	grenade::vx::signal_flow::IODataMap input_map;
 
 	auto const result_map = grenade::vx::execution::run(executor, g, input_map, initial_config);
 	EXPECT_TRUE(result_map.empty());
 
-	grenade::vx::IODataList input_list;
+	grenade::vx::signal_flow::IODataList input_list;
 	input_list.from_input_map(input_map, g);
 
 	auto const result_list = grenade::vx::execution::run(executor, g, input_list, initial_config);
@@ -53,7 +53,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	grenade::vx::execution::JITGraphExecutor executor(std::move(connections), true);
 
 	// a single batch entry with some runtime to ensure use of hardware
-	grenade::vx::IODataMap input_map;
+	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 	    haldls::vx::Timer::Value(100));
 
@@ -115,7 +115,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	grenade::vx::execution::JITGraphExecutor executor(std::move(connections), false);
 
 	// a single batch entry with some runtime to ensure use of hardware
-	grenade::vx::IODataMap input_map;
+	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 	    haldls::vx::Timer::Value(100));
 
@@ -174,17 +174,17 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	grenade::vx::execution::JITGraphExecutor executor(std::move(connections), true);
 
 	// a single batch entry with some runtime to ensure use of hardware
-	grenade::vx::IODataMap input_map;
+	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
 	    haldls::vx::Timer::Value(10000 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
 	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
 
-	std::vector<std::future<grenade::vx::IODataMap>> results;
+	std::vector<std::future<grenade::vx::signal_flow::IODataMap>> results;
 	constexpr size_t num_concurrent = 100;
 
-	auto const run_func = [&]() -> grenade::vx::IODataMap {
+	auto const run_func = [&]() -> grenade::vx::signal_flow::IODataMap {
 		return grenade::vx::execution::run(
 		    executor, network_graph.get_graph(), input_map, initial_config);
 	};

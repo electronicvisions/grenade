@@ -6,7 +6,7 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
 #include "logging_ctrl.h"
@@ -26,10 +26,10 @@ TEST(MAC, Single)
 	// Construct connection to HW
 	grenade::vx::execution::backend::Connection connection;
 
-	// fill graph inputs (with UInt5(0))
-	std::vector<grenade::vx::UInt5> inputs(5);
+	// fill graph inputs (with signal_flow::UInt5(0))
+	std::vector<grenade::vx::signal_flow::UInt5> inputs(5);
 	for (size_t i = 0; i < inputs.size(); ++i) {
-		inputs[i] = grenade::vx::UInt5(i);
+		inputs[i] = grenade::vx::signal_flow::UInt5(i);
 	}
 
 	grenade::vx::compute::MAC::Weights weights{

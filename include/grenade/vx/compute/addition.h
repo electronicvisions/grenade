@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 
 namespace cereal {
 struct access;
@@ -21,7 +21,7 @@ class JITGraphExecutor;
 namespace compute {
 
 /**
- * Compute an addition of a constant to given data batches of type Int8.
+ * Compute an addition of a constant to given data batches of type signal_flow::Int8.
  */
 class Addition
 {
@@ -32,7 +32,7 @@ public:
 	 * Create single Addition compute graph wrapper.
 	 * @param other Value to add to given data.
 	 */
-	Addition(std::vector<Int8> const& other) SYMBOL_VISIBLE;
+	Addition(std::vector<signal_flow::Int8> const& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Run given operation.
@@ -41,8 +41,8 @@ public:
 	 * @param executor Executor backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<Int8>> run(
-	    std::vector<std::vector<Int8>> const& inputs,
+	std::vector<std::vector<signal_flow::Int8>> run(
+	    std::vector<std::vector<signal_flow::Int8>> const& inputs,
 	    lola::vx::v3::Chip const& config,
 	    execution::JITGraphExecutor& executor) const SYMBOL_VISIBLE;
 
@@ -54,7 +54,7 @@ private:
 	signal_flow::Graph::vertex_descriptor m_input_vertex{};
 	signal_flow::Graph::vertex_descriptor m_other_vertex{};
 	signal_flow::Graph::vertex_descriptor m_output_vertex{};
-	std::vector<Int8> m_other{};
+	std::vector<signal_flow::Int8> m_other{};
 
 	friend struct cereal::access;
 	template <typename Archive>

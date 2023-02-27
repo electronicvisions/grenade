@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 
 namespace cereal {
 struct access;
@@ -42,8 +42,8 @@ public:
 	 * @param executor Executor backend to use
 	 * @return Resulting values
 	 */
-	std::vector<std::vector<UInt32>> run(
-	    std::vector<std::vector<Int8>> const& inputs,
+	std::vector<std::vector<signal_flow::UInt32>> run(
+	    std::vector<std::vector<signal_flow::Int8>> const& inputs,
 	    lola::vx::v3::Chip const& config,
 	    execution::JITGraphExecutor& executor) const SYMBOL_VISIBLE;
 

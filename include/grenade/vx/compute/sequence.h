@@ -6,7 +6,7 @@
 #include "grenade/vx/compute/converting_relu.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/compute/relu.h"
-#include "grenade/vx/io_data_list.h"
+#include "grenade/vx/signal_flow/io_data_list.h"
 #include "hate/visibility.h"
 #include <list>
 #include <variant>
@@ -36,9 +36,9 @@ struct Sequence
 	 * Inner dimension: values per batch entry
 	 */
 	typedef std::variant<
-	    std::vector<std::vector<UInt5>>,
-	    std::vector<std::vector<Int8>>,
-	    std::vector<std::vector<UInt32>>>
+	    std::vector<std::vector<signal_flow::UInt5>>,
+	    std::vector<std::vector<signal_flow::Int8>>,
+	    std::vector<std::vector<signal_flow::UInt32>>>
 	    IOData;
 
 	std::list<Entry> data;

@@ -66,15 +66,18 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 
 	switch (m_type) {
 		case ConnectionType::UInt32: {
-			std::vector<TimedDataSequence<std::vector<UInt32>>> output(batch_size);
+			std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> output(
+			    batch_size);
 			return copy(output);
 		}
 		case ConnectionType::Int8: {
-			std::vector<TimedDataSequence<std::vector<Int8>>> output(batch_size);
+			std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> output(
+			    batch_size);
 			return copy(output);
 		}
 		case ConnectionType::UInt5: {
-			std::vector<TimedDataSequence<std::vector<UInt5>>> output(batch_size);
+			std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>> output(
+			    batch_size);
 			return copy(output);
 		}
 		default: {

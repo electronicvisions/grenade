@@ -3,12 +3,12 @@
 #include "grenade/cerealization.h"
 #include "grenade/vx/compute/detail/range_split.h"
 #include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
-#include "grenade/vx/event.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/transformation/concatenation.h"
 #include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
 #include "halco/common/cerealization_geometry.h"
@@ -379,7 +379,7 @@ size_t MAC::output_size() const
 	return 0;
 }
 
-std::vector<std::vector<Int8>> MAC::run(
+std::vector<std::vector<signal_flow::Int8>> MAC::run(
     Activations const& inputs,
     lola::vx::v3::Chip const& config,
     execution::JITGraphExecutor& executor) const
@@ -399,14 +399,15 @@ std::vector<std::vector<Int8>> MAC::run(
 		}
 	}
 
-	// fill graph inputs (with UInt5(0))
+	// fill graph inputs (with signal_flow::UInt5(0))
 	if (batch_entry_size != input_size()) {
 		throw std::runtime_error("Provided inputs size does not match MAC input size.");
 	}
 
 	hate::Timer input_timer;
-	IODataMap input_list;
-	std::vector<TimedDataSequence<std::vector<UInt5>>> timed_inputs(inputs.size());
+	signal_flow::IODataMap input_list;
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>> timed_inputs(
+	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		timed_inputs.at(i).resize(1);
 		// TODO: Think about what to do with timing information
@@ -424,9 +425,10 @@ std::vector<std::vector<Int8>> MAC::run(
 	auto const output_activation_map = execution::run(executor, m_graph, input_list, chip_configs);
 
 	hate::Timer output_timer;
-	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
-	    output_activation_map.data.at(m_output_vertex));
-	std::vector<std::vector<Int8>> output(timed_outputs.size());
+	auto const timed_outputs =
+	    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+	        output_activation_map.data.at(m_output_vertex));
+	std::vector<std::vector<signal_flow::Int8>> output(timed_outputs.size());
 	for (size_t i = 0; i < output.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);
 		output.at(i) = timed_outputs.at(i).at(0).data;
@@ -438,10 +440,12 @@ std::vector<std::vector<Int8>> MAC::run(
 		                boost::accumulators::tag::mean, boost::accumulators::tag::variance>>
 		    acc;
 		for (auto const& l : output_activation_map.data) {
-			if (!std::holds_alternative<std::vector<TimedSpikeFromChipSequence>>(l.second)) {
+			if (!std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
+			        l.second)) {
 				continue;
 			}
-			for (auto const& b : std::get<std::vector<TimedSpikeFromChipSequence>>(l.second)) {
+			for (auto const& b :
+			     std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(l.second)) {
 				halco::common::typed_array<std::vector<haldls::vx::ChipTime>, HemisphereOnDLS> t;
 				for (auto const& s : b) {
 					t[HemisphereOnDLS(s.label.get_neuron_label() & (1 << 13) ? 1 : 0)].push_back(

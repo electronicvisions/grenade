@@ -3,7 +3,6 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -13,7 +12,8 @@
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/systime.h"
@@ -134,7 +134,7 @@ void test_background_spike_source_regular(
 	auto const network_graph = grenade::vx::network::build_network_graph(network, routing_result);
 
 	// generate input
-	grenade::vx::IODataMap inputs;
+	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(running_period);
 
 	// run graph with given inputs and return results
@@ -232,7 +232,7 @@ void test_background_spike_source_poisson(
 		    grenade::vx::network::build_network_graph(network, routing_result);
 
 		// generate input
-		grenade::vx::IODataMap inputs;
+		grenade::vx::signal_flow::IODataMap inputs;
 		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(running_period);
 
 		// run graph with given inputs and return results

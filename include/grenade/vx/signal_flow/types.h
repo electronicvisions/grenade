@@ -3,7 +3,7 @@
 #include "halco/common/geometry.h"
 #include "haldls/vx/v3/padi.h"
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
 
 /**
  * 5 bit wide unsigned activation value type.
@@ -30,4 +30,4 @@ struct GENPYBIND(inline_base("*")) Int8 : public halco::common::detail::BaseType
 	constexpr explicit Int8(value_type const value = 0) : base_t(value) {}
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

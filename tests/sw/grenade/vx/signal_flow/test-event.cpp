@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/event.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 
-using namespace grenade::vx;
+using namespace grenade::vx::signal_flow;
 
 TEST(TimedSpike, General)
 {

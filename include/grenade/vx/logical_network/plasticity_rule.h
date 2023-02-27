@@ -106,10 +106,10 @@ struct GENPYBIND(visible) PlasticityRule
 		 * recordings of the corresponding hardware synapse(s).
 		 */
 		typedef std::variant<
-		    std::vector<TimedDataSequence<std::vector<std::vector<int8_t>>>>,
-		    std::vector<TimedDataSequence<std::vector<std::vector<uint8_t>>>>,
-		    std::vector<TimedDataSequence<std::vector<std::vector<int16_t>>>>,
-		    std::vector<TimedDataSequence<std::vector<std::vector<uint16_t>>>>>
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<int8_t>>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<uint8_t>>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<int16_t>>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<uint16_t>>>>>
 		    EntryPerSynapse;
 
 		/**
@@ -118,16 +118,16 @@ struct GENPYBIND(visible) PlasticityRule
 		 * recordings of the corresponding hardware neuron(s) per compartment.
 		 */
 		typedef std::variant<
-		    std::vector<TimedDataSequence<std::vector<std::map<
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<int8_t>>>>>,
-		    std::vector<TimedDataSequence<std::vector<std::map<
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<uint8_t>>>>>,
-		    std::vector<TimedDataSequence<std::vector<std::map<
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<int16_t>>>>>,
-		    std::vector<TimedDataSequence<std::vector<std::map<
+		    std::vector<signal_flow::TimedDataSequence<std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<uint16_t>>>>>>
 		    EntryPerNeuron;
@@ -176,29 +176,29 @@ GENPYBIND_MANUAL({
 	    parent.attr("PlasticityRule").attr("RawRecordingData");
 })
 
-typedef TimedData<std::vector<std::vector<int8_t>>> _SingleEntryPerSynapseInt8
+typedef signal_flow::TimedData<std::vector<std::vector<int8_t>>> _SingleEntryPerSynapseInt8
     GENPYBIND(opaque(false));
-typedef TimedData<std::vector<std::vector<uint8_t>>> _SingleEntryPerSynapseUInt8
+typedef signal_flow::TimedData<std::vector<std::vector<uint8_t>>> _SingleEntryPerSynapseUInt8
     GENPYBIND(opaque(false));
-typedef TimedData<std::vector<std::vector<int16_t>>> _SingleEntryPerSynapseInt16
+typedef signal_flow::TimedData<std::vector<std::vector<int16_t>>> _SingleEntryPerSynapseInt16
     GENPYBIND(opaque(false));
-typedef TimedData<std::vector<std::vector<uint16_t>>> _SingleEntryPerSynapseUInt16
+typedef signal_flow::TimedData<std::vector<std::vector<uint16_t>>> _SingleEntryPerSynapseUInt16
     GENPYBIND(opaque(false));
-typedef TimedData<std::vector<int8_t>> _ArrayEntryInt8 GENPYBIND(opaque(false));
-typedef TimedData<std::vector<uint8_t>> _ArrayEntryUInt8 GENPYBIND(opaque(false));
-typedef TimedData<std::vector<int16_t>> _ArrayEntryInt16 GENPYBIND(opaque(false));
-typedef TimedData<std::vector<uint16_t>> _ArrayEntryUInt16 GENPYBIND(opaque(false));
+typedef signal_flow::TimedData<std::vector<int8_t>> _ArrayEntryInt8 GENPYBIND(opaque(false));
+typedef signal_flow::TimedData<std::vector<uint8_t>> _ArrayEntryUInt8 GENPYBIND(opaque(false));
+typedef signal_flow::TimedData<std::vector<int16_t>> _ArrayEntryInt16 GENPYBIND(opaque(false));
+typedef signal_flow::TimedData<std::vector<uint16_t>> _ArrayEntryUInt16 GENPYBIND(opaque(false));
 
-typedef TimedData<std::vector<
+typedef signal_flow::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<int8_t>>>>
     _SingleEntryPerNeuronInt8 GENPYBIND(opaque(false));
-typedef TimedData<std::vector<
+typedef signal_flow::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint8_t>>>>
     _SingleEntryPerNeuronUInt8 GENPYBIND(opaque(false));
-typedef TimedData<std::vector<
+typedef signal_flow::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<int16_t>>>>
     _SingleEntryPerNeuronInt16 GENPYBIND(opaque(false));
-typedef TimedData<std::vector<
+typedef signal_flow::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint16_t>>>>
     _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false));
 

@@ -1,7 +1,7 @@
 #pragma once
-#include "grenade/vx/event.h"
+#include "grenade/vx/signal_flow/event.h"
 
-namespace grenade::vx {
+namespace grenade::vx::signal_flow {
 
 template <typename T>
 TimedData<T>::TimedData(
@@ -23,4 +23,4 @@ bool TimedData<T>::operator!=(TimedData const& other) const
 	return !(*this == other);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

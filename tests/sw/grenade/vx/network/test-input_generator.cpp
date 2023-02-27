@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/event.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/signal_flow/event.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "haldls/vx/v3/event.h"
 
 using namespace grenade::vx;
@@ -43,40 +43,47 @@ TEST(network_InputGenerator, General)
 	InputGenerator generator(network_graph, batch_size);
 
 	// we expect this in every batch for every spike label
-	std::vector<TimedSpike::Time> times_broadcasted_over_neurons_and_batches{
-	    TimedSpike::Time(0),
-	    TimedSpike::Time(10),
-	    TimedSpike::Time(20),
-	    TimedSpike::Time(30),
+	std::vector<signal_flow::TimedSpike::Time> times_broadcasted_over_neurons_and_batches{
+	    signal_flow::TimedSpike::Time(0),
+	    signal_flow::TimedSpike::Time(10),
+	    signal_flow::TimedSpike::Time(20),
+	    signal_flow::TimedSpike::Time(30),
 	};
 
 	// we expect this in every batch
-	std::vector<std::vector<TimedSpike::Time>> times_broadcasted_over_batches{
+	std::vector<std::vector<signal_flow::TimedSpike::Time>> times_broadcasted_over_batches{
 	    {
-	        TimedSpike::Time(1),
-	        TimedSpike::Time(11),
-	        TimedSpike::Time(21),
-	        TimedSpike::Time(31),
+	        signal_flow::TimedSpike::Time(1),
+	        signal_flow::TimedSpike::Time(11),
+	        signal_flow::TimedSpike::Time(21),
+	        signal_flow::TimedSpike::Time(31),
 	    },
 	    {
-	        TimedSpike::Time(2),
-	        TimedSpike::Time(12),
-	        TimedSpike::Time(22),
-	        TimedSpike::Time(32),
+	        signal_flow::TimedSpike::Time(2),
+	        signal_flow::TimedSpike::Time(12),
+	        signal_flow::TimedSpike::Time(22),
+	        signal_flow::TimedSpike::Time(32),
 	    },
 	    {
-	        TimedSpike::Time(42), // should not be included since source is not connected
-	        TimedSpike::Time(42),
-	        TimedSpike::Time(42),
-	        TimedSpike::Time(42),
+	        signal_flow::TimedSpike::Time(
+	            42), // should not be included since source is not connected
+	        signal_flow::TimedSpike::Time(42),
+	        signal_flow::TimedSpike::Time(42),
+	        signal_flow::TimedSpike::Time(42),
 	    },
 	};
 
 	// we expect one of these in each batch
-	std::vector<std::vector<std::vector<TimedSpike::Time>>> times_not_broadcasted{
-	    {{TimedSpike::Time(3)}, {TimedSpike::Time(4)}, {TimedSpike::Time(42)}},
-	    {{TimedSpike::Time(5)}, {TimedSpike::Time(6)}, {TimedSpike::Time(42)}},
-	    {{TimedSpike::Time(7)}, {TimedSpike::Time(8)}, {TimedSpike::Time(42)}},
+	std::vector<std::vector<std::vector<signal_flow::TimedSpike::Time>>> times_not_broadcasted{
+	    {{signal_flow::TimedSpike::Time(3)},
+	     {signal_flow::TimedSpike::Time(4)},
+	     {signal_flow::TimedSpike::Time(42)}},
+	    {{signal_flow::TimedSpike::Time(5)},
+	     {signal_flow::TimedSpike::Time(6)},
+	     {signal_flow::TimedSpike::Time(42)}},
+	    {{signal_flow::TimedSpike::Time(7)},
+	     {signal_flow::TimedSpike::Time(8)},
+	     {signal_flow::TimedSpike::Time(42)}},
 	};
 
 	// select which to add by index
@@ -97,14 +104,14 @@ TEST(network_InputGenerator, General)
 		for (auto const& i : range) {
 			add(i);
 		}
-		IODataMap const data = generator.done();
+		signal_flow::IODataMap const data = generator.done();
 
 		EXPECT_EQ(data.batch_size(), batch_size);
 		EXPECT_TRUE(network_graph.get_event_input_vertex());
 		EXPECT_TRUE(data.data.contains(*network_graph.get_event_input_vertex()));
-		EXPECT_TRUE(std::holds_alternative<std::vector<TimedSpikeSequence>>(
+		EXPECT_TRUE(std::holds_alternative<std::vector<signal_flow::TimedSpikeSequence>>(
 		    data.data.at(*network_graph.get_event_input_vertex())));
-		auto const& spikes = std::get<std::vector<TimedSpikeSequence>>(
+		auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeSequence>>(
 		    data.data.at(*network_graph.get_event_input_vertex()));
 		EXPECT_EQ(spikes.size(), batch_size);
 
@@ -114,120 +121,174 @@ TEST(network_InputGenerator, General)
 		assert(network_graph.get_spike_labels().at(PopulationDescriptor(0)).at(1).at(0));
 		auto const spike_label_1 =
 		    *(network_graph.get_spike_labels().at(PopulationDescriptor(0)).at(1).at(0));
-		std::vector<TimedSpikeSequence> expectation{
+		std::vector<signal_flow::TimedSpikeSequence> expectation{
 		    {
-		        TimedSpike(
-		            TimedSpike::Time(0), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(0), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(1), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(2), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(3), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(4), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(10), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(10), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(11), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(12), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(20), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(20), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(21), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(22), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(30), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(30), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(31), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(32), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(0),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(0),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(1),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(2),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(3),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(4),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(10),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(10),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(11),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(12),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(20),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(20),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(21),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(22),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(30),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(30),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(31),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(32),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
 		    },
 		    {
-		        TimedSpike(
-		            TimedSpike::Time(0), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(0), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(1), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(2), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(5), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(6), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(10), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(10), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(11), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(12), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(20), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(20), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(21), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(22), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(30), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(30), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(31), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(32), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(0),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(0),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(1),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(2),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(5),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(6),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(10),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(10),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(11),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(12),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(20),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(20),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(21),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(22),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(30),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(30),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(31),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(32),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
 		    },
 		    {
-		        TimedSpike(
-		            TimedSpike::Time(0), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(0), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(1), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(2), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(7), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(8), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(10), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(10), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(11), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(12), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(20), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(20), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(21), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(22), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(30), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(30), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
-		        TimedSpike(
-		            TimedSpike::Time(31), TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
-		        TimedSpike(
-		            TimedSpike::Time(32), TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(0),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(0),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(1),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(2),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(7),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(8),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(10),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(10),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(11),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(12),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(20),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(20),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(21),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(22),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(30),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(30),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(31),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_0}))),
+		        signal_flow::TimedSpike(
+		            signal_flow::TimedSpike::Time(32),
+		            signal_flow::TimedSpike::Payload(SpikePack1ToChip({spike_label_1}))),
 		    },
 		};
 

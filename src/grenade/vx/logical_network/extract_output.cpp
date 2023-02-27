@@ -9,7 +9,7 @@ std::vector<std::map<
     std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<haldls::vx::v3::ChipTime>>>
 extract_neuron_spikes(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph)
 {
@@ -68,7 +68,7 @@ extract_neuron_spikes(
 std::vector<
     std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& /* network_graph */,
     network::NetworkGraph const& hardware_network_graph)
 {
@@ -82,9 +82,9 @@ std::vector<std::vector<std::tuple<
     size_t,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
     size_t,
-    Int8>>>
+    signal_flow::Int8>>>
 extract_cadc_samples(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph)
 {
@@ -92,7 +92,7 @@ extract_cadc_samples(
 
 	std::vector<std::vector<std::tuple<
 	    haldls::vx::v3::ChipTime, PopulationDescriptor, size_t,
-	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t, Int8>>>
+	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t, signal_flow::Int8>>>
 	    ret(hardware_samples.size());
 
 	std::map<
@@ -146,40 +146,37 @@ void extract_plasticity_rule_recording_data_per_synapse(
     size_t const batch_size,
     size_t const hardware_index,
     size_t const index,
-    std::vector<TimedDataSequence<std::vector<T>>> const& local_hardware_data)
+    std::vector<signal_flow::TimedDataSequence<std::vector<T>>> const& local_signal_flow)
 {
 	if (!local_logical_data.contains(descriptor)) {
-		std::vector<TimedDataSequence<std::vector<std::vector<T>>>> logical_local_hardware_data(
-		    batch_size);
-		for (auto& batch : logical_local_hardware_data) {
+		std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<T>>>>
+		    logical_local_signal_flow(batch_size);
+		for (auto& batch : logical_local_signal_flow) {
 			batch.resize(num_periods);
 			for (auto& sample : batch) {
 				sample.data.resize(
 				    network_graph.get_network()->projections.at(descriptor).connections.size());
 			}
-			for (size_t b = 0; b < local_hardware_data.size(); ++b) {
-				for (size_t s = 0; s < local_hardware_data.at(b).size(); ++s) {
-					auto& local_logical_local_hardware_data =
-					    logical_local_hardware_data.at(b).at(s);
-					auto& local_local_hardware_data = local_hardware_data.at(b).at(s);
-					local_logical_local_hardware_data.chip_time =
-					    local_local_hardware_data.chip_time;
-					local_logical_local_hardware_data.fpga_time =
-					    local_local_hardware_data.fpga_time;
+			for (size_t b = 0; b < local_signal_flow.size(); ++b) {
+				for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
+					auto& local_logical_local_signal_flow = logical_local_signal_flow.at(b).at(s);
+					auto& local_local_signal_flow = local_signal_flow.at(b).at(s);
+					local_logical_local_signal_flow.chip_time = local_local_signal_flow.chip_time;
+					local_logical_local_signal_flow.fpga_time = local_local_signal_flow.fpga_time;
 				}
 			}
 		}
-		local_logical_data[descriptor] = logical_local_hardware_data;
+		local_logical_data[descriptor] = logical_local_signal_flow;
 	}
-	auto& logical_local_hardware_data =
-	    std::get<std::vector<TimedDataSequence<std::vector<std::vector<T>>>>>(
+	auto& logical_local_signal_flow =
+	    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<T>>>>>(
 	        local_logical_data.at(descriptor));
-	for (size_t b = 0; b < local_hardware_data.size(); ++b) {
-		for (size_t s = 0; s < local_hardware_data.at(b).size(); ++s) {
-			auto& local_logical_local_hardware_data = logical_local_hardware_data.at(b).at(s);
-			auto& local_local_hardware_data = local_hardware_data.at(b).at(s);
-			local_logical_local_hardware_data.data.at(index).push_back(
-			    local_local_hardware_data.data.at(hardware_index));
+	for (size_t b = 0; b < local_signal_flow.size(); ++b) {
+		for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
+			auto& local_logical_local_signal_flow = logical_local_signal_flow.at(b).at(s);
+			auto& local_local_signal_flow = local_signal_flow.at(b).at(s);
+			local_logical_local_signal_flow.data.at(index).push_back(
+			    local_local_signal_flow.data.at(hardware_index));
 		}
 	}
 }
@@ -194,12 +191,12 @@ void extract_plasticity_rule_recording_data_per_neuron(
     std::vector<
         std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<size_t>>> const&
         neuron_translation,
-    std::vector<TimedDataSequence<std::vector<T>>> const& dd)
+    std::vector<signal_flow::TimedDataSequence<std::vector<T>>> const& dd)
 {
 	if (!local_logical_data.contains(descriptor)) {
 		// dimension (outer to inner): batch, time, neuron_on_population, compartment_on_neuron,
 		// atomic_neuron_on_compartment
-		std::vector<TimedDataSequence<std::vector<
+		std::vector<signal_flow::TimedDataSequence<std::vector<
 		    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>
 		    logical_dd(batch_size);
 		for (auto& batch : logical_dd) {
@@ -218,7 +215,7 @@ void extract_plasticity_rule_recording_data_per_neuron(
 		}
 		local_logical_data[descriptor] = logical_dd;
 	}
-	auto& logical_dd = std::get<std::vector<TimedDataSequence<std::vector<
+	auto& logical_dd = std::get<std::vector<signal_flow::TimedDataSequence<std::vector<
 	    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>>(
 	    local_logical_data.at(descriptor));
 	for (size_t b = 0; b < dd.size(); ++b) {
@@ -242,12 +239,12 @@ void extract_plasticity_rule_recording_data_per_neuron(
 } // namespace
 
 PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph,
     PlasticityRuleDescriptor descriptor)
 {
-	auto const hardware_data = network::extract_plasticity_rule_recording_data(
+	auto const signal_flow = network::extract_plasticity_rule_recording_data(
 	    data, hardware_network_graph,
 	    network_graph.get_plasticity_rule_translation().at(descriptor));
 
@@ -313,7 +310,7 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 		        return logical_data;
 	        };
 
-	return std::visit(hate::overloaded{convert_raw, convert_timed}, hardware_data);
+	return std::visit(hate::overloaded{convert_raw, convert_timed}, signal_flow);
 }
 
 } // namespace grenade::vx::logical_network

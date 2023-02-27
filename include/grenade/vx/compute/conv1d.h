@@ -3,7 +3,7 @@
 #include <gtest/gtest_prod.h>
 
 #include "grenade/vx/compute/mac.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "haldls/vx/v3/timer.h"
 
 namespace cereal {
@@ -36,7 +36,7 @@ public:
 	typedef std::vector<std::vector<std::vector<Weight>>> Weights;
 	/** Activations with batch as outer dimension and (in_channels, values) in row-major as inner
 	 * dimension. */
-	typedef std::vector<std::vector<UInt5>> Activations;
+	typedef std::vector<std::vector<signal_flow::UInt5>> Activations;
 
 	Conv1d() = default;
 
@@ -65,7 +65,7 @@ public:
 	 * @param executor Executor backend to use
 	 * @return Resulting accumulated membrane potentials
 	 */
-	std::vector<std::vector<Int8>> run(
+	std::vector<std::vector<signal_flow::Int8>> run(
 	    Activations const& inputs,
 	    lola::vx::v3::Chip const& config,
 	    execution::JITGraphExecutor& executor) const SYMBOL_VISIBLE;

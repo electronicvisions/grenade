@@ -56,7 +56,7 @@ private:
 	 */
 	static std::optional<halco::hicann_dls::vx::v3::SpikeLabel> get_spike_label(
 	    halco::hicann_dls::vx::v3::SynapseDriverOnDLS const& driver,
-	    UInt5 const value) SYMBOL_VISIBLE;
+	    signal_flow::UInt5 const value) SYMBOL_VISIBLE;
 
 	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    m_hemisphere_sizes;

@@ -11,4 +11,4 @@ It therrefore selects which atomic neurons of the compartments to connect and th
 The `NetworkGraph` then contains the original `Network` as well as the routed `network::Network`.
 This can then be used further as described in the `network` namespace.
 
-Spike-trains to the `ExternalPopulation`s in the network are supplied to an `InputGenerator` builder-pattern, which transforms the supplied spike-trains to the raw `IODataMap` format required by `run()`.
+Spike-trains to the `ExternalPopulation`s in the network are supplied to an `InputGenerator` builder-pattern, which transforms the supplied spike-trains to the raw `signal_flow::IODataMap` format required by `run()`.

@@ -1,6 +1,6 @@
-#include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 
-namespace grenade::vx {
+namespace grenade::vx::signal_flow {
 
 IODataMap::IODataMap() :
     data(), runtime(), execution_time_info(), mutex(std::make_unique<std::mutex>())
@@ -110,9 +110,9 @@ bool IODataMap::is_match(Entry const& entry, signal_flow::Port const& port)
 	auto const check_shape = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
-		    std::vector<TimedDataSequence<std::vector<UInt32>>>,
-		    std::vector<TimedDataSequence<std::vector<UInt5>>>,
-		    std::vector<TimedDataSequence<std::vector<Int8>>>>
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>,
+		    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>
 		    MatrixData;
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			if (!d.empty()) {
@@ -130,51 +130,57 @@ bool IODataMap::is_match(Entry const& entry, signal_flow::Port const& port)
 	}
 
 	if ((port.type == signal_flow::ConnectionType::DataUInt32) &&
-	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt32>>>>(entry)) {
+	    !std::holds_alternative<
+	        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::DataUInt5) &&
-	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt5>>>>(entry)) {
+	    !std::holds_alternative<
+	        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::DataInt8) &&
-	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<Int8>>>>(entry)) {
+	    !std::holds_alternative<
+	        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::DataTimedSpikeSequence) &&
-	    !std::holds_alternative<std::vector<TimedSpikeSequence>>(entry)) {
+	    !std::holds_alternative<std::vector<signal_flow::TimedSpikeSequence>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::DataTimedSpikeFromChipSequence) &&
-	    !std::holds_alternative<std::vector<TimedSpikeFromChipSequence>>(entry)) {
+	    !std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::DataTimedMADCSampleFromChipSequence) &&
-	    !std::holds_alternative<std::vector<TimedMADCSampleFromChipSequence>>(entry)) {
+	    !std::holds_alternative<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::UInt32) &&
-	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt32>>>>(entry)) {
+	    !std::holds_alternative<
+	        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::UInt5) &&
-	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<UInt5>>>>(entry)) {
+	    !std::holds_alternative<
+	        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::Int8) &&
-	    !std::holds_alternative<std::vector<TimedDataSequence<std::vector<Int8>>>>(entry)) {
+	    !std::holds_alternative<
+	        std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::TimedSpikeSequence) &&
-	    !std::holds_alternative<std::vector<TimedSpikeSequence>>(entry)) {
+	    !std::holds_alternative<std::vector<signal_flow::TimedSpikeSequence>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::TimedSpikeFromChipSequence) &&
-	    !std::holds_alternative<std::vector<TimedSpikeFromChipSequence>>(entry)) {
+	    !std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(entry)) {
 		return false;
 	} else if (
 	    (port.type == signal_flow::ConnectionType::TimedMADCSampleFromChipSequence) &&
-	    !std::holds_alternative<std::vector<TimedMADCSampleFromChipSequence>>(entry)) {
+	    !std::holds_alternative<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(entry)) {
 		return false;
 	}
 	return true;
@@ -189,4 +195,4 @@ void ConstantReferenceIODataMap::clear()
 	runtime.clear();
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow

@@ -43,31 +43,34 @@ TEST(Concatenation, General)
 	constexpr size_t batch_size = 2;
 	std::vector<Concatenation::Value> value(3);
 	{
-		std::vector<TimedDataSequence<std::vector<UInt32>>> values(batch_size);
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
+		    batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
-			v.at(0).data.resize(12, UInt32(123 + i));
+			v.at(0).data.resize(12, signal_flow::UInt32(123 + i));
 			i++;
 		}
 		value.at(0) = values;
 	}
 	{
-		std::vector<TimedDataSequence<std::vector<UInt32>>> values(batch_size);
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
+		    batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
-			v.at(0).data.resize(16, UInt32(456 + i));
+			v.at(0).data.resize(16, signal_flow::UInt32(456 + i));
 			i++;
 		}
 		value.at(1) = values;
 	}
 	{
-		std::vector<TimedDataSequence<std::vector<UInt32>>> values(batch_size);
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
+		    batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
-			v.at(0).data.resize(5, UInt32(789 + i));
+			v.at(0).data.resize(5, signal_flow::UInt32(789 + i));
 			i++;
 		}
 		value.at(2) = values;
@@ -75,13 +78,14 @@ TEST(Concatenation, General)
 
 	Concatenation::Value expectation;
 	{
-		std::vector<TimedDataSequence<std::vector<UInt32>>> values(batch_size);
+		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
+		    batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
-			v.at(0).data.insert(v.at(0).data.end(), 12, UInt32(123 + i));
-			v.at(0).data.insert(v.at(0).data.end(), 16, UInt32(456 + i));
-			v.at(0).data.insert(v.at(0).data.end(), 5, UInt32(789 + i));
+			v.at(0).data.insert(v.at(0).data.end(), 12, signal_flow::UInt32(123 + i));
+			v.at(0).data.insert(v.at(0).data.end(), 16, signal_flow::UInt32(456 + i));
+			v.at(0).data.insert(v.at(0).data.end(), 5, signal_flow::UInt32(789 + i));
 			i++;
 		}
 		expectation = values;

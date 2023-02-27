@@ -1,7 +1,7 @@
 #include "grenade/vx/network/plasticity_rule_generator.h"
 
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/common/iter_all.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"

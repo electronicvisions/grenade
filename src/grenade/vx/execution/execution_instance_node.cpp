@@ -56,14 +56,14 @@ bool contains_capmem(std::vector<halco::hicann_dls::vx::OmnibusAddress> const& a
 } // namespace
 
 ExecutionInstanceNode::ExecutionInstanceNode(
-    IODataMap& data_map,
-    IODataMap const& input_data_map,
+    signal_flow::IODataMap& data_map,
+    signal_flow::IODataMap const& input_data_map,
     signal_flow::Graph const& graph,
     signal_flow::ExecutionInstance const& execution_instance,
     lola::vx::v3::Chip const& initial_config,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,
-    ExecutionInstancePlaybackHooks& playback_hooks) :
+    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) :
     data_map(data_map),
     input_data_map(input_data_map),
     graph(graph),

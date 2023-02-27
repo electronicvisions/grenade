@@ -14,7 +14,7 @@ struct access;
 namespace grenade::vx::signal_flow::vertex {
 
 /**
- * ConvertingReLU of multiple inputs from Int8 to UInt5.
+ * ConvertingReLU of multiple inputs from signal_flow::Int8 to signal_flow::UInt5.
  */
 struct ConvertingReLU
 {

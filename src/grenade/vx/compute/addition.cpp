@@ -2,16 +2,16 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/common/cerealization_geometry.h"
 #include <cereal/types/vector.hpp>
 
 namespace grenade::vx::compute {
 
-Addition::Addition(std::vector<Int8> const& other) :
+Addition::Addition(std::vector<signal_flow::Int8> const& other) :
     m_graph(), m_input_vertex(), m_other_vertex(), m_output_vertex(), m_other(other)
 {
 	using namespace halco::hicann_dls::vx;
@@ -47,8 +47,8 @@ size_t Addition::output_size() const
 	return input_size();
 }
 
-std::vector<std::vector<Int8>> Addition::run(
-    std::vector<std::vector<Int8>> const& inputs,
+std::vector<std::vector<signal_flow::Int8>> Addition::run(
+    std::vector<std::vector<signal_flow::Int8>> const& inputs,
     lola::vx::v3::Chip const& config,
     execution::JITGraphExecutor& executor) const
 {
@@ -76,15 +76,17 @@ std::vector<std::vector<Int8>> Addition::run(
 		throw std::runtime_error("Provided inputs size does not match Addition input size.");
 	}
 
-	IODataMap input_map;
-	std::vector<TimedDataSequence<std::vector<Int8>>> timed_inputs(inputs.size());
+	signal_flow::IODataMap input_map;
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> timed_inputs(
+	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		timed_inputs.at(i).resize(1);
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
 	input_map.data[m_input_vertex] = timed_inputs;
 
-	std::vector<TimedDataSequence<std::vector<Int8>>> others(inputs.size());
+	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> others(
+	    inputs.size());
 	for (auto& o : others) {
 		o.resize(1);
 		// TODO: Think about what to do with timing information
@@ -94,9 +96,10 @@ std::vector<std::vector<Int8>> Addition::run(
 
 	auto const output_map = execution::run(executor, m_graph, input_map, configs);
 
-	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(
-	    output_map.data.at(m_output_vertex));
-	std::vector<std::vector<Int8>> outputs(timed_outputs.size());
+	auto const timed_outputs =
+	    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+	        output_map.data.at(m_output_vertex));
+	std::vector<std::vector<signal_flow::Int8>> outputs(timed_outputs.size());
 	for (size_t i = 0; i < outputs.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);
 		outputs.at(i) = timed_outputs.at(i).at(0).data;

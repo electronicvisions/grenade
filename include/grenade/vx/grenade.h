@@ -1,7 +1,4 @@
 #pragma once
-#include "grenade/vx/event.h"
-#include "grenade/vx/execution_time_info.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"
@@ -16,8 +13,11 @@
 #include "grenade/vx/network/routing_options.h"
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/network/run.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 
 #include "grenade/vx/logical_network/extract_output.h"
 #include "grenade/vx/logical_network/generate_input.h"

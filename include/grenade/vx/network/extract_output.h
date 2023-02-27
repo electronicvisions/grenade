@@ -1,8 +1,8 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "haldls/vx/v3/systime.h"
 
@@ -24,7 +24,8 @@ namespace network {
  */
 std::vector<
     std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<haldls::vx::v3::ChipTime>>>
-extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
+extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+    SYMBOL_VISIBLE;
 
 
 /**
@@ -35,7 +36,8 @@ extract_neuron_spikes(IODataMap const& data, NetworkGraph const& network_graph) 
  */
 std::vector<
     std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
-extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
+extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+    SYMBOL_VISIBLE;
 
 
 /**
@@ -45,9 +47,12 @@ extract_madc_samples(IODataMap const& data, NetworkGraph const& network_graph) S
  * @return Time-series CADC sample data per batch entry. Samples are sorted by their ChipTime per
  * batch-entry and contain their corresponding AtomicNeuronOnDLS location alongside the ADC value.
  */
-std::vector<std::vector<
-    std::tuple<haldls::vx::v3::ChipTime, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, Int8>>>
-extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph) SYMBOL_VISIBLE;
+std::vector<std::vector<std::tuple<
+    haldls::vx::v3::ChipTime,
+    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
+    signal_flow::Int8>>>
+extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+    SYMBOL_VISIBLE;
 
 
 /**
@@ -58,7 +63,7 @@ extract_cadc_samples(IODataMap const& data, NetworkGraph const& network_graph) S
  * @return Observable data per batch entry
  */
 PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;
 
@@ -71,11 +76,12 @@ PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recordi
 GENPYBIND_MANUAL({
 	auto const convert_ms = [](auto const t) {
 		return static_cast<float>(t) / 1000. /
-		       static_cast<float>(grenade::vx::TimedSpike::Time::fpga_clock_cycles_per_us);
+		       static_cast<float>(
+		           grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us);
 	};
 	auto const extract_neuron_spikes =
 	    [convert_ms](
-	        grenade::vx::IODataMap const& data,
+	        grenade::vx::signal_flow::IODataMap const& data,
 	        grenade::vx::network::NetworkGraph const& network_graph) {
 		    hate::Timer timer;
 		    auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_neuron_spikes");
@@ -94,7 +100,7 @@ GENPYBIND_MANUAL({
 		    return ret;
 	    };
 	auto const extract_madc_samples = [convert_ms](
-	                                      grenade::vx::IODataMap const& data,
+	                                      grenade::vx::signal_flow::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		hate::Timer timer;
 		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
@@ -116,7 +122,7 @@ GENPYBIND_MANUAL({
 		return ret;
 	};
 	auto const extract_cadc_samples = [convert_ms](
-	                                      grenade::vx::IODataMap const& data,
+	                                      grenade::vx::signal_flow::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		hate::Timer timer;
 		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_cadc_samples");

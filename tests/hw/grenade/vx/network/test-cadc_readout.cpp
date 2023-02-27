@@ -11,7 +11,7 @@
 #include "grenade/vx/network/routing_builder.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/types.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/timer.h"
@@ -128,7 +128,7 @@ TEST(CADCRecording, General)
 	auto const routing_result = grenade::vx::network::build_routing(network);
 	auto const network_graph = grenade::vx::network::build_network_graph(network, routing_result);
 
-	grenade::vx::IODataMap inputs;
+	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 100));
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 150));
 
@@ -138,12 +138,12 @@ TEST(CADCRecording, General)
 
 	assert(network_graph.get_cadc_sample_output_vertex().size());
 	EXPECT_EQ(network_graph.get_cadc_sample_output_vertex().size(), 1);
-	auto const result =
-	    std::get<std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::Int8>>>>(
-	        result_map.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
+	auto const result = std::get<std::vector<
+	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	    result_map.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
-	std::set<grenade::vx::Int8> unique_values;
+	std::set<grenade::vx::signal_flow::Int8> unique_values;
 	for (size_t i = 0; i < result.size(); ++i) {
 		auto const& samples = result.at(i);
 		for (auto const& sample : samples) {

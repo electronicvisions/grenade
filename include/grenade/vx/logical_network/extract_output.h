@@ -1,8 +1,8 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/io_data_map.h"
 #include "grenade/vx/logical_network/network_graph.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "haldls/vx/v3/systime.h"
 #include <map>
@@ -25,7 +25,7 @@ std::vector<std::map<
     std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<haldls::vx::v3::ChipTime>>>
 extract_neuron_spikes(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
 
@@ -40,7 +40,7 @@ extract_neuron_spikes(
 std::vector<
     std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
 
@@ -59,9 +59,9 @@ std::vector<std::vector<std::tuple<
     size_t,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
     size_t,
-    Int8>>>
+    signal_flow::Int8>>>
 extract_cadc_samples(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
 
@@ -75,7 +75,7 @@ extract_cadc_samples(
  * @return Observable data per batch entry
  */
 PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
-    IODataMap const& data,
+    signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
     network::NetworkGraph const& hardware_network_graph,
     PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;

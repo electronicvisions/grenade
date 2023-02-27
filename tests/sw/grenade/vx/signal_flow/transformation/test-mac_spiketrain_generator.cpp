@@ -2,7 +2,7 @@
 
 #include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
 
-#include "grenade/vx/io_data_map.h"
+#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "haldls/vx/v3/event.h"
@@ -26,7 +26,7 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 	{
 		SynapseDriverOnSynapseDriverBlock local_drv(8);
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
-		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
+		grenade::vx::signal_flow::UInt5 value(grenade::vx::signal_flow::UInt5::max);
 
 		auto const label =
 		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
@@ -37,7 +37,7 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 	{ // bottom hemisphere
 		SynapseDriverOnSynapseDriverBlock local_drv(8);
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::bottom);
-		grenade::vx::UInt5 value(grenade::vx::UInt5::max);
+		grenade::vx::signal_flow::UInt5 value(grenade::vx::signal_flow::UInt5::max);
 
 		auto const label =
 		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
@@ -48,7 +48,7 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 	{ // value == 13
 		SynapseDriverOnSynapseDriverBlock local_drv(24);
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
-		grenade::vx::UInt5 value(13);
+		grenade::vx::signal_flow::UInt5 value(13);
 
 		auto const label =
 		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
@@ -59,7 +59,7 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 	{ // value == 0
 		SynapseDriverOnSynapseDriverBlock local_drv(24);
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
-		grenade::vx::UInt5 value(0);
+		grenade::vx::signal_flow::UInt5 value(0);
 
 		auto const label =
 		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
@@ -72,17 +72,22 @@ TEST(MACSpikeTrainGenerator, apply)
 {
 	size_t hemisphere_size_top = 10;
 	size_t hemisphere_size_bot = 13;
-	std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::UInt5>>> activations_top(1);
-	std::vector<grenade::vx::TimedDataSequence<std::vector<grenade::vx::UInt5>>> activations_bot(1);
+	std::vector<
+	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::UInt5>>>
+	    activations_top(1);
+	std::vector<
+	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::UInt5>>>
+	    activations_bot(1);
 	activations_top.at(0).resize(1);
 	activations_bot.at(0).resize(1);
 	activations_top.at(0).at(0).data.resize(hemisphere_size_top);
 	activations_bot.at(0).at(0).data.resize(hemisphere_size_bot);
 	for (size_t i = 0; i < activations_top.at(0).at(0).data.size(); ++i) {
-		activations_top.at(0).at(0).data.at(i) = grenade::vx::UInt5(i);
+		activations_top.at(0).at(0).data.at(i) = grenade::vx::signal_flow::UInt5(i);
 	}
 	for (size_t i = 0; i < activations_bot.at(0).at(0).data.size(); ++i) {
-		activations_bot.at(0).at(0).data.at(i) = grenade::vx::UInt5(i + hemisphere_size_top);
+		activations_bot.at(0).at(0).data.at(i) =
+		    grenade::vx::signal_flow::UInt5(i + hemisphere_size_top);
 	}
 
 	size_t num_sends = 2;
@@ -94,8 +99,10 @@ TEST(MACSpikeTrainGenerator, apply)
 	    activations_top, activations_bot};
 	auto const events = generator.apply(inputs);
 
-	EXPECT_TRUE(std::holds_alternative<std::vector<grenade::vx::TimedSpikeSequence>>(events));
-	auto const& vevents = std::get<std::vector<grenade::vx::TimedSpikeSequence>>(events);
+	EXPECT_TRUE(
+	    std::holds_alternative<std::vector<grenade::vx::signal_flow::TimedSpikeSequence>>(events));
+	auto const& vevents =
+	    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeSequence>>(events);
 	EXPECT_EQ(vevents.size(), 1);
 
 	auto const spikes = vevents.at(0);
