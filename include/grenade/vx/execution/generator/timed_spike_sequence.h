@@ -4,7 +4,7 @@
 #include "hate/visibility.h"
 #include "stadls/vx/v3/playback_generator.h"
 
-namespace grenade::vx::generator {
+namespace grenade::vx::execution::generator {
 
 /**
  * Generator for a playback program snippet from a timed spike sequence.
@@ -26,4 +26,4 @@ private:
 	grenade::vx::TimedSpikeSequence const& m_values;
 };
 
-} // namespace grenade::vx::generator
+} // namespace grenade::vx::execution::generator

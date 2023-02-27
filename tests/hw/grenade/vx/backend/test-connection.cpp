@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "stadls/vx/v3/init_generator.h"
 
@@ -12,7 +12,7 @@ TEST(Connection, General)
 		hxcomm_unique_identifier =
 		    std::visit([](auto const& c) { return c.get_unique_identifier(); }, hxcomm_connection);
 
-		grenade::vx::backend::Connection connection(std::move(hxcomm_connection));
+		grenade::vx::execution::backend::Connection connection(std::move(hxcomm_connection));
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
 
 		auto released_hxcomm_connection = std::move(connection.release());
@@ -22,7 +22,7 @@ TEST(Connection, General)
 	}
 
 	{
-		grenade::vx::backend::Connection connection;
+		grenade::vx::execution::backend::Connection connection;
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
 
 		auto const time_info_first = connection.get_time_info();
@@ -33,7 +33,7 @@ TEST(Connection, General)
 		EXPECT_GE(time_info_second.execution_duration, time_info_first.execution_duration);
 	}
 	{
-		grenade::vx::backend::Connection connection(
+		grenade::vx::execution::backend::Connection connection(
 		    hxcomm::vx::get_connection_from_env(), stadls::vx::v3::DigitalInit());
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
 	}

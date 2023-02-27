@@ -1,8 +1,8 @@
 #include "grenade/vx/compute/converting_relu.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
@@ -30,11 +30,11 @@ ConvertingReLU::ConvertingReLU(size_t size, uint32_t shift) :
 std::vector<std::vector<UInt5>> ConvertingReLU::run(
     std::vector<std::vector<Int8>> const& inputs,
     lola::vx::v3::Chip const& config,
-    JITGraphExecutor& executor) const
+    execution::JITGraphExecutor& executor) const
 {
 	using namespace halco::hicann_dls::vx;
 
-	JITGraphExecutor::ChipConfigs configs;
+	execution::JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
 	    signal_flow::ExecutionInstance(), config));
 
@@ -62,7 +62,7 @@ std::vector<std::vector<UInt5>> ConvertingReLU::run(
 	}
 	input_map.data[m_input_vertex] = timed_inputs;
 
-	auto const output_map = grenade::vx::run(executor, m_graph, input_map, configs);
+	auto const output_map = execution::run(executor, m_graph, input_map, configs);
 
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<UInt5>>>>(
 	    output_map.data.at(m_output_vertex));

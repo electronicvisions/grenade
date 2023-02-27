@@ -4,8 +4,8 @@
 #include "grenade/vx/compute/detail/range_split.h"
 #include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 #include "grenade/vx/event.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
@@ -380,7 +380,9 @@ size_t MAC::output_size() const
 }
 
 std::vector<std::vector<Int8>> MAC::run(
-    Activations const& inputs, lola::vx::v3::Chip const& config, JITGraphExecutor& executor) const
+    Activations const& inputs,
+    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor& executor) const
 {
 	using namespace halco::hicann_dls::vx::v3;
 	auto logger = log4cxx::Logger::getLogger("grenade.MAC");
@@ -413,14 +415,13 @@ std::vector<std::vector<Int8>> MAC::run(
 	input_list.data[m_input_vertex] = timed_inputs;
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
-	JITGraphExecutor::ChipConfigs chip_configs;
+	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	for (auto const& [_, execution_instance] : m_graph.get_execution_instance_map()) {
 		chip_configs.emplace(execution_instance, config);
 	}
 
 	// run Graph with given inputs and return results
-	auto const output_activation_map =
-	    grenade::vx::run(executor, m_graph, input_list, chip_configs);
+	auto const output_activation_map = execution::run(executor, m_graph, input_list, chip_configs);
 
 	hate::Timer output_timer;
 	auto const timed_outputs = std::get<std::vector<TimedDataSequence<std::vector<Int8>>>>(

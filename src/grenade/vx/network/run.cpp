@@ -1,7 +1,7 @@
 #include "grenade/vx/network/run.h"
 
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 
@@ -20,7 +20,7 @@ IODataMap run(
 }
 
 IODataMap run(
-    backend::Connection& connection,
+    execution::backend::Connection& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs)
@@ -30,7 +30,7 @@ IODataMap run(
 }
 
 IODataMap run(
-    JITGraphExecutor& executor,
+    execution::JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs)
@@ -40,37 +40,37 @@ IODataMap run(
 }
 
 IODataMap run(
-    JITGraphExecutor& executor,
+    execution::JITGraphExecutor& executor,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
-	JITGraphExecutor::ChipConfigs configs;
+	execution::JITGraphExecutor::ChipConfigs configs;
 	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
 	    signal_flow::ExecutionInstance(), config));
 
-	JITGraphExecutor::PlaybackHooks playback_hooks_map;
+	execution::JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
 	    std::pair<signal_flow::ExecutionInstance, ExecutionInstancePlaybackHooks>(
 	        signal_flow::ExecutionInstance(), std::move(playback_hooks)));
 
 	auto ret =
-	    grenade::vx::run(executor, network_graph.get_graph(), inputs, configs, playback_hooks_map);
+	    execution::run(executor, network_graph.get_graph(), inputs, configs, playback_hooks_map);
 
 	return ret;
 }
 
 IODataMap run(
-    backend::Connection& connection,
+    execution::backend::Connection& connection,
     lola::vx::v3::Chip const& config,
     NetworkGraph const& network_graph,
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
-	std::map<DLSGlobal, backend::Connection> connections;
+	std::map<DLSGlobal, execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	JITGraphExecutor executor(std::move(connections));
+	execution::JITGraphExecutor executor(std::move(connections));
 
 	auto ret = run(executor, config, network_graph, inputs, playback_hooks);
 
@@ -85,7 +85,7 @@ IODataMap run(
     IODataMap const& inputs,
     ExecutionInstancePlaybackHooks& playback_hooks)
 {
-	backend::Connection backend_connection(std::move(connection));
+	execution::backend::Connection backend_connection(std::move(connection));
 
 	auto ret = run(backend_connection, config, network_graph, inputs, playback_hooks);
 	connection = backend_connection.release();

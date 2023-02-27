@@ -1,5 +1,5 @@
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -26,7 +26,7 @@ TEST(PlasticityRule, RawRecording)
 {
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	// build network
@@ -83,14 +83,14 @@ TEST(PlasticityRule, RawRecording)
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
-	grenade::vx::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	grenade::vx::execution::backend::Connection connection;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	assert(network_graph.get_plasticity_rule_output_vertices().size());
 	EXPECT_EQ(network_graph.get_plasticity_rule_output_vertices().size(), 1);
@@ -117,7 +117,7 @@ TEST(PlasticityRule, TimedRecording)
 {
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	grenade::vx::IODataMap inputs;
@@ -126,10 +126,10 @@ TEST(PlasticityRule, TimedRecording)
 	inputs.runtime[instance].push_back(
 	    Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 10000));
 
-	grenade::vx::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	grenade::vx::execution::backend::Connection connection;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	std::mt19937 rng(std::random_device{}());
 	constexpr size_t num = 10;
@@ -393,11 +393,11 @@ TEST(PlasticityRule, TimedRecording)
 		    grenade::vx::network::build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
-		EXPECT_NO_THROW(
-		    (grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs)));
+		EXPECT_NO_THROW((grenade::vx::execution::run(
+		    executor, network_graph.get_graph(), inputs, chip_configs)));
 
 		auto const result_map =
-		    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		auto const recording_data = grenade::vx::network::extract_plasticity_rule_recording_data(
 		    result_map, network_graph, plasticity_rule_descriptor);
@@ -528,17 +528,17 @@ TEST(PlasticityRule, ExecutorInitialState)
 
 	signal_flow::ExecutionInstance instance;
 
-	JITGraphExecutor::ChipConfigs chip_configs;
+	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	IODataMap inputs;
 	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
-	backend::Connection connection;
-	std::map<DLSGlobal, backend::Connection> connections;
+	execution::backend::Connection connection;
+	std::map<DLSGlobal, execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	JITGraphExecutor executor(std::move(connections));
+	execution::JITGraphExecutor executor(std::move(connections));
 
 	Projection::Connection::Weight weight_63(63);
 	Projection::Connection::Weight weight_32(32);
@@ -605,7 +605,8 @@ TEST(PlasticityRule, ExecutorInitialState)
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
-		auto const result_map = run(executor, network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map =
+		    execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		assert(network_graph.get_plasticity_rule_output_vertices().size());
 		assert(network_graph.get_plasticity_rule_output_vertices().contains(

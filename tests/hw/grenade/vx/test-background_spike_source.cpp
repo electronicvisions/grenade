@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
@@ -26,7 +26,7 @@ inline void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
     Timer::Value running_period,
     size_t spike_count_deviation,
-    grenade::vx::JITGraphExecutor& executor)
+    grenade::vx::execution::JITGraphExecutor& executor)
 {
 	size_t expected_count =
 	    running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ / period;
@@ -76,11 +76,11 @@ inline void test_background_spike_source_regular(
 	grenade::vx::IODataMap input_list;
 	input_list.runtime[instance].push_back(running_period);
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::run(executor, g, input_list, chip_configs);
+	auto const result_map = grenade::vx::execution::run(executor, g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 
@@ -115,10 +115,10 @@ inline void test_background_spike_source_regular(
 TEST(BackgroundSpikeSource, Regular)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	grenade::vx::execution::backend::Connection connection;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(

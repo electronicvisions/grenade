@@ -1,9 +1,9 @@
-#include "grenade/vx/execution_instance_builder.h"
+#include "grenade/vx/execution/execution_instance_builder.h"
 
-#include "grenade/vx/execution_instance_config_visitor.h"
-#include "grenade/vx/generator/madc.h"
-#include "grenade/vx/generator/ppu.h"
-#include "grenade/vx/generator/timed_spike_sequence.h"
+#include "grenade/vx/execution/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/generator/madc.h"
+#include "grenade/vx/execution/generator/ppu.h"
+#include "grenade/vx/execution/generator/timed_spike_sequence.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/extmem.h"
@@ -29,7 +29,7 @@
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 namespace {
 
@@ -1453,4 +1453,4 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	return {m_chunked_program, has_hook_around_realtime, m_has_plasticity_rule};
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

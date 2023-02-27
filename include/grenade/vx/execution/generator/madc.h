@@ -3,7 +3,7 @@
 #include "hate/visibility.h"
 #include "stadls/vx/v3/playback_generator.h"
 
-namespace grenade::vx::generator {
+namespace grenade::vx::execution::generator {
 
 /**
  * Generator for a playback program snippet from arming the MADC.
@@ -51,4 +51,4 @@ protected:
 	friend auto stadls::vx::generate<MADCStop>(MADCStop const&);
 };
 
-} // namespace grenade::vx::generator
+} // namespace grenade::vx::execution::generator

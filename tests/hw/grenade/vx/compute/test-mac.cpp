@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
 #include "grenade/build-config.h"
-#include "grenade/vx/backend/connection.h"
 #include "grenade/vx/compute/mac.h"
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/types.h"
@@ -24,7 +24,7 @@ using namespace lola::vx::v3;
 TEST(MAC, Single)
 {
 	// Construct connection to HW
-	grenade::vx::backend::Connection connection;
+	grenade::vx::execution::backend::Connection connection;
 
 	// fill graph inputs (with UInt5(0))
 	std::vector<grenade::vx::UInt5> inputs(5);
@@ -42,9 +42,9 @@ TEST(MAC, Single)
 
 	grenade::vx::compute::MAC mac(weights);
 
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 	auto const res = mac.run({inputs}, *chip, executor);
 	EXPECT_EQ(res.size(), 1);
 	EXPECT_EQ(res.at(0).size(), 1);

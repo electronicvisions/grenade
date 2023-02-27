@@ -16,7 +16,9 @@ class Chip;
 
 namespace grenade::vx {
 
+namespace execution {
 class JITGraphExecutor;
+} // namespace execution
 
 namespace compute {
 
@@ -66,7 +68,7 @@ public:
 	std::vector<std::vector<Int8>> run(
 	    Activations const& inputs,
 	    lola::vx::v3::Chip const& config,
-	    JITGraphExecutor& executor) const SYMBOL_VISIBLE;
+	    execution::JITGraphExecutor& executor) const SYMBOL_VISIBLE;
 
 	size_t input_size() const SYMBOL_VISIBLE;
 	size_t output_size() const SYMBOL_VISIBLE;

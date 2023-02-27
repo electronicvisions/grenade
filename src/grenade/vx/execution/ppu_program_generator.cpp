@@ -1,4 +1,4 @@
-#include "grenade/vx/ppu_program_generator.h"
+#include "grenade/vx/execution/ppu_program_generator.h"
 
 #include "grenade/vx/ppu.h"
 #include "hate/join.h"
@@ -8,7 +8,7 @@
 #include <vector>
 #include <log4cxx/logger.h>
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 void PPUProgramGenerator::add(
     signal_flow::Graph::vertex_descriptor const descriptor,
@@ -331,4 +331,4 @@ std::vector<std::string> PPUProgramGenerator::done()
 	return sources;
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

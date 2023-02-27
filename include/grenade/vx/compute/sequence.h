@@ -21,7 +21,9 @@ class Chip;
 
 namespace grenade::vx {
 
+namespace execution {
 class JITGraphExecutor;
+} // namespace execution
 
 namespace compute {
 
@@ -43,8 +45,10 @@ struct Sequence
 
 	Sequence() = default;
 
-	IOData run(IOData const& input, lola::vx::v3::Chip const& config, JITGraphExecutor& executor)
-	    SYMBOL_VISIBLE;
+	IOData run(
+	    IOData const& input,
+	    lola::vx::v3::Chip const& config,
+	    execution::JITGraphExecutor& executor) SYMBOL_VISIBLE;
 
 private:
 	friend struct cereal::access;

@@ -2,8 +2,8 @@
 #include <map>
 #include <unordered_map>
 
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/connection_state_storage.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/connection_state_storage.h"
 #include "grenade/vx/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -16,12 +16,18 @@
 
 namespace grenade::vx {
 
-namespace signal_flow {
-class Graph;
-} // namespace signal_flow
 struct IODataMap;
 class IODataList;
 struct ExecutionInstancePlaybackHooks;
+
+namespace signal_flow {
+class Graph;
+} // namespace signal_flow
+
+} // namespace grenade::vx
+
+namespace grenade::vx::execution {
+
 class JITGraphExecutor;
 
 /**
@@ -177,9 +183,9 @@ IODataList run(
     JITGraphExecutor::ChipConfigs const& initial_config,
     bool only_unconnected_output = true) SYMBOL_VISIBLE;
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution
 
 GENPYBIND_MANUAL({
-	pyhxcomm::ManagedPyBind11Helper<grenade::vx::JITGraphExecutor> helper(
+	pyhxcomm::ManagedPyBind11Helper<grenade::vx::execution::JITGraphExecutor> helper(
 	    parent, BOOST_HANA_STRING("JITGraphExecutor"));
 })

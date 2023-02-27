@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/backend/run.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/run.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -34,7 +34,7 @@ using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 
-inline std::pair<lola::vx::v3::Chip, grenade::vx::backend::Connection>
+inline std::pair<lola::vx::v3::Chip, grenade::vx::execution::backend::Connection>
 initialize_excitatory_bypass()
 {
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
@@ -51,7 +51,8 @@ initialize_excitatory_bypass()
 			init.column_current_quad_config[c].set_switch(e, s);
 		}
 	}
-	grenade::vx::backend::Connection connection(hxcomm::vx::get_connection_from_env(), init);
+	grenade::vx::execution::backend::Connection connection(
+	    hxcomm::vx::get_connection_from_env(), init);
 	stadls::vx::v3::PlaybackProgramBuilder builder;
 	// enable excitatory bypass mode
 	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
@@ -80,7 +81,7 @@ initialize_excitatory_bypass()
 		chip->synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
 	}
 	auto program = builder.done();
-	grenade::vx::backend::run(connection, program);
+	grenade::vx::execution::backend::run(connection, program);
 	return std::make_pair(*chip, std::move(connection));
 }
 
@@ -88,8 +89,8 @@ void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
     Timer::Value running_period,
     size_t spike_count_deviation,
-    grenade::vx::JITGraphExecutor& executor,
-    grenade::vx::JITGraphExecutor::ChipConfigs const& chip_configs)
+    grenade::vx::execution::JITGraphExecutor& executor,
+    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs)
 {
 	size_t expected_count =
 	    running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ / period;
@@ -138,7 +139,7 @@ void test_background_spike_source_regular(
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	auto const spikes = grenade::vx::network::extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
@@ -161,11 +162,11 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
@@ -179,8 +180,8 @@ void test_background_spike_source_poisson(
     BackgroundSpikeSource::Rate rate,
     Timer::Value running_period,
     intmax_t spike_count_deviation,
-    grenade::vx::JITGraphExecutor& executor,
-    grenade::vx::JITGraphExecutor::ChipConfigs const& chip_configs)
+    grenade::vx::execution::JITGraphExecutor& executor,
+    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs)
 {
 	intmax_t expected_count = running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ /
 	                          period / 64 /* population size */;
@@ -236,7 +237,7 @@ void test_background_spike_source_poisson(
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		auto const spikes = grenade::vx::network::extract_neuron_spikes(result_map, network_graph);
 		EXPECT_EQ(spikes.size(), 1);
@@ -277,11 +278,11 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(

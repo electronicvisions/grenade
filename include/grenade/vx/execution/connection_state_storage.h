@@ -5,7 +5,7 @@
 #include <mutex>
 #include <vector>
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 namespace backend {
 struct Connection;
@@ -34,4 +34,4 @@ struct ConnectionStateStorage
 	    SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

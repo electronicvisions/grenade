@@ -11,7 +11,7 @@ using PlaybackProgram = stadls::vx::PlaybackProgram;
 
 } // namespace stadls::vx
 
-namespace grenade::vx::backend {
+namespace grenade::vx::execution::backend {
 
 struct Connection;
 
@@ -33,4 +33,4 @@ stadls::vx::RunTimeInfo run(Connection& connection, stadls::vx::v3::PlaybackProg
 stadls::vx::RunTimeInfo run(Connection& connection, stadls::vx::v3::PlaybackProgram&& program)
     SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::backend
+} // namespace grenade::vx::execution::backend

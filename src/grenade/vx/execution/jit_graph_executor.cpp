@@ -1,7 +1,7 @@
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/execution_instance_node.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/execution_instance_node.h"
 #include "grenade/vx/execution_time_info.h"
 #include "grenade/vx/io_data_list.h"
 #include "grenade/vx/io_data_map.h"
@@ -19,7 +19,7 @@
 #include <log4cxx/logger.h>
 #include <tbb/flow_graph.h>
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
     m_connections(),
@@ -267,4 +267,4 @@ IODataList run(
 	return output;
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

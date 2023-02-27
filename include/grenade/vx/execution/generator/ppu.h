@@ -5,7 +5,7 @@
 #include "hate/visibility.h"
 #include "stadls/vx/v3/playback_generator.h"
 
-namespace grenade::vx::generator {
+namespace grenade::vx::execution::generator {
 
 /**
  * Generator for a playback program snippet from inserting a PPU command and blocking until
@@ -37,4 +37,4 @@ private:
 	grenade::vx::ppu::detail::Status m_status;
 };
 
-} // namespace grenade::vx::generator
+} // namespace grenade::vx::execution::generator

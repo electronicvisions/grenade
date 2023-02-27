@@ -1,6 +1,6 @@
-#include "grenade/vx/backend/run.h"
+#include "grenade/vx/execution/backend/run.h"
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
 #include "halco/common/iter_all.h"
 #include "halco/hicann-dls/vx/v3/barrier.h"
 #include "halco/hicann-dls/vx/v3/fpga.h"
@@ -110,7 +110,7 @@ void perform_post_fail_analysis(
 
 } // namespace
 
-namespace grenade::vx::backend {
+namespace grenade::vx::execution::backend {
 
 using namespace stadls::vx::v3;
 using namespace halco::common;
@@ -141,4 +141,4 @@ stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram&& program)
 	return run(connection, program);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution::backend

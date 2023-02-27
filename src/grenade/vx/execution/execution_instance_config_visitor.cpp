@@ -1,8 +1,8 @@
-#include "grenade/vx/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/execution_instance_config_visitor.h"
 
+#include "grenade/vx/execution/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/ppu_program_generator.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
@@ -16,7 +16,7 @@
 #include <boost/range/combine.hpp>
 #include <log4cxx/logger.h>
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     signal_flow::Graph const& graph,
@@ -456,4 +456,4 @@ ExecutionInstanceConfigVisitor::operator()()
 	return {m_config, ppu_symbols};
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

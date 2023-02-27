@@ -1,8 +1,8 @@
-#include "grenade/vx/connection_state_storage.h"
+#include "grenade/vx/execution/connection_state_storage.h"
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 ConnectionStateStorage::ConnectionStateStorage(
     bool const enable_differential_config, backend::Connection& connection) :
@@ -17,4 +17,4 @@ ConnectionStateStorage::ConnectionStateStorage(
     mutex()
 {}
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

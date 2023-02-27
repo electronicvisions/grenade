@@ -2,8 +2,8 @@
 
 #include "grenade/cerealization.h"
 #include "grenade/vx/event.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
@@ -71,7 +71,9 @@ void Conv1d::build_mac(Weights&& weights)
 }
 
 std::vector<std::vector<Int8>> Conv1d::run(
-    Activations const& inputs, lola::vx::v3::Chip const& config, JITGraphExecutor& executor) const
+    Activations const& inputs,
+    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor& executor) const
 {
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

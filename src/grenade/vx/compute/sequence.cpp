@@ -1,7 +1,7 @@
 #include "grenade/vx/compute/sequence.h"
 
 #include "grenade/cerealization.h"
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include <cereal/types/list.hpp>
 #include <cereal/types/variant.hpp>
 
@@ -16,7 +16,7 @@ template <
     typename C,
     typename Ret,
     typename Input,
-    Ret (C::*F)(Input const&, lola::vx::v3::Chip const&, grenade::vx::JITGraphExecutor&) const>
+    Ret (C::*F)(Input const&, lola::vx::v3::Chip const&, execution::JITGraphExecutor&) const>
 struct run_input<F>
 {
 	typedef Input type;
@@ -28,7 +28,9 @@ using run_input_t = typename run_input<F>::type;
 } // namespace detail
 
 Sequence::IOData Sequence::run(
-    Sequence::IOData const& input, lola::vx::v3::Chip const& config, JITGraphExecutor& executor)
+    Sequence::IOData const& input,
+    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor& executor)
 {
 	if (data.empty()) {
 		throw std::runtime_error("Empty compute sequence can't be run.");

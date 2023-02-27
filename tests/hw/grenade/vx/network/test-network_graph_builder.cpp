@@ -1,6 +1,6 @@
-#include "grenade/vx/backend/connection.h"
-#include "grenade/vx/backend/run.h"
-#include "grenade/vx/jit_graph_executor.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/run.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph.h"
@@ -30,7 +30,7 @@ using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 
-inline std::pair<lola::vx::v3::Chip, grenade::vx::backend::Connection>
+inline std::pair<lola::vx::v3::Chip, grenade::vx::execution::backend::Connection>
 initialize_excitatory_bypass()
 {
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
@@ -47,7 +47,8 @@ initialize_excitatory_bypass()
 			init.column_current_quad_config[c].set_switch(e, s);
 		}
 	}
-	grenade::vx::backend::Connection connection(hxcomm::vx::get_connection_from_env(), init);
+	grenade::vx::execution::backend::Connection connection(
+	    hxcomm::vx::get_connection_from_env(), init);
 	stadls::vx::v3::PlaybackProgramBuilder builder;
 	// enable excitatory bypass mode
 	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
@@ -76,7 +77,7 @@ initialize_excitatory_bypass()
 		chip->synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
 	}
 	auto program = builder.done();
-	grenade::vx::backend::run(connection, program);
+	grenade::vx::execution::backend::run(connection, program);
 	return std::make_pair(*chip, std::move(connection));
 }
 
@@ -84,13 +85,13 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 
 	// build network
@@ -151,7 +152,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
 	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
@@ -185,13 +186,13 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	    log4cxx::Logger::getLogger("grenade.NetworkBuilderTest.FeedForwardAllToAll");
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 
 	// build network
@@ -257,7 +258,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	assert(network_graph.get_event_output_vertex());
 	auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(
@@ -294,13 +295,13 @@ TEST(NetworkGraphBuilder, SynfireChain)
 {
 	// Construct connection to HW
 	auto [chip_config, connection] = initialize_excitatory_bypass();
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[grenade::vx::signal_flow::ExecutionInstance()] = chip_config;
 
 	// construct shuffled list of neurons
@@ -389,7 +390,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    grenade::vx::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		assert(network_graph.get_event_output_vertex());
 		auto const result = std::get<std::vector<grenade::vx::TimedSpikeFromChipSequence>>(

@@ -14,7 +14,7 @@
 #include "pyhxcomm/common/managed_connection.h"
 #endif
 
-namespace grenade::vx::backend {
+namespace grenade::vx::execution::backend {
 
 struct Connection;
 stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
@@ -116,12 +116,12 @@ private:
 	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
 };
 
-} // namespace grenade::vx::backend
+} // namespace grenade::vx::execution::backend
 
 /**
  * Wrap connection to Python as context manager named `Connection`.
  */
 GENPYBIND_MANUAL({
-	pyhxcomm::ManagedPyBind11Helper<grenade::vx::backend::Connection> helper(
+	pyhxcomm::ManagedPyBind11Helper<grenade::vx::execution::backend::Connection> helper(
 	    parent, BOOST_HANA_STRING("Connection"));
 })

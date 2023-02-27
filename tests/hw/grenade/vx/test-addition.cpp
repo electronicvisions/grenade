@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
@@ -47,10 +47,10 @@ TEST(Addition, Single)
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	// Construct map of one connection and connect to HW
-	grenade::vx::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	grenade::vx::execution::backend::Connection connection;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	// fill graph inputs
 	grenade::vx::IODataMap input_list;
@@ -63,11 +63,11 @@ TEST(Addition, Single)
 	        {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), inputs}}};
 
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = *chip;
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::run(executor, g, input_list, chip_configs);
+	auto const result_map = grenade::vx::execution::run(executor, g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 

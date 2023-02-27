@@ -1,6 +1,6 @@
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
 
-#include "grenade/vx/backend/run.h"
+#include "grenade/vx/execution/backend/run.h"
 #include "halco/hicann-dls/vx/v3/barrier.h"
 #include "halco/hicann-dls/vx/v3/highspeed_link.h"
 #include "halco/hicann-dls/vx/v3/jtag.h"
@@ -41,7 +41,7 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 
 } // namespace
 
-namespace grenade::vx::backend {
+namespace grenade::vx::execution::backend {
 
 Connection::Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& init) :
     m_connection(std::move(connection)),
@@ -117,4 +117,4 @@ bool Connection::is_quiggeldy() const
 	return std::holds_alternative<hxcomm::vx::QuiggeldyConnection>(m_connection);
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution::backend

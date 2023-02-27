@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/backend/connection.h"
+#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/io_data_map.h"
-#include "grenade/vx/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
@@ -23,7 +23,7 @@ using namespace lola::vx::v3;
 
 std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
-    grenade::vx::JITGraphExecutor& executor,
+    grenade::vx::execution::JITGraphExecutor& executor,
     std::vector<grenade::vx::TimedSpikeSequence> const& inputs)
 {
 	grenade::vx::signal_flow::vertex::ExternalInput external_input(
@@ -57,11 +57,11 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 	grenade::vx::IODataMap input_list;
 	input_list.data[v1] = inputs;
 
-	grenade::vx::JITGraphExecutor::ChipConfigs chip_configs;
+	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::run(executor, g, input_list, chip_configs);
+	auto const result_map = grenade::vx::execution::run(executor, g, input_list, chip_configs);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 
@@ -76,10 +76,10 @@ std::vector<grenade::vx::TimedSpikeFromChipSequence> test_event_loopback_single_
 TEST(JITGraphExecutor, EventLoopback)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::backend::Connection> connections;
+	grenade::vx::execution::backend::Connection connection;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	constexpr size_t max_batch_size = 5;
 

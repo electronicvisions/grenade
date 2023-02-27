@@ -14,7 +14,7 @@
 #include <tuple>
 #include <vector>
 
-namespace grenade::vx {
+namespace grenade::vx::execution {
 
 /**
  * Visitor of graph vertices of a single execution instance for construction of the initial
@@ -77,4 +77,4 @@ private:
 	void pre_process() SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::execution

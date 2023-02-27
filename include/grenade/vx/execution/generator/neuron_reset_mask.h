@@ -6,7 +6,7 @@
 #include "stadls/vx/v3/playback_generator.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 
-namespace grenade::vx::generator {
+namespace grenade::vx::execution::generator {
 
 /**
  * Generator for neuron resets.
@@ -33,4 +33,4 @@ private:
 	friend auto stadls::vx::generate<NeuronResetMask>(NeuronResetMask const&);
 };
 
-} // namespace grenade::vx::generator
+} // namespace grenade::vx::execution::generator
