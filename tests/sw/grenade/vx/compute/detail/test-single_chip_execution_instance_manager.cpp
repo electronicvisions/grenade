@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/single_chip_execution_instance_manager.h"
+#include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 
 using namespace halco::hicann_dls::vx::v3;
 
 TEST(SingleChipExecutionInstanceManager, General)
 {
-	grenade::vx::SingleChipExecutionInstanceManager manager;
+	grenade::vx::compute::detail::SingleChipExecutionInstanceManager manager;
 
 	EXPECT_EQ(manager.get_current_hemisphere(), HemisphereOnDLS(0));
 

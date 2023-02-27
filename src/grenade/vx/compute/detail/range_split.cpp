@@ -1,6 +1,6 @@
-#include "grenade/vx/range_split.h"
+#include "grenade/vx/compute/detail/range_split.h"
 
-namespace grenade::vx {
+namespace grenade::vx::compute::detail {
 
 RangeSplit::RangeSplit(size_t const split_size) : m_split_size(split_size) {}
 
@@ -22,4 +22,4 @@ std::vector<RangeSplit::SubRange> RangeSplit::operator()(size_t const size) cons
 	return split_ranges;
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute::detail

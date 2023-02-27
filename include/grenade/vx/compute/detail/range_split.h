@@ -1,9 +1,9 @@
 #pragma once
+#include "hate/visibility.h"
 #include <cstddef>
 #include <vector>
-#include "hate/visibility.h"
 
-namespace grenade::vx {
+namespace grenade::vx::compute::detail {
 
 /**
  * Split one-dimensional range into ranges of maximal given size.
@@ -35,4 +35,4 @@ private:
 	size_t m_split_size;
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute::detail

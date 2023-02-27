@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/range_split.h"
+#include "grenade/vx/compute/detail/range_split.h"
 
-using namespace grenade::vx;
+using namespace grenade::vx::compute::detail;
 
 TEST(RangeSplit, General)
 {

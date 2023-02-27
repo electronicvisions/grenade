@@ -3,7 +3,7 @@
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 
-namespace grenade::vx {
+namespace grenade::vx::compute::detail {
 
 /**
  * Manager for execution instances of a single chip.
@@ -34,4 +34,4 @@ private:
 	signal_flow::ExecutionIndex m_current_index;
 };
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute::detail

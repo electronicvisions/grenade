@@ -1,16 +1,16 @@
 #include "grenade/vx/compute/mac.h"
 
 #include "grenade/cerealization.h"
+#include "grenade/vx/compute/detail/range_split.h"
+#include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 #include "grenade/vx/event.h"
 #include "grenade/vx/io_data_map.h"
 #include "grenade/vx/jit_graph_executor.h"
-#include "grenade/vx/range_split.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/transformation/concatenation.h"
 #include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
-#include "grenade/vx/single_chip_execution_instance_manager.h"
 #include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -151,9 +151,9 @@ signal_flow::Graph::vertex_descriptor MAC::insert_synram(
 namespace {
 
 auto get_hemisphere_placement(
-    SingleChipExecutionInstanceManager& execution_instance_manager,
-    std::vector<RangeSplit::SubRange> const& x_split_ranges,
-    std::vector<RangeSplit::SubRange> const& y_split_ranges)
+    detail::SingleChipExecutionInstanceManager& execution_instance_manager,
+    std::vector<detail::RangeSplit::SubRange> const& x_split_ranges,
+    std::vector<detail::RangeSplit::SubRange> const& y_split_ranges)
 {
 	auto instance = signal_flow::ExecutionInstance();
 
@@ -170,13 +170,13 @@ auto get_hemisphere_placement(
 }
 
 auto get_placed_ranges(
-    std::vector<RangeSplit::SubRange> const& x_split_ranges,
-    std::vector<RangeSplit::SubRange> const& y_split_ranges,
+    std::vector<detail::RangeSplit::SubRange> const& x_split_ranges,
+    std::vector<detail::RangeSplit::SubRange> const& y_split_ranges,
     std::vector<
         std::pair<signal_flow::ExecutionInstance, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
         hemispheres)
 {
-	typedef std::pair<RangeSplit::SubRange, RangeSplit::SubRange> XYSubRange;
+	typedef std::pair<detail::RangeSplit::SubRange, detail::RangeSplit::SubRange> XYSubRange;
 	std::unordered_map<
 	    signal_flow::ExecutionInstance,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, XYSubRange>>
@@ -231,12 +231,12 @@ void MAC::build_graph()
 		throw std::runtime_error("Synapse weight matrix is not rectangular.");
 	}
 
-	RangeSplit x_split(NeuronColumnOnDLS::size);
-	RangeSplit y_split(SynapseDriverOnSynapseDriverBlock::size);
+	detail::RangeSplit x_split(NeuronColumnOnDLS::size);
+	detail::RangeSplit y_split(SynapseDriverOnSynapseDriverBlock::size);
 	auto const x_split_ranges = x_split(output_size());
 	auto const y_split_ranges = y_split(input_size());
 
-	SingleChipExecutionInstanceManager execution_instance_manager;
+	detail::SingleChipExecutionInstanceManager execution_instance_manager;
 
 	auto const hemispheres =
 	    get_hemisphere_placement(execution_instance_manager, x_split_ranges, y_split_ranges);

@@ -1,6 +1,6 @@
-#include "grenade/vx/single_chip_execution_instance_manager.h"
+#include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 
-namespace grenade::vx {
+namespace grenade::vx::compute::detail {
 
 signal_flow::ExecutionInstance SingleChipExecutionInstanceManager::next()
 {
@@ -26,4 +26,4 @@ signal_flow::ExecutionInstance SingleChipExecutionInstanceManager::next_index()
 	return next();
 }
 
-} // namespace grenade::vx
+} // namespace grenade::vx::compute::detail
