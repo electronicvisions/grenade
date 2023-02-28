@@ -5,11 +5,11 @@
 #include <mutex>
 #include <vector>
 
-namespace grenade::vx::execution {
-
-namespace backend {
+namespace grenade::vx::execution::backend {
 struct Connection;
-} // namespace backend
+} // namespace grenade::vx::execution::backend
+
+namespace grenade::vx::execution::detail {
 
 struct ConnectionStateStorage
 {
@@ -34,4 +34,4 @@ struct ConnectionStateStorage
 	    SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::execution
+} // namespace grenade::vx::execution::detail

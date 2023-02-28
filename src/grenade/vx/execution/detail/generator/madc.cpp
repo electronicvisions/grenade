@@ -1,4 +1,4 @@
-#include "grenade/vx/execution/generator/madc.h"
+#include "grenade/vx/execution/detail/generator/madc.h"
 
 #include "halco/hicann-dls/vx/v3/barrier.h"
 #include "halco/hicann-dls/vx/v3/madc.h"
@@ -6,7 +6,7 @@
 #include "haldls/vx/v3/madc.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 
-namespace grenade::vx::execution::generator {
+namespace grenade::vx::execution::detail::generator {
 
 using namespace haldls::vx::v3;
 using namespace stadls::vx::v3;
@@ -59,4 +59,4 @@ PlaybackGeneratorReturn<MADCStop::Result> MADCStop::generate() const
 	return {std::move(builder), hate::Nil{}};
 }
 
-} // namespace grenade::vx::execution::generator
+} // namespace grenade::vx::execution::detail::generator

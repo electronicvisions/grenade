@@ -1,11 +1,11 @@
-#include "grenade/vx/execution/generator/timed_spike_sequence.h"
+#include "grenade/vx/execution/detail/generator/timed_spike_sequence.h"
 
 #include "halco/hicann-dls/vx/v3/timing.h"
 #include "haldls/vx/v3/timer.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 #include <log4cxx/logger.h>
 
-namespace grenade::vx::execution::generator {
+namespace grenade::vx::execution::detail::generator {
 
 stadls::vx::v3::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSequence::generate()
     const
@@ -44,4 +44,4 @@ stadls::vx::v3::PlaybackGeneratorReturn<TimedSpikeSequence::Result> TimedSpikeSe
 	return {std::move(builder), hate::Nil{}};
 }
 
-} // namespace grenade::vx::execution::generator
+} // namespace grenade::vx::execution::detail::generator

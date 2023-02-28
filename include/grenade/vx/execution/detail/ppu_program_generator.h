@@ -9,7 +9,7 @@
 #include <tuple>
 #include <vector>
 
-namespace grenade::vx::execution {
+namespace grenade::vx::execution::detail {
 
 class PPUProgramGenerator
 {
@@ -39,4 +39,4 @@ private:
 	    m_plasticity_rules;
 };
 
-} // namespace grenade::vx::execution
+} // namespace grenade::vx::execution::detail

@@ -1,4 +1,4 @@
-#include "grenade/vx/execution/generator/ppu.h"
+#include "grenade/vx/execution/detail/generator/ppu.h"
 
 #include "halco/common/iter_all.h"
 #include "halco/hicann-dls/vx/v3/barrier.h"
@@ -8,7 +8,7 @@
 #include "haldls/vx/v3/ppu.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 
-namespace grenade::vx::execution::generator {
+namespace grenade::vx::execution::detail::generator {
 
 using namespace haldls::vx::v3;
 using namespace stadls::vx::v3;
@@ -40,4 +40,4 @@ PlaybackGeneratorReturn<BlockingPPUCommand::Result> BlockingPPUCommand::generate
 	return {std::move(builder), hate::Nil{}};
 }
 
-} // namespace grenade::vx::execution::generator
+} // namespace grenade::vx::execution::detail::generator

@@ -1,6 +1,6 @@
-#include "grenade/vx/execution/generator/neuron_reset_mask.h"
+#include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 
-namespace grenade::vx::execution::generator {
+namespace grenade::vx::execution::detail::generator {
 
 NeuronResetMask::NeuronResetMask() : enable_resets() {}
 
@@ -30,4 +30,4 @@ stadls::vx::v3::PlaybackGeneratorReturn<NeuronResetMask::Result> NeuronResetMask
 	return {std::move(builder), Result{}};
 }
 
-} // namespace grenade::vx::execution::generator
+} // namespace grenade::vx::execution::detail::generator

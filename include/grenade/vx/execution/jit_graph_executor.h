@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "grenade/vx/execution/backend/connection.h"
-#include "grenade/vx/execution/connection_state_storage.h"
+#include "grenade/vx/execution/detail/connection_state_storage.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -88,7 +88,7 @@ public:
 
 private:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> m_connections;
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, ConnectionStateStorage>
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, detail::ConnectionStateStorage>
 	    m_connection_state_storages;
 	bool m_enable_differential_config;
 

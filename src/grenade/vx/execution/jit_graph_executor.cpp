@@ -1,7 +1,7 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 
 #include "grenade/vx/execution/backend/connection.h"
-#include "grenade/vx/execution/execution_instance_node.h"
+#include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -186,7 +186,7 @@ signal_flow::IODataMap run(
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
 		auto const execution_instance = execution_instance_map.left.at(vertex);
 		auto const dls_global = execution_instance.toDLSGlobal();
-		ExecutionInstanceNode node_body(
+		detail::ExecutionInstanceNode node_body(
 		    output_activation_map, input, graph, execution_instance,
 		    initial_config.at(execution_instance), executor.m_connections.at(dls_global),
 		    executor.m_connection_state_storages.at(dls_global),

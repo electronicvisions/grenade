@@ -1,10 +1,10 @@
-#include "grenade/vx/execution/execution_instance_node.h"
+#include "grenade/vx/execution/detail/execution_instance_node.h"
 
 #include "fisch/vx/omnibus.h"
 #include "fisch/vx/playback_program_builder.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
-#include "grenade/vx/execution/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/ppu/detail/stopped.h"
 #include "haldls/vx/v3/barrier.h"
@@ -14,7 +14,7 @@
 #include "stadls/visitors.h"
 #include <log4cxx/logger.h>
 
-namespace grenade::vx::execution {
+namespace grenade::vx::execution::detail {
 
 namespace {
 
@@ -418,4 +418,4 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	data_map.merge(result_data_map);
 }
 
-} // namespace grenade::vx::execution
+} // namespace grenade::vx::execution::detail

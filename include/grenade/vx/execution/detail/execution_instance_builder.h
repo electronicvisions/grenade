@@ -4,7 +4,7 @@
 #include <set>
 #include <vector>
 
-#include "grenade/vx/execution/generator/neuron_reset_mask.h"
+#include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -21,7 +21,7 @@
 #include "stadls/vx/v3/playback_program.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 
-namespace grenade::vx::execution {
+namespace grenade::vx::execution::detail {
 
 /**
  * Builder for a single ExecutionInstance.
@@ -186,4 +186,4 @@ private:
 	void filter_events(std::vector<std::vector<T>>& filtered_data, std::vector<T>&& data) const;
 };
 
-} // namespace grenade::vx::execution
+} // namespace grenade::vx::execution::detail

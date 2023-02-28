@@ -2,8 +2,8 @@
 #include <memory>
 #include <tbb/flow_graph.h>
 
-#include "grenade/vx/execution/connection_state_storage.h"
-#include "grenade/vx/execution/execution_instance_builder.h"
+#include "grenade/vx/execution/detail/connection_state_storage.h"
+#include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -15,11 +15,11 @@ class Logger;
 typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx::execution {
-
-namespace backend {
+namespace grenade::vx::execution::backend {
 struct Connection;
-} // namespace backend
+} // namespace grenade::vx::execution::backend
+
+namespace grenade::vx::execution::detail {
 
 /**
  * Content of a execution node.
@@ -53,4 +53,4 @@ private:
 	log4cxx::LoggerPtr logger;
 };
 
-} // namespace grenade::vx::execution
+} // namespace grenade::vx::execution::detail
