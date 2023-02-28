@@ -64,7 +64,7 @@ If you have access to the internal *Gerrit* server, you may drop the `--repo-db-
 ## License
 ```
 GRaph-based Experiment Notation And Data-flow Execution ('grenade')
-Copyright (C) 2019-2022 Electronic Vision(s) Group
+Copyright (C) 2019-2023 Electronic Vision(s) Group
                         Kirchhoff-Institute for Physics
                         Ruprecht-Karls-Universität Heidelberg
                         69120 Heidelberg
