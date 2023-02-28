@@ -24,8 +24,6 @@ template <>
 struct IsInputsReturn<std::vector<Port>> : std::true_type
 {};
 
-} // namespace detail
-
 /**
  * A vertex is an entity which has a defined number of input ports and one output port with defined
  * type and size.
@@ -56,7 +54,7 @@ struct VertexConcept
 	struct has_inputs<V, std::void_t<decltype(&V::inputs)>>
 	{
 		constexpr static bool value =
-		    detail::IsInputsReturn<decltype(std::declval<V const>().inputs())>::value;
+		    IsInputsReturn<decltype(std::declval<V const>().inputs())>::value;
 	};
 	template <typename V>
 	constexpr static bool has_inputs_v = has_inputs<V>::value;
@@ -107,8 +105,6 @@ struct VertexConcept
 	 * This defaults to true if it is not specialized.
 	 */
 };
-
-namespace detail {
 
 template <typename VertexVariant>
 struct CheckVertexConcept;

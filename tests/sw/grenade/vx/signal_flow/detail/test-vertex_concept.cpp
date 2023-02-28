@@ -34,7 +34,7 @@ struct exceptionalized_static_assert
 		cond, __VA_ARGS__                                                                          \
 	}
 
-#include "grenade/vx/signal_flow/vertex_concept.h"
+#include "grenade/vx/signal_flow/detail/vertex_concept.h"
 
 using namespace grenade::vx::signal_flow;
 
@@ -77,9 +77,10 @@ struct Correct
 
 TEST(VertexConcept, General)
 {
-	EXPECT_THROW(VertexConcept<IncorrectOutput>{}, std::logic_error);
-	EXPECT_THROW(VertexConcept<IncorrectInputs>{}, std::logic_error);
-	EXPECT_THROW(VertexConcept<IncorrectVariadicInput>{}, std::logic_error);
-	EXPECT_THROW(VertexConcept<IncorrectCanConnectDifferentExecutionInstances>{}, std::logic_error);
-	EXPECT_NO_THROW(VertexConcept<Correct>{});
+	EXPECT_THROW(detail::VertexConcept<IncorrectOutput>{}, std::logic_error);
+	EXPECT_THROW(detail::VertexConcept<IncorrectInputs>{}, std::logic_error);
+	EXPECT_THROW(detail::VertexConcept<IncorrectVariadicInput>{}, std::logic_error);
+	EXPECT_THROW(
+	    detail::VertexConcept<IncorrectCanConnectDifferentExecutionInstances>{}, std::logic_error);
+	EXPECT_NO_THROW(detail::VertexConcept<Correct>{});
 }

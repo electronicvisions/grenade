@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/signal_flow/detail/vertex_concept.h"
 #include "grenade/vx/signal_flow/vertex/addition.h"
 #include "grenade/vx/signal_flow/vertex/argmax.h"
 #include "grenade/vx/signal_flow/vertex/background_spike_source.h"
@@ -21,7 +22,6 @@
 #include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"
 #include "grenade/vx/signal_flow/vertex/synapse_driver.h"
 #include "grenade/vx/signal_flow/vertex/transformation.h"
-#include "grenade/vx/signal_flow/vertex_concept.h"
 #include <variant>
 
 namespace grenade::vx::signal_flow {
