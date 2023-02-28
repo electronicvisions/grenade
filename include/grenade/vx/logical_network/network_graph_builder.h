@@ -5,9 +5,7 @@
 #include "hate/visibility.h"
 #include <memory>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 /**
  * Build a hardware network representation for a given network.
@@ -16,6 +14,4 @@ namespace logical_network GENPYBIND_MODULE {
 NetworkGraph GENPYBIND(visible)
     build_network_graph(std::shared_ptr<Network> const& network) SYMBOL_VISIBLE;
 
-} // namespace logical_network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network

@@ -5,9 +5,7 @@
 #include "hate/visibility.h"
 #include <iosfwd>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 struct Receptor;
 size_t hash_value(Receptor const& receptor) SYMBOL_VISIBLE;
@@ -25,7 +23,7 @@ struct GENPYBIND(visible) Receptor
 	ID id;
 
 	/** Receptor type. */
-	typedef network::Projection::ReceptorType Type;
+	typedef network::Projection::ReceptorType Type GENPYBIND(visible);
 	Type type;
 
 	Receptor() = default;
@@ -44,14 +42,7 @@ struct GENPYBIND(visible) Receptor
 	size_t hash() const SYMBOL_VISIBLE;
 };
 
-} // namespace logical_network
-
-GENPYBIND_MANUAL({
-	parent.attr("logical_network").attr("Receptor").attr("Type") =
-	    parent.attr("Projection").attr("ReceptorType");
-})
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network
 
 namespace std {
 

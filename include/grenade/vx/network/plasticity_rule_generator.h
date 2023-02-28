@@ -14,8 +14,7 @@ namespace grenade::vx {
 struct IODataMap;
 } // namespace grenade::vx
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct PlasticityRuleDescriptor;
 struct NetworkGraph;
@@ -44,5 +43,4 @@ private:
 	std::set<Observable> m_observables;
 };
 
-} // namespace grenade::vx
-} // namespace network
+} // namespace grenade::vx::network

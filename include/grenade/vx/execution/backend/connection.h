@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/genpybind.h"
 #include "hate/visibility.h"
 #include "hxcomm/common/connection_time_info.h"
 #include "hxcomm/vx/connection_variant.h"
@@ -14,7 +15,8 @@
 #include "pyhxcomm/common/managed_connection.h"
 #endif
 
-namespace grenade::vx::execution::backend {
+namespace grenade::vx::execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
+namespace backend GENPYBIND_MODULE {
 
 struct Connection;
 stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
@@ -116,8 +118,6 @@ private:
 	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
 };
 
-} // namespace grenade::vx::execution::backend
-
 /**
  * Wrap connection to Python as context manager named `Connection`.
  */
@@ -125,3 +125,6 @@ GENPYBIND_MANUAL({
 	pyhxcomm::ManagedPyBind11Helper<grenade::vx::execution::backend::Connection> helper(
 	    parent, BOOST_HANA_STRING("Connection"));
 })
+
+} // backend
+} // namespace grenade::vx::execution

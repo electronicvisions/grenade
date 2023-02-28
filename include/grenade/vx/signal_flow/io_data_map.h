@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <variant>
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Data map used for external data exchange in graph execution.

@@ -10,8 +10,7 @@ namespace cereal {
 struct access;
 } // namespace cereal
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-namespace signal_flow {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Unique temporal identifier for a execution instance.
@@ -64,8 +63,7 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
-} // namespace signal_flow
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow
 
 namespace std {
 

@@ -6,9 +6,7 @@
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 class GENPYBIND(visible) InputGenerator
 {
@@ -99,6 +97,4 @@ private:
 	NetworkGraph const& m_network_graph;
 };
 
-} // namespace logical_network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network

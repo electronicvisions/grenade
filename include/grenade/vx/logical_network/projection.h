@@ -9,9 +9,7 @@
 #include <pybind11/numpy.h>
 #endif
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 /**
  * Projection between populations.
@@ -125,9 +123,7 @@ struct GENPYBIND(inline_base("*")) ProjectionDescriptor
 	constexpr explicit ProjectionDescriptor(value_type const value = 0) : base_t(value) {}
 };
 
-} // namespace logical_network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network
 
 namespace std {
 

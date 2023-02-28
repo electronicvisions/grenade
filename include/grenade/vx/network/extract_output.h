@@ -11,9 +11,7 @@
 #include <log4cxx/logger.h>
 #endif
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Extract spikes corresponding to neurons in the network.
@@ -163,6 +161,4 @@ GENPYBIND_MANUAL({
 	    pybind11::arg("network_graph"));
 })
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network

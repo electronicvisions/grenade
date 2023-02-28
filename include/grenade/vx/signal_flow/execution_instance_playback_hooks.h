@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Playback program hooks for an execution instance.

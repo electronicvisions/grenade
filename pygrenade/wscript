@@ -34,13 +34,62 @@ def build(bld):
         bld.fatal('building pygrenade requires pybind')
 
     bld(
-        target='pygrenade_vx',
-        source='../include/grenade/vx/pygrenade.h',
-        genpybind_tags='grenade_vx',
+        target='_pygrenade_vx_signal_flow',
+        source='../include/grenade/vx/signal_flow/python_bindings.h',
+        genpybind_tags='grenade_vx_signal_flow',
         features='genpybind cxx cxxshlib pyext',
         use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
-             'pyhalco_hicann_dls_vx_v3', 'pyhxcomm_vx', 'pystadls_vx_v3'],
+             'pyhalco_hicann_dls_vx_v3'],
         install_path='${PREFIX}/lib',
+    )
+
+    bld(
+        target='_pygrenade_vx_execution',
+        source='../include/grenade/vx/execution/python_bindings.h',
+        genpybind_tags='grenade_vx_execution',
+        features='genpybind cxx cxxshlib pyext',
+        use=['grenade_vx', 'pyhalco_hicann_dls_vx_v3', 'pyhxcomm_vx',
+             'pystadls_vx_v3', '_pygrenade_vx_signal_flow'],
+        install_path='${PREFIX}/lib',
+    )
+
+    bld(
+        target='_pygrenade_vx_network',
+        source='../include/grenade/vx/network/python_bindings.h',
+        genpybind_tags='grenade_vx_network',
+        features='genpybind cxx cxxshlib pyext',
+        use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
+             'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_execution',
+             '_pygrenade_vx_signal_flow'],
+        install_path='${PREFIX}/lib',
+    )
+
+    bld(
+        target='_pygrenade_vx_logical_network',
+        source='../include/grenade/vx/logical_network/python_bindings.h',
+        genpybind_tags='grenade_vx_logical_network',
+        features='genpybind cxx cxxshlib pyext',
+        use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
+             'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_execution',
+             '_pygrenade_vx_signal_flow',
+             '_pygrenade_vx_network'],
+        install_path='${PREFIX}/lib',
+    )
+
+    bld(
+        target='pygrenade_vx',
+        features='py use pylint pycodestyle',
+        use=['_pygrenade_vx',
+             '_pygrenade_vx_execution',
+             '_pygrenade_vx_signal_flow',
+             '_pygrenade_vx_network',
+             '_pygrenade_vx_logical_network',
+             'pylogging'],
+        relative_trick=True,
+        source=bld.path.ant_glob('pygrenade_vx/**/*.py'),
+        install_path = '${PREFIX}/lib',
+        pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
+        pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")
     )
 
     bld(

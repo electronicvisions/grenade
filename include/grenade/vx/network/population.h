@@ -9,9 +9,7 @@
 #include <iosfwd>
 #include <vector>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Population of on-chip neurons. */
 struct GENPYBIND(visible) Population
@@ -98,9 +96,7 @@ struct GENPYBIND(inline_base("*")) PopulationDescriptor
 	constexpr explicit PopulationDescriptor(value_type const value = 0) : base_t(value) {}
 };
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network
 
 namespace std {
 

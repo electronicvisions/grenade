@@ -12,9 +12,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 /** Population of on-chip neurons. */
 struct GENPYBIND(visible) Population
@@ -110,8 +108,9 @@ struct GENPYBIND(visible) Population
 	size_t get_atomic_neurons_size() const SYMBOL_VISIBLE;
 };
 
-typedef grenade::vx::network::ExternalPopulation ExternalPopulation;
-typedef grenade::vx::network::BackgroundSpikeSourcePopulation BackgroundSpikeSourcePopulation;
+typedef grenade::vx::network::ExternalPopulation ExternalPopulation GENPYBIND(visible);
+typedef grenade::vx::network::BackgroundSpikeSourcePopulation BackgroundSpikeSourcePopulation
+    GENPYBIND(visible);
 
 /** Descriptor to be used to identify a population. */
 struct GENPYBIND(inline_base("*")) PopulationDescriptor
@@ -120,15 +119,7 @@ struct GENPYBIND(inline_base("*")) PopulationDescriptor
 	constexpr explicit PopulationDescriptor(value_type const value = 0) : base_t(value) {}
 };
 
-} // namespace logical_network
-
-GENPYBIND_MANUAL({
-	parent.attr("logical_network").attr("ExternalPopulation") = parent.attr("ExternalPopulation");
-	parent.attr("logical_network").attr("BackgroundSpikeSourcePopulation") =
-	    parent.attr("BackgroundSpikeSourcePopulation");
-})
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network
 
 namespace std {
 

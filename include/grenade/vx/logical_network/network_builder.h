@@ -15,9 +15,7 @@ namespace log4cxx {
 class Logger;
 } // namespace log4cxx
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 class GENPYBIND(visible) NetworkBuilder
 {
@@ -90,6 +88,4 @@ private:
 	log4cxx::LoggerPtr m_logger;
 };
 
-} // namespace logical_network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network

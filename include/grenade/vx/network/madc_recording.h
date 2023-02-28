@@ -4,9 +4,7 @@
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * MADC recording of a single neuron.
@@ -25,6 +23,4 @@ struct GENPYBIND(visible) MADCRecording
 	bool operator!=(MADCRecording const& other) const SYMBOL_VISIBLE;
 };
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network

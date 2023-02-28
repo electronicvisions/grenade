@@ -9,9 +9,7 @@
 #include <tuple>
 #include <vector>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 /**
  * Extract spikes corresponding to neurons in the network.
@@ -80,6 +78,4 @@ PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recordi
     network::NetworkGraph const& hardware_network_graph,
     PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;
 
-} // namespace logical_network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network

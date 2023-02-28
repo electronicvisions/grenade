@@ -10,9 +10,7 @@
 #include <pybind11/chrono.h>
 #endif
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Options to be passed to routing algorithm.
@@ -57,6 +55,4 @@ GENPYBIND_MANUAL({
 	    parent.attr("_RoutingOptions_AllocationPolicy");
 })
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network

@@ -30,8 +30,7 @@ class Logger;
 typedef std::shared_ptr<log4cxx::Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-namespace signal_flow {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 struct Input;
 
@@ -270,7 +269,6 @@ private:
 	void save(Archive& ar, std::uint32_t) const;
 };
 
-} // namespace signal_flow
-} // namespace grenade::vx
+} // namespace grenade::vx::signal_flow
 
 #include "grenade/vx/signal_flow/graph.tcc"

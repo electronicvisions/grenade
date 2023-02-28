@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 from dlens_vx_v3 import halco
-import pygrenade_vx as grenade
+import pygrenade_vx.network as grenade
 
 
 class SwTestPygrenadeVx(unittest.TestCase):

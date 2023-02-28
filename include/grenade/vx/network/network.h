@@ -16,9 +16,7 @@
 #include <pybind11/chrono.h>
 #endif
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Placed but not routed network consisting of populations and projections.
@@ -47,6 +45,4 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 	friend std::ostream& operator<<(std::ostream& os, Network const& network) SYMBOL_VISIBLE;
 };
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network

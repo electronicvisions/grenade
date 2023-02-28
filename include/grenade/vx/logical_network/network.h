@@ -11,9 +11,7 @@
 #include <memory>
 #include <variant>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 /**
  * Placed but not routed network consisting of populations and projections.
@@ -37,6 +35,4 @@ struct GENPYBIND(
 	friend std::ostream& operator<<(std::ostream& os, Network const& network) SYMBOL_VISIBLE;
 };
 
-} // namespace logical_network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network

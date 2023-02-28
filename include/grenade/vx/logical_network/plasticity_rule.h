@@ -8,9 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace logical_network GENPYBIND_MODULE {
+namespace grenade::vx::logical_network GENPYBIND_TAG_GRENADE_VX_LOGICAL_NETWORK {
 
 /**
  * Plasticity rule.
@@ -60,7 +58,7 @@ struct GENPYBIND(visible) PlasticityRule
 	/**
 	 * Timing information for execution of the rule.
 	 */
-	typedef network::PlasticityRule::Timer Timer;
+	typedef network::PlasticityRule::Timer Timer GENPYBIND(visible);
 	Timer timer;
 
 	/**
@@ -74,14 +72,14 @@ struct GENPYBIND(visible) PlasticityRule
 	 * Raw recording of one scratchpad memory region for all timed invocations of the
 	 * rule. No automated recording of time is performed.
 	 */
-	typedef network::PlasticityRule::RawRecording RawRecording;
+	typedef network::PlasticityRule::RawRecording RawRecording GENPYBIND(visible);
 
 	/**
 	 * Recording information for execution of the rule.
 	 * Recording of exclusive scratchpad memory per rule invocation with
 	 * time recording and returned data as time-annotated events.
 	 */
-	typedef network::PlasticityRule::TimedRecording TimedRecording;
+	typedef network::PlasticityRule::TimedRecording TimedRecording GENPYBIND(visible);
 
 	/**
 	 * Recording memory provided to plasticity rule kernel and recorded after
@@ -93,7 +91,7 @@ struct GENPYBIND(visible) PlasticityRule
 	/**
 	 * Recording data corresponding to a raw recording.
 	 */
-	typedef network::PlasticityRule::RawRecordingData RawRecordingData;
+	typedef network::PlasticityRule::RawRecordingData RawRecordingData GENPYBIND(visible);
 
 	/**
 	 * Extracted recorded data of observables corresponding to timed recording.
@@ -162,20 +160,6 @@ struct GENPYBIND(inline_base("*")) PlasticityRuleDescriptor
 	constexpr explicit PlasticityRuleDescriptor(value_type const value = 0) : base_t(value) {}
 };
 
-} // namespace logical_network
-
-GENPYBIND(postamble, tag(grenade_vx))
-GENPYBIND_MANUAL({
-	parent.attr("logical_network").attr("PlasticityRule").attr("Timer") =
-	    parent.attr("PlasticityRule").attr("Timer");
-	parent.attr("logical_network").attr("PlasticityRule").attr("RawRecording") =
-	    parent.attr("PlasticityRule").attr("RawRecording");
-	parent.attr("logical_network").attr("PlasticityRule").attr("TimedRecording") =
-	    parent.attr("PlasticityRule").attr("TimedRecording");
-	parent.attr("logical_network").attr("PlasticityRule").attr("RawRecordingData") =
-	    parent.attr("PlasticityRule").attr("RawRecordingData");
-})
-
 typedef signal_flow::TimedData<std::vector<std::vector<int8_t>>> _SingleEntryPerSynapseInt8
     GENPYBIND(opaque(false));
 typedef signal_flow::TimedData<std::vector<std::vector<uint8_t>>> _SingleEntryPerSynapseUInt8
@@ -202,7 +186,7 @@ typedef signal_flow::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint16_t>>>>
     _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false));
 
-} // namespace grenade::vx
+} // namespace grenade::vx::logical_network
 
 namespace std {
 

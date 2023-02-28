@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * signal_flow::Timed to-chip spike.

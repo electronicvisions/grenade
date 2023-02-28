@@ -4,9 +4,7 @@
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * CADC recording of a collection of neurons.
@@ -35,6 +33,4 @@ struct GENPYBIND(visible) CADCRecording
 	bool operator!=(CADCRecording const& other) const SYMBOL_VISIBLE;
 };
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network

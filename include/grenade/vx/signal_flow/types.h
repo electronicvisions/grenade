@@ -3,7 +3,7 @@
 #include "halco/common/geometry.h"
 #include "haldls/vx/v3/padi.h"
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX {
+namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * 5 bit wide unsigned activation value type.

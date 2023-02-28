@@ -21,7 +21,7 @@ struct ExecutionInstancePlaybackHooks;
 class Graph;
 } // namespace grenade::v::signal_flowx
 
-namespace grenade::vx::execution {
+namespace grenade::vx::execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
 
 class JITGraphExecutor;
 
@@ -179,9 +179,9 @@ signal_flow::IODataList run(
     JITGraphExecutor::ChipConfigs const& initial_config,
     bool only_unconnected_output = true) SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::execution
-
 GENPYBIND_MANUAL({
 	pyhxcomm::ManagedPyBind11Helper<grenade::vx::execution::JITGraphExecutor> helper(
 	    parent, BOOST_HANA_STRING("JITGraphExecutor"));
 })
+
+} // namespace grenade::vx::execution

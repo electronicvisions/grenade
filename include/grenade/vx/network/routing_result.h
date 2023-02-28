@@ -15,9 +15,7 @@
 #include <map>
 #include <vector>
 
-namespace grenade::vx GENPYBIND_TAG_GRENADE_VX {
-
-namespace network {
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Result of connection routing.
@@ -110,6 +108,4 @@ struct GENPYBIND(visible) RoutingResult
 	friend std::ostream& operator<<(std::ostream&, RoutingResult const&) SYMBOL_VISIBLE;
 };
 
-} // namespace network
-
-} // namespace grenade::vx
+} // namespace grenade::vx::network
