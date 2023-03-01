@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/generate_input.h"
 #include "grenade/vx/network/placed_atomic/network.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
-#include "grenade/vx/network/placed_atomic/routing_builder.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "haldls/vx/v3/event.h"

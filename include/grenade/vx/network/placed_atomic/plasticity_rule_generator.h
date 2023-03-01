@@ -10,10 +10,6 @@
 #endif
 
 
-namespace grenade::vx {
-struct IODataMap;
-} // namespace grenade::vx
-
 namespace grenade::vx::network::placed_atomic GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_ATOMIC {
 
 struct PlasticityRuleDescriptor;

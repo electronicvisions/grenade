@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/placed_atomic/routing/synapse_driver_on_dls_manager.h"
 #include "lola/vx/v3/synapse.h"
 #include <chrono>
 #include <iosfwd>
@@ -22,12 +22,12 @@ struct GENPYBIND(visible) RoutingOptions
 	/**
 	 * Policy to be used in synapse driver allocation.
 	 */
-	typedef SynapseDriverOnDLSManager::AllocationPolicy AllocationPolicy;
-	SynapseDriverOnDLSManager::AllocationPolicy synapse_driver_allocation_policy;
-	typedef SynapseDriverOnDLSManager::AllocationPolicyGreedy AllocationPolicyGreedy
+	typedef routing::SynapseDriverOnDLSManager::AllocationPolicy AllocationPolicy;
+	AllocationPolicy synapse_driver_allocation_policy;
+	typedef routing::SynapseDriverOnDLSManager::AllocationPolicyGreedy AllocationPolicyGreedy
 	    GENPYBIND(opaque);
-	typedef SynapseDriverOnDLSManager::AllocationPolicyBacktracking AllocationPolicyBacktracking
-	    GENPYBIND(opaque);
+	typedef routing::SynapseDriverOnDLSManager::AllocationPolicyBacktracking
+	    AllocationPolicyBacktracking GENPYBIND(opaque);
 
 	/**
 	 * Optional timeout to be used in synapse driver allocation algorithm for iteration over label
@@ -44,13 +44,13 @@ GENPYBIND_MANUAL({
 	    pybind11::class_<::grenade::vx::network::placed_atomic::RoutingOptions::AllocationPolicy>(
 	        parent, "_RoutingOptions_AllocationPolicy");
 	cls.def(
-	       pybind11::init<::grenade::vx::network::placed_atomic::SynapseDriverOnDLSManager::
-	                          AllocationPolicyGreedy>(),
-	       pybind11::arg("value") = ::grenade::vx::network::placed_atomic::
+	       pybind11::init<::grenade::vx::network::placed_atomic::routing::
+	                          SynapseDriverOnDLSManager::AllocationPolicyGreedy>(),
+	       pybind11::arg("value") = ::grenade::vx::network::placed_atomic::routing::
 	           SynapseDriverOnDLSManager::AllocationPolicyGreedy())
 	    .def(
-	        pybind11::init<::grenade::vx::network::placed_atomic::SynapseDriverOnDLSManager::
-	                           AllocationPolicyBacktracking>(),
+	        pybind11::init<::grenade::vx::network::placed_atomic::routing::
+	                           SynapseDriverOnDLSManager::AllocationPolicyBacktracking>(),
 	        pybind11::arg("value"));
 	parent.attr("RoutingOptions").attr("AllocationPolicy") =
 	    parent.attr("_RoutingOptions_AllocationPolicy");

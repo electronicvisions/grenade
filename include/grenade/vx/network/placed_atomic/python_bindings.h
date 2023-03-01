@@ -10,6 +10,7 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("_pygrenade_vx_signal_flow");
 })
 
+#include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/extract_output.h"
 #include "grenade/vx/network/placed_atomic/generate_input.h"
 #include "grenade/vx/network/placed_atomic/network.h"
@@ -20,7 +21,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/placed_atomic/plasticity_rule_generator.h"
 #include "grenade/vx/network/placed_atomic/population.h"
 #include "grenade/vx/network/placed_atomic/projection.h"
-#include "grenade/vx/network/placed_atomic/routing_builder.h"
+#include "grenade/vx/network/placed_atomic/requires_routing.h"
 #include "grenade/vx/network/placed_atomic/routing_options.h"
 #include "grenade/vx/network/placed_atomic/routing_result.h"
 #include "grenade/vx/network/placed_atomic/run.h"

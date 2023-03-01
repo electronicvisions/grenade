@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/network_builder.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
-#include "grenade/vx/network/placed_atomic/routing_builder.h"
 
 #include "hate/timer.h"
 #include <log4cxx/logger.h>

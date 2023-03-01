@@ -1,7 +1,7 @@
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
 
 #include "grenade/vx/network/placed_atomic/exception.h"
-#include "grenade/vx/network/placed_atomic/routing_builder.h"
+#include "grenade/vx/network/placed_atomic/requires_routing.h"
 #include "grenade/vx/signal_flow/transformation/concatenation.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
