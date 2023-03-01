@@ -4,6 +4,7 @@
 #include "grenade/vx/compute/detail/range_split.h"
 #include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"

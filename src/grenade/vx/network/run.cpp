@@ -2,6 +2,7 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 

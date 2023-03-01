@@ -1,5 +1,6 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"

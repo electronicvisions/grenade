@@ -2,6 +2,7 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing_builder.h"
