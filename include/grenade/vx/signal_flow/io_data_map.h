@@ -54,7 +54,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::unordered_map<signal_flow::ExecutionInstance, std::vector<common::Time>> runtime;
+	std::vector<std::unordered_map<signal_flow::ExecutionInstance, common::Time>> runtime;
 
 	/**
 	 * Optional time information of performed execution to be filled by executor.
@@ -128,7 +128,7 @@ struct ConstantReferenceIODataMap
 	std::map<signal_flow::detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
-	std::unordered_map<signal_flow::ExecutionInstance, std::vector<common::Time>> runtime;
+	std::vector<std::unordered_map<signal_flow::ExecutionInstance, common::Time>> runtime;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

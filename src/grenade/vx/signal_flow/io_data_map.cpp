@@ -1,5 +1,7 @@
 #include "grenade/vx/signal_flow/io_data_map.h"
 
+#include <stdexcept>
+
 namespace grenade::vx::signal_flow {
 
 IODataMap::IODataMap() :
@@ -29,7 +31,22 @@ void IODataMap::merge(IODataMap&& other)
 {
 	std::unique_lock<std::mutex> lock(*mutex);
 	data.merge(other.data);
-	runtime.merge(other.runtime);
+	if (!other.runtime.empty()) {
+		if (runtime.empty()) {
+			runtime = std::move(other.runtime);
+			other.runtime.clear();
+		} else {
+			if (runtime.size() != other.runtime.size()) {
+				throw std::runtime_error(
+				    "Runtime sizes need to match for IODataMap::merge(), but are (" +
+				    std::to_string(runtime.size()) + ") vs. (" +
+				    std::to_string(other.runtime.size()) + ").");
+			}
+			for (size_t i = 0; i < runtime.size(); ++i) {
+				runtime.at(i).merge(other.runtime.at(i));
+			}
+		}
+	}
 	if (execution_time_info) {
 		execution_time_info->merge(*(other.execution_time_info));
 	} else {
@@ -63,12 +80,8 @@ namespace {
  */
 size_t unsafe_batch_size(IODataMap const& map)
 {
-	size_t size = 0;
-	if (map.runtime.size()) {
-		if (map.runtime.begin()->second.size()) {
-			size = map.runtime.begin()->second.size();
-		}
-	} else if (map.data.size()) {
+	size_t size = map.runtime.size();
+	if (map.data.size()) {
 		size = std::visit([](auto const& d) { return d.size(); }, map.data.begin()->second);
 	}
 	return size;
@@ -79,9 +92,7 @@ size_t unsafe_batch_size(IODataMap const& map)
  */
 bool unsafe_valid(IODataMap const& map, size_t const size)
 {
-	bool const runtime_value = std::all_of(
-	    map.runtime.cbegin(), map.runtime.cend(),
-	    [size](auto const& ei) { return (ei.second.size() == size) || (ei.second.size() == 0); });
+	bool const runtime_value = (map.runtime.size() == size) || map.runtime.empty();
 	bool const data_value =
 	    std::all_of(map.data.cbegin(), map.data.cend(), [size](auto const& list) {
 		    return std::visit([size](auto const& d) { return d.size() == size; }, list.second);

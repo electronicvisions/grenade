@@ -84,10 +84,12 @@ TEST(PlasticityRule, RawRecording)
 	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(
-	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
-	inputs.runtime[instance].push_back(
-	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
 	// Construct connection to HW
 	grenade::vx::execution::backend::Connection connection;
@@ -128,10 +130,12 @@ TEST(PlasticityRule, TimedRecording)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(
-	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000));
-	inputs.runtime[instance].push_back(
-	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000));
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
 
 	grenade::vx::execution::backend::Connection connection;
 	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
@@ -553,8 +557,9 @@ TEST(PlasticityRule, ExecutorInitialState)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(
-	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
 	// Construct connection to HW
 	execution::backend::Connection connection;

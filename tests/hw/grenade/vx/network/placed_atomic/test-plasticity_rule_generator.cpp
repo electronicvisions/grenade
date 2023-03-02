@@ -149,8 +149,9 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(
-	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
 	// Construct connection to HW
 	grenade::vx::execution::backend::Connection connection;

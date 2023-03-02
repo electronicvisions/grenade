@@ -139,7 +139,7 @@ void test_background_spike_source_regular(
 
 	// generate input
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(running_period);
+	inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -242,7 +242,7 @@ void test_background_spike_source_poisson(
 
 		// generate input
 		grenade::vx::signal_flow::IODataMap inputs;
-		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(running_period);
+		inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
 
 		// run graph with given inputs and return results
 		auto const result_map =

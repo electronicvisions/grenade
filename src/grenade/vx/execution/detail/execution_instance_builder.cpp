@@ -681,10 +681,10 @@ void ExecutionInstanceBuilder::filter_events(
 		assert(e.m_ticket_events_end);
 		auto const interval_end_time = e.m_ticket_events_end->get_fpga_time().value();
 		uintmax_t end_time = 0;
-		if (m_local_external_data.runtime.contains(m_execution_instance) &&
-		    !m_local_external_data.runtime.at(m_execution_instance).empty()) {
+		if (!m_local_external_data.runtime.empty() &&
+		    m_local_external_data.runtime.at(i).contains(m_execution_instance)) {
 			auto const absolute_end_chip_time =
-			    m_local_external_data.runtime.at(m_execution_instance).at(i).value() +
+			    m_local_external_data.runtime.at(i).at(m_execution_instance).value() +
 			    interval_begin_time;
 			end_time = std::min(interval_end_time, absolute_end_chip_time);
 		} else {
@@ -1025,11 +1025,11 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 	// if no on-chip computation is to be done, return without static configuration
 	auto const has_computation =
 	    m_event_input_vertex.has_value() ||
-	    (m_local_external_data.runtime.contains(m_execution_instance) &&
-	     std::any_of(
-	         m_local_external_data.runtime.at(m_execution_instance).begin(),
-	         m_local_external_data.runtime.at(m_execution_instance).end(),
-	         [](auto const& r) { return r != 0; }));
+	    std::any_of(
+	        m_local_external_data.runtime.begin(), m_local_external_data.runtime.end(),
+	        [this](auto const& r) {
+		        return r.contains(m_execution_instance) && r.at(m_execution_instance) != 0;
+	        });
 	if (!has_computation) {
 		PlaybackProgramBuilder builder;
 		builder.merge_back(m_playback_hooks.pre_static_config);
@@ -1196,7 +1196,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 				builder.write(
 				    PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
 				    PPUMemoryWord(PPUMemoryWord::Value(
-				        m_local_external_data.runtime.at(m_execution_instance).at(b) * 2)));
+				        m_local_external_data.runtime.at(b).at(m_execution_instance) * 2)));
 			} else {
 				builder.write(
 				    PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
@@ -1282,11 +1282,11 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			builder.merge_back(builder_events);
 		}
 		// wait until runtime reached
-		if (m_local_external_data.runtime.contains(m_execution_instance) &&
-		    !m_local_external_data.runtime.at(m_execution_instance).empty()) {
+		if (!m_local_external_data.runtime.empty() &&
+		    m_local_external_data.runtime.at(b).contains(m_execution_instance)) {
 			builder.block_until(
 			    TimerOnDLS(),
-			    m_local_external_data.runtime.at(m_execution_instance).at(b).toTimerOnFPGAValue());
+			    m_local_external_data.runtime.at(b).at(m_execution_instance).toTimerOnFPGAValue());
 		}
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_end = builder.read(NullPayloadReadableOnFPGA());
@@ -1357,7 +1357,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 					// get experiment duration either via runtime or via last spike time
 					if (!m_local_external_data.runtime.empty()) {
 						expected_size =
-						    m_local_external_data.runtime.at(m_execution_instance).at(b) /
+						    m_local_external_data.runtime.at(b).at(m_execution_instance) /
 						    approx_sample_duration;
 					} else if (m_event_input_vertex) {
 						auto const& spikes =

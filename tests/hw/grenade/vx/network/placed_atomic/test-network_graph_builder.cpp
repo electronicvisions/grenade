@@ -147,8 +147,9 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 			                                                  .at(0))})};
 			input_spikes.at(i).push_back(spike);
 		}
-		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
-		    grenade::vx::common::Time(num * isi));
+		inputs.runtime.push_back(
+		    {{grenade::vx::signal_flow::ExecutionInstance(),
+		      grenade::vx::common::Time(num * isi)}});
 	}
 	assert(network_graph.get_event_input_vertex());
 	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
@@ -257,8 +258,9 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			                                                  .at(0))})};
 			input_spikes.at(i).push_back(spike);
 		}
-		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
-		    grenade::vx::common::Time(num * isi));
+		inputs.runtime.push_back(
+		    {{grenade::vx::signal_flow::ExecutionInstance(),
+		      grenade::vx::common::Time(num * isi)}});
 	}
 	assert(network_graph.get_event_input_vertex());
 	inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
@@ -391,8 +393,9 @@ TEST(NetworkGraphBuilder, SynfireChain)
 			                                                  .at(0))})};
 			input_spikes.at(0).push_back(spike);
 		}
-		inputs.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
-		    grenade::vx::common::Time(num * isi));
+		inputs.runtime.push_back(
+		    {{grenade::vx::signal_flow::ExecutionInstance(),
+		      grenade::vx::common::Time(num * isi)}});
 		assert(network_graph.get_event_input_vertex());
 		inputs.data[*network_graph.get_event_input_vertex()] = std::move(input_spikes);
 
