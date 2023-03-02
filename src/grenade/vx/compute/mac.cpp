@@ -407,7 +407,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 
 	hate::Timer input_timer;
 	signal_flow::IODataMap input_list;
-	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>> timed_inputs(
+	std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		timed_inputs.at(i).resize(1);
@@ -427,7 +427,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 
 	hate::Timer output_timer;
 	auto const timed_outputs =
-	    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 	        output_activation_map.data.at(m_output_vertex));
 	std::vector<std::vector<signal_flow::Int8>> output(timed_outputs.size());
 	for (size_t i = 0; i < output.size(); ++i) {
@@ -447,10 +447,10 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 			}
 			for (auto const& b :
 			     std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(l.second)) {
-				halco::common::typed_array<std::vector<haldls::vx::ChipTime>, HemisphereOnDLS> t;
+				halco::common::typed_array<std::vector<common::Time>, HemisphereOnDLS> t;
 				for (auto const& s : b) {
-					t[HemisphereOnDLS(s.label.get_neuron_label() & (1 << 13) ? 1 : 0)].push_back(
-					    s.chip_time);
+					t[HemisphereOnDLS(s.data.get_neuron_label() & (1 << 13) ? 1 : 0)].push_back(
+					    s.time);
 				}
 				for (auto& ht : t) {
 					std::sort(ht.begin(), ht.end());

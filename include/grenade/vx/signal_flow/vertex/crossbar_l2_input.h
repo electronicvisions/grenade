@@ -35,7 +35,7 @@ struct CrossbarL2Input
 	constexpr static bool variadic_input = false;
 	constexpr std::array<Port, 1> inputs() const
 	{
-		return {Port(1, ConnectionType::TimedSpikeSequence)};
+		return {Port(1, ConnectionType::TimedSpikeToChipSequence)};
 	}
 
 	constexpr Port output() const

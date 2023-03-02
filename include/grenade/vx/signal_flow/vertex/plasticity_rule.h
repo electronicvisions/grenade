@@ -25,8 +25,11 @@ struct access;
 namespace grenade::vx {
 
 namespace signal_flow {
-
 struct Int8;
+} // namespace signal_flow
+
+namespace signal_flow {
+
 struct PortRestriction;
 
 namespace vertex {
@@ -343,10 +346,10 @@ struct PlasticityRule
 	struct TimedRecordingData
 	{
 		typedef std::variant<
-		    std::vector<signal_flow::TimedDataSequence<std::vector<int8_t>>>,
-		    std::vector<signal_flow::TimedDataSequence<std::vector<uint8_t>>>,
-		    std::vector<signal_flow::TimedDataSequence<std::vector<int16_t>>>,
-		    std::vector<signal_flow::TimedDataSequence<std::vector<uint16_t>>>>
+		    std::vector<common::TimedDataSequence<std::vector<int8_t>>>,
+		    std::vector<common::TimedDataSequence<std::vector<uint8_t>>>,
+		    std::vector<common::TimedDataSequence<std::vector<int16_t>>>,
+		    std::vector<common::TimedDataSequence<std::vector<uint16_t>>>>
 		    Entry;
 
 		std::map<std::string, std::vector<Entry>> data_per_synapse;
@@ -484,8 +487,8 @@ struct PlasticityRule
 	 * @param data Raw data to extract recording from
 	 */
 	RecordingData extract_recording_data(
-	    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data)
-	    const SYMBOL_VISIBLE;
+	    std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data) const
+	    SYMBOL_VISIBLE;
 
 	std::string const& get_kernel() const SYMBOL_VISIBLE;
 	Timer const& get_timer() const SYMBOL_VISIBLE;

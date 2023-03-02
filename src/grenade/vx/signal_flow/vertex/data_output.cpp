@@ -23,11 +23,11 @@ DataOutput::DataOutput(ConnectionType const input_type, size_t const size) :
 			m_input_type = input_type;
 			break;
 		}
-		case ConnectionType::TimedSpikeSequence: {
+		case ConnectionType::TimedSpikeToChipSequence: {
 			m_input_type = input_type;
 			if (m_size > 1) {
 				throw std::runtime_error(
-				    "DataOutput only supports size(1) for TimedSpikeSequence.");
+				    "DataOutput only supports size(1) for TimedSpikeToChipSequence.");
 			}
 			break;
 		}
@@ -73,8 +73,8 @@ Port DataOutput::output() const
 			case ConnectionType::Int8: {
 				return ConnectionType::DataInt8;
 			}
-			case ConnectionType::TimedSpikeSequence: {
-				return ConnectionType::DataTimedSpikeSequence;
+			case ConnectionType::TimedSpikeToChipSequence: {
+				return ConnectionType::DataTimedSpikeToChipSequence;
 			}
 			case ConnectionType::TimedSpikeFromChipSequence: {
 				return ConnectionType::DataTimedSpikeFromChipSequence;

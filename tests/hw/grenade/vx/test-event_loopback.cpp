@@ -26,13 +26,13 @@ std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>
 test_event_loopback_single_crossbar_node(
     CrossbarL2OutputOnDLS const& node,
     grenade::vx::execution::JITGraphExecutor& executor,
-    std::vector<grenade::vx::signal_flow::TimedSpikeSequence> const& inputs)
+    std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> const& inputs)
 {
 	grenade::vx::signal_flow::vertex::ExternalInput external_input(
-	    grenade::vx::signal_flow::ConnectionType::DataTimedSpikeSequence, 1);
+	    grenade::vx::signal_flow::ConnectionType::DataTimedSpikeToChipSequence, 1);
 
 	grenade::vx::signal_flow::vertex::DataInput data_input(
-	    grenade::vx::signal_flow::ConnectionType::TimedSpikeSequence, 1);
+	    grenade::vx::signal_flow::ConnectionType::TimedSpikeToChipSequence, 1);
 
 	grenade::vx::signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
 
@@ -92,12 +92,12 @@ TEST(JITGraphExecutor, EventLoopback)
 			for (auto const address : iter_all<SPL1Address>()) {
 				halco::hicann_dls::vx::v3::SpikeLabel label;
 				label.set_spl1_address(address);
-				std::vector<grenade::vx::signal_flow::TimedSpikeSequence> inputs(b);
+				std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> inputs(b);
 				for (auto& in : inputs) {
 					for (intmax_t i = 0; i < 1000; ++i) {
-						in.push_back(grenade::vx::signal_flow::TimedSpike{
-						    grenade::vx::signal_flow::TimedSpike::Time(i * 10),
-						    grenade::vx::signal_flow::TimedSpike::Payload(
+						in.push_back(grenade::vx::signal_flow::TimedSpikeToChip{
+						    grenade::vx::common::Time(i * 10),
+						    grenade::vx::signal_flow::TimedSpikeToChip::Data(
 						        haldls::vx::v3::SpikePack1ToChip({label}))});
 					}
 				}

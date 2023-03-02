@@ -5,26 +5,26 @@
 
 using namespace grenade::vx::signal_flow;
 
-TEST(TimedSpike, General)
+TEST(TimedSpikeToChip, General)
 {
-	TimedSpike spike(
-	    TimedSpike::Time(123),
+	TimedSpikeToChip spike(
+	    grenade::vx::common::Time(123),
 	    haldls::vx::v3::SpikePack1ToChip({halco::hicann_dls::vx::v3::SpikeLabel(456)}));
 
-	EXPECT_EQ(spike.time, TimedSpike::Time(123));
-	EXPECT_TRUE(std::holds_alternative<haldls::vx::v3::SpikePack1ToChip>(spike.payload));
+	EXPECT_EQ(spike.time, grenade::vx::common::Time(123));
+	EXPECT_TRUE(std::holds_alternative<haldls::vx::v3::SpikePack1ToChip>(spike.data));
 	EXPECT_EQ(
-	    std::get<haldls::vx::v3::SpikePack1ToChip>(spike.payload),
+	    std::get<haldls::vx::v3::SpikePack1ToChip>(spike.data),
 	    haldls::vx::v3::SpikePack1ToChip({halco::hicann_dls::vx::v3::SpikeLabel(456)}));
 
-	TimedSpike spike_other = spike;
-	spike_other.time = TimedSpike::Time(321);
+	TimedSpikeToChip spike_other = spike;
+	spike_other.time = grenade::vx::common::Time(321);
 	EXPECT_NE(spike, spike_other);
 	spike_other.time = spike.time;
-	spike_other.payload =
+	spike_other.data =
 	    haldls::vx::v3::SpikePack1ToChip({halco::hicann_dls::vx::v3::SpikeLabel(654)});
 	EXPECT_NE(spike, spike_other);
 
-	TimedSpike spike_copy = spike;
+	TimedSpikeToChip spike_copy = spike;
 	EXPECT_EQ(spike, spike_copy);
 }

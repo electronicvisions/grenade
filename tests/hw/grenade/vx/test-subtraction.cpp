@@ -60,8 +60,8 @@ TEST(Subtraction, Single)
 		inputs.at(i + 128) = grenade::vx::signal_flow::Int8(i);
 	}
 	input_list.data[v1] = std::vector<
-	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>{
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), inputs}}};
+	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>{
+	    {{grenade::vx::common::Time(), inputs}}};
 
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
@@ -74,26 +74,29 @@ TEST(Subtraction, Single)
 
 	EXPECT_TRUE(result_map.data.find(v4) != result_map.data.end());
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
-	        std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
+	    std::get<std::vector<
+	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	        result_map.data.at(v4))
 	        .size(),
 	    1);
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
-	        std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
+	    std::get<std::vector<
+	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	        result_map.data.at(v4))
 	        .at(0)
 	        .size(),
 	    1);
 	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
-	        std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
+	    std::get<std::vector<
+	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	        result_map.data.at(v4))
 	        .at(0)
 	        .at(0)
 	        .data.size(),
 	    size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		EXPECT_EQ(
-		    0, std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<
+		    0, std::get<std::vector<grenade::vx::common::TimedDataSequence<
 		           std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
 		           .at(0)
 		           .at(0)

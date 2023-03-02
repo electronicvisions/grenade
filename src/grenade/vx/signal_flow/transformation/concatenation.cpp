@@ -49,8 +49,7 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 					ret.at(i).at(j).data.resize(output_size);
 					// TODO: think about what to do with event time information, whether to
 					// check for equality or just drop, etc.
-					ret.at(i).at(j).chip_time = v.at(i).at(j).chip_time;
-					ret.at(i).at(j).fpga_time = v.at(i).at(j).fpga_time;
+					ret.at(i).at(j).time = v.at(i).at(j).time;
 					for (size_t k = 0; k < v.at(i).at(j).data.size(); ++k) {
 						ret.at(i).at(j).data.at(k + o_offset) = v.at(i).at(j).data.at(k);
 						ret.at(i).at(j).data.at(k + o_offset) = v.at(i).at(j).data.at(k);
@@ -66,17 +65,17 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 
 	switch (m_type) {
 		case ConnectionType::UInt32: {
-			std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> output(
+			std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>> output(
 			    batch_size);
 			return copy(output);
 		}
 		case ConnectionType::Int8: {
-			std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> output(
+			std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> output(
 			    batch_size);
 			return copy(output);
 		}
 		case ConnectionType::UInt5: {
-			std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt5>>> output(
+			std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>> output(
 			    batch_size);
 			return copy(output);
 		}

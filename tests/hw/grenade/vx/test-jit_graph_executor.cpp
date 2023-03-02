@@ -56,7 +56,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
-	    haldls::vx::Timer::Value(100));
+	    grenade::vx::common::Time(100));
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
 	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
@@ -118,7 +118,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
-	    haldls::vx::Timer::Value(100));
+	    grenade::vx::common::Time(100));
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
 	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
@@ -178,7 +178,7 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime[grenade::vx::signal_flow::ExecutionInstance()].push_back(
-	    haldls::vx::Timer::Value(10000 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+	    grenade::vx::common::Time(10000 * grenade::vx::common::Time::fpga_clock_cycles_per_us));
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
 	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};

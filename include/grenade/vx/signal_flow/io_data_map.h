@@ -1,4 +1,6 @@
 #pragma once
+#include "grenade/vx/common/time.h"
+#include "grenade/vx/common/timed_data.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
 #include "grenade/vx/signal_flow/event.h"
@@ -24,10 +26,10 @@ namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 struct GENPYBIND(visible) IODataMap
 {
 	typedef std::variant<
-	    std::vector<TimedDataSequence<std::vector<UInt32>>>,
-	    std::vector<TimedDataSequence<std::vector<UInt5>>>,
-	    std::vector<TimedDataSequence<std::vector<Int8>>>,
-	    std::vector<TimedSpikeSequence>,
+	    std::vector<common::TimedDataSequence<std::vector<UInt32>>>,
+	    std::vector<common::TimedDataSequence<std::vector<UInt5>>>,
+	    std::vector<common::TimedDataSequence<std::vector<Int8>>>,
+	    std::vector<TimedSpikeToChipSequence>,
 	    std::vector<TimedSpikeFromChipSequence>,
 	    std::vector<TimedMADCSampleFromChipSequence>>
 	    Entry;
@@ -44,7 +46,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Data is connected to specified vertex descriptors.
 	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
 	 */
-	std::map<signal_flow::detail::vertex_descriptor, Entry> data;
+	std::map<signal_flow::detail::vertex_descriptor, Entry> data GENPYBIND(hidden);
 
 	/**
 	 * Runtime time-interval data.
@@ -52,8 +54,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::unordered_map<signal_flow::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
-	    runtime;
+	std::unordered_map<signal_flow::ExecutionInstance, std::vector<common::Time>> runtime;
 
 	/**
 	 * Optional time information of performed execution to be filled by executor.
@@ -127,8 +128,7 @@ struct ConstantReferenceIODataMap
 	std::map<signal_flow::detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
-	std::unordered_map<signal_flow::ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>>
-	    runtime;
+	std::unordered_map<signal_flow::ExecutionInstance, std::vector<common::Time>> runtime;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

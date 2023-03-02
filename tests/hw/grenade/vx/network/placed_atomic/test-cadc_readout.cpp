@@ -132,8 +132,10 @@ TEST(CADCRecording, General)
 	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 100));
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 150));
+	inputs.runtime[instance].push_back(
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 100));
+	inputs.runtime[instance].push_back(
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 150));
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -142,7 +144,7 @@ TEST(CADCRecording, General)
 	assert(network_graph.get_cadc_sample_output_vertex().size());
 	EXPECT_EQ(network_graph.get_cadc_sample_output_vertex().size(), 1);
 	auto const result = std::get<std::vector<
-	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
 	    result_map.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
 
 	EXPECT_EQ(result.size(), inputs.batch_size());

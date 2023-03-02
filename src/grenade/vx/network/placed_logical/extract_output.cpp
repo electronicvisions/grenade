@@ -7,7 +7,7 @@ namespace grenade::vx::network::placed_logical {
 
 std::vector<std::map<
     std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
-    std::vector<haldls::vx::v3::ChipTime>>>
+    std::vector<common::Time>>>
 extract_neuron_spikes(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
@@ -48,7 +48,7 @@ extract_neuron_spikes(
 	std::vector<std::map<
 	    std::tuple<
 	        PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
-	    std::vector<haldls::vx::v3::ChipTime>>>
+	    std::vector<common::Time>>>
 	    logical_neuron_events(atomic_neuron_events.size());
 
 	for (size_t batch = 0; batch < logical_neuron_events.size(); ++batch) {
@@ -66,8 +66,7 @@ extract_neuron_spikes(
 }
 
 
-std::vector<
-    std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
+std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(
     signal_flow::IODataMap const& data,
     NetworkGraph const& /* network_graph */,
@@ -78,7 +77,7 @@ extract_madc_samples(
 
 
 std::vector<std::vector<std::tuple<
-    haldls::vx::v3::ChipTime,
+    common::Time,
     PopulationDescriptor,
     size_t,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
@@ -93,7 +92,7 @@ extract_cadc_samples(
 	    network::placed_atomic::extract_cadc_samples(data, hardware_network_graph);
 
 	std::vector<std::vector<std::tuple<
-	    haldls::vx::v3::ChipTime, PopulationDescriptor, size_t,
+	    common::Time, PopulationDescriptor, size_t,
 	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t, signal_flow::Int8>>>
 	    ret(hardware_samples.size());
 
@@ -148,10 +147,10 @@ void extract_plasticity_rule_recording_data_per_synapse(
     size_t const batch_size,
     size_t const hardware_index,
     size_t const index,
-    std::vector<signal_flow::TimedDataSequence<std::vector<T>>> const& local_signal_flow)
+    std::vector<common::TimedDataSequence<std::vector<T>>> const& local_signal_flow)
 {
 	if (!local_logical_data.contains(descriptor)) {
-		std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<T>>>>
+		std::vector<common::TimedDataSequence<std::vector<std::vector<T>>>>
 		    logical_local_signal_flow(batch_size);
 		for (auto& batch : logical_local_signal_flow) {
 			batch.resize(num_periods);
@@ -163,15 +162,14 @@ void extract_plasticity_rule_recording_data_per_synapse(
 				for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
 					auto& local_logical_local_signal_flow = logical_local_signal_flow.at(b).at(s);
 					auto& local_local_signal_flow = local_signal_flow.at(b).at(s);
-					local_logical_local_signal_flow.chip_time = local_local_signal_flow.chip_time;
-					local_logical_local_signal_flow.fpga_time = local_local_signal_flow.fpga_time;
+					local_logical_local_signal_flow.time = local_local_signal_flow.time;
 				}
 			}
 		}
 		local_logical_data[descriptor] = logical_local_signal_flow;
 	}
 	auto& logical_local_signal_flow =
-	    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<std::vector<T>>>>>(
+	    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<T>>>>>(
 	        local_logical_data.at(descriptor));
 	for (size_t b = 0; b < local_signal_flow.size(); ++b) {
 		for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
@@ -193,12 +191,12 @@ void extract_plasticity_rule_recording_data_per_neuron(
     std::vector<
         std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<size_t>>> const&
         neuron_translation,
-    std::vector<signal_flow::TimedDataSequence<std::vector<T>>> const& dd)
+    std::vector<common::TimedDataSequence<std::vector<T>>> const& dd)
 {
 	if (!local_logical_data.contains(descriptor)) {
 		// dimension (outer to inner): batch, time, neuron_on_population, compartment_on_neuron,
 		// atomic_neuron_on_compartment
-		std::vector<signal_flow::TimedDataSequence<std::vector<
+		std::vector<common::TimedDataSequence<std::vector<
 		    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>
 		    logical_dd(batch_size);
 		for (auto& batch : logical_dd) {
@@ -210,14 +208,13 @@ void extract_plasticity_rule_recording_data_per_neuron(
 				for (size_t s = 0; s < dd.at(b).size(); ++s) {
 					auto& local_logical_dd = logical_dd.at(b).at(s);
 					auto& local_dd = dd.at(b).at(s);
-					local_logical_dd.chip_time = local_dd.chip_time;
-					local_logical_dd.fpga_time = local_dd.fpga_time;
+					local_logical_dd.time = local_dd.time;
 				}
 			}
 		}
 		local_logical_data[descriptor] = logical_dd;
 	}
-	auto& logical_dd = std::get<std::vector<signal_flow::TimedDataSequence<std::vector<
+	auto& logical_dd = std::get<std::vector<common::TimedDataSequence<std::vector<
 	    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>>(
 	    local_logical_data.at(descriptor));
 	for (size_t b = 0; b < dd.size(); ++b) {

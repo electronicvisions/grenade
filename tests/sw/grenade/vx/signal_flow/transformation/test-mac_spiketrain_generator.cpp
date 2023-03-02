@@ -73,10 +73,10 @@ TEST(MACSpikeTrainGenerator, apply)
 	size_t hemisphere_size_top = 10;
 	size_t hemisphere_size_bot = 13;
 	std::vector<
-	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::UInt5>>>
+	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::UInt5>>>
 	    activations_top(1);
 	std::vector<
-	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::UInt5>>>
+	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::UInt5>>>
 	    activations_bot(1);
 	activations_top.at(0).resize(1);
 	activations_bot.at(0).resize(1);
@@ -91,7 +91,7 @@ TEST(MACSpikeTrainGenerator, apply)
 	}
 
 	size_t num_sends = 2;
-	haldls::vx::v3::Timer::Value wait_between_events(3);
+	grenade::vx::common::Time wait_between_events(3);
 
 	grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator generator(
 	    {hemisphere_size_top, hemisphere_size_bot}, num_sends, wait_between_events);
@@ -100,9 +100,10 @@ TEST(MACSpikeTrainGenerator, apply)
 	auto const events = generator.apply(inputs);
 
 	EXPECT_TRUE(
-	    std::holds_alternative<std::vector<grenade::vx::signal_flow::TimedSpikeSequence>>(events));
+	    std::holds_alternative<std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence>>(
+	        events));
 	auto const& vevents =
-	    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeSequence>>(events);
+	    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence>>(events);
 	EXPECT_EQ(vevents.size(), 1);
 
 	auto const spikes = vevents.at(0);

@@ -18,10 +18,10 @@ enum class ConnectionType
 	Int8,                                // CADC readout, PPU operation
 	SynapticInput,                       // Accumulated (analog) synaptic input for a neuron
 	MembraneVoltage,                     // Neuron membrane voltage for input of CADC readout
-	TimedSpikeSequence,                  // Spike sequence to chip
+	TimedSpikeToChipSequence,            // Spike sequence to chip
 	TimedSpikeFromChipSequence,          // Spike sequence from chip
 	TimedMADCSampleFromChipSequence,     // MADC sample sequence from chip
-	DataTimedSpikeSequence,              // Spike sequence to chip data
+	DataTimedSpikeToChipSequence,        // Spike sequence to chip data
 	DataTimedSpikeFromChipSequence,      // Spike sequence from chip data
 	DataTimedMADCSampleFromChipSequence, // MADC sample sequence from chip data
 	DataInt8,                            // PPU computation or CADC readout value
@@ -40,7 +40,7 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type) SYMBOL_VI
 constexpr auto can_connect_different_execution_instances = std::array{
     ConnectionType::DataUInt5,
     ConnectionType::DataInt8,
-    ConnectionType::DataTimedSpikeSequence,
+    ConnectionType::DataTimedSpikeToChipSequence,
     ConnectionType::DataTimedSpikeFromChipSequence,
     ConnectionType::DataUInt32,
     ConnectionType::DataTimedMADCSampleFromChipSequence};

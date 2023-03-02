@@ -22,10 +22,10 @@ ExternalInput::ExternalInput(ConnectionType const output_type, size_t const size
 			m_output_type = output_type;
 			break;
 		}
-		case ConnectionType::DataTimedSpikeSequence: {
+		case ConnectionType::DataTimedSpikeToChipSequence: {
 			if (m_size > 1) {
 				throw std::runtime_error(
-				    "ExternalInput only supports size(1) for DataTimedSpikeSequence.");
+				    "ExternalInput only supports size(1) for DataTimedSpikeToChipSequence.");
 			}
 			m_output_type = output_type;
 			break;

@@ -4,6 +4,8 @@
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/port.h"
 
+using namespace grenade::vx;
+using namespace grenade::vx::common;
 using namespace grenade::vx::signal_flow;
 using namespace grenade::vx::signal_flow;
 
@@ -15,20 +17,18 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.valid());
 
 	auto const data = IODataMap::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), {Int8(1), Int8(2)}}},
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), {Int8(3), Int8(4)}}}});
+	    {{common::Time(), {Int8(1), Int8(2)}}}, {{common::Time(), {Int8(3), Int8(4)}}}});
 	map.data[0] = data;
 
 	EXPECT_FALSE(map.empty());
 	EXPECT_EQ(map.batch_size(), 2);
 	EXPECT_TRUE(map.valid());
 
-	map.runtime[ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
+	map.runtime[ExecutionInstance()] = std::vector{common::Time(0)};
 	EXPECT_FALSE(map.valid());
 	EXPECT_THROW(map.batch_size(), std::runtime_error);
-	std::unordered_map<ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>> runtime;
-	runtime[ExecutionInstance()] =
-	    std::vector{haldls::vx::v3::Timer::Value(0), haldls::vx::v3::Timer::Value(1)};
+	std::unordered_map<ExecutionInstance, std::vector<common::Time>> runtime;
+	runtime[ExecutionInstance()] = std::vector{common::Time(0), common::Time(1)};
 	map.runtime = runtime;
 	EXPECT_TRUE(map.valid());
 	EXPECT_EQ(map.batch_size(), 2);
@@ -46,8 +46,7 @@ TEST(IODataMap, General)
 
 	IODataMap map_2;
 	auto const data_1 = IODataMap::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), {Int8(5), Int8(6)}}},
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), {Int8(7), Int8(8)}}}});
+	    {{common::Time(), {Int8(5), Int8(6)}}}, {{common::Time(), {Int8(7), Int8(8)}}}});
 	map_2.data[1] = data_1;
 	map.runtime = runtime;
 	map.merge(map_2);
@@ -55,8 +54,8 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.data.contains(1));
 	EXPECT_EQ(map.data.at(1), data_1);
 	EXPECT_EQ(map.runtime, runtime);
-	std::unordered_map<ExecutionInstance, std::vector<haldls::vx::v3::Timer::Value>> runtime_2;
-	runtime_2[ExecutionInstance()] = std::vector{haldls::vx::v3::Timer::Value(0)};
+	std::unordered_map<ExecutionInstance, std::vector<common::Time>> runtime_2;
+	runtime_2[ExecutionInstance()] = std::vector{common::Time(0)};
 	map_2.runtime = runtime_2;
 	map.merge(map_2);
 	EXPECT_EQ(map.runtime, runtime);
@@ -68,8 +67,7 @@ TEST(IODataMap, General)
 TEST(IODataMap, is_match)
 {
 	auto const data = std::vector<TimedDataSequence<std::vector<Int8>>>{
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), {Int8(5), Int8(6)}}},
-	    {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), {Int8(7), Int8(8)}}}};
+	    {{common::Time(), {Int8(5), Int8(6)}}}, {{common::Time(), {Int8(7), Int8(8)}}}};
 	{
 		Port port(2, ConnectionType::Int8);
 		EXPECT_TRUE(IODataMap::is_match(data, port));

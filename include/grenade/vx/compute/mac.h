@@ -2,6 +2,7 @@
 #include <vector>
 #include <gtest/gtest_prod.h>
 
+#include "grenade/vx/common/time.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -9,7 +10,6 @@
 #include "halco/common/geometry.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/synapse_driver.h"
-#include "haldls/vx/v3/timer.h"
 #include "lola/vx/v3/synapse.h"
 
 namespace cereal {
@@ -68,7 +68,7 @@ public:
 	template <typename WeightsT>
 	MAC(WeightsT&& weights,
 	    size_t num_sends = 1,
-	    haldls::vx::v3::Timer::Value wait_between_events = haldls::vx::v3::Timer::Value(25),
+	    common::Time wait_between_events = common::Time(25),
 	    bool enable_loopback = false);
 
 	/**
@@ -113,7 +113,7 @@ private:
 	void build_graph() SYMBOL_VISIBLE;
 
 	size_t m_num_sends{};
-	haldls::vx::v3::Timer::Value m_wait_between_events{};
+	common::Time m_wait_between_events{};
 
 	friend struct cereal::access;
 	template <typename Archive>

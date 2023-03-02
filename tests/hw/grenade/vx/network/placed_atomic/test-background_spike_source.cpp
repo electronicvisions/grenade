@@ -88,7 +88,7 @@ initialize_excitatory_bypass()
 
 void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
-    Timer::Value running_period,
+    grenade::vx::common::Time running_period,
     size_t spike_count_deviation,
     grenade::vx::execution::JITGraphExecutor& executor,
     grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs)
@@ -175,15 +175,17 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(1000), Timer::Value(1000000), 100, executor, chip_configs);
+	    BackgroundSpikeSource::Period(1000), grenade::vx::common::Time(1000000), 100, executor,
+	    chip_configs);
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(10000), Timer::Value(10000000), 100, executor, chip_configs);
+	    BackgroundSpikeSource::Period(10000), grenade::vx::common::Time(10000000), 100, executor,
+	    chip_configs);
 }
 
 void test_background_spike_source_poisson(
     BackgroundSpikeSource::Period period,
     BackgroundSpikeSource::Rate rate,
-    Timer::Value running_period,
+    grenade::vx::common::Time running_period,
     intmax_t spike_count_deviation,
     grenade::vx::execution::JITGraphExecutor& executor,
     grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs)
@@ -295,8 +297,8 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(1000), BackgroundSpikeSource::Rate(255),
-	    Timer::Value(1000000), 100, executor, chip_configs);
+	    grenade::vx::common::Time(1000000), 100, executor, chip_configs);
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(10000), BackgroundSpikeSource::Rate(255),
-	    Timer::Value(10000000), 100, executor, chip_configs);
+	    grenade::vx::common::Time(10000000), 100, executor, chip_configs);
 }

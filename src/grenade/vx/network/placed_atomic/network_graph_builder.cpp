@@ -345,11 +345,12 @@ void NetworkGraphBuilder::add_external_input(
 
 	// add external input for spikes
 	signal_flow::vertex::ExternalInput external_input(
-	    signal_flow::ConnectionType::DataTimedSpikeSequence, 1);
+	    signal_flow::ConnectionType::DataTimedSpikeToChipSequence, 1);
 	auto const event_input_vertex = graph.add(external_input, instance, {});
 
 	// add local execution instance data input for spikes
-	signal_flow::vertex::DataInput data_input(signal_flow::ConnectionType::TimedSpikeSequence, 1);
+	signal_flow::vertex::DataInput data_input(
+	    signal_flow::ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const data_input_vertex = graph.add(data_input, instance, {event_input_vertex});
 
 	// add crossbar l2 input from spike data

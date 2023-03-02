@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/time.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "halco/common/typed_array.h"
@@ -36,7 +37,7 @@ struct MACSpikeTrainGenerator : public vertex::Transformation::Function
 	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS> const&
 	        hemisphere_sizes,
 	    size_t num_sends,
-	    haldls::vx::v3::Timer::Value wait_between_events) SYMBOL_VISIBLE;
+	    common::Time wait_between_events) SYMBOL_VISIBLE;
 
 	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 	Port output() const SYMBOL_VISIBLE;
@@ -61,7 +62,7 @@ private:
 	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    m_hemisphere_sizes;
 	size_t m_num_sends{};
-	haldls::vx::Timer::Value m_wait_between_events{};
+	common::Time m_wait_between_events{};
 
 	friend struct cereal::access;
 	template <typename Archive>

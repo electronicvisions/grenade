@@ -43,8 +43,7 @@ TEST(Concatenation, General)
 	constexpr size_t batch_size = 2;
 	std::vector<Concatenation::Value> value(3);
 	{
-		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
-		    batch_size);
+		std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
@@ -54,8 +53,7 @@ TEST(Concatenation, General)
 		value.at(0) = values;
 	}
 	{
-		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
-		    batch_size);
+		std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
@@ -65,8 +63,7 @@ TEST(Concatenation, General)
 		value.at(1) = values;
 	}
 	{
-		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
-		    batch_size);
+		std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);
@@ -78,8 +75,7 @@ TEST(Concatenation, General)
 
 	Concatenation::Value expectation;
 	{
-		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(
-		    batch_size);
+		std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>> values(batch_size);
 		size_t i = 0;
 		for (auto& v : values) {
 			v.resize(1);

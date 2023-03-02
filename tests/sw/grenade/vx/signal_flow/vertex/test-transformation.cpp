@@ -38,10 +38,9 @@ struct ZerosLike : public vertex::Transformation::Function
 	{
 		assert(value.size() == 1);
 		auto const& input =
-		    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 		        value.at(0));
-		std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> ret(
-		    input.size());
+		std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> ret(input.size());
 		size_t i = 0;
 		for (auto& r : ret) {
 			r.resize(input.at(i).size());
@@ -82,9 +81,8 @@ TEST(Transformation, General)
 	std::vector<signal_flow::Int8> value(123, signal_flow::Int8(42));
 	EXPECT_EQ(
 	    transformation.apply(
-	        {std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>{
-	            {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), value}}}}),
-	    function_copy.apply(
-	        {std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>{
-	            {{haldls::vx::v3::FPGATime(), haldls::vx::v3::ChipTime(), value}}}}));
+	        {std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>{
+	            {{common::Time(), value}}}}),
+	    function_copy.apply({std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>{
+	        {{common::Time(), value}}}}));
 }

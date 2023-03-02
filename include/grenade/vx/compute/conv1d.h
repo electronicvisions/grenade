@@ -2,9 +2,9 @@
 #include <vector>
 #include <gtest/gtest_prod.h>
 
+#include "grenade/vx/common/time.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/signal_flow/types.h"
-#include "haldls/vx/v3/timer.h"
 
 namespace cereal {
 struct access;
@@ -55,7 +55,7 @@ public:
 	    size_t input_size,
 	    size_t stride,
 	    size_t num_sends = 1,
-	    haldls::vx::v3::Timer::Value wait_between_events = haldls::vx::v3::Timer::Value(25),
+	    common::Time wait_between_events = haldls::vx::v3::Timer::Value(25),
 	    bool enable_loopback = false);
 
 	/**
@@ -87,7 +87,7 @@ private:
 	MAC m_mac{};
 
 	size_t m_num_sends{};
-	haldls::vx::v3::Timer::Value m_wait_between_events{};
+	common::Time m_wait_between_events{};
 
 	friend struct cereal::access;
 	template <typename Archive>

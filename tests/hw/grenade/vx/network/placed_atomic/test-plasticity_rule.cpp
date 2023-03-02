@@ -84,8 +84,10 @@ TEST(PlasticityRule, RawRecording)
 	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime[instance].push_back(
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime[instance].push_back(
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
 	grenade::vx::execution::backend::Connection connection;
@@ -102,7 +104,7 @@ TEST(PlasticityRule, RawRecording)
 	EXPECT_TRUE(
 	    network_graph.get_plasticity_rule_output_vertices().contains(plasticity_rule_descriptor));
 	auto const result = std::get<std::vector<
-	    grenade::vx::signal_flow::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
+	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
 	    result_map.data.at(
 	        network_graph.get_plasticity_rule_output_vertices().at(plasticity_rule_descriptor)));
 
@@ -127,9 +129,9 @@ TEST(PlasticityRule, TimedRecording)
 
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime[instance].push_back(
-	    Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 10000));
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000));
 	inputs.runtime[instance].push_back(
-	    Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 10000));
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000));
 
 	grenade::vx::execution::backend::Connection connection;
 	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
@@ -224,7 +226,7 @@ TEST(PlasticityRule, TimedRecording)
 		    grenade::vx::network::placed_atomic::PlasticityRule::Timer::Value(0);
 		plasticity_rule.timer.period =
 		    grenade::vx::network::placed_atomic::PlasticityRule::Timer::Value(
-		        Timer::Value::fpga_clock_cycles_per_us * 3000);
+		        grenade::vx::common::Time::fpga_clock_cycles_per_us * 3000);
 
 		std::uniform_int_distribution num_periods_distribution(1, 3);
 		plasticity_rule.timer.num_periods = num_periods_distribution(rng);
@@ -431,16 +433,16 @@ TEST(PlasticityRule, TimedRecording)
 				        auto const& data_entry_variant = timed_recording_data.data_array.at(name);
 				        std::visit(
 				            [&](auto type) {
-					            auto const& data_entry = std::get<
-					                std::vector<grenade::vx::signal_flow::TimedDataSequence<
+					            auto const& data_entry =
+					                std::get<std::vector<grenade::vx::common::TimedDataSequence<
 					                    std::vector<typename decltype(type)::ElementType>>>>(
-					                data_entry_variant);
+					                    data_entry_variant);
 					            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 					            for (size_t i = 0; i < data_entry.size(); ++i) {
 						            auto const& samples = data_entry.at(i);
 						            EXPECT_EQ(samples.size(), plasticity_rule.timer.num_periods);
 						            for (size_t time = 0; auto const& sample : samples) {
-							            EXPECT_EQ(sample.chip_time, time);
+							            EXPECT_EQ(sample.time, time);
 							            EXPECT_EQ(sample.data.size(), obsv.size * 2);
 							            for (size_t i = 0; i < sample.data.size(); ++i) {
 								            EXPECT_EQ(static_cast<int>(sample.data.at(i)), j)
@@ -462,17 +464,18 @@ TEST(PlasticityRule, TimedRecording)
 					            EXPECT_EQ(
 					                data_entry_variant.size(), plasticity_rule.projections.size());
 					            for (size_t p = 0; p < plasticity_rule.projections.size(); ++p) {
-						            auto const& data_entry = std::get<
-						                std::vector<grenade::vx::signal_flow::TimedDataSequence<
+						            auto const& data_entry =
+						                std::get<std::vector<grenade::vx::common::TimedDataSequence<
 						                    std::vector<typename decltype(type)::ElementType>>>>(
-						                data_entry_variant.at(plasticity_rule.projections.at(p)));
+						                    data_entry_variant.at(
+						                        plasticity_rule.projections.at(p)));
 						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
 							            EXPECT_EQ(
 							                samples.size(), plasticity_rule.timer.num_periods);
 							            for (size_t time = 0; auto const& sample : samples) {
-								            EXPECT_EQ(sample.chip_time, time);
+								            EXPECT_EQ(sample.time, time);
 								            EXPECT_EQ(
 								                sample.data.size(),
 								                network->projections
@@ -499,18 +502,18 @@ TEST(PlasticityRule, TimedRecording)
 					            EXPECT_EQ(
 					                data_entry_variant.size(), plasticity_rule.populations.size());
 					            for (size_t p = 0; p < plasticity_rule.populations.size(); ++p) {
-						            auto const& data_entry = std::get<
-						                std::vector<grenade::vx::signal_flow::TimedDataSequence<
+						            auto const& data_entry =
+						                std::get<std::vector<grenade::vx::common::TimedDataSequence<
 						                    std::vector<typename decltype(type)::ElementType>>>>(
-						                data_entry_variant.at(
-						                    plasticity_rule.populations.at(p).descriptor));
+						                    data_entry_variant.at(
+						                        plasticity_rule.populations.at(p).descriptor));
 						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
 							            EXPECT_EQ(
 							                samples.size(), plasticity_rule.timer.num_periods);
 							            for (size_t time = 0; auto const& sample : samples) {
-								            EXPECT_EQ(sample.chip_time, time);
+								            EXPECT_EQ(sample.time, time);
 								            EXPECT_EQ(
 								                sample.data.size(),
 								                std::get<grenade::vx::network::placed_atomic::
@@ -550,7 +553,8 @@ TEST(PlasticityRule, ExecutorInitialState)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime[instance].push_back(
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
 	execution::backend::Connection connection;
@@ -630,7 +634,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 		assert(network_graph.get_plasticity_rule_output_vertices().contains(
 		    plasticity_rule_descriptor));
 		auto const result =
-		    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 		        result_map.data.at(network_graph.get_plasticity_rule_output_vertices().at(
 		            plasticity_rule_descriptor)));
 		assert(result.size() == inputs.batch_size());

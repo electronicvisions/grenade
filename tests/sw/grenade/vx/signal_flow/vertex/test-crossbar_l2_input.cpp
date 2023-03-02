@@ -14,6 +14,6 @@ TEST(CrossbarL2Input, General)
 	EXPECT_EQ(config.inputs().front().size, 1);
 	EXPECT_EQ(config.output().size, 1);
 
-	EXPECT_EQ(config.inputs().front().type, ConnectionType::TimedSpikeSequence);
+	EXPECT_EQ(config.inputs().front().type, ConnectionType::TimedSpikeToChipSequence);
 	EXPECT_EQ(config.output().type, ConnectionType::CrossbarInputLabel);
 }

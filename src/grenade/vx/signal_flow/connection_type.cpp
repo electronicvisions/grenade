@@ -19,8 +19,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "SynapticInput");
 		case ConnectionType::MembraneVoltage:
 			return (os << "MembraneVoltage");
-		case ConnectionType::TimedSpikeSequence:
-			return (os << "TimedSpikeSequence");
+		case ConnectionType::TimedSpikeToChipSequence:
+			return (os << "TimedSpikeToChipSequence");
 		case ConnectionType::TimedSpikeFromChipSequence:
 			return (os << "TimedSpikeFromChipSequence");
 		case ConnectionType::TimedMADCSampleFromChipSequence:
@@ -33,8 +33,8 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 			return (os << "DataInt8");
 		case ConnectionType::DataTimedSpikeFromChipSequence:
 			return (os << "DataTimedSpikeFromChipSequence");
-		case ConnectionType::DataTimedSpikeSequence:
-			return (os << "DataTimedSpikeSequence");
+		case ConnectionType::DataTimedSpikeToChipSequence:
+			return (os << "DataTimedSpikeToChipSequence");
 		case ConnectionType::DataTimedMADCSampleFromChipSequence:
 			return (os << "DataTimedMADCSampleFromChipSequence");
 		case ConnectionType::CrossbarInputLabel:

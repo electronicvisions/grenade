@@ -152,11 +152,11 @@ TEST(Graph, check_supports_input_from)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
 
 	// Graph: v0 -> v1 -> v2
@@ -197,11 +197,11 @@ TEST(Graph, recurrence)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
 
 	// Graph: v1 -> v2
@@ -289,11 +289,11 @@ TEST(Graph, CerealizeCoverage)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
 
 	// Graph: v1 -> v2
@@ -380,11 +380,11 @@ TEST(Graph, update)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
 
 	// Graph: v0 -> v1 -> v2
@@ -432,11 +432,11 @@ TEST(Graph, update_and_relocate)
 	Graph graph;
 
 	// Graph: v0
-	ExternalInput vertex(ConnectionType::DataTimedSpikeSequence, 1);
+	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
 	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
 
 	// Graph: v0 -> v1
-	DataInput vertex2(ConnectionType::TimedSpikeSequence, 1);
+	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
 
 	// Graph: v1 -> v2

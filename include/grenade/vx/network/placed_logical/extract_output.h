@@ -1,10 +1,10 @@
 #pragma once
+#include "grenade/vx/common/time.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
-#include "haldls/vx/v3/systime.h"
 #include <map>
 #include <tuple>
 #include <vector>
@@ -21,7 +21,7 @@ namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_
  */
 std::vector<std::map<
     std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
-    std::vector<haldls::vx::v3::ChipTime>>>
+    std::vector<common::Time>>>
 extract_neuron_spikes(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
@@ -35,8 +35,7 @@ extract_neuron_spikes(
  * samples
  * @return Time-series MADC sample data per batch entry
  */
-std::vector<
-    std::vector<std::pair<haldls::vx::v3::ChipTime, haldls::vx::v3::MADCSampleFromChip::Value>>>
+std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
@@ -52,7 +51,7 @@ extract_madc_samples(
  * batch-entry and contain their corresponding location alongside the ADC value.
  */
 std::vector<std::vector<std::tuple<
-    haldls::vx::v3::ChipTime,
+    common::Time,
     PopulationDescriptor,
     size_t,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,

@@ -52,9 +52,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         config = lola.Chip()
 
-        inputs = grenade.signal_flow.IODataMap()
-        inputs.data = {network_graph.event_input_vertex: [
-            [grenade.signal_flow.TimedSpike()]]}
+        inputs = grenade.network.placed_atomic.InputGenerator(
+            network_graph).done()
 
         with hxcomm.ManagedConnection() as connection:
             init, _ = sta.generate(sta.DigitalInit())
@@ -62,15 +61,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
             outputs = grenade.network.placed_atomic.run(
                 connection, config, network_graph, inputs)
 
-        if enable_spikes:
-            self.assertEqual(len(
-                outputs.data[network_graph.event_output_vertex]
-            ), 1)
-
-        if enable_v:
-            self.assertEqual(len(
-                outputs.data[network_graph.madc_sample_output_vertex]
-            ), 1)
+        if enable_spikes or enable_v:
+            self.assertEqual(outputs.batch_size(), 1)
 
     def test_run_network_graph(self):
         for enable_spikes in [True, False]:

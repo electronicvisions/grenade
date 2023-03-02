@@ -149,7 +149,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime[instance].push_back(Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 1000));
+	inputs.runtime[instance].push_back(
+	    grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000));
 
 	// Construct connection to HW
 	grenade::vx::execution::backend::Connection connection;
@@ -171,8 +172,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	EXPECT_EQ(recorded_data.data_per_synapse.at("weights").size(), 5 /* #projections */);
 	for (auto const& [descriptor, ws] : recorded_data.data_per_synapse.at("weights")) {
 		auto const& weights =
-		    std::get<std::vector<grenade::vx::signal_flow::TimedDataSequence<std::vector<int8_t>>>>(
-		        ws);
+		    std::get<std::vector<grenade::vx::common::TimedDataSequence<std::vector<int8_t>>>>(ws);
 		EXPECT_EQ(weights.size(), inputs.batch_size());
 		for (size_t i = 0; i < weights.size(); ++i) {
 			auto const& samples = weights.at(i);

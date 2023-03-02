@@ -6,7 +6,7 @@ Conv1d::Conv1d(
     size_t input_size,
     size_t stride,
     size_t num_sends,
-    haldls::vx::Timer::Value wait_between_events,
+    common::Time wait_between_events,
     bool enable_loopback) :
     m_enable_loopback(enable_loopback),
     m_input_size(input_size),

@@ -11,22 +11,20 @@ class GENPYBIND(visible) InputGenerator
 public:
 	InputGenerator(NetworkGraph const& network_graph, size_t batch_size = 1) SYMBOL_VISIBLE;
 
-	void add(
-	    std::vector<signal_flow::TimedSpike::Time> const& times,
-	    PopulationDescriptor population) SYMBOL_VISIBLE;
+	void add(std::vector<common::Time> const& times, PopulationDescriptor population)
+	    SYMBOL_VISIBLE;
+
+	void add(std::vector<std::vector<common::Time>> const& times, PopulationDescriptor population)
+	    SYMBOL_VISIBLE;
 
 	void add(
-	    std::vector<std::vector<signal_flow::TimedSpike::Time>> const& times,
-	    PopulationDescriptor population) SYMBOL_VISIBLE;
-
-	void add(
-	    std::vector<std::vector<std::vector<signal_flow::TimedSpike::Time>>> const& times,
+	    std::vector<std::vector<std::vector<common::Time>>> const& times,
 	    PopulationDescriptor population) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		auto const convert_ms = [](float const t) {
-			return grenade::vx::signal_flow::TimedSpike::Time(std::llround(
-			    t * 1000. * grenade::vx::signal_flow::TimedSpike::Time::fpga_clock_cycles_per_us));
+			return grenade::vx::common::Time(
+			    std::llround(t * 1000. * grenade::vx::common::Time::fpga_clock_cycles_per_us));
 		};
 		parent.def(
 		    "add",
@@ -34,8 +32,7 @@ public:
 		        GENPYBIND_PARENT_TYPE& self,
 		        std::vector<std::vector<std::vector<float>>> const& times,
 		        grenade::vx::network::placed_atomic::PopulationDescriptor const population) {
-			    std::vector<std::vector<std::vector<grenade::vx::signal_flow::TimedSpike::Time>>>
-			        gtimes;
+			    std::vector<std::vector<std::vector<grenade::vx::common::Time>>> gtimes;
 			    gtimes.resize(times.size());
 			    for (size_t b = 0; auto& gt_b : gtimes) {
 				    gt_b.resize(times.at(b).size());
@@ -58,7 +55,7 @@ public:
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self, std::vector<std::vector<float>> const& times,
 		        grenade::vx::network::placed_atomic::PopulationDescriptor const population) {
-			    std::vector<std::vector<grenade::vx::signal_flow::TimedSpike::Time>> gtimes;
+			    std::vector<std::vector<grenade::vx::common::Time>> gtimes;
 			    gtimes.resize(times.size());
 			    for (size_t i = 0; auto& gt : gtimes) {
 				    gt.reserve(times.at(i).size());
@@ -77,7 +74,7 @@ public:
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self, std::vector<float> const& times,
 		        grenade::vx::network::placed_atomic::PopulationDescriptor const population) {
-			    std::vector<grenade::vx::signal_flow::TimedSpike::Time> gtimes;
+			    std::vector<grenade::vx::common::Time> gtimes;
 			    gtimes.reserve(times.size());
 			    std::transform(times.begin(), times.end(), std::back_inserter(gtimes), convert_ms);
 			    self.add(gtimes, population);

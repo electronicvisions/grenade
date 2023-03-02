@@ -762,7 +762,7 @@ PlasticityRule::get_recorded_memory_timed_data_intervals() const
 }
 
 PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
-    std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data) const
+    std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data) const
 {
 	if (!m_recording) {
 		throw std::runtime_error("Observable extraction only possible when recording is present.");
@@ -813,7 +813,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int synapse_view = data_per_synapse.size() - 1; synapse_view >= 0; --synapse_view) {
 			auto const& synapse_view_shape = m_synapse_view_shapes.at(synapse_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			std::vector<common::TimedDataSequence<std::vector<ElementType>>> batch_values(
 			    data.size());
 			size_t local_synapse_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
@@ -824,8 +824,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
 					auto& local_sample = local_batch_values.at(sample);
 					auto& local_data_sample = local_data.at(sample);
-					local_sample.chip_time = local_data_sample.chip_time;
-					local_sample.fpga_time = local_data_sample.fpga_time;
+					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(
 					    synapse_view_shape.num_rows * synapse_view_shape.columns.size());
 					for (size_t synapse = 0; synapse < local_sample.data.size(); ++synapse) {
@@ -882,7 +881,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int synapse_view = data_per_synapse.size() - 1; synapse_view >= 0; --synapse_view) {
 			auto const& synapse_view_shape = m_synapse_view_shapes.at(synapse_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			std::vector<common::TimedDataSequence<std::vector<ElementType>>> batch_values(
 			    data.size());
 			size_t local_synapse_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
@@ -896,8 +895,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 					size_t const ppu_offset = synapse_view_shape.hemisphere.value()
 					                              ? local_data_sample.data.size() / 2
 					                              : 0;
-					local_sample.chip_time = local_data_sample.chip_time;
-					local_sample.fpga_time = local_data_sample.fpga_time;
+					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(
 					    synapse_view_shape.num_rows * synapse_view_shape.columns.size());
 					for (size_t synapse = 0; synapse < local_sample.data.size(); ++synapse) {
@@ -935,7 +933,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int neuron_view = data_per_neuron.size() - 1; neuron_view >= 0; --neuron_view) {
 			auto const& neuron_view_shape = m_neuron_view_shapes.at(neuron_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			std::vector<common::TimedDataSequence<std::vector<ElementType>>> batch_values(
 			    data.size());
 			size_t local_neuron_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
@@ -946,8 +944,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
 					auto& local_sample = local_batch_values.at(sample);
 					auto& local_data_sample = local_data.at(sample);
-					local_sample.chip_time = local_data_sample.chip_time;
-					local_sample.fpga_time = local_data_sample.fpga_time;
+					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(neuron_view_shape.columns.size());
 					for (size_t neuron = 0; neuron < local_sample.data.size(); ++neuron) {
 						size_t const ppu_offset =
@@ -996,7 +993,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (int neuron_view = data_per_neuron.size() - 1; neuron_view >= 0; --neuron_view) {
 			auto const& neuron_view_shape = m_neuron_view_shapes.at(neuron_view);
 			typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-			std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
+			std::vector<common::TimedDataSequence<std::vector<ElementType>>> batch_values(
 			    data.size());
 			size_t local_neuron_view_offset = 0;
 			for (size_t batch = 0; batch < batch_values.size(); ++batch) {
@@ -1009,8 +1006,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 					auto& local_data_sample = local_data.at(sample);
 					size_t const ppu_offset =
 					    neuron_view_shape.row.value() ? local_data_sample.data.size() / 2 : 0;
-					local_sample.chip_time = local_data_sample.chip_time;
-					local_sample.fpga_time = local_data_sample.fpga_time;
+					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(neuron_view_shape.columns.size());
 					for (size_t neuron = 0; neuron < local_sample.data.size(); ++neuron) {
 						size_t const total_offset = (sizeof(ElementType) * neuron) +
@@ -1041,8 +1037,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 	                                          auto const& name) {
 		auto& data_array = observable_data.data_array[name];
 		typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
-		std::vector<signal_flow::TimedDataSequence<std::vector<ElementType>>> batch_values(
-		    data.size());
+		std::vector<common::TimedDataSequence<std::vector<ElementType>>> batch_values(data.size());
 		for (size_t batch = 0; batch < batch_values.size(); ++batch) {
 			auto& local_batch_values = batch_values.at(batch);
 			auto const& local_data = data.at(batch);
@@ -1050,8 +1045,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 			for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
 				auto& local_sample = local_batch_values.at(sample);
 				auto& local_data_sample = local_data.at(sample);
-				local_sample.chip_time = local_data_sample.chip_time;
-				local_sample.fpga_time = local_data_sample.fpga_time;
+				local_sample.time = local_data_sample.time;
 				local_sample.data.resize(size * 2);
 				for (auto const ppu :
 				     halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {

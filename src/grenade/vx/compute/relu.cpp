@@ -54,7 +54,7 @@ std::vector<std::vector<signal_flow::Int8>> ReLU::run(
 	}
 
 	signal_flow::IODataMap input_map;
-	std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>> timed_inputs(
+	std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		timed_inputs.at(i).resize(1);
@@ -66,7 +66,7 @@ std::vector<std::vector<signal_flow::Int8>> ReLU::run(
 	auto const output_map = execution::run(executor, m_graph, input_map, configs);
 
 	auto const timed_outputs =
-	    std::get<std::vector<signal_flow::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 	        output_map.data.at(m_output_vertex));
 	std::vector<std::vector<signal_flow::Int8>> outputs(timed_outputs.size());
 	for (size_t i = 0; i < outputs.size(); ++i) {

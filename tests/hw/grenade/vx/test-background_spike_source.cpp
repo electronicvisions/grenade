@@ -25,7 +25,7 @@ using namespace haldls::vx::v3;
 
 inline void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
-    Timer::Value running_period,
+    grenade::vx::common::Time running_period,
     size_t spike_count_deviation,
     grenade::vx::execution::JITGraphExecutor& executor)
 {
@@ -95,7 +95,7 @@ inline void test_background_spike_source_regular(
 	expected_labels_count.fill(0);
 	for (auto spike : spikes) {
 		for (auto source_coord : iter_all<BackgroundSpikeSourceOnDLS>()) {
-			if (expected_labels[source_coord] == spike.label) {
+			if (expected_labels[source_coord] == spike.data) {
 				expected_labels_count[source_coord] += 1;
 			}
 		}
@@ -123,7 +123,7 @@ TEST(BackgroundSpikeSource, Regular)
 
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(1000), Timer::Value(10000000), 1000, executor);
+	    BackgroundSpikeSource::Period(1000), grenade::vx::common::Time(10000000), 1000, executor);
 	test_background_spike_source_regular(
-	    BackgroundSpikeSource::Period(10000), Timer::Value(100000000), 1000, executor);
+	    BackgroundSpikeSource::Period(10000), grenade::vx::common::Time(100000000), 1000, executor);
 }

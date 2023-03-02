@@ -6,6 +6,7 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("pyhalco_hicann_dls_vx_v3");
 	parent->py::module::import("pyhaldls_vx_v3");
 	parent->py::module::import("pylola_vx_v3");
+	parent->py::module::import("_pygrenade_vx_common");
 })
 
 #include "grenade/vx/signal_flow/event.h"
