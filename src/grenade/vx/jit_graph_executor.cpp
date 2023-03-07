@@ -12,7 +12,6 @@
 #include "hxcomm/vx/connection_from_env.h"
 #include <chrono>
 #include <map>
-#include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <variant>
@@ -33,15 +32,8 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
 		m_connections.emplace(
 		    identifier, std::move(backend::Connection(std::move(hxcomm_connections.at(i)))));
 		m_connection_state_storages.emplace(
-		    identifier, std::move(ConnectionStateStorage{
-		                    m_enable_differential_config,
-		                    {},
-		                    {},
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry()}));
+		    std::piecewise_construct, std::forward_as_tuple(identifier),
+		    std::forward_as_tuple(m_enable_differential_config, m_connections.at(identifier)));
 	}
 }
 
@@ -54,15 +46,8 @@ JITGraphExecutor::JITGraphExecutor(
 {
 	for (auto const& [identifier, _] : m_connections) {
 		m_connection_state_storages.emplace(
-		    identifier, std::move(ConnectionStateStorage{
-		                    m_enable_differential_config,
-		                    {},
-		                    {},
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry(),
-		                    m_connections.at(identifier).create_reinit_stack_entry()}));
+		    std::piecewise_construct, std::forward_as_tuple(identifier),
+		    std::forward_as_tuple(m_enable_differential_config, m_connections.at(identifier)));
 	}
 }
 
@@ -195,18 +180,6 @@ IODataMap run(
 	// global data map
 	IODataMap output_activation_map;
 
-	std::map<DLSGlobal, hxcomm::ConnectionTimeInfo> connection_time_info_begin;
-	for (auto const& [dls, connection] : executor.m_connections) {
-		connection_time_info_begin.emplace(dls, connection.get_time_info());
-	}
-
-	// connection mutex map
-	std::map<DLSGlobal, std::mutex> continuous_chunked_program_execution_mutexes;
-	for (auto const& [dls, _] : executor.m_connections) {
-		continuous_chunked_program_execution_mutexes.emplace(
-		    std::piecewise_construct, std::make_tuple(dls), std::make_tuple());
-	}
-
 	// build execution nodes
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
@@ -216,7 +189,6 @@ IODataMap run(
 		    output_activation_map, input, graph, execution_instance,
 		    initial_config.at(execution_instance), executor.m_connections.at(dls_global),
 		    executor.m_connection_state_storages.at(dls_global),
-		    continuous_chunked_program_execution_mutexes.at(dls_global),
 		    playback_hooks[execution_instance]);
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
@@ -241,30 +213,28 @@ IODataMap run(
 
 	ExecutionTimeInfo execution_time_info;
 	execution_time_info.execution_duration = std::chrono::nanoseconds(timer.get_ns());
-	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
-	LOG4CXX_INFO(
-	    logger, "run(): Executed graph in "
-	                << hate::to_string(execution_time_info.execution_duration) << ".");
-	for (auto const& [dls, e] : executor.m_connections) {
-		auto const connection_time_info_difference =
-		    e.get_time_info() - connection_time_info_begin.at(dls);
-		execution_time_info.execution_duration_per_hardware[dls] =
-		    connection_time_info_difference.execution_duration;
-		LOG4CXX_INFO(
-		    logger, "run(): Chip at "
-		                << dls << " spent "
-		                << hate::to_string(connection_time_info_difference.execution_duration)
-		                << " in execution, which is "
-		                << (static_cast<double>(
-		                        connection_time_info_difference.execution_duration.count()) /
-		                    static_cast<double>(execution_time_info.execution_duration.count()) *
-		                    100.)
-		                << " % of total graph execution time.");
-	}
 	if (output_activation_map.execution_time_info) {
 		output_activation_map.execution_time_info->merge(execution_time_info);
 	} else {
 		output_activation_map.execution_time_info = execution_time_info;
+	}
+	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
+	LOG4CXX_INFO(
+	    logger,
+	    "run(): Executed graph in "
+	        << hate::to_string(output_activation_map.execution_time_info->execution_duration)
+	        << ".");
+	for (auto const& [dls, duration] :
+	     output_activation_map.execution_time_info->execution_duration_per_hardware) {
+		LOG4CXX_INFO(
+		    logger, "run(): Chip at "
+		                << dls << " spent " << hate::to_string(duration)
+		                << " in execution, which is "
+		                << (static_cast<double>(duration.count()) /
+		                    static_cast<double>(output_activation_map.execution_time_info
+		                                            ->execution_duration.count()) *
+		                    100.)
+		                << " % of total graph execution time.");
 	}
 	output_activation_map.runtime = input.runtime;
 	return output_activation_map;

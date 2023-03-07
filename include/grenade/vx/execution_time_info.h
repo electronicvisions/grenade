@@ -23,7 +23,7 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	 * responses and decoding them up to the halt response.
 	 */
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::chrono::nanoseconds>
-	    execution_duration_per_hardware;
+	    execution_duration_per_hardware{};
 
 	/**
 	 * Time spent in realtime section on hardware.
@@ -32,25 +32,27 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	 * event recording is enabled for each batch entry.
 	 */
 	std::unordered_map<coordinate::ExecutionInstance, std::chrono::nanoseconds>
-	    realtime_duration_per_execution_instance;
+	    realtime_duration_per_execution_instance{};
 
 	/**
 	 * Total duration of execution.
 	 * This includes graph traversal, compilation of playback programs and post-processing of
 	 * result. data.
 	 */
-	std::chrono::nanoseconds execution_duration;
+	std::chrono::nanoseconds execution_duration{0};
 
 	/**
 	 * Merge other execution time info.
-	 * This merges all map-like structures and overwrites the others.
+	 * This merges all map-like structures and accumulates the others as well as already present map
+	 * entries.
 	 * @param other Other execution time info to merge
 	 */
 	void merge(ExecutionTimeInfo& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Merge other execution time info.
-	 * This merges all map-like structures and overwrites the others.
+	 * This merges all map-like structures and accumulates the others as well as already present map
+	 * entries.
 	 * @param other Other execution time info to merge
 	 */
 	void merge(ExecutionTimeInfo&& other) SYMBOL_VISIBLE GENPYBIND(hidden);

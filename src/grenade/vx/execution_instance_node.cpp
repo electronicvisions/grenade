@@ -63,7 +63,6 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     lola::vx::v3::Chip const& initial_config,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,
-    std::mutex& connection_mutex,
     ExecutionInstancePlaybackHooks& playback_hooks) :
     data_map(data_map),
     input_data_map(input_data_map),
@@ -72,7 +71,6 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     initial_config(initial_config),
     connection(connection),
     connection_state_storage(connection_state_storage),
-    connection_mutex(connection_mutex),
     playback_hooks(playback_hooks),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
@@ -237,7 +235,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    logger, "operator(): Generated playback program for PPU startup trigger in "
 	                << trigger_timer.print() << ".");
 
-	std::unique_lock<std::mutex> connection_lock(connection_mutex, std::defer_lock);
+	std::unique_lock<std::mutex> connection_lock(connection_state_storage.mutex, std::defer_lock);
 	// exclusive access to connection_state_storage and connection required from here in
 	// differential mode
 	if (connection_state_storage.enable_differential_config) {
@@ -320,11 +318,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// execute
 	hate::Timer const exec_timer;
+	std::chrono::nanoseconds connection_execution_duration_before{0};
+	std::chrono::nanoseconds connection_execution_duration_after{0};
 	if (!program.realtime.empty() || !base_program.empty()) {
 		// only lock execution section for non-differential config mode
 		if (!connection_state_storage.enable_differential_config) {
 			connection_lock.lock();
 		}
+
+		// we are locked here in any case
+		connection_execution_duration_before = connection.get_time_info().execution_duration;
 
 		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
@@ -362,6 +365,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 		// unlock execution section for non-differential config mode
 		if (!connection_state_storage.enable_differential_config) {
+			connection_execution_duration_after = connection.get_time_info().execution_duration;
 			connection_lock.unlock();
 		}
 	}
@@ -395,6 +399,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// unlock execution section for differential config mode
 	if (connection_state_storage.enable_differential_config) {
+		connection_execution_duration_after = connection.get_time_info().execution_duration;
 		connection_lock.unlock();
 	}
 
@@ -402,6 +407,12 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	hate::Timer const post_timer;
 	auto result_data_map = builder.post_process();
 	LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
+
+	// add execution duration per hardware to result data map
+	assert(result_data_map.execution_time_info);
+	result_data_map.execution_time_info
+	    ->execution_duration_per_hardware[execution_instance.toDLSGlobal()] =
+	    connection_execution_duration_after - connection_execution_duration_before;
 
 	// merge local data map into global data map
 	data_map.merge(result_data_map);

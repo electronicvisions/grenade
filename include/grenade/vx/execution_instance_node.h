@@ -1,6 +1,5 @@
 #pragma once
 #include <memory>
-#include <mutex>
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/connection_state_storage.h"
@@ -38,7 +37,6 @@ struct ExecutionInstanceNode
 	    lola::vx::v3::Chip const& initial_config,
 	    backend::Connection& connection,
 	    ConnectionStateStorage& connection_state_storage,
-	    std::mutex& connection_mutex,
 	    ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
@@ -51,7 +49,6 @@ private:
 	lola::vx::v3::Chip const& initial_config;
 	backend::Connection& connection;
 	ConnectionStateStorage& connection_state_storage;
-	std::mutex& connection_mutex;
 	ExecutionInstancePlaybackHooks& playback_hooks;
 	log4cxx::LoggerPtr logger;
 };

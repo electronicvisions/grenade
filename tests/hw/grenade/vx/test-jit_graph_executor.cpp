@@ -10,6 +10,7 @@
 #include "grenade/vx/network/routing_builder.h"
 #include "hate/timer.h"
 #include "lola/vx/v3/chip.h"
+#include <future>
 #include <log4cxx/logger.h>
 
 TEST(JITGraphExecutor, Empty)
@@ -151,4 +152,65 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 		// Fourth run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
+}
+
+TEST(JITGraphExecutor, ConcurrentUsage)
+{
+	// use network to build simple experiment using the hardeware
+	grenade::vx::network::NetworkBuilder builder;
+	builder.add(
+	    grenade::vx::network::Population({halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
+	auto const network = builder.done();
+	auto const routing = grenade::vx::network::build_routing(network);
+	auto const network_graph = grenade::vx::network::build_network_graph(network, routing);
+
+	// construct JIT executor with differential config mode enabled
+	grenade::vx::backend::Connection connection;
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::backend::Connection> connections;
+	connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(connection));
+	grenade::vx::JITGraphExecutor executor(std::move(connections), true);
+
+	// a single batch entry with some runtime to ensure use of hardware
+	grenade::vx::IODataMap input_map;
+	input_map.runtime[grenade::vx::coordinate::ExecutionInstance()].push_back(
+	    haldls::vx::Timer::Value(10000 * haldls::vx::Timer::Value::fpga_clock_cycles_per_us));
+
+	grenade::vx::JITGraphExecutor::ChipConfigs initial_config{
+	    {grenade::vx::coordinate::ExecutionInstance(), lola::vx::v3::Chip()}};
+
+	std::vector<std::future<grenade::vx::IODataMap>> results;
+	constexpr size_t num_concurrent = 100;
+
+	auto const run_func = [&]() -> grenade::vx::IODataMap {
+		return grenade::vx::run(executor, network_graph.get_graph(), input_map, initial_config);
+	};
+
+	hate::Timer timer;
+	for (size_t i = 0; i < num_concurrent; ++i) {
+		results.push_back(std::async(std::launch::async, run_func));
+	}
+
+	for (size_t i = 0; i < num_concurrent; ++i) {
+		auto const data = results.at(i).get();
+		assert(data.execution_time_info);
+		EXPECT_TRUE(data.execution_time_info->execution_duration_per_hardware.contains(
+		    halco::hicann_dls::vx::v3::DLSGlobal()));
+		// expect at least the realtime runtime as duration
+		EXPECT_GE(
+		    data.execution_time_info->execution_duration_per_hardware.at(
+		        halco::hicann_dls::vx::v3::DLSGlobal()),
+		    std::chrono::milliseconds(10));
+		// expect no more than 200ms per execution
+		// since we don't know which execution will be the first, we can't assert, that this one
+		// requires more time due to applying the initial config
+		EXPECT_LE(
+		    data.execution_time_info->execution_duration_per_hardware.at(
+		        halco::hicann_dls::vx::v3::DLSGlobal()),
+		    std::chrono::milliseconds(200));
+	}
+
+	// expect no more than three times the realtime runtime as duration
+	// this ensures, that differential mode works concurrently, since otherwise we would expect at
+	// least 100ms per execution
+	EXPECT_LE(timer.get_ms(), 30 * num_concurrent);
 }

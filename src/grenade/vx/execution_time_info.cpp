@@ -12,9 +12,19 @@ void ExecutionTimeInfo::merge(ExecutionTimeInfo& other)
 
 void ExecutionTimeInfo::merge(ExecutionTimeInfo&& other)
 {
-	execution_duration = other.execution_duration;
+	execution_duration += other.execution_duration;
+
 	execution_duration_per_hardware.merge(other.execution_duration_per_hardware);
+	for (auto const& [dls, duration] : other.execution_duration_per_hardware) {
+		execution_duration_per_hardware.at(dls) += duration;
+	}
+	other.execution_duration_per_hardware.clear();
+
 	realtime_duration_per_execution_instance.merge(other.realtime_duration_per_execution_instance);
+	for (auto const& [ei, duration] : other.realtime_duration_per_execution_instance) {
+		realtime_duration_per_execution_instance.at(ei) += duration;
+	}
+	other.realtime_duration_per_execution_instance.clear();
 }
 
 std::ostream& operator<<(std::ostream& os, ExecutionTimeInfo const& info)
