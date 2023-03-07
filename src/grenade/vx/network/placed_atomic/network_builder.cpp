@@ -135,20 +135,6 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 		}
 	}
 
-	// check that single connections connect unique pairs
-	auto const get_unique_connections = [](auto const& connections) {
-		std::set<std::pair<size_t, size_t>> unique_connections;
-		for (auto const& c : connections) {
-			unique_connections.insert({c.index_pre, c.index_post});
-		}
-		return unique_connections;
-	};
-	auto const unique_connections = get_unique_connections(projection.connections);
-	if (unique_connections.size() != projection.connections.size()) {
-		throw std::runtime_error(
-		    "Projection to be added features same single connection multiple times.");
-	}
-
 	// check that if source is background the hemisphere matches
 	if (std::holds_alternative<BackgroundSpikeSourcePopulation>(
 	        m_populations.at(projection.population_pre))) {
