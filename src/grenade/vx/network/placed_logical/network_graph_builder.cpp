@@ -1,6 +1,7 @@
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
 
 #include "grenade/vx/network/placed_atomic/network_builder.h"
+#include "grenade/vx/network/placed_logical/build_connection_routing.h"
 #include "hate/math.h"
 #include "hate/variant.h"
 #include <map>
@@ -89,22 +90,19 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 	// add projections, distribute weight onto multiple synapses
 	// we split the weight like: 123 -> 63 + 60
 	// we distribute over all neurons in every compartment
-	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> in_degree;
-	in_degree.fill(0);
+	auto const connection_routing = build_connection_routing(network);
 	NetworkGraph::ProjectionTranslation projection_translation;
 	std::map<ProjectionDescriptor, std::vector<network::placed_atomic::ProjectionDescriptor>>
 	    projection_descriptor_translation;
 	for (auto const& [descriptor, projection] : network->projections) {
-		std::vector<size_t> num_synapses;
-		for (auto const& connection : projection.connections) {
-			num_synapses.push_back(std::max(
-			    hate::math::round_up_integer_division(
-			        connection.weight.value(),
-			        network::placed_atomic::Projection::Connection::Weight::max),
-			    static_cast<size_t>(1)));
-		}
-		assert(!num_synapses.empty());
-		auto const max_num_synapses = *std::max_element(num_synapses.begin(), num_synapses.end());
+		auto const max_num_synapses =
+		    std::max_element(
+		        connection_routing.at(descriptor).begin(), connection_routing.at(descriptor).end(),
+		        [](auto const& a, auto const& b) {
+			        return a.atomic_neurons_on_target_compartment.size() <
+			               b.atomic_neurons_on_target_compartment.size();
+		        })
+		        ->atomic_neurons_on_target_compartment.size();
 		for (size_t p = 0; p < max_num_synapses; ++p) {
 			network::placed_atomic::Projection hardware_projection;
 			hardware_projection.receptor_type = projection.receptor.type;
@@ -112,53 +110,19 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 			    population_translation.at(projection.population_pre);
 			hardware_projection.population_post =
 			    population_translation.at(projection.population_post);
-			auto const& population_post =
-			    std::get<Population>(network->populations.at(projection.population_post));
 			auto const& population_pre = network->populations.at(projection.population_pre);
 			std::vector<size_t> indices;
 			for (size_t i = 0; i < projection.connections.size(); ++i) {
 				// only find new hardware synapse, if the current connection requires another one
-				if (num_synapses.at(i) <= p) {
+				if (connection_routing.at(descriptor)
+				        .at(i)
+				        .atomic_neurons_on_target_compartment.size() <= p) {
 					continue;
 				}
 				auto const& local_connection = projection.connections.at(i);
-				// find neurons with matching receptor
-				auto const& receptors =
-				    population_post.neurons.at(local_connection.index_post.first)
-				        .compartments.at(local_connection.index_post.second)
-				        .receptors;
-				auto const get_neuron_post = [&](size_t index) {
-					return population_post.neurons.at(local_connection.index_post.first)
-					    .coordinate.get_placed_compartments()
-					    .at(local_connection.index_post.second)
-					    .at(index);
-				};
-				std::set<size_t> neurons_with_matching_receptor;
-				for (size_t i = 0; i < receptors.size(); ++i) {
-					if (receptors.at(i).contains(projection.receptor)) {
-						if ((std::holds_alternative<BackgroundSpikeSourcePopulation>(
-						         population_pre) &&
-						     std::get<BackgroundSpikeSourcePopulation>(population_pre)
-						         .coordinate.contains(
-						             get_neuron_post(i).toNeuronRowOnDLS().toHemisphereOnDLS())) ||
-						    !std::holds_alternative<BackgroundSpikeSourcePopulation>(
-						        population_pre)) {
-							neurons_with_matching_receptor.insert(i);
-						}
-					}
-				}
-				if (neurons_with_matching_receptor.empty()) {
-					throw std::runtime_error(
-					    "No neuron on compartment features receptor requested by projection.");
-				}
-				// choose neuron with matching reecptor and smallest current in_degree
-				auto const neuron_on_compartment = *std::min_element(
-				    neurons_with_matching_receptor.begin(), neurons_with_matching_receptor.end(),
-				    [in_degree, get_neuron_post](auto const& a, auto const& b) {
-					    return in_degree[get_neuron_post(a)] < in_degree[get_neuron_post(b)];
-				    });
-				// choice performed, in_degree++ of chosen neuron
-				in_degree[get_neuron_post(neuron_on_compartment)]++;
+				auto const neuron_on_compartment = connection_routing.at(descriptor)
+				                                       .at(i)
+				                                       .atomic_neurons_on_target_compartment.at(p);
 				size_t index_pre;
 				if (std::holds_alternative<Population>(population_pre)) {
 					auto const& pop = std::get<Population>(population_pre);
