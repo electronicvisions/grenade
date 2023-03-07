@@ -180,15 +180,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    std::optional<PlaybackProgram::ContainerTicket<lola::vx::v3::SynapseWeightMatrix>>,
 	    SynapseWeightMatrixOnDLS>
 	    read_ticket_synaptic_weights;
-	if (connection_state_storage.enable_differential_config) {
-		if (ppu_symbols) {
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				read_ticket_ppu_memory[ppu.toPPUMemoryOnDLS()].emplace(
-				    read_builder.read(ppu.toPPUMemoryOnDLS()));
-			}
-			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
-				read_ticket_synaptic_weights[coord].emplace(read_builder.read(coord));
-			}
+	if (connection_state_storage.enable_differential_config && ppu_symbols) {
+		for (auto const ppu : iter_all<PPUOnDLS>()) {
+			read_ticket_ppu_memory[ppu.toPPUMemoryOnDLS()].emplace(
+			    read_builder.read(ppu.toPPUMemoryOnDLS()));
+		}
+		for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
+			read_ticket_synaptic_weights[coord].emplace(read_builder.read(coord));
 		}
 		read_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 	}
