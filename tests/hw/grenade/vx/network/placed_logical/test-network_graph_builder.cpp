@@ -303,7 +303,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 			Projection::Connections projection_connections{
 			    {{0, CompartmentOnLogicalNeuron()},
 			     {0, CompartmentOnLogicalNeuron()},
-			     Projection::Connection::Weight(Projection::Connection::Weight::max)}};
+			     Projection::Connection::Weight(SynapseMatrix::Weight::max)}};
 			if (i == 0) {
 				Projection projection{
 				    Receptor(Receptor::ID(), Receptor::Type::excitatory),
