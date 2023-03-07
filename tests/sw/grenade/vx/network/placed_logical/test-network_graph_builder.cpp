@@ -62,27 +62,12 @@ TEST(logical_network_build_network_graph, Multapses)
 	auto const network_graph = build_network_graph(network);
 
 	EXPECT_TRUE(network_graph.get_hardware_network());
-	EXPECT_EQ(network_graph.get_hardware_network()->projections.size(), max_weight_multiplier);
+	EXPECT_EQ(network_graph.get_hardware_network()->projections.size(), 1);
 	EXPECT_EQ(
 	    network_graph.get_hardware_network()
 	        ->projections.at(grenade::vx::network::placed_atomic::ProjectionDescriptor(0))
 	        .connections.size(),
-	    max_weight_multiplier);
-	EXPECT_EQ(
-	    network_graph.get_hardware_network()
-	        ->projections.at(grenade::vx::network::placed_atomic::ProjectionDescriptor(1))
-	        .connections.size(),
-	    2);
-	EXPECT_EQ(
-	    network_graph.get_hardware_network()
-	        ->projections.at(grenade::vx::network::placed_atomic::ProjectionDescriptor(2))
-	        .connections.size(),
-	    1);
-	EXPECT_EQ(
-	    network_graph.get_hardware_network()
-	        ->projections.at(grenade::vx::network::placed_atomic::ProjectionDescriptor(3))
-	        .connections.size(),
-	    1);
+	    1 + 2 + 1 + max_weight_multiplier);
 	{
 		auto const translation = network_graph.get_projection_translation().equal_range(
 		    std::make_pair(projection_descriptor, 0));

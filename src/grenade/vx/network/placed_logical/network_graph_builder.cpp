@@ -92,7 +92,7 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 	// we distribute over all neurons in every compartment
 	auto const connection_routing = build_connection_routing(network);
 	NetworkGraph::ProjectionTranslation projection_translation;
-	std::map<ProjectionDescriptor, std::vector<network::placed_atomic::ProjectionDescriptor>>
+	std::map<ProjectionDescriptor, network::placed_atomic::ProjectionDescriptor>
 	    projection_descriptor_translation;
 	for (auto const& [descriptor, projection] : network->projections) {
 		auto const max_num_synapses =
@@ -103,15 +103,13 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 			               b.atomic_neurons_on_target_compartment.size();
 		        })
 		        ->atomic_neurons_on_target_compartment.size();
+		network::placed_atomic::Projection hardware_projection;
+		hardware_projection.receptor_type = projection.receptor.type;
+		hardware_projection.population_pre = population_translation.at(projection.population_pre);
+		hardware_projection.population_post = population_translation.at(projection.population_post);
+		auto const& population_pre = network->populations.at(projection.population_pre);
+		std::vector<size_t> indices;
 		for (size_t p = 0; p < max_num_synapses; ++p) {
-			network::placed_atomic::Projection hardware_projection;
-			hardware_projection.receptor_type = projection.receptor.type;
-			hardware_projection.population_pre =
-			    population_translation.at(projection.population_pre);
-			hardware_projection.population_post =
-			    population_translation.at(projection.population_post);
-			auto const& population_pre = network->populations.at(projection.population_pre);
-			std::vector<size_t> indices;
 			for (size_t i = 0; i < projection.connections.size(); ++i) {
 				// only find new hardware synapse, if the current connection requires another one
 				if (connection_routing.at(descriptor)
@@ -156,14 +154,13 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 				indices.push_back(i);
 				hardware_projection.connections.push_back(hardware_connection);
 			}
-			auto const hardware_descriptor = builder.add(hardware_projection);
-			for (size_t i = 0; i < indices.size(); ++i) {
-				projection_translation.insert(std::make_pair(
-				    std::make_pair(descriptor, indices.at(i)),
-				    std::make_pair(hardware_descriptor, i)));
-			}
-			projection_descriptor_translation[descriptor].push_back(hardware_descriptor);
 		}
+		auto const hardware_descriptor = builder.add(hardware_projection);
+		for (size_t i = 0; i < indices.size(); ++i) {
+			projection_translation.insert(std::make_pair(
+			    std::make_pair(descriptor, indices.at(i)), std::make_pair(hardware_descriptor, i)));
+		}
+		projection_descriptor_translation[descriptor] = hardware_descriptor;
 	}
 
 	// add plasticity rules
@@ -171,10 +168,7 @@ NetworkGraph build_network_graph(std::shared_ptr<Network> const& network)
 	for (auto const& [d, plasticity_rule] : network->plasticity_rules) {
 		network::placed_atomic::PlasticityRule hardware_plasticity_rule;
 		for (auto const& d : plasticity_rule.projections) {
-			hardware_plasticity_rule.projections.insert(
-			    hardware_plasticity_rule.projections.end(),
-			    projection_descriptor_translation.at(d).begin(),
-			    projection_descriptor_translation.at(d).end());
+			hardware_plasticity_rule.projections.push_back(projection_descriptor_translation.at(d));
 		}
 		for (auto const& d : plasticity_rule.populations) {
 			network::placed_atomic::PlasticityRule::PopulationHandle hardware_handle;
