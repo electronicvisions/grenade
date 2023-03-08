@@ -92,10 +92,7 @@ TEST(PlasticityRule, RawRecording)
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
 	// Construct connection to HW
-	grenade::vx::execution::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -137,10 +134,7 @@ TEST(PlasticityRule, TimedRecording)
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
 
-	grenade::vx::execution::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	std::mt19937 rng(std::random_device{}());
 	constexpr size_t num = 10;
@@ -562,10 +556,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
 	// Construct connection to HW
-	execution::backend::Connection connection;
-	std::map<DLSGlobal, execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	execution::JITGraphExecutor executor(std::move(connections));
+	execution::JITGraphExecutor executor;
 
 	Projection::Connection::Weight weight_63(63);
 	Projection::Connection::Weight weight_32(32);

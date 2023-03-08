@@ -48,10 +48,7 @@ TEST(Subtraction, Single)
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	// Construct map of one connection and connect to HW
-	grenade::vx::execution::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	// fill graph inputs
 	grenade::vx::signal_flow::IODataMap input_list;

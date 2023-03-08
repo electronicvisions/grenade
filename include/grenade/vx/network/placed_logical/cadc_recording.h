@@ -21,6 +21,12 @@ struct GENPYBIND(visible) CADCRecording
 		Source source{Source::membrane};
 
 		Neuron() = default;
+		Neuron(
+		    PopulationDescriptor population,
+		    size_t neuron_on_population,
+		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron,
+		    size_t atomic_neuron_on_compartment,
+		    Source source) SYMBOL_VISIBLE;
 
 		bool operator==(Neuron const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Neuron const& other) const SYMBOL_VISIBLE;

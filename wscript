@@ -97,11 +97,20 @@ def build(bld):
     )
 
     bld(
+        target = 'grenade_hwtest_helper_vx',
+        features = 'cxx cxxshlib',
+        source = bld.path.ant_glob('tests/hw/grenade/vx/helper.cpp'),
+        use = ['grenade_vx', 'stadls_vx_v3', 'haldls_vx_v3', 'lola_vx_v3'],
+        uselib = 'GRENADE_LIBRARIES',
+        export_includes = 'tests/hw/grenade/vx',
+    )
+
+    bld(
         target = 'grenade_hwtest_vx',
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/hw/grenade/vx/**/test-*.cpp'),
         test_main = 'tests/common/grenade/vx/main.cpp',
-        use = ['grenade_vx', 'stadls_vx_v3', 'GTEST', 'haldls_vx_v3', 'lola_vx_v3'],
+        use = ['grenade_vx', 'stadls_vx_v3', 'GTEST', 'haldls_vx_v3', 'lola_vx_v3', 'grenade_hwtest_helper_vx'],
         install_path = '${PREFIX}/bin',
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=240,

@@ -47,11 +47,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	auto network_graph = grenade::vx::network::placed_atomic::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
-	grenade::vx::execution::backend::Connection connection;
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::execution::backend::Connection>
-	    connections;
-	connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections), true);
+	grenade::vx::execution::JITGraphExecutor executor(true);
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
@@ -109,11 +105,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	auto network_graph = grenade::vx::network::placed_atomic::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode disabled
-	grenade::vx::execution::backend::Connection connection;
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::execution::backend::Connection>
-	    connections;
-	connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections), false);
+	grenade::vx::execution::JITGraphExecutor executor(false);
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
@@ -169,11 +161,7 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	    grenade::vx::network::placed_atomic::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
-	grenade::vx::execution::backend::Connection connection;
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::execution::backend::Connection>
-	    connections;
-	connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections), true);
+	grenade::vx::execution::JITGraphExecutor executor(true);
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;

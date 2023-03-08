@@ -80,10 +80,7 @@ test_event_loopback_single_crossbar_node(
 TEST(JITGraphExecutor, EventLoopback)
 {
 	// Construct map of one connection and connect to HW
-	grenade::vx::execution::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	constexpr size_t max_batch_size = 5;
 

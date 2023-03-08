@@ -24,7 +24,7 @@ using namespace lola::vx::v3;
 TEST(MAC, Single)
 {
 	// Construct connection to HW
-	grenade::vx::execution::backend::Connection connection;
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	// fill graph inputs (with signal_flow::UInt5(0))
 	std::vector<grenade::vx::signal_flow::UInt5> inputs(5);
@@ -42,9 +42,6 @@ TEST(MAC, Single)
 
 	grenade::vx::compute::MAC mac(weights);
 
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 	auto const res = mac.run({inputs}, *chip, executor);
 	EXPECT_EQ(res.size(), 1);
 	EXPECT_EQ(res.at(0).size(), 1);

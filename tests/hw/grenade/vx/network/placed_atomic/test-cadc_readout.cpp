@@ -16,6 +16,7 @@
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/timer.h"
+#include "helper.h"
 #include "hxcomm/vx/connection_from_env.h"
 #include "logging_ctrl.h"
 #include "stadls/vx/v3/init_generator.h"
@@ -31,69 +32,13 @@ using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 
-inline std::pair<lola::vx::v3::Chip, grenade::vx::execution::backend::Connection>
-initialize_excitatory_bypass()
-{
-	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
-	// Initialize chip
-	ExperimentInit init;
-	for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-		chip->neuron_block.backends[c].set_enable_clocks(true);
-	}
-	for (auto const c : iter_all<ColumnCurrentQuadOnDLS>()) {
-		for (auto const e : iter_all<EntryOnQuad>()) {
-			auto s = init.column_current_quad_config[c].get_switch(e);
-			s.set_enable_synaptic_current_excitatory(true);
-			s.set_enable_synaptic_current_inhibitory(true);
-			init.column_current_quad_config[c].set_switch(e, s);
-		}
-	}
-	grenade::vx::execution::backend::Connection connection(
-	    hxcomm::vx::get_connection_from_env(), init);
-	stadls::vx::v3::PlaybackProgramBuilder builder;
-	// enable excitatory bypass mode
-	for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
-		auto& config = chip->neuron_block.atomic_neurons[neuron];
-		config.event_routing.enable_digital = true;
-		config.event_routing.analog_output =
-		    lola::vx::v3::AtomicNeuron::EventRouting::AnalogOutputMode::normal;
-		config.event_routing.enable_bypass_excitatory = true;
-		config.threshold.enable = false;
-	}
-	for (auto const block : iter_all<CommonPADIBusConfigOnDLS>()) {
-		auto& padi_config = chip->synapse_driver_blocks[block.toSynapseDriverBlockOnDLS()].padi_bus;
-		auto dacen = padi_config.get_dacen_pulse_extension();
-		for (auto const block : iter_all<PADIBusOnPADIBusBlock>()) {
-			dacen[block] = CommonPADIBusConfig::DacenPulseExtension(15);
-		}
-		padi_config.set_dacen_pulse_extension(dacen);
-	}
-	for (auto const drv : iter_all<SynapseDriverOnDLS>()) {
-		auto& config = chip->synapse_driver_blocks[drv.toSynapseDriverBlockOnDLS()]
-		                   .synapse_drivers[drv.toSynapseDriverOnSynapseDriverBlock()];
-		config.set_enable_receiver(true);
-		config.set_enable_address_out(true);
-	}
-	for (auto const block : iter_all<SynapseBlockOnDLS>()) {
-		chip->synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
-	}
-	auto program = builder.done();
-	grenade::vx::execution::backend::run(connection, program);
-	return std::make_pair(*chip, std::move(connection));
-}
-
 TEST(CADCRecording, General)
 {
 	// Construct connection to HW
-	auto [chip_config, connection] = initialize_excitatory_bypass();
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	auto chip_configs = get_chip_configs_bypass_excitatory();
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	grenade::vx::signal_flow::ExecutionInstance instance;
-
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = chip_config;
 
 	// build network
 	grenade::vx::network::placed_atomic::NetworkBuilder network_builder;
