@@ -152,18 +152,15 @@ void extract_plasticity_rule_recording_data_per_synapse(
 	if (!local_logical_data.contains(descriptor)) {
 		std::vector<common::TimedDataSequence<std::vector<std::vector<T>>>>
 		    logical_local_signal_flow(batch_size);
-		for (auto& batch : logical_local_signal_flow) {
+		for (size_t b = 0; b < logical_local_signal_flow.size(); ++b) {
+			auto& batch = logical_local_signal_flow.at(b);
 			batch.resize(num_periods);
 			for (auto& sample : batch) {
 				sample.data.resize(
 				    network_graph.get_network()->projections.at(descriptor).connections.size());
 			}
-			for (size_t b = 0; b < local_signal_flow.size(); ++b) {
-				for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
-					auto& local_logical_local_signal_flow = logical_local_signal_flow.at(b).at(s);
-					auto& local_local_signal_flow = local_signal_flow.at(b).at(s);
-					local_logical_local_signal_flow.time = local_local_signal_flow.time;
-				}
+			for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
+				batch.at(s).time = local_signal_flow.at(b).at(s).time;
 			}
 		}
 		local_logical_data[descriptor] = logical_local_signal_flow;
@@ -199,17 +196,14 @@ void extract_plasticity_rule_recording_data_per_neuron(
 		std::vector<common::TimedDataSequence<std::vector<
 		    std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<T>>>>>
 		    logical_dd(batch_size);
-		for (auto& batch : logical_dd) {
+		for (size_t b = 0; b < logical_dd.size(); ++b) {
+			auto& batch = logical_dd.at(b);
 			batch.resize(num_periods);
 			for (auto& sample : batch) {
 				sample.data.resize(neuron_translation.size());
 			}
-			for (size_t b = 0; b < dd.size(); ++b) {
-				for (size_t s = 0; s < dd.at(b).size(); ++s) {
-					auto& local_logical_dd = logical_dd.at(b).at(s);
-					auto& local_dd = dd.at(b).at(s);
-					local_logical_dd.time = local_dd.time;
-				}
+			for (size_t s = 0; s < dd.at(b).size(); ++s) {
+				batch.at(s).time = dd.at(b).at(s).time;
 			}
 		}
 		local_logical_data[descriptor] = logical_dd;
