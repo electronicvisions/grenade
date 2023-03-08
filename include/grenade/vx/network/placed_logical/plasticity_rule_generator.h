@@ -1,19 +1,14 @@
 #pragma once
-#include "grenade/vx/network/placed_atomic/plasticity_rule.h"
+#include "grenade/vx/network/placed_logical/plasticity_rule.h"
 #include "hate/visibility.h"
-#include <optional>
 #include <set>
-#include <vector>
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include <pybind11/stl.h>
 #endif
 
 
-namespace grenade::vx::network::placed_atomic GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_ATOMIC {
-
-struct PlasticityRuleDescriptor;
-struct NetworkGraph;
+namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_LOGICAL {
 
 struct GENPYBIND(visible) OnlyRecordingPlasticityRuleGenerator
 {
@@ -39,4 +34,4 @@ private:
 	std::set<Observable> m_observables;
 };
 
-} // namespace grenade::vx::network::placed_atomic
+} // namespace grenade::vx::network::placed_logical

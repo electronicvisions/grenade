@@ -18,7 +18,6 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
 #include "grenade/vx/network/placed_atomic/network_graph_statistics.h"
-#include "grenade/vx/network/placed_atomic/plasticity_rule_generator.h"
 #include "grenade/vx/network/placed_atomic/population.h"
 #include "grenade/vx/network/placed_atomic/projection.h"
 #include "grenade/vx/network/placed_atomic/requires_routing.h"

@@ -3,12 +3,12 @@
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
-#include "grenade/vx/network/placed_atomic/plasticity_rule_generator.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/plasticity_rule_generator.h"
 #include "grenade/vx/network/placed_logical/population.h"
 #include "grenade/vx/network/placed_logical/projection.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
@@ -168,15 +168,10 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	auto const projection_descriptor_5 = network_builder.add(projection_5);
 
 
-	grenade::vx::network::placed_atomic::OnlyRecordingPlasticityRuleGenerator recording_generator(
-	    {grenade::vx::network::placed_atomic::OnlyRecordingPlasticityRuleGenerator::Observable::
-	         weights});
+	OnlyRecordingPlasticityRuleGenerator recording_generator(
+	    {OnlyRecordingPlasticityRuleGenerator::Observable::weights});
 
-	grenade::vx::network::placed_atomic::PlasticityRule placed_atomic_plasticity_rule =
-	    recording_generator.generate();
-	PlasticityRule plasticity_rule;
-	plasticity_rule.kernel = placed_atomic_plasticity_rule.kernel;
-	plasticity_rule.recording = placed_atomic_plasticity_rule.recording;
+	PlasticityRule plasticity_rule = recording_generator.generate();
 	plasticity_rule.timer = PlasticityRule::Timer{
 	    PlasticityRule::Timer::Value(0),
 	    PlasticityRule::Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 300), 2};

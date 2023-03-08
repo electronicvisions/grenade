@@ -18,5 +18,6 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
 #include "grenade/vx/network/placed_logical/plasticity_rule.h"
+#include "grenade/vx/network/placed_logical/plasticity_rule_generator.h"
 #include "grenade/vx/network/placed_logical/population.h"
 #include "grenade/vx/network/placed_logical/projection.h"

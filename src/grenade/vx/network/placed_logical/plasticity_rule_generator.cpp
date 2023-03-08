@@ -1,13 +1,12 @@
-#include "grenade/vx/network/placed_atomic/plasticity_rule_generator.h"
+#include "grenade/vx/network/placed_logical/plasticity_rule_generator.h"
 
-#include "grenade/vx/network/placed_atomic/network_graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/network/placed_logical/network_graph.h"
 #include "halco/common/iter_all.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include <sstream>
 
-namespace grenade::vx::network::placed_atomic {
+namespace grenade::vx::network::placed_logical {
 
 OnlyRecordingPlasticityRuleGenerator::OnlyRecordingPlasticityRuleGenerator(
     std::set<Observable> const& observables) :
@@ -210,4 +209,4 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 	return rule;
 }
 
-} // namespace grenade::vx::network::placed_atomic
+} // namespace grenade::vx::network::placed_logical
