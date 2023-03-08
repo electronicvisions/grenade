@@ -4,6 +4,7 @@
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
@@ -119,32 +120,30 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	auto const result_map = grenade::vx::execution::run(
 	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	assert(atomic_network_graph.get_event_output_vertex());
-	auto const result = std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	    result_map.data.at(*atomic_network_graph.get_event_output_vertex()));
+	auto const result = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
 
-	EXPECT_EQ(
-	    result.size(), std::get<std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence>>(
-	                       inputs.data.at(*atomic_network_graph.get_event_input_vertex()))
-	                       .size());
+	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
-		auto const& spikes = result.at(i);
-		EXPECT_GE(spikes.size(), num * 0.8);
-		EXPECT_LE(spikes.size(), num * 1.2);
-		// count wrong spikes
-		size_t not_matching = 0;
-		auto const expected_label =
-		    atomic_network_graph.get_spike_labels()
-		        .at(network_graph.get_population_translation().at(population_internal_descriptor))
-		        .at(i)
-		        .at(0);
-		assert(expected_label);
-		for (auto const spike : spikes) {
-			if (spike.data != *expected_label) {
-				not_matching++;
+		for (size_t j = 0; j < result.size(); ++j) {
+			if (i == j) {
+				EXPECT_TRUE(result.at(j).contains(std::tuple{
+				    population_internal_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
+				if (result.at(j).contains(std::tuple{
+				        population_internal_descriptor, static_cast<size_t>(i),
+				        CompartmentOnLogicalNeuron()})) {
+					auto const& spikes = result.at(i).at(std::tuple{
+					    population_internal_descriptor, static_cast<size_t>(i),
+					    CompartmentOnLogicalNeuron()});
+					EXPECT_GE(spikes.size(), num * 0.8);
+					EXPECT_LE(spikes.size(), num * 1.2);
+				}
+			} else {
+				EXPECT_FALSE(result.at(j).contains(std::tuple{
+				    population_internal_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
 			}
 		}
-		EXPECT_LE(not_matching, num * 0.2);
 	}
 }
 
@@ -241,36 +240,31 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto const result_map = grenade::vx::execution::run(
 	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	assert(atomic_network_graph.get_event_output_vertex());
-	auto const result = std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	    result_map.data.at(*atomic_network_graph.get_event_output_vertex()));
+	auto const result = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
 
-	EXPECT_EQ(
-	    result.size(), std::get<std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence>>(
-	                       inputs.data.at(*atomic_network_graph.get_event_input_vertex()))
-	                       .size());
+	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t j = 0; j < population_external.size; ++j) {
 		for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
-			auto const& spikes = result.at(i);
-			// count correct spikes
-			size_t matching = 0;
-			auto const expected_label = atomic_network_graph.get_spike_labels()
-			                                .at(network_graph.get_population_translation().at(
-			                                    population_internal_descriptor))
-			                                .at(i)
-			                                .at(0);
-			assert(expected_label);
-			for (auto const& spike : spikes) {
-				if (spike.data == *expected_label) {
-					matching++;
-				} else {
-					LOG4CXX_INFO(
-					    logger, spike.data << spike.data.get_neuron_backend_address_out()
-					                       << spike.data.get_neuron_event_output());
+			if (i == j) {
+				EXPECT_TRUE(result.at(j).contains(std::tuple{
+				    population_internal_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
+				if (result.at(j).contains(std::tuple{
+				        population_internal_descriptor, static_cast<size_t>(i),
+				        CompartmentOnLogicalNeuron()})) {
+					size_t matching = result.at(j)
+					                      .at(std::tuple{
+					                          population_internal_descriptor,
+					                          static_cast<size_t>(i), CompartmentOnLogicalNeuron()})
+					                      .size();
+					EXPECT_GE(matching, num * 0.8);
+					EXPECT_LE(matching, num * 1.2);
 				}
+			} else {
+				EXPECT_FALSE(result.at(j).contains(std::tuple{
+				    population_internal_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
 			}
-			EXPECT_GE(matching, num * 0.8);
-			EXPECT_LE(matching, num * 1.2);
 		}
 	}
 }
@@ -393,31 +387,22 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		auto const result_map = grenade::vx::execution::run(
 		    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-		assert(atomic_network_graph.get_event_output_vertex());
-		auto const result =
-		    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-		        result_map.data.at(*atomic_network_graph.get_event_output_vertex()));
+		auto const result = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
 
-		EXPECT_EQ(
-		    result.size(),
-		    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence>>(
-		        inputs.data.at(*atomic_network_graph.get_event_input_vertex()))
-		        .size());
-		auto const& spikes = result.at(0);
-		// count correct spikes
-		size_t matching = 0;
-		auto const expected_label = atomic_network_graph.get_spike_labels()
-		                                .at(network_graph.get_population_translation().at(
-		                                    population_internal_descriptors.back()))
-		                                .at(0)
-		                                .at(0);
-		assert(expected_label);
-		for (auto const& spike : spikes) {
-			if (spike.data == *expected_label) {
-				matching++;
-			}
+		EXPECT_EQ(result.size(), inputs.batch_size());
+		EXPECT_TRUE(result.at(0).contains(std::tuple{
+		    population_internal_descriptors.back(), static_cast<size_t>(0),
+		    CompartmentOnLogicalNeuron()}));
+		if (result.at(0).contains(std::tuple{
+		        population_internal_descriptors.back(), static_cast<size_t>(0),
+		        CompartmentOnLogicalNeuron()})) {
+			size_t matching = result.at(0)
+			                      .at(std::tuple{
+			                          population_internal_descriptors.back(),
+			                          static_cast<size_t>(0), CompartmentOnLogicalNeuron()})
+			                      .size();
+			EXPECT_GE(matching, num * 0.8) << "length: " << length << " for seed: " << seed;
+			EXPECT_LE(matching, num * 1.2) << "length: " << length << " for seed: " << seed;
 		}
-		EXPECT_GE(matching, num * 0.8) << "length: " << length << " for seed: " << seed;
-		EXPECT_LE(matching, num * 1.2) << "length: " << length << " for seed: " << seed;
 	}
 }

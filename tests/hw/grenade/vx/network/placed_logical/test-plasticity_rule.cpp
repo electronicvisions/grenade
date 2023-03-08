@@ -106,23 +106,19 @@ TEST(PlasticityRule, RawRecording)
 	auto const result_map = grenade::vx::execution::run(
 	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	assert(atomic_network_graph.get_plasticity_rule_output_vertices().size());
-	EXPECT_EQ(atomic_network_graph.get_plasticity_rule_output_vertices().size(), 1);
-	EXPECT_TRUE(atomic_network_graph.get_plasticity_rule_output_vertices().contains(
-	    network_graph.get_plasticity_rule_translation().at(plasticity_rule_descriptor)));
-	auto const result = std::get<std::vector<
-	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	    result_map.data.at(atomic_network_graph.get_plasticity_rule_output_vertices().at(
-	        network_graph.get_plasticity_rule_translation().at(plasticity_rule_descriptor))));
+	auto const result =
+	    std::get<PlasticityRule::RawRecordingData>(
+	        extract_plasticity_rule_recording_data(
+	            result_map, network_graph, atomic_network_graph, plasticity_rule_descriptor))
+	        .data;
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
 		auto const& samples = result.at(i);
-		for (auto const& sample : samples) {
-			EXPECT_EQ(sample.data.size(), 8 * 2);
-			for (size_t i = 0; i < sample.data.size(); ++i) {
-				EXPECT_EQ(static_cast<int>(sample.data.at(i)), i % 8);
-			}
+		EXPECT_EQ(samples.size(), 8 * 2);
+		for (size_t j = 0; auto const& sample : samples) {
+			EXPECT_EQ(static_cast<int>(sample), j % 8);
+			j++;
 		}
 	}
 }
@@ -652,17 +648,17 @@ TEST(PlasticityRule, ExecutorInitialState)
 		auto const result_map =
 		    execution::run(executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-		assert(atomic_network_graph.get_plasticity_rule_output_vertices().size());
-		assert(atomic_network_graph.get_plasticity_rule_output_vertices().contains(
-		    network_graph.get_plasticity_rule_translation().at(plasticity_rule_descriptor)));
 		auto const result =
-		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
-		        result_map.data.at(atomic_network_graph.get_plasticity_rule_output_vertices().at(
-		            network_graph.get_plasticity_rule_translation().at(
-		                plasticity_rule_descriptor))));
+		    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
+		        std::get<PlasticityRule::TimedRecordingData>(extract_plasticity_rule_recording_data(
+		                                                         result_map, network_graph,
+		                                                         atomic_network_graph,
+		                                                         plasticity_rule_descriptor))
+		            .data_per_synapse.at("w")
+		            .at(projection_descriptor));
 		assert(result.size() == inputs.batch_size());
 		assert(result.at(0).size() == plasticity_rule.timer.num_periods);
-		return static_cast<int>(result.at(0).at(0).data.at(0));
+		return static_cast<int>(result.at(0).at(0).data.at(0).at(0));
 	};
 
 	auto const with_weight_32 = execute(true);

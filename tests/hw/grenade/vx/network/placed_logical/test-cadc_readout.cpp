@@ -5,6 +5,7 @@
 #include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
 #include "grenade/vx/network/placed_logical/cadc_recording.h"
+#include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
@@ -96,29 +97,29 @@ TEST(CADCRecording, General)
 	auto const result_map = grenade::vx::execution::run(
 	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	assert(atomic_network_graph.get_cadc_sample_output_vertex().size());
-	EXPECT_EQ(atomic_network_graph.get_cadc_sample_output_vertex().size(), 1);
-	auto const result = std::get<std::vector<
-	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	    result_map.data.at(atomic_network_graph.get_cadc_sample_output_vertex().at(0)));
+	auto const result = extract_cadc_samples(result_map, network_graph, atomic_network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	std::set<grenade::vx::signal_flow::Int8> unique_values;
 	for (size_t i = 0; i < result.size(); ++i) {
+		std::map<
+		    std::tuple<PopulationDescriptor, size_t, CompartmentOnLogicalNeuron, size_t>, size_t>
+		    samples_per_neuron;
 		auto const& samples = result.at(i);
 		for (auto const& sample : samples) {
-			EXPECT_EQ(sample.data.size(), cadc_recording.neurons.size());
-			for (auto const& e : sample.data) {
-				unique_values.insert(e);
-			}
+			auto const& [_, d, n, c, an, v] = sample;
+			samples_per_neuron[std::tuple{d, n, c, an}] += 1;
+			unique_values.insert(v);
 		}
-		// CADC sampling shall take between one and two us
-		EXPECT_GE(
-		    samples.size(),
-		    inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us / 2);
-		EXPECT_LE(
-		    samples.size(),
-		    inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us);
+		EXPECT_EQ(samples_per_neuron.size(), cadc_recording.neurons.size());
+		for (auto const& [_, num] : samples_per_neuron) {
+			// CADC sampling shall take between one and two us
+			EXPECT_GE(
+			    num,
+			    inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us / 2);
+			EXPECT_LE(
+			    num, inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us);
+		}
 	}
 	EXPECT_GT(unique_values.size(), 1);
 }
