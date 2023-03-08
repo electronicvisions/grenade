@@ -5,13 +5,13 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/extract_output.h"
-#include "grenade/vx/network/placed_atomic/network.h"
-#include "grenade/vx/network/placed_atomic/network_builder.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
-#include "grenade/vx/network/placed_atomic/population.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
+#include "grenade/vx/network/placed_logical/extract_output.h"
+#include "grenade/vx/network/placed_logical/network.h"
+#include "grenade/vx/network/placed_logical/network_builder.h"
+#include "grenade/vx/network/placed_logical/network_graph.h"
+#include "grenade/vx/network/placed_logical/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/population.h"
+#include "grenade/vx/network/placed_logical/projection.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -35,6 +35,7 @@ using namespace halco::hicann_dls::vx::v3;
 using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
+using namespace grenade::vx::network::placed_logical;
 
 void test_background_spike_source_regular(
     BackgroundSpikeSource::Period period,
@@ -51,57 +52,69 @@ void test_background_spike_source_regular(
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	// build network
-	grenade::vx::network::placed_atomic::NetworkBuilder network_builder;
+	NetworkBuilder network_builder;
 
-	grenade::vx::network::placed_atomic::BackgroundSpikeSourcePopulation
-	    population_background_spike_source{
-	        1,
-	        {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
-	        grenade::vx::network::placed_atomic::BackgroundSpikeSourcePopulation::Config{
-	            BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(),
-	            BackgroundSpikeSource::Seed(), false}};
+	BackgroundSpikeSourcePopulation population_background_spike_source{
+	    1,
+	    {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
+	    BackgroundSpikeSourcePopulation::Config{
+	        BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(),
+	        BackgroundSpikeSource::Seed(), false}};
 	auto const population_background_spike_source_descriptor =
 	    network_builder.add(population_background_spike_source);
 
-	grenade::vx::network::placed_atomic::Population::Neurons neurons{AtomicNeuronOnDLS()};
-	grenade::vx::network::placed_atomic::Population::EnableRecordSpikes enable_record_spikes{true};
-	grenade::vx::network::placed_atomic::Population population_internal{
-	    std::move(neurons), enable_record_spikes};
+	Population::Neurons neurons{Population::Neuron(
+	    LogicalNeuronOnDLS(
+	        LogicalNeuronCompartments(
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	        AtomicNeuronOnDLS()),
+	    Population::Neuron::Compartments{
+	        {CompartmentOnLogicalNeuron(),
+	         Population::Neuron::Compartment{
+	             Population::Neuron::Compartment::SpikeMaster(0, true),
+	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+	Population population_internal{std::move(neurons)};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
-	grenade::vx::network::placed_atomic::Projection::Connections projection_connections;
+	Projection::Connections projection_connections;
 	for (size_t i = 0; i < population_background_spike_source.size; ++i) {
 		projection_connections.push_back(
-		    {i, i, grenade::vx::network::placed_atomic::Projection::Connection::Weight(63)});
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(63)});
 	}
-	grenade::vx::network::placed_atomic::Projection projection{
-	    grenade::vx::network::placed_atomic::Projection::ReceptorType::excitatory,
-	    std::move(projection_connections), population_background_spike_source_descriptor,
-	    population_internal_descriptor};
+	Projection projection{
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+	    population_background_spike_source_descriptor, population_internal_descriptor};
 	network_builder.add(projection);
 
 	auto const network = network_builder.done();
 
+	auto const network_graph = build_network_graph(network);
+
 	// build network graph
-	auto const routing_result = grenade::vx::network::placed_atomic::build_routing(network);
-	auto const network_graph =
-	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
+	auto const routing_result =
+	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
+	auto const atomic_network_graph =
+	    build_network_graph(network_graph.get_hardware_network(), routing_result);
 
 	// generate input
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map = grenade::vx::execution::run(
+	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	auto const spikes =
-	    grenade::vx::network::placed_atomic::extract_neuron_spikes(result_map, network_graph);
+	auto const spikes = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
 	EXPECT_EQ(spikes.size(), 1);
 
-	size_t expected_label_count = spikes.at(0).contains(AtomicNeuronOnDLS())
-	                                  ? spikes.at(0).at(AtomicNeuronOnDLS()).size()
-	                                  : 0;
+	size_t expected_label_count =
+	    spikes.at(0).contains({population_internal_descriptor, 0, CompartmentOnLogicalNeuron()})
+	        ? spikes.at(0)
+	              .at({population_internal_descriptor, 0, CompartmentOnLogicalNeuron()})
+	              .size()
+	        : 0;
 
 	// check approx. equality in number of spikes expected
 	EXPECT_TRUE(
@@ -143,64 +156,78 @@ void test_background_spike_source_poisson(
 
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	grenade::vx::network::placed_atomic::BackgroundSpikeSourcePopulation
-	    population_background_spike_source{
-	        64,
-	        {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
-	        grenade::vx::network::placed_atomic::BackgroundSpikeSourcePopulation::Config{
-	            BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(rate),
-	            BackgroundSpikeSource::Seed(1234), true}};
+	BackgroundSpikeSourcePopulation population_background_spike_source{
+	    64,
+	    {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
+	    BackgroundSpikeSourcePopulation::Config{
+	        BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(rate),
+	        BackgroundSpikeSource::Seed(1234), true}};
 
-	grenade::vx::network::placed_atomic::Population::Neurons neurons;
-	grenade::vx::network::placed_atomic::Population::EnableRecordSpikes enable_record_spikes;
+	Population::Neurons neurons;
 	for (size_t i = 0; i < population_background_spike_source.size; ++i) {
-		neurons.push_back(AtomicNeuronOnDLS(NeuronColumnOnDLS(i), NeuronRowOnDLS()));
-		enable_record_spikes.push_back(true);
+		neurons.push_back(Population::Neuron(
+		    LogicalNeuronOnDLS(
+		        LogicalNeuronCompartments(
+		            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+		        AtomicNeuronOnDLS(NeuronColumnOnDLS(i), NeuronRowOnDLS())),
+		    Population::Neuron::Compartments{
+		        {CompartmentOnLogicalNeuron(),
+		         Population::Neuron::Compartment{
+		             Population::Neuron::Compartment::SpikeMaster(0, true),
+		             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
 	}
-	grenade::vx::network::placed_atomic::Population population_internal{
-	    std::move(neurons), enable_record_spikes};
+	Population population_internal{std::move(neurons)};
 
 	for (size_t i = 0; i < population_background_spike_source.size; ++i) {
 		// build network
-		grenade::vx::network::placed_atomic::NetworkBuilder network_builder;
+		NetworkBuilder network_builder;
 
 		auto const population_background_spike_source_descriptor =
 		    network_builder.add(population_background_spike_source);
 
 		auto const population_internal_descriptor = network_builder.add(population_internal);
 
-		grenade::vx::network::placed_atomic::Projection::Connections projection_connections;
+		Projection::Connections projection_connections;
 		projection_connections.push_back(
-		    {i, i, grenade::vx::network::placed_atomic::Projection::Connection::Weight(63)});
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(63)});
 
-		grenade::vx::network::placed_atomic::Projection projection{
-		    grenade::vx::network::placed_atomic::Projection::ReceptorType::excitatory,
-		    std::move(projection_connections), population_background_spike_source_descriptor,
-		    population_internal_descriptor};
+		Projection projection{
+		    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+		    population_background_spike_source_descriptor, population_internal_descriptor};
 		network_builder.add(projection);
 
 		auto const network = network_builder.done();
 
 		// build network graph
-		auto const routing_result = grenade::vx::network::placed_atomic::build_routing(network);
-		auto const network_graph =
-		    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
+		auto const network_graph = build_network_graph(network);
+		auto const routing_result = grenade::vx::network::placed_atomic::build_routing(
+		    network_graph.get_hardware_network());
+		auto const atomic_network_graph =
+		    build_network_graph(network_graph.get_hardware_network(), routing_result);
 
 		// generate input
 		grenade::vx::signal_flow::IODataMap inputs;
 		inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
 
 		// run graph with given inputs and return results
-		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map = grenade::vx::execution::run(
+		    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-		auto const spikes =
-		    grenade::vx::network::placed_atomic::extract_neuron_spikes(result_map, network_graph);
+		auto const spikes = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
 		EXPECT_EQ(spikes.size(), 1);
 
 		std::array<intmax_t, 64> expected_label_counts;
 		expected_label_counts.fill(0);
-		for (auto [an, spike] : spikes.at(0)) {
+		for (auto [nrn, spike] : spikes.at(0)) {
+			auto const& [descriptor, neuron_on_population, compartment_on_neuron] = nrn;
+			auto const& neuron = std::get<Population>(network->populations.at(descriptor))
+			                         .neurons.at(neuron_on_population);
+			auto const an = neuron.coordinate.get_placed_compartments()
+			                    .at(compartment_on_neuron)
+			                    .at(neuron.compartments.at(compartment_on_neuron)
+			                            .spike_master->neuron_on_compartment);
 			if (an.toNeuronRowOnDLS() == NeuronRowOnDLS()) {
 				expected_label_counts.at(an.toNeuronColumnOnDLS().value()) += spike.size();
 			}

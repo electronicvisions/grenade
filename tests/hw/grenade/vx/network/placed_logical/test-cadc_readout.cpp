@@ -3,13 +3,14 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/cadc_recording.h"
-#include "grenade/vx/network/placed_atomic/network.h"
-#include "grenade/vx/network/placed_atomic/network_builder.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
-#include "grenade/vx/network/placed_atomic/population.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
+#include "grenade/vx/network/placed_logical/cadc_recording.h"
+#include "grenade/vx/network/placed_logical/network.h"
+#include "grenade/vx/network/placed_logical/network_builder.h"
+#include "grenade/vx/network/placed_logical/network_graph.h"
+#include "grenade/vx/network/placed_logical/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/population.h"
+#include "grenade/vx/network/placed_logical/projection.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -31,6 +32,7 @@ using namespace halco::hicann_dls::vx::v3;
 using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
+using namespace grenade::vx::network::placed_logical;
 
 TEST(CADCRecording, General)
 {
@@ -41,40 +43,46 @@ TEST(CADCRecording, General)
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
 	// build network
-	grenade::vx::network::placed_atomic::NetworkBuilder network_builder;
+	NetworkBuilder network_builder;
 
-	grenade::vx::network::placed_atomic::Population::Neurons neurons;
-	grenade::vx::network::placed_atomic::Population::EnableRecordSpikes enable_record_spikes;
+	Population::Neurons neurons;
 	for (auto const column : iter_all<NeuronColumnOnDLS>()) {
-		neurons.push_back(AtomicNeuronOnDLS(column, NeuronRowOnDLS::top));
-		enable_record_spikes.push_back(false);
+		neurons.push_back(Population::Neuron(
+		    LogicalNeuronOnDLS(
+		        LogicalNeuronCompartments(
+		            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+		        AtomicNeuronOnDLS(column, NeuronRowOnDLS::top)),
+		    Population::Neuron::Compartments{
+		        {CompartmentOnLogicalNeuron(),
+		         Population::Neuron::Compartment{
+		             Population::Neuron::Compartment::SpikeMaster(0, false),
+		             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
 	}
 	std::mt19937 rng{std::random_device{}()};
 	std::shuffle(neurons.begin(), neurons.end(), rng);
-	grenade::vx::network::placed_atomic::Population population_internal{
-	    std::move(neurons), enable_record_spikes};
+	Population population_internal{std::move(neurons)};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
-	grenade::vx::network::placed_atomic::CADCRecording cadc_recording;
-	cadc_recording.neurons.push_back(grenade::vx::network::placed_atomic::CADCRecording::Neuron(
-	    population_internal_descriptor, 14,
-	    grenade::vx::network::placed_atomic::CADCRecording::Neuron::Source::membrane));
-	cadc_recording.neurons.push_back(grenade::vx::network::placed_atomic::CADCRecording::Neuron(
-	    population_internal_descriptor, 60,
-	    grenade::vx::network::placed_atomic::CADCRecording::Neuron::Source::membrane));
-	cadc_recording.neurons.push_back(grenade::vx::network::placed_atomic::CADCRecording::Neuron(
-	    population_internal_descriptor, 25,
-	    grenade::vx::network::placed_atomic::CADCRecording::Neuron::Source::membrane));
-	cadc_recording.neurons.push_back(grenade::vx::network::placed_atomic::CADCRecording::Neuron(
-	    population_internal_descriptor, 150,
-	    grenade::vx::network::placed_atomic::CADCRecording::Neuron::Source::membrane));
+	CADCRecording cadc_recording;
+	cadc_recording.neurons.push_back(CADCRecording::Neuron{
+	    population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0,
+	    CADCRecording::Neuron::Source::membrane});
+	cadc_recording.neurons.push_back(CADCRecording::Neuron{
+	    population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0,
+	    CADCRecording::Neuron::Source::membrane});
+	cadc_recording.neurons.push_back(CADCRecording::Neuron{
+	    population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0,
+	    CADCRecording::Neuron::Source::membrane});
+	cadc_recording.neurons.push_back(CADCRecording::Neuron{
+	    population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0,
+	    CADCRecording::Neuron::Source::membrane});
 	network_builder.add(cadc_recording);
 
 	auto const network = network_builder.done();
-
-	auto const routing_result = grenade::vx::network::placed_atomic::build_routing(network);
-	auto const network_graph =
-	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
+	auto const network_graph = build_network_graph(network);
+	auto const routing_result = build_routing(network_graph.get_hardware_network());
+	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
+	    network_graph.get_hardware_network(), routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back(
@@ -85,14 +93,14 @@ TEST(CADCRecording, General)
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 150)}});
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map = grenade::vx::execution::run(
+	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	assert(network_graph.get_cadc_sample_output_vertex().size());
-	EXPECT_EQ(network_graph.get_cadc_sample_output_vertex().size(), 1);
+	assert(atomic_network_graph.get_cadc_sample_output_vertex().size());
+	EXPECT_EQ(atomic_network_graph.get_cadc_sample_output_vertex().size(), 1);
 	auto const result = std::get<std::vector<
 	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	    result_map.data.at(network_graph.get_cadc_sample_output_vertex().at(0)));
+	    result_map.data.at(atomic_network_graph.get_cadc_sample_output_vertex().at(0)));
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	std::set<grenade::vx::signal_flow::Int8> unique_values;

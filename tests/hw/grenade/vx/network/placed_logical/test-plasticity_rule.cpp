@@ -2,14 +2,15 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/extract_output.h"
-#include "grenade/vx/network/placed_atomic/network.h"
-#include "grenade/vx/network/placed_atomic/network_builder.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
-#include "grenade/vx/network/placed_atomic/plasticity_rule.h"
-#include "grenade/vx/network/placed_atomic/population.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
+#include "grenade/vx/network/placed_logical/extract_output.h"
+#include "grenade/vx/network/placed_logical/network.h"
+#include "grenade/vx/network/placed_logical/network_builder.h"
+#include "grenade/vx/network/placed_logical/network_graph.h"
+#include "grenade/vx/network/placed_logical/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/plasticity_rule.h"
+#include "grenade/vx/network/placed_logical/population.h"
+#include "grenade/vx/network/placed_logical/projection.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -22,6 +23,7 @@ using namespace halco::hicann_dls::vx::v3;
 using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
+using namespace grenade::vx::network::placed_logical;
 
 TEST(PlasticityRule, RawRecording)
 {
@@ -31,33 +33,39 @@ TEST(PlasticityRule, RawRecording)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	// build network
-	grenade::vx::network::placed_atomic::NetworkBuilder network_builder;
+	NetworkBuilder network_builder;
 
-	grenade::vx::network::placed_atomic::Population::Neurons neurons{AtomicNeuronOnDLS()};
-	grenade::vx::network::placed_atomic::Population::EnableRecordSpikes enable_record_spikes{false};
-	grenade::vx::network::placed_atomic::Population population{
-	    std::move(neurons), std::move(enable_record_spikes)};
+	Population::Neurons neurons{Population::Neuron(
+	    LogicalNeuronOnDLS(
+	        LogicalNeuronCompartments(
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	        AtomicNeuronOnDLS()),
+	    Population::Neuron::Compartments{
+	        {CompartmentOnLogicalNeuron(),
+	         Population::Neuron::Compartment{
+	             Population::Neuron::Compartment::SpikeMaster(0, true),
+	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+	Population population{std::move(neurons)};
 	auto const population_descriptor = network_builder.add(population);
 
-	grenade::vx::network::placed_atomic::Projection::Connections projection_connections;
+	Projection::Connections projection_connections;
 	for (size_t i = 0; i < population.neurons.size(); ++i) {
 		projection_connections.push_back(
-		    {i, i, grenade::vx::network::placed_atomic::Projection::Connection::Weight(63)});
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(63)});
 	}
-	grenade::vx::network::placed_atomic::Projection projection{
-	    grenade::vx::network::placed_atomic::Projection::ReceptorType::excitatory,
-	    std::move(projection_connections), population_descriptor, population_descriptor};
+	Projection projection{
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+	    population_descriptor, population_descriptor};
 	auto const projection_descriptor = network_builder.add(projection);
 
-	grenade::vx::network::placed_atomic::PlasticityRule plasticity_rule;
-	plasticity_rule.timer.start =
-	    grenade::vx::network::placed_atomic::PlasticityRule::Timer::Value(1000);
-	plasticity_rule.timer.period =
-	    grenade::vx::network::placed_atomic::PlasticityRule::Timer::Value(10000);
+	PlasticityRule plasticity_rule;
+	plasticity_rule.timer.start = PlasticityRule::Timer::Value(1000);
+	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
 	plasticity_rule.timer.num_periods = 1;
 	plasticity_rule.projections.push_back(projection_descriptor);
-	plasticity_rule.recording =
-	    grenade::vx::network::placed_atomic::PlasticityRule::RawRecording{8};
+	plasticity_rule.recording = PlasticityRule::RawRecording{8};
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -78,10 +86,10 @@ TEST(PlasticityRule, RawRecording)
 	auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 	auto const network = network_builder.done();
-
-	auto const routing_result = grenade::vx::network::placed_atomic::build_routing(network);
-	auto const network_graph =
-	    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
+	auto const network_graph = build_network_graph(network);
+	auto const routing_result = build_routing(network_graph.get_hardware_network());
+	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
+	    network_graph.get_hardware_network(), routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back(
@@ -95,17 +103,17 @@ TEST(PlasticityRule, RawRecording)
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map = grenade::vx::execution::run(
+	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-	assert(network_graph.get_plasticity_rule_output_vertices().size());
-	EXPECT_EQ(network_graph.get_plasticity_rule_output_vertices().size(), 1);
-	EXPECT_TRUE(
-	    network_graph.get_plasticity_rule_output_vertices().contains(plasticity_rule_descriptor));
+	assert(atomic_network_graph.get_plasticity_rule_output_vertices().size());
+	EXPECT_EQ(atomic_network_graph.get_plasticity_rule_output_vertices().size(), 1);
+	EXPECT_TRUE(atomic_network_graph.get_plasticity_rule_output_vertices().contains(
+	    network_graph.get_plasticity_rule_translation().at(plasticity_rule_descriptor)));
 	auto const result = std::get<std::vector<
 	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	    result_map.data.at(
-	        network_graph.get_plasticity_rule_output_vertices().at(plasticity_rule_descriptor)));
+	    result_map.data.at(atomic_network_graph.get_plasticity_rule_output_vertices().at(
+	        network_graph.get_plasticity_rule_translation().at(plasticity_rule_descriptor))));
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
@@ -134,97 +142,112 @@ TEST(PlasticityRule, TimedRecording)
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
 
-	grenade::vx::execution::JITGraphExecutor executor;
+	grenade::vx::execution::backend::Connection connection;
+	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
+	connections.emplace(DLSGlobal(), std::move(connection));
+	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
 	std::mt19937 rng(std::random_device{}());
 	constexpr size_t num = 10;
 	for (size_t n = 0; n < num; ++n) {
-		std::vector<AtomicNeuronOnDLS> all_neurons;
+		Population::Neurons all_neurons;
 		for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
-			all_neurons.push_back(neuron);
+			all_neurons.push_back(Population::Neuron(
+			    LogicalNeuronOnDLS(
+			        LogicalNeuronCompartments(
+			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+			        neuron),
+			    Population::Neuron::Compartments{
+			        {CompartmentOnLogicalNeuron(),
+			         Population::Neuron::Compartment{
+			             Population::Neuron::Compartment::SpikeMaster(0, false),
+			             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
 		}
 
 		// build network
-		grenade::vx::network::placed_atomic::NetworkBuilder network_builder;
+		NetworkBuilder network_builder;
 
 		// FIXME: Fix is required in order in routing
 		std::uniform_int_distribution num_projection_distribution(1, 3);
 		size_t const num_projections = num_projection_distribution(rng);
-		std::vector<grenade::vx::network::placed_atomic::ProjectionDescriptor>
-		    projection_descriptors;
-		std::vector<grenade::vx::network::placed_atomic::PlasticityRule::PopulationHandle>
-		    population_descriptors;
+		std::vector<ProjectionDescriptor> projection_descriptors;
+		std::vector<PlasticityRule::PopulationHandle> population_descriptors;
 		for (size_t p = 0; p < num_projections; ++p) {
 			std::uniform_int_distribution neuron_distribution(1, 3);
 
-			grenade::vx::network::placed_atomic::Population::Neurons neurons_s;
+			Population::Neurons neurons_s;
 			std::sample(
 			    all_neurons.begin(), all_neurons.end(), std::back_inserter(neurons_s),
 			    neuron_distribution(rng), rng);
-			grenade::vx::network::placed_atomic::Population::EnableRecordSpikes
-			    enable_record_spikes_s;
 			for (auto const& neuron : neurons_s) {
-				enable_record_spikes_s.push_back(false);
 				all_neurons.erase(std::find(all_neurons.begin(), all_neurons.end(), neuron));
 			}
 			// sort neurons in population because otherwise dense requirement of projection is not
 			// necessarily fulfilled
-			std::sort(neurons_s.begin(), neurons_s.end());
 			std::stable_sort(neurons_s.begin(), neurons_s.end(), [](auto const& a, auto const& b) {
-				return a.toNeuronColumnOnDLS()
+				return a.coordinate.get_atomic_neurons()
+				           .at(0)
+				           .toNeuronColumnOnDLS()
 				           .toNeuronEventOutputOnDLS()
 				           .toNeuronEventOutputOnNeuronBackendBlock() <
-				       b.toNeuronColumnOnDLS()
+				       b.coordinate.get_atomic_neurons()
+				           .at(0)
+				           .toNeuronColumnOnDLS()
 				           .toNeuronEventOutputOnDLS()
 				           .toNeuronEventOutputOnNeuronBackendBlock();
 			});
-			grenade::vx::network::placed_atomic::Population population_s{
-			    std::move(neurons_s), std::move(enable_record_spikes_s)};
+			Population population_s{std::move(neurons_s)};
 			auto const population_descriptor_s = network_builder.add(population_s);
 
-			grenade::vx::network::placed_atomic::Population::Neurons neurons_t;
+			Population::Neurons neurons_t;
 			std::sample(
 			    all_neurons.begin(), all_neurons.end(), std::back_inserter(neurons_t),
 			    neuron_distribution(rng), rng);
-			grenade::vx::network::placed_atomic::Population::EnableRecordSpikes
-			    enable_record_spikes_t;
 			for (auto const& neuron : neurons_t) {
-				enable_record_spikes_t.push_back(false);
 				all_neurons.erase(std::find(all_neurons.begin(), all_neurons.end(), neuron));
 			}
 			// sort neurons in population because otherwise dense requirement of projection is not
 			// necessarily fulfilled
-			std::sort(neurons_t.begin(), neurons_t.end());
-			grenade::vx::network::placed_atomic::Population population_t{
-			    std::move(neurons_t), std::move(enable_record_spikes_t)};
+			std::stable_sort(neurons_t.begin(), neurons_t.end(), [](auto const& a, auto const& b) {
+				return a.coordinate.get_atomic_neurons()
+				           .at(0)
+				           .toNeuronColumnOnDLS()
+				           .toNeuronEventOutputOnDLS()
+				           .toNeuronEventOutputOnNeuronBackendBlock() <
+				       b.coordinate.get_atomic_neurons()
+				           .at(0)
+				           .toNeuronColumnOnDLS()
+				           .toNeuronEventOutputOnDLS()
+				           .toNeuronEventOutputOnNeuronBackendBlock();
+			});
+			Population population_t{std::move(neurons_t)};
 			auto const population_descriptor_t = network_builder.add(population_t);
 
-			grenade::vx::network::placed_atomic::Projection::Connections projection_connections;
+			Projection::Connections projection_connections;
 			for (size_t i = 0; i < population_s.neurons.size(); ++i) {
 				for (size_t j = 0; j < population_t.neurons.size(); ++j) {
 					projection_connections.push_back(
-					    {i, j,
-					     grenade::vx::network::placed_atomic::Projection::Connection::Weight(63)});
+					    {{i, CompartmentOnLogicalNeuron()},
+					     {j, CompartmentOnLogicalNeuron()},
+					     Projection::Connection::Weight(63)});
 				}
 			}
-			grenade::vx::network::placed_atomic::Projection projection{
-			    grenade::vx::network::placed_atomic::Projection::ReceptorType::excitatory,
+			Projection projection{
+			    Receptor(Receptor::ID(), Receptor::Type::excitatory),
 			    std::move(projection_connections), population_descriptor_s,
 			    population_descriptor_t};
 			projection_descriptors.push_back(network_builder.add(projection));
-			grenade::vx::network::placed_atomic::PlasticityRule::PopulationHandle
-			    population_handle_t;
+			PlasticityRule::PopulationHandle population_handle_t;
 			population_handle_t.descriptor = population_descriptor_t;
-			population_handle_t.neuron_readout_sources.resize(population_t.neurons.size());
+			population_handle_t.neuron_readout_sources.resize(
+			    population_t.neurons.size(), {{CompartmentOnLogicalNeuron(), {std::nullopt}}});
 			population_descriptors.push_back(population_handle_t);
 		}
 
-		grenade::vx::network::placed_atomic::PlasticityRule plasticity_rule;
-		plasticity_rule.timer.start =
-		    grenade::vx::network::placed_atomic::PlasticityRule::Timer::Value(0);
-		plasticity_rule.timer.period =
-		    grenade::vx::network::placed_atomic::PlasticityRule::Timer::Value(
-		        grenade::vx::common::Time::fpga_clock_cycles_per_us * 3000);
+		PlasticityRule plasticity_rule;
+		plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
+		plasticity_rule.timer.period = PlasticityRule::Timer::Value(
+		    grenade::vx::common::Time::fpga_clock_cycles_per_us * 3000);
 
 		std::uniform_int_distribution num_periods_distribution(1, 3);
 		plasticity_rule.timer.num_periods = num_periods_distribution(rng);
@@ -247,7 +270,7 @@ TEST(PlasticityRule, TimedRecording)
 		kernel << "\tstatic size_t period = 0;\n";
 
 		// generate random timed recording
-		grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording recording;
+		PlasticityRule::TimedRecording recording;
 		// select number of observables
 		std::uniform_int_distribution num_observable_distribution(1, 3);
 		size_t const num_observables = num_observable_distribution(rng);
@@ -259,9 +282,8 @@ TEST(PlasticityRule, TimedRecording)
 				case 0: { // ObservableArray
 					// select observable size
 					recording.observables["observable_" + std::to_string(i)] = grenade::vx::
-					    network::placed_atomic::PlasticityRule::TimedRecording::ObservableArray{
-					        grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-					            ObservableArray::Type::int8,
+					    network::placed_logical::PlasticityRule::TimedRecording::ObservableArray{
+					        PlasticityRule::TimedRecording::ObservableArray::Type::int8,
 					        std::uniform_int_distribution<size_t>(1, 15)(rng)};
 					// set its value from the PPU to i
 					kernel << "\trecording.observable_" << i << ".fill(" << i << ");\n";
@@ -269,37 +291,33 @@ TEST(PlasticityRule, TimedRecording)
 				}
 				case 1: { // ObservablePerSynapse
 					// select memory layout per row
-					auto obsv = grenade::vx::network::placed_atomic::PlasticityRule::
-					    TimedRecording::ObservablePerSynapse{
-					        grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-					            ObservablePerSynapse::Type::int8,
-					        std::bernoulli_distribution{}(rng)
-					            ? grenade::vx::network::placed_atomic::PlasticityRule::
-					                  TimedRecording::ObservablePerSynapse::LayoutPerRow::
-					                      complete_rows
-					            : grenade::vx::network::placed_atomic::PlasticityRule::
-					                  TimedRecording::ObservablePerSynapse::LayoutPerRow::
-					                      packed_active_columns};
+					auto obsv = PlasticityRule::TimedRecording::ObservablePerSynapse{
+					    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8,
+					    std::bernoulli_distribution{}(rng)
+					        ? PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
+					              complete_rows
+					        : PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
+					              packed_active_columns};
 					// select data type
 					switch (std::uniform_int_distribution{0, 3}(rng)) {
 						case 0: { // int8
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerSynapse::Type::int8;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8;
 							break;
 						}
 						case 1: { // uint8
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerSynapse::Type::uint8;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::uint8;
 							break;
 						}
 						case 2: { // int16
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerSynapse::Type::int16;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int16;
 							break;
 						}
 						case 3: { // uint16
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerSynapse::Type::uint16;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::uint16;
 							break;
 						}
 						default: {
@@ -310,13 +328,13 @@ TEST(PlasticityRule, TimedRecording)
 					// set its value from the PPU to i
 					kernel << "\thate::for_each([](auto& rec) { ";
 					switch (obsv.layout_per_row) {
-						case grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-						    ObservablePerSynapse::LayoutPerRow::complete_rows: {
+						case PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
+						    complete_rows: {
 							kernel << "for (auto& row: rec) { row = " << i << "; } },\n";
 							break;
 						}
-						case grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-						    ObservablePerSynapse::LayoutPerRow::packed_active_columns: {
+						case PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
+						    packed_active_columns: {
 							kernel << "for (auto& row: rec) { row.fill(" << i << "); } },\n";
 							break;
 						}
@@ -329,36 +347,33 @@ TEST(PlasticityRule, TimedRecording)
 				}
 				case 2: { // ObservablePerNeuron
 					// select memory layout
-					auto obsv = grenade::vx::network::placed_atomic::PlasticityRule::
-					    TimedRecording::ObservablePerNeuron{
-					        grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-					            ObservablePerNeuron::Type::int8,
-					        std::bernoulli_distribution{}(rng)
-					            ? grenade::vx::network::placed_atomic::PlasticityRule::
-					                  TimedRecording::ObservablePerNeuron::Layout::complete_row
-					            : grenade::vx::network::placed_atomic::PlasticityRule::
-					                  TimedRecording::ObservablePerNeuron::Layout::
-					                      packed_active_columns};
+					auto obsv = PlasticityRule::TimedRecording::ObservablePerNeuron{
+					    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int8,
+					    std::bernoulli_distribution{}(rng)
+					        ? PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+					              complete_row
+					        : PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+					              packed_active_columns};
 					// select data type
 					switch (std::uniform_int_distribution{0, 3}(rng)) {
 						case 0: { // int8
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerNeuron::Type::int8;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int8;
 							break;
 						}
 						case 1: { // uint8
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerNeuron::Type::uint8;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::uint8;
 							break;
 						}
 						case 2: { // int16
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerNeuron::Type::int16;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int16;
 							break;
 						}
 						case 3: { // uint16
-							obsv.type = grenade::vx::network::placed_atomic::PlasticityRule::
-							    TimedRecording::ObservablePerNeuron::Type::uint16;
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::uint16;
 							break;
 						}
 						default: {
@@ -369,13 +384,13 @@ TEST(PlasticityRule, TimedRecording)
 					// set its value from the PPU to i
 					kernel << "\thate::for_each([](auto& rec) { ";
 					switch (obsv.layout) {
-						case grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-						    ObservablePerNeuron::Layout::complete_row: {
+						case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+						    complete_row: {
 							kernel << "rec = " << i << ";\n";
 							break;
 						}
-						case grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-						    ObservablePerNeuron::Layout::packed_active_columns: {
+						case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+						    packed_active_columns: {
 							kernel << "rec.fill(" << i << ");\n";
 							break;
 						}
@@ -403,30 +418,27 @@ TEST(PlasticityRule, TimedRecording)
 		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 		auto const network = network_builder.done();
-
-		auto const routing_result = grenade::vx::network::placed_atomic::build_routing(network);
-		auto const network_graph =
-		    grenade::vx::network::placed_atomic::build_network_graph(network, routing_result);
+		auto const network_graph = build_network_graph(network);
+		auto const routing_result = build_routing(network_graph.get_hardware_network());
+		auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
+		    network_graph.get_hardware_network(), routing_result);
 
 		// run graph with given inputs and return results
 		EXPECT_NO_THROW((grenade::vx::execution::run(
-		    executor, network_graph.get_graph(), inputs, chip_configs)));
+		    executor, atomic_network_graph.get_graph(), inputs, chip_configs)));
 
-		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map = grenade::vx::execution::run(
+		    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-		auto const recording_data =
-		    grenade::vx::network::placed_atomic::extract_plasticity_rule_recording_data(
-		        result_map, network_graph, plasticity_rule_descriptor);
+		auto const recording_data = extract_plasticity_rule_recording_data(
+		    result_map, network_graph, atomic_network_graph, plasticity_rule_descriptor);
 		auto const& timed_recording_data =
-		    std::get<grenade::vx::network::placed_atomic::PlasticityRule::TimedRecordingData>(
-		        recording_data);
+		    std::get<PlasticityRule::TimedRecordingData>(recording_data);
 
 		for (size_t j = 0; auto const& [name, observable] : recording.observables) {
 			std::visit(
 			    hate::overloaded{
-			        [&](grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-			                ObservableArray const& obsv) {
+			        [&](PlasticityRule::TimedRecording::ObservableArray const& obsv) {
 				        EXPECT_TRUE(timed_recording_data.data_array.contains(name));
 				        auto const& data_entry_variant = timed_recording_data.data_array.at(name);
 				        std::visit(
@@ -452,8 +464,7 @@ TEST(PlasticityRule, TimedRecording)
 				            },
 				            obsv.type);
 			        },
-			        [&](grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-			                ObservablePerSynapse const& obsv) {
+			        [&](PlasticityRule::TimedRecording::ObservablePerSynapse const& obsv) {
 				        EXPECT_TRUE(timed_recording_data.data_per_synapse.contains(name));
 				        auto const& data_entry_variant =
 				            timed_recording_data.data_per_synapse.at(name);
@@ -462,11 +473,10 @@ TEST(PlasticityRule, TimedRecording)
 					            EXPECT_EQ(
 					                data_entry_variant.size(), plasticity_rule.projections.size());
 					            for (size_t p = 0; p < plasticity_rule.projections.size(); ++p) {
-						            auto const& data_entry =
-						                std::get<std::vector<grenade::vx::common::TimedDataSequence<
-						                    std::vector<typename decltype(type)::ElementType>>>>(
-						                    data_entry_variant.at(
-						                        plasticity_rule.projections.at(p)));
+						            auto const& data_entry = std::get<std::vector<
+						                grenade::vx::common::TimedDataSequence<std::vector<
+						                    std::vector<typename decltype(type)::ElementType>>>>>(
+						                data_entry_variant.at(plasticity_rule.projections.at(p)));
 						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
@@ -480,7 +490,8 @@ TEST(PlasticityRule, TimedRecording)
 								                    .at(plasticity_rule.projections.at(p))
 								                    .connections.size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
-									            EXPECT_EQ(static_cast<int>(sample.data.at(i)), j)
+									            EXPECT_EQ(
+									                static_cast<int>(sample.data.at(i).at(0)), j)
 									                << name;
 								            }
 								            time++;
@@ -490,8 +501,7 @@ TEST(PlasticityRule, TimedRecording)
 				            },
 				            obsv.type);
 			        },
-			        [&](grenade::vx::network::placed_atomic::PlasticityRule::TimedRecording::
-			                ObservablePerNeuron const& obsv) {
+			        [&](PlasticityRule::TimedRecording::ObservablePerNeuron const& obsv) {
 				        EXPECT_TRUE(timed_recording_data.data_per_neuron.contains(name));
 				        auto const& data_entry_variant =
 				            timed_recording_data.data_per_neuron.at(name);
@@ -500,11 +510,12 @@ TEST(PlasticityRule, TimedRecording)
 					            EXPECT_EQ(
 					                data_entry_variant.size(), plasticity_rule.populations.size());
 					            for (size_t p = 0; p < plasticity_rule.populations.size(); ++p) {
-						            auto const& data_entry =
-						                std::get<std::vector<grenade::vx::common::TimedDataSequence<
-						                    std::vector<typename decltype(type)::ElementType>>>>(
-						                    data_entry_variant.at(
-						                        plasticity_rule.populations.at(p).descriptor));
+						            auto const& data_entry = std::get<std::vector<
+						                grenade::vx::common::TimedDataSequence<std::vector<std::map<
+						                    CompartmentOnLogicalNeuron,
+						                    std::vector<typename decltype(type)::ElementType>>>>>>(
+						                data_entry_variant.at(
+						                    plasticity_rule.populations.at(p).descriptor));
 						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
@@ -514,14 +525,18 @@ TEST(PlasticityRule, TimedRecording)
 								            EXPECT_EQ(sample.time, time);
 								            EXPECT_EQ(
 								                sample.data.size(),
-								                std::get<grenade::vx::network::placed_atomic::
-								                             Population>(
+								                std::get<Population>(
 								                    network->populations.at(
 								                        plasticity_rule.populations.at(p)
 								                            .descriptor))
 								                    .neurons.size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
-									            EXPECT_EQ(static_cast<int>(sample.data.at(i)), j)
+									            EXPECT_EQ(
+									                static_cast<int>(
+									                    sample.data.at(i)
+									                        .at(CompartmentOnLogicalNeuron())
+									                        .at(0)),
+									                j)
 									                << name;
 								            }
 								            time++;
@@ -543,7 +558,7 @@ TEST(PlasticityRule, TimedRecording)
 TEST(PlasticityRule, ExecutorInitialState)
 {
 	using namespace grenade::vx;
-	using namespace grenade::vx::network::placed_atomic;
+	using namespace grenade::vx::network::placed_logical;
 
 	signal_flow::ExecutionInstance instance;
 
@@ -564,17 +579,26 @@ TEST(PlasticityRule, ExecutorInitialState)
 	auto const execute = [&](bool const set_weight) {
 		NetworkBuilder network_builder;
 
-		Population::Neurons neurons{AtomicNeuronOnDLS()};
-		Population::EnableRecordSpikes enable_record_spikes{false};
-		Population population{std::move(neurons), std::move(enable_record_spikes)};
+		Population::Neurons neurons{Population::Neuron(
+		    LogicalNeuronOnDLS(
+		        LogicalNeuronCompartments(
+		            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+		        AtomicNeuronOnDLS()),
+		    Population::Neuron::Compartments{
+		        {CompartmentOnLogicalNeuron(),
+		         Population::Neuron::Compartment{
+		             Population::Neuron::Compartment::SpikeMaster(0, false),
+		             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+		Population population{std::move(neurons)};
 		auto const population_descriptor = network_builder.add(population);
 
 		Projection::Connections projection_connections;
 		for (size_t i = 0; i < population.neurons.size(); ++i) {
-			projection_connections.push_back({i, i, weight_63});
+			projection_connections.push_back(
+			    {{i, CompartmentOnLogicalNeuron()}, {i, CompartmentOnLogicalNeuron()}, weight_63});
 		}
 		Projection projection{
-		    Projection::ReceptorType::excitatory, std::move(projection_connections),
+		    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
 		    population_descriptor, population_descriptor};
 		auto const projection_descriptor = network_builder.add(projection);
 
@@ -619,20 +643,23 @@ TEST(PlasticityRule, ExecutorInitialState)
 		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 		auto const network = network_builder.done();
-		auto const routing_result = build_routing(network);
-		auto const network_graph = build_network_graph(network, routing_result);
+		auto const network_graph = build_network_graph(network);
+		auto const routing_result = build_routing(network_graph.get_hardware_network());
+		auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
+		    network_graph.get_hardware_network(), routing_result);
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    execution::run(executor, atomic_network_graph.get_graph(), inputs, chip_configs);
 
-		assert(network_graph.get_plasticity_rule_output_vertices().size());
-		assert(network_graph.get_plasticity_rule_output_vertices().contains(
-		    plasticity_rule_descriptor));
+		assert(atomic_network_graph.get_plasticity_rule_output_vertices().size());
+		assert(atomic_network_graph.get_plasticity_rule_output_vertices().contains(
+		    network_graph.get_plasticity_rule_translation().at(plasticity_rule_descriptor)));
 		auto const result =
 		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
-		        result_map.data.at(network_graph.get_plasticity_rule_output_vertices().at(
-		            plasticity_rule_descriptor)));
+		        result_map.data.at(atomic_network_graph.get_plasticity_rule_output_vertices().at(
+		            network_graph.get_plasticity_rule_translation().at(
+		                plasticity_rule_descriptor))));
 		assert(result.size() == inputs.batch_size());
 		assert(result.at(0).size() == plasticity_rule.timer.num_periods);
 		return static_cast<int>(result.at(0).at(0).data.at(0));
