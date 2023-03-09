@@ -12,7 +12,6 @@ GENPYBIND_MANUAL({
 
 #include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/extract_output.h"
-#include "grenade/vx/network/placed_atomic/generate_input.h"
 #include "grenade/vx/network/placed_atomic/network.h"
 #include "grenade/vx/network/placed_atomic/network_builder.h"
 #include "grenade/vx/network/placed_atomic/network_graph.h"

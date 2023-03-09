@@ -1,6 +1,5 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/generate_input.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -88,7 +87,7 @@ public:
 	signal_flow::IODataMap done() SYMBOL_VISIBLE;
 
 private:
-	network::placed_atomic::InputGenerator m_input_generator;
+	signal_flow::IODataMap m_data{};
 	NetworkGraph const& m_network_graph;
 };
 

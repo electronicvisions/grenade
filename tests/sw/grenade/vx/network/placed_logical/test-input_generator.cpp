@@ -1,15 +1,15 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/generate_input.h"
-#include "grenade/vx/network/placed_atomic/network.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
+#include "grenade/vx/network/placed_logical/generate_input.h"
+#include "grenade/vx/network/placed_logical/network.h"
+#include "grenade/vx/network/placed_logical/network_graph_builder.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "haldls/vx/v3/event.h"
 
 using namespace grenade::vx;
-using namespace grenade::vx::network::placed_atomic;
+using namespace grenade::vx::network::placed_logical;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 using namespace haldls::vx::v3;
@@ -19,15 +19,38 @@ TEST(network_InputGenerator, General)
 	auto const network = std::make_shared<Network>(Network{
 	    {{PopulationDescriptor(0), ExternalPopulation(3)},
 	     {PopulationDescriptor(1),
-	      Population({AtomicNeuronOnDLS(Enum(0)), AtomicNeuronOnDLS(Enum(1))}, {false, false})}},
+	      Population(
+	          {Population::Neuron(
+	               LogicalNeuronOnDLS(
+	                   LogicalNeuronCompartments(
+	                       {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	                   AtomicNeuronOnDLS(Enum(0))),
+	               Population::Neuron::Compartments{
+	                   {CompartmentOnLogicalNeuron(),
+	                    Population::Neuron::Compartment{
+	                        Population::Neuron::Compartment::SpikeMaster(0, false),
+	                        {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}),
+	           Population::Neuron(
+	               LogicalNeuronOnDLS(
+	                   LogicalNeuronCompartments(
+	                       {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	                   AtomicNeuronOnDLS(Enum(1))),
+	               Population::Neuron::Compartments{
+	                   {CompartmentOnLogicalNeuron(),
+	                    Population::Neuron::Compartment{
+	                        Population::Neuron::Compartment::SpikeMaster(0, false),
+	                        {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})})}},
 	    {{ProjectionDescriptor(0),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {
-	              Projection::Connection(0, 0, Projection::Connection::Weight(63)),
 	              Projection::Connection(
-	                  1, 1, Projection::Connection::Weight(63)) // third source not connected -> we
-	                                                            // expect events to be filtered
+	                  {0, CompartmentOnLogicalNeuron()}, {0, CompartmentOnLogicalNeuron()},
+	                  Projection::Connection::Weight(63)),
+	              Projection::Connection(
+	                  {1, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
+	                  Projection::Connection::Weight(63)) // third source not connected -> we
+	                                                      // expect events to be filtered
 	          },
 	          PopulationDescriptor(0), PopulationDescriptor(1))}},
 	    std::nullopt,
@@ -108,12 +131,26 @@ TEST(network_InputGenerator, General)
 		    data.data.at(*network_graph.get_event_input_vertex()));
 		EXPECT_EQ(spikes.size(), batch_size);
 
-		assert(network_graph.get_spike_labels().at(PopulationDescriptor(0)).at(0).at(0));
-		auto const spike_label_0 =
-		    *(network_graph.get_spike_labels().at(PopulationDescriptor(0)).at(0).at(0));
-		assert(network_graph.get_spike_labels().at(PopulationDescriptor(0)).at(1).at(0));
-		auto const spike_label_1 =
-		    *(network_graph.get_spike_labels().at(PopulationDescriptor(0)).at(1).at(0));
+		assert(network_graph.get_spike_labels()
+		           .at(PopulationDescriptor(0))
+		           .at(0)
+		           .at(CompartmentOnLogicalNeuron())
+		           .at(0));
+		auto const spike_label_0 = *(network_graph.get_spike_labels()
+		                                 .at(PopulationDescriptor(0))
+		                                 .at(0)
+		                                 .at(CompartmentOnLogicalNeuron())
+		                                 .at(0));
+		assert(network_graph.get_spike_labels()
+		           .at(PopulationDescriptor(0))
+		           .at(1)
+		           .at(CompartmentOnLogicalNeuron())
+		           .at(0));
+		auto const spike_label_1 = *(network_graph.get_spike_labels()
+		                                 .at(PopulationDescriptor(0))
+		                                 .at(1)
+		                                 .at(CompartmentOnLogicalNeuron())
+		                                 .at(0));
 		std::vector<signal_flow::TimedSpikeToChipSequence> expectation{
 		    {
 		        signal_flow::TimedSpikeToChip(
