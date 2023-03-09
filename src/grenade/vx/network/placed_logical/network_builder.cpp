@@ -12,6 +12,7 @@ namespace grenade::vx::network::placed_logical {
 NetworkBuilder::NetworkBuilder() :
     m_populations(),
     m_projections(),
+    m_duration(0),
     m_logger(log4cxx::Logger::getLogger("grenade.logical_network.NetworkBuilder"))
 {}
 
@@ -45,19 +46,25 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added population(" << descriptor << ") in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
 
 PopulationDescriptor NetworkBuilder::add(ExternalPopulation const& population)
 {
+	hate::Timer timer;
 	PopulationDescriptor descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
-	LOG4CXX_TRACE(m_logger, "add(): Added external population(" << descriptor << ").");
+	LOG4CXX_TRACE(
+	    m_logger,
+	    "add(): Added external population(" << descriptor << ") in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
 
 PopulationDescriptor NetworkBuilder::add(BackgroundSpikeSourcePopulation const& population)
 {
+	hate::Timer timer;
 	// check that supplied coordinate doesn't overlap with already added populations
 	for (auto const& [descriptor, other] : m_populations) {
 		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(other)) {
@@ -93,7 +100,9 @@ PopulationDescriptor NetworkBuilder::add(BackgroundSpikeSourcePopulation const& 
 	PopulationDescriptor descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
-	    m_logger, "add(): Added background spike source population(" << descriptor << ").");
+	    m_logger, "add(): Added background spike source population(" << descriptor << ") in "
+	                                                                 << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
 
@@ -207,6 +216,7 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	    m_logger, "add(): Added projection(" << descriptor << ", " << projection.population_pre
 	                                         << " -> " << projection.population_post << ") in "
 	                                         << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
 
@@ -286,6 +296,7 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 	}
 	m_madc_recording = madc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
 void NetworkBuilder::add(CADCRecording const& cadc_recording)
@@ -327,6 +338,7 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 	}
 	m_cadc_recording = cadc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added CADC recording in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
 PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_rule)
@@ -412,6 +424,7 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 	m_plasticity_rules.insert({descriptor, plasticity_rule});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added plasticity_rule(" << descriptor << ") in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
 
@@ -420,9 +433,10 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
 	auto const ret = std::make_shared<Network>(
 	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording),
-	    std::move(m_cadc_recording), std::move(m_plasticity_rules));
+	    std::move(m_cadc_recording), std::move(m_plasticity_rules), m_duration);
 	m_madc_recording.reset();
 	m_cadc_recording.reset();
+	m_duration = std::chrono::microseconds(0);
 	assert(ret);
 	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);
 	return ret;

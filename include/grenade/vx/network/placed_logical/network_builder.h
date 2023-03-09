@@ -7,6 +7,7 @@
 #include "grenade/vx/network/placed_logical/population.h"
 #include "grenade/vx/network/placed_logical/projection.h"
 #include "hate/visibility.h"
+#include <chrono>
 #include <map>
 #include <memory>
 #include <variant>
@@ -85,6 +86,7 @@ private:
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
 	std::map<PlasticityRuleDescriptor, PlasticityRule> m_plasticity_rules{};
+	std::chrono::microseconds m_duration;
 	log4cxx::LoggerPtr m_logger;
 };
 
