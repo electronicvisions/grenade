@@ -14,17 +14,6 @@
 namespace grenade::vx::network::placed_atomic GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_ATOMIC {
 
 /**
- * Extract MADC samples to be recorded for a network.
- * @param data Data containing MADC samples
- * @param network_graph Network graph to use for vertex descriptor lookup of the MADC samples
- * @return Time-series MADC sample data per batch entry
- */
-std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
-extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
-    SYMBOL_VISIBLE;
-
-
-/**
  * Extract CADC samples to be recorded for a network.
  * @param data Data containing CADC samples
  * @param network_graph Network graph to use for vertex descriptor lookup of the CADC samples
@@ -60,30 +49,6 @@ GENPYBIND_MANUAL({
 		return static_cast<float>(t) / 1000. /
 		       static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us);
 	};
-	auto const extract_madc_samples =
-	    [convert_ms](
-	        grenade::vx::signal_flow::IODataMap const& data,
-	        grenade::vx::network::placed_atomic::NetworkGraph const& network_graph) {
-		    hate::Timer timer;
-		    auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
-		    auto const samples =
-		        grenade::vx::network::placed_atomic::extract_madc_samples(data, network_graph);
-		    std::vector<std::pair<pybind11::array_t<float>, pybind11::array_t<int>>> ret(
-		        samples.size());
-		    for (size_t b = 0; b < samples.size(); ++b) {
-			    auto const madc_samples = samples.at(b);
-			    pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(madc_samples.size()));
-			    pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(madc_samples.size()));
-			    for (size_t i = 0; i < madc_samples.size(); ++i) {
-				    auto const& sample = madc_samples.at(i);
-				    times.mutable_at(i) = convert_ms(sample.first);
-				    values.mutable_at(i) = sample.second.toEnum().value();
-			    }
-			    ret.at(b) = std::make_pair(times, values);
-		    }
-		    LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
-		    return ret;
-	    };
 	auto const extract_cadc_samples = [convert_ms](
 	                                      grenade::vx::signal_flow::IODataMap const& data,
 	                                      grenade::vx::network::placed_atomic::NetworkGraph const&
@@ -117,9 +82,6 @@ GENPYBIND_MANUAL({
 		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;
 	};
-	parent.def(
-	    "extract_madc_samples", extract_madc_samples, pybind11::arg("data"),
-	    pybind11::arg("network_graph"));
 	parent.def(
 	    "extract_cadc_samples", extract_cadc_samples, pybind11::arg("data"),
 	    pybind11::arg("network_graph"));

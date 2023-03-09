@@ -83,8 +83,27 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
 std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
-	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
-	return network::placed_atomic::extract_madc_samples(data, hardware_network_graph);
+	hate::Timer timer;
+	auto logger = log4cxx::Logger::getLogger("grenade.network.placed_logical.extract_madc_samples");
+	if (!network_graph.get_madc_sample_output_vertex()) {
+		std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
+		    ret(data.batch_size());
+		return ret;
+	}
+	// convert samples
+	auto const& samples = std::get<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(
+	    data.data.at(*network_graph.get_madc_sample_output_vertex()));
+	std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
+	    ret(data.batch_size());
+	assert(!samples.size() || samples.size() == data.batch_size());
+	for (size_t b = 0; b < samples.size(); ++b) {
+		auto& local_ret = ret.at(b);
+		for (auto const& sample : samples.at(b)) {
+			local_ret.push_back({sample.time, sample.data});
+		}
+	}
+	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
+	return ret;
 }
 
 
