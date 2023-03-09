@@ -1,6 +1,5 @@
 #include "grenade/vx/network/placed_logical/extract_output.h"
 
-#include "grenade/vx/network/placed_atomic/extract_output.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
 #include <log4cxx/logger.h>
@@ -212,33 +211,33 @@ void extract_plasticity_rule_recording_data_per_synapse(
     size_t const batch_size,
     size_t const hardware_index,
     size_t const index,
-    std::vector<common::TimedDataSequence<std::vector<T>>> const& local_signal_flow)
+    std::vector<common::TimedDataSequence<std::vector<T>>> const& local_hardware_data)
 {
 	if (!local_logical_data.contains(descriptor)) {
 		std::vector<common::TimedDataSequence<std::vector<std::vector<T>>>>
-		    logical_local_signal_flow(batch_size);
-		for (size_t b = 0; b < logical_local_signal_flow.size(); ++b) {
-			auto& batch = logical_local_signal_flow.at(b);
+		    logical_local_hardware_data(batch_size);
+		for (size_t b = 0; b < logical_local_hardware_data.size(); ++b) {
+			auto& batch = logical_local_hardware_data.at(b);
 			batch.resize(num_periods);
 			for (auto& sample : batch) {
 				sample.data.resize(
 				    network_graph.get_network()->projections.at(descriptor).connections.size());
 			}
-			for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
-				batch.at(s).time = local_signal_flow.at(b).at(s).time;
+			for (size_t s = 0; s < local_hardware_data.at(b).size(); ++s) {
+				batch.at(s).time = local_hardware_data.at(b).at(s).time;
 			}
 		}
-		local_logical_data[descriptor] = logical_local_signal_flow;
+		local_logical_data[descriptor] = logical_local_hardware_data;
 	}
-	auto& logical_local_signal_flow =
+	auto& logical_local_hardware_data =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<T>>>>>(
 	        local_logical_data.at(descriptor));
-	for (size_t b = 0; b < local_signal_flow.size(); ++b) {
-		for (size_t s = 0; s < local_signal_flow.at(b).size(); ++s) {
-			auto& local_logical_local_signal_flow = logical_local_signal_flow.at(b).at(s);
-			auto& local_local_signal_flow = local_signal_flow.at(b).at(s);
-			local_logical_local_signal_flow.data.at(index).push_back(
-			    local_local_signal_flow.data.at(hardware_index));
+	for (size_t b = 0; b < local_hardware_data.size(); ++b) {
+		for (size_t s = 0; s < local_hardware_data.at(b).size(); ++s) {
+			auto& local_logical_local_hardware_data = logical_local_hardware_data.at(b).at(s);
+			auto& local_local_hardware_data = local_hardware_data.at(b).at(s);
+			local_logical_local_hardware_data.data.at(index).push_back(
+			    local_local_hardware_data.data.at(hardware_index));
 		}
 	}
 }
@@ -250,8 +249,9 @@ void extract_plasticity_rule_recording_data_per_neuron(
     size_t const num_periods,
     PopulationDescriptor const& descriptor,
     size_t const batch_size,
-    std::vector<
-        std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<size_t>>> const&
+    std::vector<std::map<
+        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+        std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>> const&
         neuron_translation,
     std::vector<common::TimedDataSequence<std::vector<T>>> const& dd)
 {
@@ -285,7 +285,7 @@ void extract_plasticity_rule_recording_data_per_neuron(
 				for (auto const& [compartment, atomic_neuron_indices] :
 				     neuron_translation.at(neuron)) {
 					auto& compartment_data = neuron_data[compartment];
-					for (auto const& atomic_neuron_index : atomic_neuron_indices) {
+					for (auto const& [_, atomic_neuron_index] : atomic_neuron_indices) {
 						compartment_data.push_back(local_dd.data.at(atomic_neuron_index));
 					}
 				}
@@ -301,73 +301,150 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
     NetworkGraph const& network_graph,
     PlasticityRuleDescriptor descriptor)
 {
-	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
-	auto const signal_flow = network::placed_atomic::extract_plasticity_rule_recording_data(
-	    data, hardware_network_graph,
-	    network_graph.get_plasticity_rule_translation().at(descriptor));
+	assert(network_graph.get_network());
+	if (!network_graph.get_network()->plasticity_rules.contains(descriptor)) {
+		throw std::runtime_error("Requested plasticity rule not part of network graph.");
+	}
+	if (!network_graph.get_plasticity_rule_output_vertices().contains(descriptor)) {
+		throw std::runtime_error("Requested plasticity rule isn't recording data.");
+	}
+	signal_flow::Graph::vertex_descriptor const output_vertex =
+	    network_graph.get_plasticity_rule_output_vertices().at(descriptor);
+	if (!data.data.contains(output_vertex)) {
+		throw std::runtime_error(
+		    "Provided signal_flow::IODataMap doesn't contain data of recording plasticity rule.");
+	}
+	auto const& output_data =
+	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+	        data.data.at(output_vertex));
 
+	assert(boost::in_degree(output_vertex, network_graph.get_graph().get_graph()) == 1);
+	auto const in_edges = boost::in_edges(output_vertex, network_graph.get_graph().get_graph());
+	auto const plasticity_rule_vertex =
+	    boost::source(*(in_edges.first), network_graph.get_graph().get_graph());
+
+	auto const vertex_recorded_data =
+	    std::get<signal_flow::vertex::PlasticityRule>(
+	        network_graph.get_graph().get_vertex_property(plasticity_rule_vertex))
+	        .extract_recording_data(output_data);
+	if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecordingData>(
+	        vertex_recorded_data)) {
+		return std::get<signal_flow::vertex::PlasticityRule::RawRecordingData>(
+		    vertex_recorded_data);
+	} else if (!std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecordingData>(
+	               vertex_recorded_data)) {
+		throw std::logic_error("Recording data type not implemented.");
+	}
+
+	auto const& vertex_timed_recorded_data =
+	    std::get<signal_flow::vertex::PlasticityRule::TimedRecordingData>(vertex_recorded_data);
+
+	PlasticityRule::TimedRecordingData logical_data;
+	logical_data.data_array = vertex_timed_recorded_data.data_array;
+
+	auto const& plasticity_rule = network_graph.get_network()->plasticity_rules.at(descriptor);
 	auto const batch_size = data.batch_size();
 
-	auto const convert_raw =
-	    [](network::placed_atomic::PlasticityRule::RawRecordingData const& data)
-	    -> PlasticityRule::RecordingData { return data; };
-
-	auto const convert_timed =
-	    [batch_size, descriptor,
-	     network_graph](network::placed_atomic::PlasticityRule::TimedRecordingData const& data)
-	    -> PlasticityRule::RecordingData {
-		PlasticityRule::TimedRecordingData logical_data;
-		for (auto const& logical_proj :
-		     network_graph.get_network()->plasticity_rules.at(descriptor).projections) {
-			for (auto const& [name, d] : data.data_per_synapse) {
-				auto& local_logical_data = logical_data.data_per_synapse[name];
-				for (size_t index = 0;
-				     index <
-				     network_graph.get_network()->projections.at(logical_proj).connections.size();
-				     ++index) {
-					auto const hardware_connections =
-					    network_graph.get_projection_translation().equal_range(
-					        std::make_pair(logical_proj, index));
-					for (auto const& [_, hardware_index] :
-					     boost::make_iterator_range(hardware_connections)) {
-						auto const extractor = [&](auto const& dd) {
-							extract_plasticity_rule_recording_data_per_synapse(
-							    local_logical_data,
-							    network_graph.get_network()
-							        ->plasticity_rules.at(descriptor)
-							        .timer.num_periods,
-							    logical_proj, network_graph, batch_size, hardware_index.second,
-							    index, dd);
-						};
-						std::visit(extractor, d.at(hardware_index.first));
-					}
-				}
-			}
+	// create location lookup for data_per_synapse
+	// map<vertex_descriptor, IndexOnVertexData>
+	std::map<signal_flow::Graph::vertex_descriptor, size_t> data_per_synapse_lookup_table;
+	for (size_t index = 0; auto const& in_edge : boost::make_iterator_range(boost::in_edges(
+	                           plasticity_rule_vertex, network_graph.get_graph().get_graph()))) {
+		auto const source = boost::source(in_edge, network_graph.get_graph().get_graph());
+		if (!std::holds_alternative<signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(source))) {
+			continue;
 		}
-		for (auto const& logical_pop :
-		     network_graph.get_network()->plasticity_rules.at(descriptor).populations) {
-			for (auto const& [name, d] : data.data_per_neuron) {
-				auto& local_logical_data = logical_data.data_per_neuron[name];
-				auto const& neuron_translation =
-				    network_graph.get_neuron_translation().at(logical_pop.descriptor);
-				auto const extractor = [&](auto const& dd) {
-					extract_plasticity_rule_recording_data_per_neuron(
-					    local_logical_data,
+		data_per_synapse_lookup_table[source] = index;
+		index++;
+	}
+
+	auto const extract_observable_per_synapse = [&](auto const& type, auto const& name) {
+		typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
+		for (auto const& projection : plasticity_rule.projections) {
+			for (size_t index = 0;
+			     index < network_graph.get_network()->projections.at(projection).connections.size();
+			     ++index) {
+				auto const& hardware_connections =
+				    network_graph.get_graph_translation().projections.at(projection).at(index);
+				for (auto const& hardware_index : hardware_connections) {
+					auto const& local_result =
+					    std::get<std::vector<common::TimedDataSequence<std::vector<ElementType>>>>(
+					        vertex_timed_recorded_data.data_per_synapse.at(name).at(
+					            data_per_synapse_lookup_table.at(hardware_index.first)));
+					extract_plasticity_rule_recording_data_per_synapse(
+					    logical_data.data_per_synapse[name],
 					    network_graph.get_network()
 					        ->plasticity_rules.at(descriptor)
 					        .timer.num_periods,
-					    logical_pop.descriptor, batch_size, neuron_translation, dd);
-				};
-				std::visit(
-				    extractor,
-				    d.at(network_graph.get_population_translation().at(logical_pop.descriptor)));
+					    projection, network_graph, batch_size, hardware_index.second, index,
+					    local_result);
+				}
 			}
 		}
-		logical_data.data_array = data.data_array;
-		return logical_data;
 	};
 
-	return std::visit(hate::overloaded{convert_raw, convert_timed}, signal_flow);
+	auto const extract_observable_per_neuron = [&](auto const& type, auto const& name) {
+		typedef typename std::decay_t<decltype(type)>::ElementType ElementType;
+		for (size_t p = 0; auto const& population : plasticity_rule.populations) {
+			std::vector<common::TimedDataSequence<std::vector<ElementType>>> local_record;
+			size_t neuron_view_offset = 0;
+			auto const neuron_vertices = network_graph.get_neuron_vertices();
+			for ([[maybe_unused]] auto const& _ : neuron_vertices.at(population.descriptor)) {
+				auto const& local_result =
+				    std::get<std::vector<common::TimedDataSequence<std::vector<ElementType>>>>(
+				        vertex_timed_recorded_data.data_per_neuron.at(name).at(p));
+				local_record.resize(local_result.size());
+				for (size_t i = 0; i < local_record.size(); ++i) {
+					local_record.at(i).resize(local_result.at(i).size());
+					for (size_t s = 0; s < local_record.at(i).size(); ++s) {
+						// TODO: make array over hemispheres
+						local_record.at(i).at(s).time = local_result.at(i).at(s).time;
+						local_record.at(i).at(s).data.resize(
+						    std::get<Population>(
+						        network_graph.get_network()->populations.at(population.descriptor))
+						        .neurons.size());
+						for (size_t c = 0; c < local_result.at(i).at(s).data.size(); ++c) {
+							local_record.at(i).at(s).data.at(c + neuron_view_offset) =
+							    local_result.at(i).at(s).data.at(c);
+						}
+					}
+				}
+				if (local_result.size() && local_result.at(0).size()) {
+					neuron_view_offset += local_result.at(0).at(0).data.size();
+				}
+				p++;
+			}
+			auto const& neuron_translation =
+			    network_graph.get_graph_translation().populations.at(population.descriptor);
+			extract_plasticity_rule_recording_data_per_neuron(
+			    logical_data.data_per_neuron[name],
+			    network_graph.get_network()->plasticity_rules.at(descriptor).timer.num_periods,
+			    population.descriptor, batch_size, neuron_translation, local_record);
+		}
+	};
+
+	for (auto const& [name, obsv] :
+	     std::get<PlasticityRule::TimedRecording>(*plasticity_rule.recording).observables) {
+		std::visit(
+		    hate::overloaded{
+		        [&](PlasticityRule::TimedRecording::ObservablePerSynapse const& observable) {
+			        std::visit(
+			            [&](auto const& type) { extract_observable_per_synapse(type, name); },
+			            observable.type);
+		        },
+		        [&](PlasticityRule::TimedRecording::ObservablePerNeuron const& observable) {
+			        std::visit(
+			            [&](auto const& type) { extract_observable_per_neuron(type, name); },
+			            observable.type);
+		        },
+		        [&](PlasticityRule::TimedRecording::ObservableArray const&) {
+			        // handled above, no conversion needed
+		        },
+		        [&](auto const&) { throw std::logic_error("Observable type not implemented."); }},
+		    obsv);
+	}
+	return logical_data;
 }
 
 } // namespace grenade::vx::network::placed_logical
