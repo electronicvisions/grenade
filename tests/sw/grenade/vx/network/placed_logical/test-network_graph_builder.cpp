@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
 
@@ -58,8 +59,8 @@ TEST(logical_network_build_network_graph, Multapses)
 	auto const projection_descriptor = builder.add(projection);
 
 	auto network = builder.done();
-
-	auto const network_graph = build_network_graph(network);
+	auto const routing = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing);
 
 	EXPECT_TRUE(network_graph.get_hardware_network());
 	EXPECT_EQ(network_graph.get_hardware_network()->projections.size(), 1);

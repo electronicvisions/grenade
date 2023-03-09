@@ -1,16 +1,17 @@
 #pragma once
+#include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/placed_logical/projection.h"
 #include <cstddef>
 #include <map>
 #include <vector>
 
-namespace grenade::vx::network::placed_logical {
+namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_LOGICAL {
 
 /**
  * Translation of a single connection to a collection of hardware synapse routes to an atomic neuron
  * circuit of the logical neuron's target compartment.
  */
-struct ConnectionToHardwareRoutes
+struct GENPYBIND(visible) ConnectionToHardwareRoutes
 {
 	/** Indices of atomic neurons in target compartment. */
 	std::vector<size_t> atomic_neurons_on_target_compartment;

@@ -1,13 +1,17 @@
 #pragma once
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include <map>
 #include <tuple>
 #include <vector>
+
+#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
+#include "hate/timer.h"
+#include <log4cxx/logger.h>
+#endif
 
 namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_LOGICAL {
 
@@ -22,10 +26,8 @@ namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_
 std::vector<std::map<
     std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<common::Time>>>
-extract_neuron_spikes(
-    signal_flow::IODataMap const& data,
-    NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
+extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+    SYMBOL_VISIBLE;
 
 /**
  * Extract MADC samples to be recorded for a network.
@@ -36,10 +38,8 @@ extract_neuron_spikes(
  * @return Time-series MADC sample data per batch entry
  */
 std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
-extract_madc_samples(
-    signal_flow::IODataMap const& data,
-    NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
+extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+    SYMBOL_VISIBLE;
 
 /**
  * Extract CADC samples to be recorded for a network.
@@ -57,10 +57,8 @@ std::vector<std::vector<std::tuple<
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
     size_t,
     signal_flow::Int8>>>
-extract_cadc_samples(
-    signal_flow::IODataMap const& data,
-    NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph) SYMBOL_VISIBLE;
+extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+    SYMBOL_VISIBLE;
 
 /**
  * Extract to be recorded observable data of a plasticity rule.
@@ -74,7 +72,118 @@ extract_cadc_samples(
 PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph,
     PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;
+
+
+/**
+ * PyNN's format expects times in floating-point ms, neuron (compartment)s as integer representation
+ * of the enum values and sample values as integer values. Currently, only batch-size one is
+ * supported, i.e. one time sequence.
+ */
+GENPYBIND_MANUAL({
+	auto const convert_ms = [](auto const t) {
+		return static_cast<float>(t) / 1000. /
+		       static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us);
+	};
+	auto const extract_neuron_spikes =
+	    [convert_ms](
+	        grenade::vx::signal_flow::IODataMap const& data,
+	        grenade::vx::network::placed_logical::NetworkGraph const& network_graph) {
+		    hate::Timer timer;
+		    auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_neuron_spikes");
+		    auto const spikes =
+		        grenade::vx::network::placed_logical::extract_neuron_spikes(data, network_graph);
+		    std::vector<std::map<std::tuple<int, int, int>, pybind11::array_t<double>>> ret(
+		        spikes.size());
+		    for (size_t b = 0; b < spikes.size(); ++b) {
+			    for (auto const& [neuron, times] : spikes.at(b)) {
+				    pybind11::array_t<double> pytimes(static_cast<pybind11::ssize_t>(times.size()));
+				    for (size_t i = 0; i < times.size(); ++i) {
+					    pytimes.mutable_at(i) = convert_ms(times.at(i));
+				    }
+				    auto const& [descriptor, nrn_on_pop, comp_on_nrn] = neuron;
+				    ret.at(b)[std::tuple<int, int, int>(descriptor, nrn_on_pop, comp_on_nrn)] =
+				        pytimes;
+			    }
+		    }
+		    LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
+		    return ret;
+	    };
+	auto const extract_madc_samples =
+	    [convert_ms](
+	        grenade::vx::signal_flow::IODataMap const& data,
+	        grenade::vx::network::placed_logical::NetworkGraph const& network_graph) {
+		    hate::Timer timer;
+		    auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
+		    auto const samples =
+		        grenade::vx::network::placed_logical::extract_madc_samples(data, network_graph);
+		    std::vector<std::pair<pybind11::array_t<float>, pybind11::array_t<int>>> ret(
+		        samples.size());
+		    for (size_t b = 0; b < samples.size(); ++b) {
+			    auto const madc_samples = samples.at(b);
+			    pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			    pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			    for (size_t i = 0; i < madc_samples.size(); ++i) {
+				    auto const& sample = madc_samples.at(i);
+				    times.mutable_at(i) = convert_ms(sample.first);
+				    values.mutable_at(i) = sample.second.toEnum().value();
+			    }
+			    ret.at(b) = std::make_pair(times, values);
+		    }
+		    LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
+		    return ret;
+	    };
+	auto const extract_cadc_samples = [convert_ms](
+	                                      grenade::vx::signal_flow::IODataMap const& data,
+	                                      grenade::vx::network::placed_logical::NetworkGraph const&
+	                                          network_graph) {
+		hate::Timer timer;
+		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_cadc_samples");
+		auto const samples =
+		    grenade::vx::network::placed_logical::extract_cadc_samples(data, network_graph);
+		std::vector<std::tuple<
+		    pybind11::array_t<float>, pybind11::array_t<int>, pybind11::array_t<int>,
+		    pybind11::array_t<int>, pybind11::array_t<int>, pybind11::array_t<int>>>
+		    ret(samples.size());
+		for (size_t b = 0; b < samples.size(); ++b) {
+			auto const cadc_samples = samples.at(b);
+			if (cadc_samples.empty()) {
+				ret.at(b) = std::make_tuple(
+				    pybind11::array_t<float>(0), pybind11::array_t<int>(0),
+				    pybind11::array_t<int>(0), pybind11::array_t<int>(0), pybind11::array_t<int>(0),
+				    pybind11::array_t<int>(0));
+				continue;
+			}
+			pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> descriptor(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> nrn_on_pop(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> comp_on_nrn(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> an_on_comp(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(cadc_samples.size()));
+			for (size_t i = 0; i < cadc_samples.size(); ++i) {
+				auto const& sample = cadc_samples.at(i);
+				times.mutable_at(i) = convert_ms(std::get<0>(sample));
+				descriptor.mutable_at(i) = std::get<1>(sample).value();
+				nrn_on_pop.mutable_at(i) = std::get<2>(sample);
+				comp_on_nrn.mutable_at(i) = std::get<3>(sample).value();
+				an_on_comp.mutable_at(i) = std::get<4>(sample);
+				values.mutable_at(i) = std::get<5>(sample).value();
+			}
+			ret.at(b) =
+			    std::make_tuple(times, descriptor, nrn_on_pop, comp_on_nrn, an_on_comp, values);
+		}
+		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
+		return ret;
+	};
+	parent.def(
+	    "extract_neuron_spikes", extract_neuron_spikes, pybind11::arg("data"),
+	    pybind11::arg("network_graph"));
+	parent.def(
+	    "extract_madc_samples", extract_madc_samples, pybind11::arg("data"),
+	    pybind11::arg("network_graph"));
+	parent.def(
+	    "extract_cadc_samples", extract_cadc_samples, pybind11::arg("data"),
+	    pybind11::arg("network_graph"));
+})
 
 } // namespace grenade::vx::network::placed_logical

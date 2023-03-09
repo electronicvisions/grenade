@@ -2,8 +2,7 @@
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/cadc_recording.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
@@ -80,10 +79,8 @@ TEST(CADCRecording, General)
 	network_builder.add(cadc_recording);
 
 	auto const network = network_builder.done();
-	auto const network_graph = build_network_graph(network);
-	auto const routing_result = build_routing(network_graph.get_hardware_network());
-	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing_result);
+	auto const routing_result = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back(
@@ -94,10 +91,10 @@ TEST(CADCRecording, General)
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 150)}});
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(
-	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-	auto const result = extract_cadc_samples(result_map, network_graph, atomic_network_graph);
+	auto const result = extract_cadc_samples(result_map, network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	std::set<grenade::vx::signal_flow::Int8> unique_values;

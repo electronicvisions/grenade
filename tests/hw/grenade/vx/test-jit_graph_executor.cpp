@@ -3,8 +3,7 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -58,11 +57,8 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	Population population_internal{std::move(neurons)};
 	builder.add(population_internal);
 	auto network = builder.done();
-	auto network_graph = build_network_graph(network);
-	auto routing =
-	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
-	auto atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing);
+	auto routing = build_routing(network);
+	auto network_graph = build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
 	grenade::vx::execution::JITGraphExecutor executor(true);
@@ -79,8 +75,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.DifferentialConfig");
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// First run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -89,8 +84,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    lola::vx::v3::AtomicNeuron::AnalogValue(123);
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Second run: expect CapMem settling time due to single cell change
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -99,8 +93,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    !config.neuron_block.atomic_neurons.front().leak.enable_multiplication;
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Third run: expect no CapMem settling time due to non-CapMem change
 		EXPECT_LE(timer.get_ms(), capmem_settling_time_ms);
 		// Not too fast (may change)
@@ -108,8 +101,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	}
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Fourth run: expect no CapMem settling time due to non-CapMem change and even faster
 		// construction due to equality of config
 		EXPECT_LE(timer.get_ms(), 5);
@@ -133,11 +125,8 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	Population population_internal{std::move(neurons)};
 	builder.add(population_internal);
 	auto network = builder.done();
-	auto network_graph = build_network_graph(network);
-	auto routing =
-	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
-	auto atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing);
+	auto routing = build_routing(network);
+	auto network_graph = build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode disabled
 	grenade::vx::execution::JITGraphExecutor executor(false);
@@ -154,8 +143,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.NoDifferentialConfig");
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// First run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -164,8 +152,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	    lola::vx::v3::AtomicNeuron::AnalogValue(123);
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Second run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -174,15 +161,13 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	    !config.neuron_block.atomic_neurons.front().leak.enable_multiplication;
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Third run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
 		// Fourth run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -205,11 +190,8 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	Population population_internal{std::move(neurons)};
 	builder.add(population_internal);
 	auto network = builder.done();
-	auto network_graph = build_network_graph(network);
-	auto routing =
-	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
-	auto atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing);
+	auto routing = build_routing(network);
+	auto network_graph = build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
 	grenade::vx::execution::JITGraphExecutor executor(true);
@@ -228,7 +210,7 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 
 	auto const run_func = [&]() -> grenade::vx::signal_flow::IODataMap {
 		return grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), input_map, initial_config);
+		    executor, network_graph.get_graph(), input_map, initial_config);
 	};
 
 	hate::Timer timer;

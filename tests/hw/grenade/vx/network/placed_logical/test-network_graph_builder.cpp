@@ -2,8 +2,7 @@
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/generate_input.h"
 #include "grenade/vx/network/placed_logical/network.h"
@@ -82,11 +81,8 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 	// build network graph
 	auto const network = network_builder.done();
-	auto const network_graph = build_network_graph(network);
-	auto const routing_result =
-	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
-	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing_result);
+	auto const routing_result = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing_result);
 
 	// generate input
 	constexpr size_t num = 100;
@@ -99,7 +95,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 		}
 	}
-	InputGenerator input_generator(network_graph, atomic_network_graph, input_spike_times.size());
+	InputGenerator input_generator(network_graph, input_spike_times.size());
 	input_generator.add(input_spike_times, population_external_descriptor);
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
@@ -107,10 +103,10 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(
-	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-	auto const result = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
+	auto const result = extract_neuron_spikes(result_map, network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
@@ -191,11 +187,8 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto const network = network_builder.done();
 
 	// build network graph
-	auto const network_graph = build_network_graph(network);
-	auto const routing_result =
-	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
-	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing_result);
+	auto const routing_result = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing_result);
 
 	// generate input
 	constexpr size_t num = 100;
@@ -208,7 +201,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 		}
 	}
-	InputGenerator input_generator(network_graph, atomic_network_graph, input_spike_times.size());
+	InputGenerator input_generator(network_graph, input_spike_times.size());
 	input_generator.add(input_spike_times, population_external_descriptor);
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
@@ -216,10 +209,10 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(
-	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-	auto const result = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
+	auto const result = extract_neuron_spikes(result_map, network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t j = 0; j < population_external.size; ++j) {
@@ -329,11 +322,8 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		auto const network = network_builder.done();
 
 		// build network graph
-		auto const network_graph = build_network_graph(network);
-		auto const routing_result = grenade::vx::network::placed_atomic::build_routing(
-		    network_graph.get_hardware_network());
-		auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-		    network_graph.get_hardware_network(), routing_result);
+		auto const routing_result = build_routing(network);
+		auto const network_graph = build_network_graph(network, routing_result);
 
 		// generate input
 		constexpr size_t num = 100;
@@ -343,8 +333,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		for (size_t j = 0; j < num; ++j) {
 			input_spike_times.at(0).at(0).push_back(grenade::vx::common::Time(j * isi));
 		}
-		InputGenerator input_generator(
-		    network_graph, atomic_network_graph, input_spike_times.size());
+		InputGenerator input_generator(network_graph, input_spike_times.size());
 		input_generator.add(input_spike_times, population_external_descriptor);
 		auto inputs = input_generator.done();
 		inputs.runtime.resize(
@@ -352,10 +341,10 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		                           grenade::vx::common::Time(num * isi)}});
 
 		// run graph with given inputs and return results
-		auto const result_map = grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map =
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-		auto const result = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
+		auto const result = extract_neuron_spikes(result_map, network_graph);
 
 		EXPECT_EQ(result.size(), inputs.batch_size());
 		EXPECT_TRUE(result.at(0).contains(std::tuple{

@@ -1,27 +1,17 @@
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
 
 #include "grenade/vx/network/placed_atomic/network_builder.h"
-#include "grenade/vx/network/placed_logical/build_atomic_network.h"
 #include "grenade/vx/network/placed_logical/build_connection_routing.h"
-#include "grenade/vx/network/placed_logical/requires_routing.h"
 #include "hate/math.h"
 #include "hate/variant.h"
 #include <map>
-#include <log4cxx/logger.h>
 
 namespace grenade::vx::network::placed_logical {
 
-NetworkGraph build_network_graph(
-    std::shared_ptr<Network> const& network, RoutingResult const& routing_result)
+std::shared_ptr<placed_atomic::Network> build_atomic_network(
+    std::shared_ptr<Network> const& network, ConnectionRoutingResult const& connection_routing)
 {
 	assert(network);
-
-	auto const atomic_network =
-	    build_atomic_network(network, routing_result.connection_routing_result);
-
-	NetworkGraph result;
-	result.m_hardware_network_graph =
-	    placed_atomic::build_network_graph(atomic_network, routing_result.atomic_routing_result);
 
 	// construct hardware network
 	network::placed_atomic::NetworkBuilder builder;
@@ -63,12 +53,7 @@ NetworkGraph build_network_graph(
 		        [&builder, construct_population](Population const& pop) {
 			        return builder.add(construct_population(pop));
 		        },
-		        [&builder, &neuron_translation, descriptor](auto const& pop /* BackgroundSpikeSoucePopulation, ExternalPopulation stay the same */) {
-			for (size_t i = 0; i < pop.size; ++i) {
-				neuron_translation[descriptor].push_back({{halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(), {i}}});
-			}
-			 return builder.add(pop);
-			 }},
+		        [&builder](auto const& pop /* BackgroundSpikeSoucePopulation, ExternalPopulation stay the same */) { return builder.add(pop); }},
 		    population);
 	}
 
@@ -119,8 +104,8 @@ NetworkGraph build_network_graph(
 		if (!projection.connections.empty()) {
 			auto const max_num_synapses =
 			    std::max_element(
-			        routing_result.connection_routing_result.at(descriptor).begin(),
-			        routing_result.connection_routing_result.at(descriptor).end(),
+			        connection_routing.at(descriptor).begin(),
+			        connection_routing.at(descriptor).end(),
 			        [](auto const& a, auto const& b) {
 				        return a.atomic_neurons_on_target_compartment.size() <
 				               b.atomic_neurons_on_target_compartment.size();
@@ -130,14 +115,14 @@ NetworkGraph build_network_graph(
 				for (size_t i = 0; i < projection.connections.size(); ++i) {
 					// only find new hardware synapse, if the current connection requires another
 					// one
-					if (routing_result.connection_routing_result.at(descriptor)
+					if (connection_routing.at(descriptor)
 					        .at(i)
 					        .atomic_neurons_on_target_compartment.size() <= p) {
 						continue;
 					}
 					auto const& local_connection = projection.connections.at(i);
 					auto const neuron_on_compartment =
-					    routing_result.connection_routing_result.at(descriptor)
+					    connection_routing.at(descriptor)
 					        .at(i)
 					        .atomic_neurons_on_target_compartment.at(p);
 					size_t index_pre;
@@ -211,33 +196,7 @@ NetworkGraph build_network_graph(
 		plasticity_rule_translation[d] = builder.add(hardware_plasticity_rule);
 	}
 
-	result.m_network = network;
-	result.m_population_translation = population_translation;
-	result.m_neuron_translation = neuron_translation;
-	result.m_projection_translation = projection_translation;
-	result.m_plasticity_rule_translation = plasticity_rule_translation;
-	return result;
-}
-
-
-void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network)
-{
-	hate::Timer timer;
-	log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.update_network_graph");
-
-	if (requires_routing(network, network_graph.m_network)) {
-		throw std::runtime_error(
-		    "Network graph can only be updated if no new routing is required.");
-	}
-
-	auto const connection_routing_result = build_connection_routing(network);
-	placed_atomic::update_network_graph(
-	    network_graph.m_hardware_network_graph,
-	    build_atomic_network(network, connection_routing_result));
-	network_graph.m_network = network;
-
-	LOG4CXX_TRACE(
-	    logger, "Updated hardware graph representation of network in " << timer.print() << ".");
+	return builder.done();
 }
 
 } // namespace grenade::vx::network::placed_logical

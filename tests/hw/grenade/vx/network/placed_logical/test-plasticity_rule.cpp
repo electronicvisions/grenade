@@ -1,8 +1,7 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
@@ -86,10 +85,8 @@ TEST(PlasticityRule, RawRecording)
 	auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 	auto const network = network_builder.done();
-	auto const network_graph = build_network_graph(network);
-	auto const routing_result = build_routing(network_graph.get_hardware_network());
-	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing_result);
+	auto const routing_result = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back(
@@ -103,14 +100,13 @@ TEST(PlasticityRule, RawRecording)
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(
-	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-	auto const result =
-	    std::get<PlasticityRule::RawRecordingData>(
-	        extract_plasticity_rule_recording_data(
-	            result_map, network_graph, atomic_network_graph, plasticity_rule_descriptor))
-	        .data;
+	auto const result = std::get<PlasticityRule::RawRecordingData>(
+	                        extract_plasticity_rule_recording_data(
+	                            result_map, network_graph, plasticity_rule_descriptor))
+	                        .data;
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
@@ -457,20 +453,18 @@ TEST(PlasticityRule, TimedRecording)
 		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 		auto const network = network_builder.done();
-		auto const network_graph = build_network_graph(network);
-		auto const routing_result = build_routing(network_graph.get_hardware_network());
-		auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-		    network_graph.get_hardware_network(), routing_result);
+		auto const routing_result = build_routing(network);
+		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
 		EXPECT_NO_THROW((grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), inputs, chip_configs)));
+		    executor, network_graph.get_graph(), inputs, chip_configs)));
 
-		auto const result_map = grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map =
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		auto const recording_data = extract_plasticity_rule_recording_data(
-		    result_map, network_graph, atomic_network_graph, plasticity_rule_descriptor);
+		    result_map, network_graph, plasticity_rule_descriptor);
 		auto const& timed_recording_data =
 		    std::get<PlasticityRule::TimedRecordingData>(recording_data);
 
@@ -685,20 +679,17 @@ TEST(PlasticityRule, ExecutorInitialState)
 		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 		auto const network = network_builder.done();
-		auto const network_graph = build_network_graph(network);
-		auto const routing_result = build_routing(network_graph.get_hardware_network());
-		auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-		    network_graph.get_hardware_network(), routing_result);
+		auto const routing_result = build_routing(network);
+		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    execution::run(executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+		    execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 		auto const result =
 		    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
 		        std::get<PlasticityRule::TimedRecordingData>(extract_plasticity_rule_recording_data(
 		                                                         result_map, network_graph,
-		                                                         atomic_network_graph,
 		                                                         plasticity_rule_descriptor))
 		            .data_per_synapse.at("w")
 		            .at(projection_descriptor));

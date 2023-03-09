@@ -8,16 +8,10 @@ namespace grenade::vx::network::placed_logical {
 std::vector<std::map<
     std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<common::Time>>>
-extract_neuron_spikes(
-    signal_flow::IODataMap const& data,
-    NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph)
+extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
-	if (network_graph.get_hardware_network() != hardware_network_graph.get_network()) {
-		throw std::runtime_error(
-		    "Logical and hardware network graph need to feature matching hardware network.");
-	}
 	assert(network_graph.get_network());
+	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
 
 	std::map<
 	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
@@ -67,11 +61,9 @@ extract_neuron_spikes(
 
 
 std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
-extract_madc_samples(
-    signal_flow::IODataMap const& data,
-    NetworkGraph const& /* network_graph */,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph)
+extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
+	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
 	return network::placed_atomic::extract_madc_samples(data, hardware_network_graph);
 }
 
@@ -83,11 +75,9 @@ std::vector<std::vector<std::tuple<
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
     size_t,
     signal_flow::Int8>>>
-extract_cadc_samples(
-    signal_flow::IODataMap const& data,
-    NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph)
+extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
+	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
 	auto const hardware_samples =
 	    network::placed_atomic::extract_cadc_samples(data, hardware_network_graph);
 
@@ -234,9 +224,9 @@ void extract_plasticity_rule_recording_data_per_neuron(
 PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph,
     PlasticityRuleDescriptor descriptor)
 {
+	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
 	auto const signal_flow = network::placed_atomic::extract_plasticity_rule_recording_data(
 	    data, hardware_network_graph,
 	    network_graph.get_plasticity_rule_translation().at(descriptor));

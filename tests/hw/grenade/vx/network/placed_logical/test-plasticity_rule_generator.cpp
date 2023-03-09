@@ -1,8 +1,7 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_atomic/build_routing.h"
-#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
@@ -182,10 +181,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 	auto const network = network_builder.done();
-	auto const network_graph = build_network_graph(network);
-	auto const routing_result = build_routing(network_graph.get_hardware_network());
-	auto const atomic_network_graph = grenade::vx::network::placed_atomic::build_network_graph(
-	    network_graph.get_hardware_network(), routing_result);
+	auto const routing_result = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back(
@@ -196,12 +193,12 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(
-	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
 	auto const recorded_data =
 	    std::get<PlasticityRule::TimedRecordingData>(extract_plasticity_rule_recording_data(
-	        result_map, network_graph, atomic_network_graph, plasticity_rule_descriptor));
+	        result_map, network_graph, plasticity_rule_descriptor));
 	EXPECT_EQ(recorded_data.data_per_synapse.size(), 1);
 	EXPECT_EQ(recorded_data.data_array.size(), 0);
 	EXPECT_TRUE(recorded_data.data_per_synapse.contains("weights"));

@@ -1,7 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/placed_atomic/generate_input.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -13,7 +12,6 @@ class GENPYBIND(visible) InputGenerator
 public:
 	InputGenerator(
 	    NetworkGraph const& network_graph,
-	    network::placed_atomic::NetworkGraph const& hardware_network_graph,
 	    size_t batch_size = 1) SYMBOL_VISIBLE;
 
 	void add(std::vector<common::Time> const& times, PopulationDescriptor population)

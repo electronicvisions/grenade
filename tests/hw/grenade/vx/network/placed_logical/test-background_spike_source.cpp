@@ -4,7 +4,7 @@
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_atomic/build_routing.h"
+#include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
@@ -90,23 +90,19 @@ void test_background_spike_source_regular(
 
 	auto const network = network_builder.done();
 
-	auto const network_graph = build_network_graph(network);
-
 	// build network graph
-	auto const routing_result =
-	    grenade::vx::network::placed_atomic::build_routing(network_graph.get_hardware_network());
-	auto const atomic_network_graph =
-	    build_network_graph(network_graph.get_hardware_network(), routing_result);
+	auto const routing_result = build_routing(network);
+	auto const network_graph = build_network_graph(network, routing_result);
 
 	// generate input
 	grenade::vx::signal_flow::IODataMap inputs;
 	inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
 
 	// run graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(
-	    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-	auto const spikes = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
+	auto const spikes = extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
 
 	size_t expected_label_count =
@@ -201,21 +197,18 @@ void test_background_spike_source_poisson(
 		auto const network = network_builder.done();
 
 		// build network graph
-		auto const network_graph = build_network_graph(network);
-		auto const routing_result = grenade::vx::network::placed_atomic::build_routing(
-		    network_graph.get_hardware_network());
-		auto const atomic_network_graph =
-		    build_network_graph(network_graph.get_hardware_network(), routing_result);
+		auto const routing_result = build_routing(network);
+		auto const network_graph = build_network_graph(network, routing_result);
 
 		// generate input
 		grenade::vx::signal_flow::IODataMap inputs;
 		inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
 
 		// run graph with given inputs and return results
-		auto const result_map = grenade::vx::execution::run(
-		    executor, atomic_network_graph.get_graph(), inputs, chip_configs);
+		auto const result_map =
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 
-		auto const spikes = extract_neuron_spikes(result_map, network_graph, atomic_network_graph);
+		auto const spikes = extract_neuron_spikes(result_map, network_graph);
 		EXPECT_EQ(spikes.size(), 1);
 
 		std::array<intmax_t, 64> expected_label_counts;

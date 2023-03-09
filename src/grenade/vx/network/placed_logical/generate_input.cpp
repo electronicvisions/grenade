@@ -5,17 +5,10 @@
 
 namespace grenade::vx::network::placed_logical {
 
-InputGenerator::InputGenerator(
-    NetworkGraph const& network_graph,
-    network::placed_atomic::NetworkGraph const& hardware_network_graph,
-    size_t const batch_size) :
-    m_input_generator(hardware_network_graph, batch_size), m_network_graph(network_graph)
-{
-	if (network_graph.get_hardware_network() != hardware_network_graph.get_network()) {
-		throw std::runtime_error(
-		    "Input generator requires logical and hardware network graph with matching network.");
-	}
-}
+InputGenerator::InputGenerator(NetworkGraph const& network_graph, size_t const batch_size) :
+    m_input_generator(network_graph.get_hardware_network_graph(), batch_size),
+    m_network_graph(network_graph)
+{}
 
 void InputGenerator::add(
     std::vector<common::Time> const& times, PopulationDescriptor const population)
