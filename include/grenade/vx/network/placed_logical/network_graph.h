@@ -2,6 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_logical/network.h"
+#include "grenade/vx/network/placed_logical/network_graph_statistics.h"
 #include "grenade/vx/network/placed_logical/population.h"
 #include "hate/visibility.h"
 #include <map>
@@ -184,10 +185,15 @@ private:
 	PlasticityRuleTranslation m_plasticity_rule_translation;
 	GraphTranslation m_graph_translation;
 
+	std::chrono::microseconds m_construction_duration;
+	std::chrono::microseconds m_verification_duration;
+	std::chrono::microseconds m_routing_duration;
+
 	friend NetworkGraph build_network_graph(
 	    std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
 	friend void update_network_graph(
 	    NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
+	friend NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph);
 };
 
 } // namespace grenade::vx::network::placed_logical

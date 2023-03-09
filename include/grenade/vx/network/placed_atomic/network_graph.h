@@ -144,6 +144,7 @@ private:
 	    m_plasticity_rule_output_vertices;
 	SpikeLabels m_spike_labels;
 
+public:
 	std::chrono::microseconds m_construction_duration;
 	std::chrono::microseconds m_verification_duration;
 	std::chrono::microseconds m_routing_duration;

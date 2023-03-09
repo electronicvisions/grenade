@@ -280,6 +280,10 @@ NetworkGraph build_network_graph(
 			}
 		}
 	}
+
+	result.m_construction_duration = result.m_hardware_network_graph.m_construction_duration;
+	result.m_verification_duration = result.m_hardware_network_graph.m_verification_duration;
+	result.m_routing_duration = result.m_hardware_network_graph.m_routing_duration;
 	return result;
 }
 
