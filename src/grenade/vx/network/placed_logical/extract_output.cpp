@@ -116,9 +116,44 @@ std::vector<std::vector<std::tuple<
     signal_flow::Int8>>>
 extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
-	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
-	auto const hardware_samples =
-	    network::placed_atomic::extract_cadc_samples(data, hardware_network_graph);
+	hate::Timer timer;
+	auto logger = log4cxx::Logger::getLogger("grenade.network.placed_logical.extract_cadc_samples");
+	std::vector<std::vector<
+	    std::tuple<common::Time, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, signal_flow::Int8>>>
+	    hardware_samples(data.batch_size());
+	for (auto const cadc_output_vertex : network_graph.get_cadc_sample_output_vertex()) {
+		auto const& samples =
+		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
+		        data.data.at(cadc_output_vertex));
+		assert(!samples.size() || samples.size() == data.batch_size());
+		assert(boost::in_degree(cadc_output_vertex, network_graph.get_graph().get_graph()) == 1);
+		auto const in_edges =
+		    boost::in_edges(cadc_output_vertex, network_graph.get_graph().get_graph());
+		auto const cadc_vertex =
+		    boost::source(*in_edges.first, network_graph.get_graph().get_graph());
+		auto const& vertex = std::get<signal_flow::vertex::CADCMembraneReadoutView>(
+		    network_graph.get_graph().get_vertex_property(cadc_vertex));
+		auto const& columns = vertex.get_columns();
+		auto const& row = vertex.get_synram().toNeuronRowOnDLS();
+		for (size_t b = 0; b < samples.size(); ++b) {
+			auto& local_ret = hardware_samples.at(b);
+			for (auto const& sample : samples.at(b)) {
+				for (size_t j = 0; auto const& cs : columns) {
+					for (auto const& column : cs) {
+						local_ret.push_back(
+						    {sample.time,
+						     halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
+						         column.toNeuronColumnOnDLS(), row),
+						     sample.data.at(j)});
+						j++;
+					}
+				}
+			}
+		}
+	}
+	for (auto& batch : hardware_samples) {
+		std::sort(batch.begin(), batch.end());
+	}
 
 	std::vector<std::vector<std::tuple<
 	    common::Time, PopulationDescriptor, size_t,
@@ -160,6 +195,7 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 			    compartment_on_neuron, atomic_neuron_on_compartment, std::get<2>(hardware_sample)});
 		}
 	}
+	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 	return ret;
 }
 
