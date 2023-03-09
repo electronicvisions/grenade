@@ -9,6 +9,12 @@
 #include <optional>
 #include <vector>
 
+namespace grenade::vx::network::placed_logical {
+struct Network;
+struct NetworkGraph;
+void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
+} // namespace grenade::vx::network::placed_logical
+
 namespace grenade::vx::network::placed_atomic GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_ATOMIC {
 
 struct RoutingResult;
@@ -77,6 +83,11 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(plasticity_rule_output_vertices))
 	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
 	get_plasticity_rule_output_vertices() const SYMBOL_VISIBLE;
+
+	/** Vertex descriptor of plasticity rules. */
+	GENPYBIND(getter_for(plasticity_rule_vertices))
+	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
+	get_plasticity_rule_vertices() const SYMBOL_VISIBLE;
 
 	/**
 	 * Spike labels corresponding to each neuron in a population.
@@ -153,6 +164,9 @@ public:
 	    std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
 	friend void update_network_graph(
 	    NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
+	friend void placed_logical::update_network_graph(
+	    placed_logical::NetworkGraph& network_graph,
+	    std::shared_ptr<placed_logical::Network> const& network);
 	friend NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph);
 };
 

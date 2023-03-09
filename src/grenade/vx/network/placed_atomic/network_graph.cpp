@@ -66,6 +66,12 @@ NetworkGraph::get_plasticity_rule_output_vertices() const
 	return m_plasticity_rule_output_vertices;
 }
 
+std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
+NetworkGraph::get_plasticity_rule_vertices() const
+{
+	return m_plasticity_rule_vertices;
+}
+
 NetworkGraph::SpikeLabels const& NetworkGraph::get_spike_labels() const
 {
 	return m_spike_labels;

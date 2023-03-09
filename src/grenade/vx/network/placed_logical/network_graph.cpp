@@ -115,6 +115,17 @@ NetworkGraph::get_plasticity_rule_output_vertices() const
 	return ret;
 }
 
+std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
+NetworkGraph::get_plasticity_rule_vertices() const
+{
+	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> ret;
+	for (auto const& [atomic_descriptor, vertex] :
+	     m_hardware_network_graph.get_plasticity_rule_vertices()) {
+		ret[PlasticityRuleDescriptor(atomic_descriptor.value())] = vertex;
+	}
+	return ret;
+}
+
 NetworkGraph::SpikeLabels NetworkGraph::get_spike_labels() const
 {
 	auto const atomic_spike_labels = m_hardware_network_graph.get_spike_labels();

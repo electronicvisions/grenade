@@ -6,6 +6,7 @@
 #include "grenade/vx/network/placed_logical/build_connection_weight_split.h"
 #include "grenade/vx/network/placed_logical/requires_routing.h"
 #include "hate/math.h"
+#include "hate/timer.h"
 #include "hate/variant.h"
 #include <map>
 #include <log4cxx/logger.h>
@@ -218,6 +219,9 @@ NetworkGraph build_network_graph(
 	result.m_neuron_translation = neuron_translation;
 	result.m_projection_translation = projection_translation;
 	result.m_plasticity_rule_translation = plasticity_rule_translation;
+	result.m_construction_duration = result.m_hardware_network_graph.m_construction_duration;
+	result.m_verification_duration = result.m_hardware_network_graph.m_verification_duration;
+	result.m_routing_duration = result.m_hardware_network_graph.m_routing_duration;
 
 	// build graph translation
 	auto const synapse_vertices = result.get_synapse_vertices();
@@ -282,30 +286,199 @@ NetworkGraph build_network_graph(
 		}
 	}
 
-	result.m_construction_duration = result.m_hardware_network_graph.m_construction_duration;
-	result.m_verification_duration = result.m_hardware_network_graph.m_verification_duration;
-	result.m_routing_duration = result.m_hardware_network_graph.m_routing_duration;
 	return result;
 }
 
 
+using namespace halco::hicann_dls::vx::v3;
+using namespace halco::common;
+
 void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> const& network)
 {
 	hate::Timer timer;
-	log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.update_network_graph");
+	log4cxx::LoggerPtr logger =
+	    log4cxx::Logger::getLogger("grenade.placed_logical.update_network_graph");
 
 	if (requires_routing(network, network_graph)) {
 		throw std::runtime_error(
 		    "Network graph can only be updated if no new routing is required.");
 	}
 
-	placed_atomic::update_network_graph(
-	    network_graph.m_hardware_network_graph,
-	    build_atomic_network(network, network_graph.get_connection_routing_result()));
+	// get whether projection requires weight changes
+	auto const requires_change = [](Projection const& projection,
+	                                Projection const& old_projection) {
+		for (size_t i = 0; i < projection.connections.size(); ++i) {
+			auto const& connection = projection.connections.at(i);
+			auto const& old_connection = old_projection.connections.at(i);
+			if (connection.weight != old_connection.weight) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	// update synapse array view in hardware graph corresponding to projection
+	auto const update_weights = [](NetworkGraph& network_graph,
+	                               std::shared_ptr<Network> const& network,
+	                               ProjectionDescriptor const descriptor) {
+		std::map<
+		    signal_flow::Graph::vertex_descriptor,
+		    signal_flow::vertex::SynapseArrayViewSparse::Synapses>
+		    synapses;
+		auto const synapse_vertices = network_graph.get_synapse_vertices();
+		for (auto const [_, vertex_descriptor] : synapse_vertices.at(descriptor)) {
+			auto const& old_synapse_array_view =
+			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+			        network_graph.get_graph().get_vertex_property(vertex_descriptor));
+			auto const old_synapses = old_synapse_array_view.get_synapses();
+			synapses[vertex_descriptor] = signal_flow::vertex::SynapseArrayViewSparse::Synapses{
+			    old_synapses.begin(), old_synapses.end()};
+		}
+		auto const& old_projection = network_graph.get_network()->projections.at(descriptor);
+		auto const& projection = network->projections.at(descriptor);
+		auto const& translation = network_graph.get_graph_translation().projections;
+		for (size_t i = 0; i < old_projection.connections.size(); ++i) {
+			auto const& connection = projection.connections.at(i);
+			auto const& old_connection = old_projection.connections.at(i);
+			if (connection.weight != old_connection.weight) {
+				auto const& synapse_indices = translation.at(descriptor).at(i);
+				auto const weight_split =
+				    build_connection_weight_split(connection.weight, synapse_indices.size());
+				for (size_t s = 0; s < synapse_indices.size(); ++s) {
+					synapses.at(synapse_indices.at(s).first)
+					    .at(synapse_indices.at(s).second)
+					    .weight = weight_split.at(s);
+				}
+			}
+		}
+		for (auto const [_, vertex_descriptor] : synapse_vertices.at(descriptor)) {
+			auto const& old_synapse_array_view =
+			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+			        network_graph.get_graph().get_vertex_property(vertex_descriptor));
+			auto const old_rows = old_synapse_array_view.get_rows();
+			auto rows =
+			    signal_flow::vertex::SynapseArrayViewSparse::Rows{old_rows.begin(), old_rows.end()};
+			auto const old_columns = old_synapse_array_view.get_columns();
+			auto columns = signal_flow::vertex::SynapseArrayViewSparse::Columns{
+			    old_columns.begin(), old_columns.end()};
+			signal_flow::vertex::SynapseArrayViewSparse synapse_array_view(
+			    old_synapse_array_view.get_synram(), std::move(rows), std::move(columns),
+			    std::move(synapses.at(vertex_descriptor)));
+			network_graph.m_hardware_network_graph.m_graph.update(
+			    vertex_descriptor, std::move(synapse_array_view));
+		}
+	};
+
+	// update MADC in graph such that it resembles the configuration from network to update towards
+	auto const update_madc = [](NetworkGraph& network_graph, Network const& network) {
+		if (!network.madc_recording || !network_graph.m_network->madc_recording) {
+			throw std::runtime_error("Updating network graph only possible, if MADC recording is "
+			                         "neither added nor removed.");
+		}
+		auto const& population =
+		    std::get<Population>(network.populations.at(network.madc_recording->population));
+		auto const neuron = population.neurons.at(network.madc_recording->neuron_on_population)
+		                        .coordinate.get_placed_compartments()
+		                        .at(network.madc_recording->compartment_on_neuron)
+		                        .at(network.madc_recording->atomic_neuron_on_compartment);
+		signal_flow::vertex::MADCReadoutView madc_readout(neuron, network.madc_recording->source);
+		auto const neuron_vertex_descriptor =
+		    network_graph.get_neuron_vertices()
+		        .at(network.madc_recording->population)
+		        .at(neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
+		auto const& neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
+		    network_graph.get_graph().get_vertex_property(neuron_vertex_descriptor));
+		auto const& columns = neuron_vertex.get_columns();
+		auto const in_view_location = static_cast<size_t>(std::distance(
+		    columns.begin(),
+		    std::find(columns.begin(), columns.end(), neuron.toNeuronColumnOnDLS())));
+		assert(in_view_location < columns.size());
+		std::vector<signal_flow::Input> inputs{
+		    {neuron_vertex_descriptor, {in_view_location, in_view_location}}};
+		assert(network_graph.get_madc_sample_output_vertex());
+		assert(
+		    boost::in_degree(
+		        *(network_graph.get_madc_sample_output_vertex()),
+		        network_graph.get_graph().get_graph()) == 1);
+		auto const edges = boost::in_edges(
+		    *(network_graph.get_madc_sample_output_vertex()),
+		    network_graph.get_graph().get_graph());
+		auto const madc_vertex =
+		    boost::source(*(edges.first), network_graph.get_graph().get_graph());
+		network_graph.m_hardware_network_graph.m_graph.update_and_relocate(
+		    madc_vertex, std::move(madc_readout), inputs);
+	};
+
+	// update plasticity rule in graph such that it resembles the configuration from network to
+	// update towards
+	auto const update_plasticity_rule = [](NetworkGraph& network_graph,
+	                                       PlasticityRule const& new_rule,
+	                                       PlasticityRuleDescriptor descriptor) {
+		if (!network_graph.m_network->plasticity_rules.contains(descriptor)) {
+			throw std::runtime_error("Updating network graph only possible, if plasticity rule is "
+			                         "neither added nor removed.");
+		}
+		if (network_graph.m_network->plasticity_rules.at(descriptor).recording !=
+		    new_rule.recording) {
+			throw std::runtime_error("Updating network graph only possible, if plasticity rule "
+			                         "recording is not changed.");
+		}
+		// TODO (Issue #3991): merge impl. from here and add_plasticity_rule below, requires rework
+		// of resources in order to align interface to NetworkGraph.
+		auto const vertex_descriptor = network_graph.get_plasticity_rule_vertices().at(descriptor);
+		std::vector<signal_flow::Input> inputs;
+		auto const synapse_vertices = network_graph.get_synapse_vertices();
+		for (auto const& d : new_rule.projections) {
+			for (auto const& [_, p] : synapse_vertices.at(d)) {
+				inputs.push_back({p});
+			}
+		}
+		auto const neuron_vertices = network_graph.get_neuron_vertices();
+		for (auto const& d : new_rule.populations) {
+			for (auto const& [_, p] : neuron_vertices.at(d.descriptor)) {
+				inputs.push_back({p});
+			}
+		}
+		auto const& old_rule = std::get<signal_flow::vertex::PlasticityRule>(
+		    network_graph.get_graph().get_vertex_property(vertex_descriptor));
+		signal_flow::vertex::PlasticityRule vertex(
+		    new_rule.kernel,
+		    signal_flow::vertex::PlasticityRule::Timer{
+		        signal_flow::vertex::PlasticityRule::Timer::Value(new_rule.timer.start.value()),
+		        signal_flow::vertex::PlasticityRule::Timer::Value(new_rule.timer.period.value()),
+		        new_rule.timer.num_periods},
+		    old_rule.get_synapse_view_shapes(), old_rule.get_neuron_view_shapes(),
+		    new_rule.recording);
+		network_graph.m_hardware_network_graph.m_graph.update_and_relocate(
+		    vertex_descriptor, std::move(vertex), inputs);
+	};
+
+	assert(network);
+	assert(network_graph.m_network);
+
+	for (auto const& [descriptor, projection] : network->projections) {
+		auto const& old_projection = network_graph.m_network->projections.at(descriptor);
+		if (!requires_change(projection, old_projection)) {
+			continue;
+		}
+		update_weights(network_graph, network, descriptor);
+	}
+	if (network_graph.m_network->madc_recording != network->madc_recording) {
+		update_madc(network_graph, *network);
+	}
+	if (network_graph.m_network->plasticity_rules != network->plasticity_rules) {
+		for (auto const& [descriptor, new_rule] : network->plasticity_rules) {
+			update_plasticity_rule(network_graph, new_rule, descriptor);
+		}
+	}
 	network_graph.m_network = network;
+	network_graph.m_hardware_network_graph.m_network =
+	    build_atomic_network(network, network_graph.get_connection_routing_result());
 
 	LOG4CXX_TRACE(
 	    logger, "Updated hardware graph representation of network in " << timer.print() << ".");
+	//	network_graph.m_hardware_network_graph.m_construction_duration +=
+	//	    std::chrono::microseconds(timer.get_us());
 }
 
 } // namespace grenade::vx::network::placed_logical

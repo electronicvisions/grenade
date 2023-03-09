@@ -113,6 +113,11 @@ struct GENPYBIND(visible) NetworkGraph
 	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
 	get_plasticity_rule_output_vertices() const SYMBOL_VISIBLE;
 
+	/** Vertex descriptor of plasticity rules. */
+	GENPYBIND(getter_for(plasticity_rule_vertices))
+	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
+	get_plasticity_rule_vertices() const SYMBOL_VISIBLE;
+
 	/**
 	 * Spike labels corresponding to each neuron in a population.
 	 * For external populations these are the input spike labels, for internal population this is
