@@ -5,6 +5,7 @@
 #include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
 #include "grenade/vx/network/placed_logical/extract_output.h"
+#include "grenade/vx/network/placed_logical/generate_input.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
@@ -88,33 +89,22 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	    network_graph.get_hardware_network(), routing_result);
 
 	// generate input
-	grenade::vx::signal_flow::IODataMap inputs;
 	constexpr size_t num = 100;
 	constexpr size_t isi = 1000;
-	std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> input_spikes(256);
+	std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(
+	    population_external.size);
 	for (size_t i = 0; i < population_external.size; ++i) {
+		input_spike_times.at(i).resize(population_external.size);
 		for (size_t j = 0; j < num; ++j) {
-			assert(atomic_network_graph.get_spike_labels()
-			           .at(network_graph.get_population_translation().at(
-			               population_external_descriptor))
-			           .at(i)
-			           .at(0));
-			grenade::vx::signal_flow::TimedSpikeToChip spike{
-			    grenade::vx::common::Time(j * isi),
-			    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			        *(atomic_network_graph.get_spike_labels()
-			              .at(network_graph.get_population_translation().at(
-			                  population_external_descriptor))
-			              .at(i)
-			              .at(0))})};
-			input_spikes.at(i).push_back(spike);
+			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 		}
-		inputs.runtime.push_back(
-		    {{grenade::vx::signal_flow::ExecutionInstance(),
-		      grenade::vx::common::Time(num * isi)}});
 	}
-	assert(atomic_network_graph.get_event_input_vertex());
-	inputs.data[*atomic_network_graph.get_event_input_vertex()] = std::move(input_spikes);
+	InputGenerator input_generator(network_graph, atomic_network_graph, input_spike_times.size());
+	input_generator.add(input_spike_times, population_external_descriptor);
+	auto inputs = input_generator.done();
+	inputs.runtime.resize(
+	    inputs.batch_size(),
+	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(
@@ -208,33 +198,22 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	    network_graph.get_hardware_network(), routing_result);
 
 	// generate input
-	grenade::vx::signal_flow::IODataMap inputs;
 	constexpr size_t num = 100;
 	constexpr size_t isi = 1000;
-	std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> input_spikes(256);
+	std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(
+	    population_external.size);
 	for (size_t i = 0; i < population_external.size; ++i) {
+		input_spike_times.at(i).resize(population_external.size);
 		for (size_t j = 0; j < num; ++j) {
-			assert(atomic_network_graph.get_spike_labels()
-			           .at(network_graph.get_population_translation().at(
-			               population_external_descriptor))
-			           .at(i)
-			           .at(0));
-			grenade::vx::signal_flow::TimedSpikeToChip spike{
-			    grenade::vx::common::Time(j * isi),
-			    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			        *(atomic_network_graph.get_spike_labels()
-			              .at(network_graph.get_population_translation().at(
-			                  population_external_descriptor))
-			              .at(i)
-			              .at(0))})};
-			input_spikes.at(i).push_back(spike);
+			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 		}
-		inputs.runtime.push_back(
-		    {{grenade::vx::signal_flow::ExecutionInstance(),
-		      grenade::vx::common::Time(num * isi)}});
 	}
-	assert(atomic_network_graph.get_event_input_vertex());
-	inputs.data[*atomic_network_graph.get_event_input_vertex()] = std::move(input_spikes);
+	InputGenerator input_generator(network_graph, atomic_network_graph, input_spike_times.size());
+	input_generator.add(input_spike_times, population_external_descriptor);
+	auto inputs = input_generator.done();
+	inputs.runtime.resize(
+	    inputs.batch_size(),
+	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(
@@ -357,31 +336,20 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		    network_graph.get_hardware_network(), routing_result);
 
 		// generate input
-		grenade::vx::signal_flow::IODataMap inputs;
 		constexpr size_t num = 100;
 		constexpr size_t isi = 12500;
-		std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> input_spikes(1);
+		std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(1);
+		input_spike_times.at(0).resize(population_external.size);
 		for (size_t j = 0; j < num; ++j) {
-			assert(atomic_network_graph.get_spike_labels()
-			           .at(network_graph.get_population_translation().at(
-			               population_external_descriptor))
-			           .at(0)
-			           .at(0));
-			grenade::vx::signal_flow::TimedSpikeToChip spike{
-			    grenade::vx::common::Time(j * isi),
-			    SpikePack1ToChip(SpikePack1ToChip::labels_type{
-			        *(atomic_network_graph.get_spike_labels()
-			              .at(network_graph.get_population_translation().at(
-			                  population_external_descriptor))
-			              .at(0)
-			              .at(0))})};
-			input_spikes.at(0).push_back(spike);
+			input_spike_times.at(0).at(0).push_back(grenade::vx::common::Time(j * isi));
 		}
-		inputs.runtime.push_back(
-		    {{grenade::vx::signal_flow::ExecutionInstance(),
-		      grenade::vx::common::Time(num * isi)}});
-		assert(atomic_network_graph.get_event_input_vertex());
-		inputs.data[*atomic_network_graph.get_event_input_vertex()] = std::move(input_spikes);
+		InputGenerator input_generator(
+		    network_graph, atomic_network_graph, input_spike_times.size());
+		input_generator.add(input_spike_times, population_external_descriptor);
+		auto inputs = input_generator.done();
+		inputs.runtime.resize(
+		    inputs.batch_size(), {{grenade::vx::signal_flow::ExecutionInstance(),
+		                           grenade::vx::common::Time(num * isi)}});
 
 		// run graph with given inputs and return results
 		auto const result_map = grenade::vx::execution::run(
