@@ -1,7 +1,9 @@
 #include "grenade/vx/network/placed_logical/extract_output.h"
 
 #include "grenade/vx/network/placed_atomic/extract_output.h"
+#include "hate/timer.h"
 #include "hate/variant.h"
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::network::placed_logical {
 
@@ -10,52 +12,70 @@ std::vector<std::map<
     std::vector<common::Time>>>
 extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
-	assert(network_graph.get_network());
-	auto const& hardware_network_graph = network_graph.get_hardware_network_graph();
-
-	std::map<
-	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
-	    std::tuple<
-	        PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>
-	    spike_master_lookup;
-	for (auto const& [descriptor, population] : network_graph.get_network()->populations) {
-		if (!std::holds_alternative<Population>(population)) {
-			continue;
-		}
-		size_t i = 0;
-		for (auto const& neuron : std::get<Population>(population).neurons) {
-			for (auto const& [compartment_on_neuron, compartment] : neuron.compartments) {
-				if (compartment.spike_master && compartment.spike_master->enable_record_spikes) {
-					spike_master_lookup[neuron.coordinate.get_placed_compartments()
-					                        .at(compartment_on_neuron)
-					                        .at(compartment.spike_master->neuron_on_compartment)] =
-					    std::tuple{descriptor, i, compartment_on_neuron};
-				}
-				i++;
-			}
-		}
-	}
-
-	auto const atomic_neuron_events =
-	    network::placed_atomic::extract_neuron_spikes(data, hardware_network_graph);
+	hate::Timer timer;
+	auto logger =
+	    log4cxx::Logger::getLogger("grenade.network.placed_logical.extract_neuron_spikes");
 
 	std::vector<std::map<
 	    std::tuple<
 	        PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	    std::vector<common::Time>>>
-	    logical_neuron_events(atomic_neuron_events.size());
+	    logical_neuron_events(data.batch_size());
 
-	for (size_t batch = 0; batch < logical_neuron_events.size(); ++batch) {
-		auto& local_logical_neuron_events = logical_neuron_events.at(batch);
-		auto const& local_atomic_neuron_events = atomic_neuron_events.at(batch);
+	if (network_graph.get_event_output_vertex()) {
+		// generate reverse lookup table from spike label to neuron coordinate
+		std::map<
+		    halco::hicann_dls::vx::v3::SpikeLabel,
+		    std::tuple<
+		        PopulationDescriptor, size_t,
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>
+		    label_lookup;
+		assert(network_graph.get_network());
+		for (auto const& [descriptor, population] : network_graph.get_network()->populations) {
+			if (!std::holds_alternative<Population>(population)) {
+				continue;
+			}
+			size_t i = 0;
+			for (auto const& neuron : std::get<Population>(population).neurons) {
+				for (auto const& [compartment_on_neuron, compartment] : neuron.compartments) {
+					if (compartment.spike_master &&
+					    compartment.spike_master->enable_record_spikes) {
+						auto const compartment_labels = network_graph.get_spike_labels()
+						                                    .at(descriptor)
+						                                    .at(i)
+						                                    .at(compartment_on_neuron);
+						// internal neurons only have one label assigned
+						assert(
+						    compartment_labels.size() == neuron.coordinate.get_placed_compartments()
+						                                     .at(compartment_on_neuron)
+						                                     .size());
+						assert(
+						    compartment_labels.at(compartment.spike_master->neuron_on_compartment));
+						label_lookup[*compartment_labels.at(
+						    compartment.spike_master->neuron_on_compartment)] =
+						    std::tuple{descriptor, i, compartment_on_neuron};
+					}
+				}
+				i++;
+			}
+		}
 
-		for (auto const& [atomic_neuron, times] : local_atomic_neuron_events) {
-			if (spike_master_lookup.contains(atomic_neuron)) {
-				local_logical_neuron_events[spike_master_lookup.at(atomic_neuron)] = times;
+		// convert spikes
+		auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
+		    data.data.at(*network_graph.get_event_output_vertex()));
+		assert(!spikes.size() || spikes.size() == data.batch_size());
+
+		for (size_t batch = 0; batch < spikes.size(); ++batch) {
+			auto& local_logical_neuron_events = logical_neuron_events.at(batch);
+			for (auto const& spike : spikes.at(batch)) {
+				if (label_lookup.contains(spike.data)) {
+					local_logical_neuron_events[label_lookup.at(spike.data)].push_back(spike.time);
+				}
 			}
 		}
 	}
 
+	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 	return logical_neuron_events;
 }
 

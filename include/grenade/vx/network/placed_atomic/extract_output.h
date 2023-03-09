@@ -14,18 +14,6 @@
 namespace grenade::vx::network::placed_atomic GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_ATOMIC {
 
 /**
- * Extract spikes corresponding to neurons in the network.
- * Spikes which don't correspond to a neuron in the network are ignored.
- * @param data Data containing spike labels
- * @param network_graph Network graph to use for matching of spike labels to neurons
- * @return Time-series neuron spike data per batch entry
- */
-std::vector<std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<common::Time>>>
-extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
-    SYMBOL_VISIBLE;
-
-
-/**
  * Extract MADC samples to be recorded for a network.
  * @param data Data containing MADC samples
  * @param network_graph Network graph to use for vertex descriptor lookup of the MADC samples
@@ -72,27 +60,6 @@ GENPYBIND_MANUAL({
 		return static_cast<float>(t) / 1000. /
 		       static_cast<float>(grenade::vx::common::Time::fpga_clock_cycles_per_us);
 	};
-	auto const extract_neuron_spikes =
-	    [convert_ms](
-	        grenade::vx::signal_flow::IODataMap const& data,
-	        grenade::vx::network::placed_atomic::NetworkGraph const& network_graph) {
-		    hate::Timer timer;
-		    auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_neuron_spikes");
-		    auto const spikes =
-		        grenade::vx::network::placed_atomic::extract_neuron_spikes(data, network_graph);
-		    std::vector<std::map<int, pybind11::array_t<double>>> ret(spikes.size());
-		    for (size_t b = 0; b < spikes.size(); ++b) {
-			    for (auto const& [neuron, times] : spikes.at(b)) {
-				    pybind11::array_t<double> pytimes(static_cast<pybind11::ssize_t>(times.size()));
-				    for (size_t i = 0; i < times.size(); ++i) {
-					    pytimes.mutable_at(i) = convert_ms(times.at(i));
-				    }
-				    ret.at(b)[neuron.toEnum().value()] = pytimes;
-			    }
-		    }
-		    LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
-		    return ret;
-	    };
 	auto const extract_madc_samples =
 	    [convert_ms](
 	        grenade::vx::signal_flow::IODataMap const& data,
@@ -150,9 +117,6 @@ GENPYBIND_MANUAL({
 		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;
 	};
-	parent.def(
-	    "extract_neuron_spikes", extract_neuron_spikes, pybind11::arg("data"),
-	    pybind11::arg("network_graph"));
 	parent.def(
 	    "extract_madc_samples", extract_madc_samples, pybind11::arg("data"),
 	    pybind11::arg("network_graph"));

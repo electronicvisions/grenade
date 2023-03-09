@@ -7,55 +7,6 @@
 
 namespace grenade::vx::network::placed_atomic {
 
-std::vector<std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<common::Time>>>
-extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
-{
-	hate::Timer timer;
-	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_neuron_spikes");
-	if (!network_graph.get_event_output_vertex()) {
-		return std::vector<
-		    std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<common::Time>>>(
-		    data.batch_size());
-	}
-	// generate reverse lookup table from spike label to neuron coordinate
-	std::map<halco::hicann_dls::vx::v3::SpikeLabel, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
-	    label_lookup;
-	assert(network_graph.get_network());
-	for (auto const& [descriptor, neurons] : network_graph.get_spike_labels()) {
-		if (!std::holds_alternative<Population>(
-		        network_graph.get_network()->populations.at(descriptor))) {
-			continue;
-		}
-		auto const& population =
-		    std::get<Population>(network_graph.get_network()->populations.at(descriptor));
-		for (size_t i = 0; i < neurons.size(); ++i) {
-			if (population.enable_record_spikes.at(i)) {
-				// internal neurons only have one label assigned
-				assert(neurons.at(i).size() == 1);
-				assert(neurons.at(i).at(0));
-				label_lookup[*(neurons.at(i).at(0))] = population.neurons.at(i);
-			}
-		}
-	}
-	// convert spikes
-	auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
-	    data.data.at(*network_graph.get_event_output_vertex()));
-	std::vector<std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, std::vector<common::Time>>>
-	    ret(data.batch_size());
-	assert(!spikes.size() || spikes.size() == data.batch_size());
-	for (size_t b = 0; b < spikes.size(); ++b) {
-		auto& local_ret = ret.at(b);
-		for (auto const& spike : spikes.at(b)) {
-			auto const label = spike.data;
-			if (label_lookup.contains(label)) {
-				local_ret[label_lookup.at(label)].push_back(spike.time);
-			}
-		}
-	}
-	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
-	return ret;
-}
-
 std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
