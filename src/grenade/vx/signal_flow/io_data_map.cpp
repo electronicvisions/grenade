@@ -47,7 +47,7 @@ void IODataMap::merge(IODataMap&& other)
 			}
 		}
 	}
-	if (execution_time_info) {
+	if (execution_time_info && other.execution_time_info) {
 		execution_time_info->merge(*(other.execution_time_info));
 	} else {
 		execution_time_info = std::move(other.execution_time_info);
