@@ -191,8 +191,7 @@ TEST(build_routing, EmptyProjection)
 	auto network = builder.done();
 	auto const routing_result = build_routing(network);
 
-	EXPECT_TRUE(routing_result.atomic_routing_result.connections.contains(
-	    grenade::vx::network::placed_atomic::ProjectionDescriptor(projection_descriptor)));
+	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
 }
 
 TEST(build_routing, DenseInOrder)

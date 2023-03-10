@@ -64,82 +64,80 @@ TEST(logical_network_build_network_graph, Multapses)
 	auto const routing = build_routing(network);
 	auto const network_graph = build_network_graph(network, routing);
 
-	EXPECT_TRUE(network_graph.get_hardware_network());
-	EXPECT_EQ(network_graph.get_hardware_network()->projections.size(), 1);
 	EXPECT_EQ(
-	    network_graph.get_hardware_network()
-	        ->projections.at(grenade::vx::network::placed_atomic::ProjectionDescriptor(0))
-	        .connections.size(),
-	    1 + 2 + 1 + max_weight_multiplier);
+	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(0).size(),
+	    1);
+	EXPECT_EQ(
+	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(1).size(),
+	    2);
+	EXPECT_EQ(
+	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(2).size(),
+	    1);
+	EXPECT_EQ(
+	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(3).size(),
+	    max_weight_multiplier);
 	{
-		auto const translation = network_graph.get_projection_translation().equal_range(
-		    std::make_pair(projection_descriptor, 0));
-		EXPECT_EQ(std::distance(translation.first, translation.second), 1);
+		auto const& local_translation =
+		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(0);
 		EXPECT_EQ(
-		    connections.at(0).weight.value(), network_graph.get_hardware_network()
-		                                          ->projections.at(translation.first->second.first)
-		                                          .connections.at(translation.first->second.second)
-		                                          .weight.value());
-	}
-	{
-		auto translation = network_graph.get_projection_translation().equal_range(
-		    std::make_pair(projection_descriptor, 1));
-		EXPECT_EQ(std::distance(translation.first, translation.second), 2);
-		EXPECT_EQ(
-		    grenade::vx::network::placed_atomic::Projection::Connection::Weight::max,
-		    network_graph.get_hardware_network()
-		        ->projections.at(translation.first->second.first)
-		        .connections.at(translation.first->second.second)
-		        .weight.value());
-		++translation.first;
-		EXPECT_EQ(
-		    connections.at(1).weight.value() -
-		        grenade::vx::network::placed_atomic::Projection::Connection::Weight::max,
-		    network_graph.get_hardware_network()
-		        ->projections.at(translation.first->second.first)
-		        .connections.at(translation.first->second.second)
+		    connections.at(0).weight.value(),
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(0).first))
+		        .get_synapses()[local_translation.at(0).second]
 		        .weight.value());
 	}
 	{
-		auto const translation = network_graph.get_projection_translation().equal_range(
-		    std::make_pair(projection_descriptor, 2));
-		EXPECT_EQ(std::distance(translation.first, translation.second), 1);
+		auto const& local_translation =
+		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(1);
 		EXPECT_EQ(
-		    connections.at(2).weight.value(), network_graph.get_hardware_network()
-		                                          ->projections.at(translation.first->second.first)
-		                                          .connections.at(translation.first->second.second)
-		                                          .weight.value());
+		    lola::vx::v3::SynapseMatrix::Weight::max,
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(0).first))
+		        .get_synapses()[local_translation.at(0).second]
+		        .weight.value());
+		EXPECT_EQ(
+		    connections.at(1).weight - lola::vx::v3::SynapseMatrix::Weight::max,
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(1).first))
+		        .get_synapses()[local_translation.at(1).second]
+		        .weight.value());
 	}
 	{
-		auto translation = network_graph.get_projection_translation().equal_range(
-		    std::make_pair(projection_descriptor, 3));
-		EXPECT_EQ(std::distance(translation.first, translation.second), 4);
+		auto const& local_translation =
+		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(2);
 		EXPECT_EQ(
-		    grenade::vx::network::placed_atomic::Projection::Connection::Weight::max,
-		    network_graph.get_hardware_network()
-		        ->projections.at(translation.first->second.first)
-		        .connections.at(translation.first->second.second)
+		    connections.at(2).weight.value(),
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(0).first))
+		        .get_synapses()[local_translation.at(0).second]
 		        .weight.value());
-		++translation.first;
+	}
+	{
+		auto const& local_translation =
+		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(3);
 		EXPECT_EQ(
-		    grenade::vx::network::placed_atomic::Projection::Connection::Weight::max,
-		    network_graph.get_hardware_network()
-		        ->projections.at(translation.first->second.first)
-		        .connections.at(translation.first->second.second)
+		    lola::vx::v3::SynapseMatrix::Weight::max,
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(0).first))
+		        .get_synapses()[local_translation.at(0).second]
 		        .weight.value());
-		++translation.first;
 		EXPECT_EQ(
-		    grenade::vx::network::placed_atomic::Projection::Connection::Weight::max,
-		    network_graph.get_hardware_network()
-		        ->projections.at(translation.first->second.first)
-		        .connections.at(translation.first->second.second)
+		    lola::vx::v3::SynapseMatrix::Weight::max,
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(1).first))
+		        .get_synapses()[local_translation.at(1).second]
 		        .weight.value());
-		++translation.first;
 		EXPECT_EQ(
-		    grenade::vx::network::placed_atomic::Projection::Connection::Weight::max,
-		    network_graph.get_hardware_network()
-		        ->projections.at(translation.first->second.first)
-		        .connections.at(translation.first->second.second)
+		    lola::vx::v3::SynapseMatrix::Weight::max,
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(2).first))
+		        .get_synapses()[local_translation.at(2).second]
+		        .weight.value());
+		EXPECT_EQ(
+		    lola::vx::v3::SynapseMatrix::Weight::max,
+		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
+		        network_graph.get_graph().get_vertex_property(local_translation.at(3).first))
+		        .get_synapses()[local_translation.at(3).second]
 		        .weight.value());
 	}
 }
@@ -163,8 +161,7 @@ TEST(build_network_graph, EmptyProjection)
 	auto network = builder.done();
 	auto const routing_result = build_routing(network);
 
-	EXPECT_TRUE(routing_result.atomic_routing_result.connections.contains(
-	    grenade::vx::network::placed_atomic::ProjectionDescriptor(projection_descriptor)));
+	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
 
 	[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
 }
