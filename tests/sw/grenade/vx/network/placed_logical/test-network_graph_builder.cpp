@@ -53,8 +53,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	    Projection::Connection(
 	        {1, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
 	        Projection::Connection::Weight(
-	            grenade::vx::network::placed_atomic::Projection::Connection::Weight::max *
-	            max_weight_multiplier)),
+	            lola::vx::v3::SynapseMatrix::Weight::max * max_weight_multiplier)),
 	};
 	Projection projection(
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), connections, descriptor, descriptor);

@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/placed_atomic/build_routing.h"
 #include "grenade/vx/network/placed_atomic/exception.h"
 #include "grenade/vx/network/placed_atomic/network_builder.h"
 #include "grenade/vx/network/placed_atomic/network_graph_builder.h"
@@ -606,8 +605,9 @@ void test_routing(std::shared_ptr<Network> const& network)
 		options.synapse_driver_allocation_policy =
 		    SynapseDriverOnDLSManager::AllocationPolicyGreedy();
 		options.synapse_driver_allocation_timeout = 100ms;
-		auto const routing_result =
-		    grenade::vx::network::placed_atomic::build_routing(network, options);
+		grenade::vx::network::placed_atomic::routing::RoutingBuilder routing_builder;
+		assert(network);
+		auto const routing_result = routing_builder.route(*network, options);
 		// check if network is valid
 		[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
 	} catch (UnsuccessfulRouting const&) {
