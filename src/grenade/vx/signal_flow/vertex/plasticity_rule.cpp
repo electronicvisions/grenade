@@ -849,15 +849,13 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						    (sizeof(ElementType) *
 						     (row_offset + column_parity_offset + column_in_parity_offset)) +
 						    timed_data_intervals.at(name).first + ppu_offset;
-						local_sample.data.at(synapse) = static_cast<ElementType>(
-						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
-						        .value());
-						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
-							local_sample.data.at(synapse) |=
-							    (static_cast<ElementType>(
-							         local_data_sample.data.at(total_offset + byte).value())
-							     << (CHAR_BIT * (byte + 1)));
+						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
+						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
+							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
+							    local_data_sample.data.at(total_offset + byte).value();
 						}
+						local_sample.data.at(synapse) =
+						    *reinterpret_cast<ElementType*>(&local_sample_bytes);
 					}
 					sample_local_synapse_view_offset += sizeof(ElementType) *
 					                                    synapse_view_shape.columns.size() *
@@ -902,15 +900,13 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						size_t const total_offset = (sizeof(ElementType) * synapse) +
 						                            timed_data_intervals.at(name).first +
 						                            ppu_offset + synapse_view_offset;
-						local_sample.data.at(synapse) = static_cast<ElementType>(
-						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
-						        .value());
-						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
-							local_sample.data.at(synapse) |=
-							    (static_cast<ElementType>(
-							         local_data_sample.data.at(total_offset + byte).value())
-							     << (CHAR_BIT * (byte + 1)));
+						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
+						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
+							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
+							    local_data_sample.data.at(total_offset + byte).value();
 						}
+						local_sample.data.at(synapse) =
+						    *reinterpret_cast<ElementType*>(&local_sample_bytes);
 					}
 					sample_local_synapse_view_offset +=
 					    sizeof(ElementType) * local_sample.data.size();
@@ -962,15 +958,13 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						    (sizeof(ElementType) *
 						     (column_parity_offset + column_in_parity_offset)) +
 						    timed_data_intervals.at(name).first + ppu_offset;
-						local_sample.data.at(neuron) = static_cast<ElementType>(
-						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
-						        .value());
-						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
-							local_sample.data.at(neuron) |=
-							    (static_cast<ElementType>(
-							         local_data_sample.data.at(total_offset + byte).value())
-							     << (CHAR_BIT * (byte + 1)));
+						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
+						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
+							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
+							    local_data_sample.data.at(total_offset + byte).value();
 						}
+						local_sample.data.at(neuron) =
+						    *reinterpret_cast<ElementType*>(&local_sample_bytes);
 					}
 					sample_local_neuron_view_offset +=
 					    sizeof(ElementType) * neuron_view_shape.columns.size();
@@ -1012,15 +1006,13 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						size_t const total_offset = (sizeof(ElementType) * neuron) +
 						                            timed_data_intervals.at(name).first +
 						                            ppu_offset + neuron_view_offset;
-						local_sample.data.at(neuron) = static_cast<ElementType>(
-						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
-						        .value());
-						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
-							local_sample.data.at(neuron) |=
-							    (static_cast<ElementType>(
-							         local_data_sample.data.at(total_offset + byte).value())
-							     << (CHAR_BIT * (byte + 1)));
+						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
+						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
+							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
+							    local_data_sample.data.at(total_offset + byte).value();
 						}
+						local_sample.data.at(neuron) =
+						    *reinterpret_cast<ElementType*>(&local_sample_bytes);
 					}
 					sample_local_neuron_view_offset +=
 					    sizeof(ElementType) * local_sample.data.size();
@@ -1060,15 +1052,13 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						size_t const total_offset = (sizeof(ElementType) * element) +
 						                            timed_data_intervals.at(name).first +
 						                            ppu_offset;
-						local_sample.data.at(element + local_ppu_offset) = static_cast<ElementType>(
-						    local_data_sample.data.at(total_offset + (sizeof(ElementType) - 1))
-						        .value());
-						for (size_t byte = 0; byte < sizeof(ElementType) - 1; ++byte) {
-							local_sample.data.at(element + local_ppu_offset) |=
-							    (static_cast<ElementType>(
-							         local_data_sample.data.at(total_offset + byte).value())
-							     << (CHAR_BIT * (byte + 1)));
+						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
+						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
+							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
+							    local_data_sample.data.at(total_offset + byte).value();
 						}
+						local_sample.data.at(element + local_ppu_offset) =
+						    *reinterpret_cast<ElementType*>(&local_sample_bytes);
 					}
 				}
 			}

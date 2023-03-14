@@ -270,6 +270,7 @@ TEST(PlasticityRule, TimedRecording)
 		// select number of observables
 		std::uniform_int_distribution num_observable_distribution(1, 3);
 		size_t const num_observables = num_observable_distribution(rng);
+		std::vector<intmax_t> expectations;
 		// generate observables
 		for (size_t i = 0; i < num_observables; ++i) {
 			// select which type of observable to generate
@@ -277,12 +278,43 @@ TEST(PlasticityRule, TimedRecording)
 			switch (std::uniform_int_distribution(0, 2)(rng)) {
 				case 0: { // ObservableArray
 					// select observable size
-					recording.observables["observable_" + std::to_string(i)] = grenade::vx::
-					    network::placed_logical::PlasticityRule::TimedRecording::ObservableArray{
+					auto obsv = grenade::vx::network::placed_logical::PlasticityRule::
+					    TimedRecording::ObservableArray{
 					        PlasticityRule::TimedRecording::ObservableArray::Type::int8,
 					        std::uniform_int_distribution<size_t>(1, 15)(rng)};
-					// set its value from the PPU to i
-					kernel << "\trecording.observable_" << i << ".fill(" << i << ");\n";
+					// select data type
+					switch (std::uniform_int_distribution{0, 3}(rng)) {
+						case 0: { // int8
+							obsv.type = PlasticityRule::TimedRecording::ObservableArray::Type::int8;
+							expectations.push_back(std::uniform_int_distribution<int8_t>()(rng));
+							break;
+						}
+						case 1: { // uint8
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservableArray::Type::uint8;
+							expectations.push_back(std::uniform_int_distribution<uint8_t>()(rng));
+							break;
+						}
+						case 2: { // int16
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservableArray::Type::int16;
+							expectations.push_back(std::uniform_int_distribution<int16_t>()(rng));
+							break;
+						}
+						case 3: { // uint16
+							obsv.type =
+							    PlasticityRule::TimedRecording::ObservableArray::Type::uint16;
+							expectations.push_back(std::uniform_int_distribution<uint16_t>()(rng));
+							break;
+						}
+						default: {
+							throw std::logic_error("Unknown observable type");
+						}
+					}
+					recording.observables["observable_" + std::to_string(i)] = obsv;
+					// set its value from the PPU to expectation
+					kernel << "\trecording.observable_" << i << ".fill("
+					       << expectations.at(expectations.size() - 1) << ");\n";
 					break;
 				}
 				case 1: { // ObservablePerSynapse
@@ -299,21 +331,25 @@ TEST(PlasticityRule, TimedRecording)
 						case 0: { // int8
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8;
+							expectations.push_back(std::uniform_int_distribution<int8_t>()(rng));
 							break;
 						}
 						case 1: { // uint8
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::uint8;
+							expectations.push_back(std::uniform_int_distribution<uint8_t>()(rng));
 							break;
 						}
 						case 2: { // int16
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int16;
+							expectations.push_back(std::uniform_int_distribution<int16_t>()(rng));
 							break;
 						}
 						case 3: { // uint16
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::uint16;
+							expectations.push_back(std::uniform_int_distribution<uint16_t>()(rng));
 							break;
 						}
 						default: {
@@ -326,12 +362,14 @@ TEST(PlasticityRule, TimedRecording)
 					switch (obsv.layout_per_row) {
 						case PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
 						    complete_rows: {
-							kernel << "for (auto& row: rec) { row = " << i << "; } },\n";
+							kernel << "for (auto& row: rec) { row = "
+							       << expectations.at(expectations.size() - 1) << "; } },\n";
 							break;
 						}
 						case PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
 						    packed_active_columns: {
-							kernel << "for (auto& row: rec) { row.fill(" << i << "); } },\n";
+							kernel << "for (auto& row: rec) { row.fill("
+							       << expectations.at(expectations.size() - 1) << "); } },\n";
 							break;
 						}
 						default: {
@@ -355,21 +393,25 @@ TEST(PlasticityRule, TimedRecording)
 						case 0: { // int8
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int8;
+							expectations.push_back(std::uniform_int_distribution<int8_t>()(rng));
 							break;
 						}
 						case 1: { // uint8
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::uint8;
+							expectations.push_back(std::uniform_int_distribution<uint8_t>()(rng));
 							break;
 						}
 						case 2: { // int16
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int16;
+							expectations.push_back(std::uniform_int_distribution<int16_t>()(rng));
 							break;
 						}
 						case 3: { // uint16
 							obsv.type =
 							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::uint16;
+							expectations.push_back(std::uniform_int_distribution<uint16_t>()(rng));
 							break;
 						}
 						default: {
@@ -382,12 +424,13 @@ TEST(PlasticityRule, TimedRecording)
 					switch (obsv.layout) {
 						case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
 						    complete_row: {
-							kernel << "rec = " << i << ";\n";
+							kernel << "rec = " << expectations.at(expectations.size() - 1) << ";\n";
 							break;
 						}
 						case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
 						    packed_active_columns: {
-							kernel << "rec.fill(" << i << ");\n";
+							kernel << "rec.fill(" << expectations.at(expectations.size() - 1)
+							       << ");\n";
 							break;
 						}
 						default: {
@@ -451,7 +494,9 @@ TEST(PlasticityRule, TimedRecording)
 							            EXPECT_EQ(sample.time, time);
 							            EXPECT_EQ(sample.data.size(), obsv.size * 2);
 							            for (size_t i = 0; i < sample.data.size(); ++i) {
-								            EXPECT_EQ(static_cast<int>(sample.data.at(i)), j)
+								            EXPECT_EQ(
+								                static_cast<int>(sample.data.at(i)),
+								                expectations.at(j))
 								                << name;
 							            }
 							            time++;
@@ -487,7 +532,8 @@ TEST(PlasticityRule, TimedRecording)
 								                    .connections.size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
 									            EXPECT_EQ(
-									                static_cast<int>(sample.data.at(i).at(0)), j)
+									                static_cast<int>(sample.data.at(i).at(0)),
+									                expectations.at(j))
 									                << name;
 								            }
 								            time++;
@@ -532,7 +578,7 @@ TEST(PlasticityRule, TimedRecording)
 									                    sample.data.at(i)
 									                        .at(CompartmentOnLogicalNeuron())
 									                        .at(0)),
-									                j)
+									                expectations.at(j))
 									                << name;
 								            }
 								            time++;
