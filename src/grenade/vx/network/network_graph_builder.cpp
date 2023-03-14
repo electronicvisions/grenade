@@ -134,6 +134,11 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 				inputs.push_back({p});
 			}
 		}
+		for (auto const& d : new_rule.populations) {
+			for (auto const& [_, p] : network_graph.m_neuron_vertices.at(d.descriptor)) {
+				inputs.push_back({p});
+			}
+		}
 		auto const& old_rule = std::get<vertex::PlasticityRule>(
 		    network_graph.get_graph().get_vertex_property(vertex_descriptor));
 		vertex::PlasticityRule vertex(
