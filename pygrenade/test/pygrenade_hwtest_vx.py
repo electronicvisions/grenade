@@ -10,30 +10,32 @@ logger.set_loglevel(logger_grenade, logger.LogLevel.INFO)
 class HwTestPygrenadeVx(unittest.TestCase):
     # pylint: disable=too-many-locals
     def run_network_graph(self, enable_spikes=True, enable_v=False):
-        network_builder = grenade.network.NetworkBuilder()
+        network_builder = grenade.network.placed_atomic.NetworkBuilder()
 
-        ext_pop = grenade.network.ExternalPopulation(256)
+        ext_pop = grenade.network.placed_atomic.ExternalPopulation(256)
 
         neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
                    for coord in halco.iter_all(halco.NeuronColumnOnDLS)]
         record_spikes = [False] * len(neurons)
         record_spikes[0] = enable_spikes
-        int_pop = grenade.network.Population(neurons, record_spikes)
+        int_pop = grenade.network.placed_atomic.Population(
+            neurons, record_spikes)
 
         ext_pop_descr = network_builder.add(ext_pop)
         int_pop_descr = network_builder.add(int_pop)
 
         if enable_v:
-            madc_recording = grenade.network.MADCRecording()
+            madc_recording = grenade.network.placed_atomic.MADCRecording()
             madc_recording.population = int_pop_descr
             madc_recording.index = 0
             network_builder.add(madc_recording)
 
         connections = []
         for i in range(256):
-            connections.append(grenade.network.Projection.Connection(i, i, 63))
-        proj = grenade.network.Projection(
-            grenade.network.Projection.ReceptorType.excitatory,
+            connections.append(grenade.network.placed_atomic.Projection
+                               .Connection(i, i, 63))
+        proj = grenade.network.placed_atomic.Projection(
+            grenade.network.placed_atomic.Projection.ReceptorType.excitatory,
             connections,
             ext_pop_descr,
             int_pop_descr
@@ -43,9 +45,9 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         network = network_builder.done()
 
-        routing_result = grenade.network.build_routing(network)
+        routing_result = grenade.network.placed_atomic.build_routing(network)
 
-        network_graph = grenade.network.build_network_graph(
+        network_graph = grenade.network.placed_atomic.build_network_graph(
             network, routing_result)
 
         config = lola.Chip()
@@ -57,7 +59,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
         with hxcomm.ManagedConnection() as connection:
             init, _ = sta.generate(sta.DigitalInit())
             sta.run(connection, init.done())
-            outputs = grenade.network.run(
+            outputs = grenade.network.placed_atomic.run(
                 connection, config, network_graph, inputs)
 
         if enable_spikes:
@@ -77,16 +79,16 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
     @staticmethod
     def test_run_empty_graph():
-        network_builder = grenade.network.NetworkBuilder()
+        network_builder = grenade.network.placed_atomic.NetworkBuilder()
         network = network_builder.done()
 
-        network_graph = grenade.network.build_network_graph(
-            network, grenade.network.build_routing(network))
+        network_graph = grenade.network.placed_atomic.build_network_graph(
+            network, grenade.network.placed_atomic.build_routing(network))
         inputs = grenade.signal_flow.IODataMap()
         with hxcomm.ManagedConnection() as connection:
             init, _ = sta.generate(sta.DigitalInit())
             sta.run(connection, init.done())
-            grenade.network.run(
+            grenade.network.placed_atomic.run(
                 connection,
                 lola.Chip(),
                 network_graph,
@@ -97,24 +99,26 @@ class HwTestPygrenadeVx(unittest.TestCase):
         batch_size = 2
         int_pop_size = 3
         ext_pop_size = 3
-        network_builder = grenade.network.NetworkBuilder()
+        network_builder = grenade.network.placed_atomic.NetworkBuilder()
 
-        ext_pop = grenade.network.ExternalPopulation(ext_pop_size)
+        ext_pop = grenade.network.placed_atomic.ExternalPopulation(
+            ext_pop_size)
 
         neurons = [halco.AtomicNeuronOnDLS(coord, halco.NeuronRowOnDLS.top)
                    for coord
                    in halco.iter_all(halco.NeuronColumnOnDLS)][:int_pop_size]
         record_spikes = [enable_spikes] * len(neurons)
-        int_pop = grenade.network.Population(neurons, record_spikes)
+        int_pop = grenade.network.placed_atomic.Population(
+            neurons, record_spikes)
 
         int_pop_descr = network_builder.add(int_pop)
         ext_pop_descr = network_builder.add(ext_pop)
 
-        cadc_recording = grenade.network.CADCRecording()
+        cadc_recording = grenade.network.placed_atomic.CADCRecording()
         recorded_neurons = []
         for nrn_id in range(int_pop_size):
             recorded_neurons.append(
-                grenade.network.CADCRecording.Neuron(
+                grenade.network.placed_atomic.CADCRecording.Neuron(
                     int_pop_descr, nrn_id,
                     lola.AtomicNeuron.Readout.Source.membrane))
         cadc_recording.neurons = recorded_neurons
@@ -123,10 +127,10 @@ class HwTestPygrenadeVx(unittest.TestCase):
         connections = []
         for i in range(ext_pop_size):
             for j in range(int_pop_size):
-                connections.append(grenade.network.Projection.Connection(
-                    i, j, 63))
-        proj = grenade.network.Projection(
-            grenade.network.Projection.ReceptorType.excitatory,
+                connections.append(grenade.network.placed_atomic.Projection
+                                   .Connection(i, j, 63))
+        proj = grenade.network.placed_atomic.Projection(
+            grenade.network.placed_atomic.Projection.ReceptorType.excitatory,
             connections,
             ext_pop_descr,
             int_pop_descr
@@ -135,14 +139,14 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         network = network_builder.done()
 
-        routing_result = grenade.network.build_routing(network)
+        routing_result = grenade.network.placed_atomic.build_routing(network)
 
-        network_graph = grenade.network.build_network_graph(
+        network_graph = grenade.network.placed_atomic.build_network_graph(
             network, routing_result)
 
         config = lola.Chip()
 
-        input_generator = grenade.network.InputGenerator(
+        input_generator = grenade.network.placed_atomic.InputGenerator(
             network_graph, batch_size)
         times = [None for _ in range(batch_size)]
         for i in range(batch_size):
@@ -156,13 +160,13 @@ class HwTestPygrenadeVx(unittest.TestCase):
         with hxcomm.ManagedConnection() as connection:
             init, _ = sta.generate(sta.ExperimentInit())
             sta.run(connection, init.done())
-            result_map = grenade.network.run(
+            result_map = grenade.network.placed_atomic.run(
                 connection, config, network_graph, inputs)
 
-        hw_spike_times = grenade.network.extract_neuron_spikes(
+        hw_spike_times = grenade.network.placed_atomic.extract_neuron_spikes(
             result_map, network_graph)
         print(hw_spike_times)
-        hw_cadc_samples = grenade.network.extract_cadc_samples(
+        hw_cadc_samples = grenade.network.placed_atomic.extract_cadc_samples(
             result_map, network_graph)
         print(hw_cadc_samples)
 

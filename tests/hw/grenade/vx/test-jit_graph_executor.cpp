@@ -3,9 +3,9 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/network_builder.h"
-#include "grenade/vx/network/network_graph_builder.h"
-#include "grenade/vx/network/routing_builder.h"
+#include "grenade/vx/network/placed_atomic/network_builder.h"
+#include "grenade/vx/network/placed_atomic/network_graph_builder.h"
+#include "grenade/vx/network/placed_atomic/routing_builder.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/io_data_list.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -39,12 +39,12 @@ constexpr static long capmem_settling_time_ms = 100;
 TEST(JITGraphExecutor, DifferentialConfig)
 {
 	// use network to build simple experiment using the hardeware
-	grenade::vx::network::NetworkBuilder builder;
-	builder.add(
-	    grenade::vx::network::Population({halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
+	grenade::vx::network::placed_atomic::NetworkBuilder builder;
+	builder.add(grenade::vx::network::placed_atomic::Population(
+	    {halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
 	auto network = builder.done();
-	auto routing = grenade::vx::network::build_routing(network);
-	auto network_graph = grenade::vx::network::build_network_graph(network, routing);
+	auto routing = grenade::vx::network::placed_atomic::build_routing(network);
+	auto network_graph = grenade::vx::network::placed_atomic::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
 	grenade::vx::execution::backend::Connection connection;
@@ -101,12 +101,12 @@ TEST(JITGraphExecutor, DifferentialConfig)
 TEST(JITGraphExecutor, NoDifferentialConfig)
 {
 	// use network to build simple experiment using the hardeware
-	grenade::vx::network::NetworkBuilder builder;
-	builder.add(
-	    grenade::vx::network::Population({halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
+	grenade::vx::network::placed_atomic::NetworkBuilder builder;
+	builder.add(grenade::vx::network::placed_atomic::Population(
+	    {halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
 	auto network = builder.done();
-	auto routing = grenade::vx::network::build_routing(network);
-	auto network_graph = grenade::vx::network::build_network_graph(network, routing);
+	auto routing = grenade::vx::network::placed_atomic::build_routing(network);
+	auto network_graph = grenade::vx::network::placed_atomic::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode disabled
 	grenade::vx::execution::backend::Connection connection;
@@ -160,12 +160,13 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 TEST(JITGraphExecutor, ConcurrentUsage)
 {
 	// use network to build simple experiment using the hardeware
-	grenade::vx::network::NetworkBuilder builder;
-	builder.add(
-	    grenade::vx::network::Population({halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
+	grenade::vx::network::placed_atomic::NetworkBuilder builder;
+	builder.add(grenade::vx::network::placed_atomic::Population(
+	    {halco::hicann_dls::vx::v3::AtomicNeuronOnDLS()}, {true}));
 	auto const network = builder.done();
-	auto const routing = grenade::vx::network::build_routing(network);
-	auto const network_graph = grenade::vx::network::build_network_graph(network, routing);
+	auto const routing = grenade::vx::network::placed_atomic::build_routing(network);
+	auto const network_graph =
+	    grenade::vx::network::placed_atomic::build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
 	grenade::vx::execution::backend::Connection connection;
