@@ -10,6 +10,7 @@
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "hate/algorithm.h"
+#include "hate/timer.h"
 #include "hate/variant.h"
 #include <map>
 #include <set>

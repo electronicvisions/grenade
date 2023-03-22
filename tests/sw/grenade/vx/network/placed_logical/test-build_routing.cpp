@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/placed_atomic/projection.h"
 #include "grenade/vx/network/placed_logical/build_routing.h"
 #include "grenade/vx/network/placed_logical/network_builder.h"
 

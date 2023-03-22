@@ -6,6 +6,23 @@
 
 namespace grenade::vx::network::placed_logical {
 
+bool PlasticityRule::Timer::operator==(PlasticityRule::Timer const& other) const
+{
+	return start == other.start && period == other.period && num_periods == other.num_periods;
+}
+
+bool PlasticityRule::Timer::operator!=(PlasticityRule::Timer const& other) const
+{
+	return !(*this == other);
+}
+
+std::ostream& operator<<(std::ostream& os, PlasticityRule::Timer const& timer)
+{
+	os << "Timer(start: " << timer.start << ", period: " << timer.period
+	   << ", num_periods: " << timer.num_periods << ")";
+	return os;
+}
+
 bool PlasticityRule::PopulationHandle::operator==(
     PlasticityRule::PopulationHandle const& other) const
 {

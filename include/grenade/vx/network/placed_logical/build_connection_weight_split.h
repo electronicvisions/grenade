@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
 #include "grenade/vx/network/placed_logical/projection.h"
+#include "lola/vx/v3/synapse.h"
 #include <vector>
 
 namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_LOGICAL {
@@ -12,8 +12,7 @@ namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_
  * @param weight Weight to split
  * @param num Number of synapses to split weight onto
  */
-std::vector<placed_atomic::Projection::Connection::Weight> GENPYBIND(visible)
-    build_connection_weight_split(Projection::Connection::Weight const& weight, size_t num)
-        SYMBOL_VISIBLE;
+std::vector<lola::vx::v3::SynapseMatrix::Weight> GENPYBIND(visible) build_connection_weight_split(
+    Projection::Connection::Weight const& weight, size_t num) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx::network::placed_logical

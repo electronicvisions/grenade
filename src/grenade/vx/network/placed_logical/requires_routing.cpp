@@ -1,6 +1,5 @@
 #include "grenade/vx/network/placed_logical/requires_routing.h"
 
-#include "grenade/vx/network/placed_logical/build_atomic_network.h"
 #include "grenade/vx/network/placed_logical/build_connection_routing.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_graph.h"
@@ -25,7 +24,7 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 		return true;
 	}
 	// check if projection topology changed
-	auto const projection_translation = old_graph.get_projection_translation();
+	auto const& projection_translation = old_graph.get_graph_translation().projections;
 	for (auto const& [descriptor, projection] : current->projections) {
 		auto const& old_projection = old->projections.at(descriptor);
 		if ((projection.population_pre != old_projection.population_pre) ||
@@ -43,11 +42,8 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 			}
 			// check if weight changed such that it no longer fits into the routed number of
 			// hardware synapse circuits
-			auto const local_connection_translation_range =
-			    projection_translation.equal_range(std::pair{descriptor, i});
-			size_t const local_num_hw_synapses = std::distance(
-			    local_connection_translation_range.first,
-			    local_connection_translation_range.second);
+			auto const& local_connection_translation = projection_translation.at(descriptor).at(i);
+			size_t const local_num_hw_synapses = local_connection_translation.size();
 			if (hate::math::round_up_integer_division(
 			        connection.weight.value(), lola::vx::v3::SynapseMatrix::Weight::max) >
 			    local_num_hw_synapses) {

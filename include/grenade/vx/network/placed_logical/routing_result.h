@@ -1,7 +1,19 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/routing_result.h"
 #include "grenade/vx/network/placed_logical/connection_routing_result.h"
+#include "halco/hicann-dls/vx/v3/event.h"
+#include "halco/hicann-dls/vx/v3/synapse.h"
+#include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/event.h"
+#include "haldls/vx/v3/neuron.h"
+#include "haldls/vx/v3/routing_crossbar.h"
+#include "haldls/vx/v3/synapse_driver.h"
+#include "hate/visibility.h"
+#include "lola/vx/v3/synapse.h"
+#include <chrono>
+#include <iosfwd>
+#include <map>
+#include <vector>
 
 namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_PLACED_LOGICAL {
 

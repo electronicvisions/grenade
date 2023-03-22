@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/network/placed_logical/receptor.h"
 #include "grenade/vx/network/placed_logical/routing/synapse_driver_on_dls_manager.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"

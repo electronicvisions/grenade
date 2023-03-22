@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/placed_atomic/cadc_recording.h"
-#include "grenade/vx/network/placed_atomic/madc_recording.h"
-#include "grenade/vx/network/placed_atomic/network.h"
-#include "grenade/vx/network/placed_atomic/population.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
+#include "grenade/vx/network/placed_logical/cadc_recording.h"
+#include "grenade/vx/network/placed_logical/madc_recording.h"
+#include "grenade/vx/network/placed_logical/network.h"
+#include "grenade/vx/network/placed_logical/population.h"
+#include "grenade/vx/network/placed_logical/projection.h"
 #include <chrono>
 
-using namespace grenade::vx::network::placed_atomic;
+using namespace grenade::vx::network::placed_logical;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
@@ -17,8 +17,10 @@ TEST(network_Network, General)
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
-	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
@@ -29,8 +31,10 @@ TEST(network_Network, General)
 	    {{PopulationDescriptor(2), ExternalPopulation(3)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
-	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
@@ -41,8 +45,10 @@ TEST(network_Network, General)
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
 	    {{ProjectionDescriptor(4),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
-	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
@@ -53,8 +59,10 @@ TEST(network_Network, General)
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
-	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    std::nullopt,
 	    CADCRecording{},
@@ -65,8 +73,10 @@ TEST(network_Network, General)
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
-	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    std::nullopt,
@@ -79,8 +89,10 @@ TEST(network_Network, General)
 	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
-	          Projection::ReceptorType::excitatory,
-	          {Projection::Connection(4, 5, Projection::Connection::Weight(6))},
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
 	          PopulationDescriptor(1), PopulationDescriptor(1))}},
 	    MADCRecording{},
 	    CADCRecording{},

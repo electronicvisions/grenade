@@ -1,9 +1,9 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/network_graph.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_graph_statistics.h"
 #include "grenade/vx/network/placed_logical/population.h"
+#include "grenade/vx/signal_flow/graph.h"
 #include "hate/visibility.h"
 #include <map>
 #include <optional>
@@ -26,39 +26,6 @@ struct GENPYBIND(visible) NetworkGraph
 	/** Graph representing the network. */
 	GENPYBIND(getter_for(graph))
 	signal_flow::Graph const& get_graph() const SYMBOL_VISIBLE;
-
-	/** Translation between logical and hardware populations. TODO: remove once placed_atomic is
-	 * squashed. */
-	typedef std::map<PopulationDescriptor, network::placed_atomic::PopulationDescriptor>
-	    PopulationTranslation;
-	GENPYBIND(getter_for(population_translation))
-	PopulationTranslation const& get_population_translation() const SYMBOL_VISIBLE;
-
-	/** Translation between logical and hardware neurons in populations. TODO: remove once
-	 * placed_atomic is squashed. */
-	typedef std::map<
-	    PopulationDescriptor,
-	    std::vector<
-	        std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<size_t>>>>
-	    NeuronTranslation;
-	GENPYBIND(getter_for(neuron_translation))
-	NeuronTranslation const& get_neuron_translation() const SYMBOL_VISIBLE;
-
-	/** Translation between logical and hardware projections. TODO: replace by translation to
-	 * synapse view hardware synapses once placed_atomic is squashed. */
-	typedef std::multimap<
-	    std::pair<ProjectionDescriptor, size_t>,
-	    std::pair<network::placed_atomic::ProjectionDescriptor, size_t>>
-	    ProjectionTranslation;
-	GENPYBIND(getter_for(projection_translation))
-	ProjectionTranslation const& get_projection_translation() const SYMBOL_VISIBLE;
-
-	/** Translation between logical and hardware populations. TODO: remove once placed_atomic is
-	 * squashed. */
-	typedef std::map<PlasticityRuleDescriptor, network::placed_atomic::PlasticityRuleDescriptor>
-	    PlasticityRuleTranslation;
-	GENPYBIND(getter_for(plasticity_rule_translation))
-	PlasticityRuleTranslation const& get_plasticity_rule_translation() const SYMBOL_VISIBLE;
 
 	/** Vertex descriptor at which to insert external spike data. */
 	GENPYBIND(getter_for(event_input_vertex))
@@ -213,10 +180,6 @@ private:
 	    m_plasticity_rule_output_vertices;
 	SpikeLabels m_spike_labels;
 
-	PopulationTranslation m_population_translation;
-	NeuronTranslation m_neuron_translation;
-	ProjectionTranslation m_projection_translation;
-	PlasticityRuleTranslation m_plasticity_rule_translation;
 	GraphTranslation m_graph_translation;
 
 	std::chrono::microseconds m_construction_duration;

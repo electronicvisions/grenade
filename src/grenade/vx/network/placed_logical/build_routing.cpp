@@ -1,6 +1,5 @@
 #include "grenade/vx/network/placed_logical/build_routing.h"
 
-#include "grenade/vx/network/placed_logical/build_atomic_network.h"
 #include "grenade/vx/network/placed_logical/build_connection_routing.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/routing/routing_builder.h"

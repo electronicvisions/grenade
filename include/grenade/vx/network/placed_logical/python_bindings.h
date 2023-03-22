@@ -8,7 +8,6 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("pylola_vx_v3");
 	parent->py::module::import("_pygrenade_vx_execution");
 	parent->py::module::import("_pygrenade_vx_signal_flow");
-	parent->py::module::import("_pygrenade_vx_network_placed_atomic");
 })
 
 #include "grenade/vx/network/placed_logical/build_routing.h"

@@ -17,8 +17,8 @@ struct GENPYBIND(visible) MADCRecording
 	halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron{};
 	size_t atomic_neuron_on_compartment{0};
 
-	lola::vx::v3::AtomicNeuron::Readout::Source source{
-	    lola::vx::v3::AtomicNeuron::Readout::Source::membrane};
+	typedef lola::vx::v3::AtomicNeuron::Readout::Source Source GENPYBIND(visible);
+	Source source{Source::membrane};
 
 	MADCRecording() = default;
 

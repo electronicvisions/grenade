@@ -20,26 +20,6 @@ signal_flow::Graph const& NetworkGraph::get_graph() const
 	return m_graph;
 }
 
-NetworkGraph::PopulationTranslation const& NetworkGraph::get_population_translation() const
-{
-	return m_population_translation;
-}
-
-NetworkGraph::NeuronTranslation const& NetworkGraph::get_neuron_translation() const
-{
-	return m_neuron_translation;
-}
-
-NetworkGraph::ProjectionTranslation const& NetworkGraph::get_projection_translation() const
-{
-	return m_projection_translation;
-}
-
-NetworkGraph::PlasticityRuleTranslation const& NetworkGraph::get_plasticity_rule_translation() const
-{
-	return m_plasticity_rule_translation;
-}
-
 std::optional<signal_flow::Graph::vertex_descriptor> const& NetworkGraph::get_event_input_vertex()
     const
 {

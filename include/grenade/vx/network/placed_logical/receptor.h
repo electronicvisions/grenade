@@ -1,6 +1,5 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/projection.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include <iosfwd>
@@ -23,7 +22,11 @@ struct GENPYBIND(visible) Receptor
 	ID id;
 
 	/** Receptor type. */
-	typedef network::placed_atomic::Projection::ReceptorType Type GENPYBIND(visible);
+	enum class Type
+	{
+		excitatory,
+		inhibitory
+	};
 	Type type;
 
 	Receptor() = default;
@@ -41,6 +44,8 @@ struct GENPYBIND(visible) Receptor
 	GENPYBIND(expose_as(__hash__))
 	size_t hash() const SYMBOL_VISIBLE;
 };
+
+std::ostream& operator<<(std::ostream& os, Receptor::Type const& receptor_type) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx::network::placed_logical
 

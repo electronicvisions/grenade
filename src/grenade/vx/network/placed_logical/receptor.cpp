@@ -32,6 +32,11 @@ size_t Receptor::hash() const
 	return hash;
 }
 
+std::ostream& operator<<(std::ostream& os, Receptor::Type const& receptor_type)
+{
+	return os << (receptor_type == Receptor::Type::excitatory ? "excitatory" : "inhibitory");
+}
+
 size_t hash_value(Receptor const& receptor)
 {
 	size_t hash = 0;

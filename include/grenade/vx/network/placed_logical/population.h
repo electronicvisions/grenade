@@ -1,9 +1,9 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/population.h"
 #include "grenade/vx/network/placed_logical/receptor.h"
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
+#include "haldls/vx/v3/background.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 #include <iosfwd>
@@ -108,10 +108,65 @@ struct GENPYBIND(visible) Population
 	size_t get_atomic_neurons_size() const SYMBOL_VISIBLE;
 };
 
-typedef grenade::vx::network::placed_atomic::ExternalPopulation ExternalPopulation
-    GENPYBIND(visible);
-typedef grenade::vx::network::placed_atomic::BackgroundSpikeSourcePopulation
-    BackgroundSpikeSourcePopulation GENPYBIND(visible);
+
+/** External spike source population. */
+struct GENPYBIND(visible) ExternalPopulation
+{
+	/** Number of individual sources. */
+	size_t size{0};
+
+	ExternalPopulation() = default;
+	ExternalPopulation(size_t size) SYMBOL_VISIBLE;
+
+	bool operator==(ExternalPopulation const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ExternalPopulation const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, ExternalPopulation const& population)
+	    SYMBOL_VISIBLE;
+};
+
+
+/** BackgroundSpikeSource spike source population. */
+struct GENPYBIND(visible) BackgroundSpikeSourcePopulation
+{
+	/** Number of individual sources. */
+	size_t size{0};
+
+	/** Placement of the source. */
+	typedef std::map<
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS,
+	    halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>
+	    Coordinate;
+	Coordinate coordinate;
+
+	/** Configuration of the source. */
+	struct Config
+	{
+		haldls::vx::v3::BackgroundSpikeSource::Period period;
+		haldls::vx::v3::BackgroundSpikeSource::Rate rate;
+		haldls::vx::v3::BackgroundSpikeSource::Seed seed;
+		bool enable_random;
+
+		bool operator==(Config const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, Config const& config) SYMBOL_VISIBLE;
+	} config;
+
+	BackgroundSpikeSourcePopulation() = default;
+	BackgroundSpikeSourcePopulation(size_t size, Coordinate const& coordinate, Config const& config)
+	    SYMBOL_VISIBLE;
+
+	bool operator==(BackgroundSpikeSourcePopulation const& other) const SYMBOL_VISIBLE;
+	bool operator!=(BackgroundSpikeSourcePopulation const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(
+	    std::ostream& os, BackgroundSpikeSourcePopulation const& population) SYMBOL_VISIBLE;
+};
+
 
 /** Descriptor to be used to identify a population. */
 struct GENPYBIND(inline_base("*")) PopulationDescriptor

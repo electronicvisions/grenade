@@ -1,7 +1,5 @@
 #include "grenade/vx/network/placed_logical/network_graph_builder.h"
 
-#include "grenade/vx/network/placed_atomic/network_builder.h"
-#include "grenade/vx/network/placed_logical/build_atomic_network.h"
 #include "grenade/vx/network/placed_logical/build_connection_routing.h"
 #include "grenade/vx/network/placed_logical/build_connection_weight_split.h"
 #include "grenade/vx/network/placed_logical/exception.h"

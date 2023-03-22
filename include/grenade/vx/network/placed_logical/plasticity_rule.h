@@ -1,10 +1,11 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/placed_atomic/plasticity_rule.h"
 #include "grenade/vx/network/placed_logical/projection.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -58,8 +59,26 @@ struct GENPYBIND(visible) PlasticityRule
 	/**
 	 * Timing information for execution of the rule.
 	 */
-	typedef network::placed_atomic::PlasticityRule::Timer Timer GENPYBIND(visible);
-	Timer timer;
+	struct Timer
+	{
+		/** PPU clock cycles. */
+		struct GENPYBIND(inline_base("*")) Value
+		    : public halco::common::detail::RantWrapper<Value, uintmax_t, 0xffffffff, 0>
+		{
+			constexpr explicit Value(uintmax_t const value = 0) : rant_t(value) {}
+		};
+
+		Value start;
+		Value period;
+		size_t num_periods;
+
+		bool operator==(Timer const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Timer const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, Timer const& timer) SYMBOL_VISIBLE;
+	} timer;
+
 
 	/**
 	 * Enable whether this plasticity rule requires all projections to have one source per row and
@@ -72,28 +91,28 @@ struct GENPYBIND(visible) PlasticityRule
 	 * Raw recording of one scratchpad memory region for all timed invocations of the
 	 * rule. No automated recording of time is performed.
 	 */
-	typedef network::placed_atomic::PlasticityRule::RawRecording RawRecording GENPYBIND(visible);
+	typedef signal_flow::vertex::PlasticityRule::RawRecording RawRecording GENPYBIND(opaque(false));
 
 	/**
 	 * Recording information for execution of the rule.
 	 * Recording of exclusive scratchpad memory per rule invocation with
 	 * time recording and returned data as time-annotated events.
 	 */
-	typedef network::placed_atomic::PlasticityRule::TimedRecording TimedRecording
-	    GENPYBIND(visible);
+	typedef signal_flow::vertex::PlasticityRule::TimedRecording TimedRecording
+	    GENPYBIND(opaque(false));
 
 	/**
 	 * Recording memory provided to plasticity rule kernel and recorded after
 	 * execution.
 	 */
-	typedef network::placed_atomic::PlasticityRule::Recording Recording;
+	typedef signal_flow::vertex::PlasticityRule::Recording Recording;
 	std::optional<Recording> recording;
 
 	/**
 	 * Recording data corresponding to a raw recording.
 	 */
-	typedef network::placed_atomic::PlasticityRule::RawRecordingData RawRecordingData
-	    GENPYBIND(visible);
+	typedef signal_flow::vertex::PlasticityRule::RawRecordingData RawRecordingData
+	    GENPYBIND(opaque(false));
 
 	/**
 	 * Extracted recorded data of observables corresponding to timed recording.
@@ -132,7 +151,7 @@ struct GENPYBIND(visible) PlasticityRule
 		        std::vector<uint16_t>>>>>>
 		    EntryPerNeuron;
 
-		typedef network::placed_atomic::PlasticityRule::TimedRecordingData::Entry EntryArray;
+		typedef signal_flow::vertex::PlasticityRule::TimedRecordingData::Entry EntryArray;
 
 		std::map<std::string, std::map<ProjectionDescriptor, EntryPerSynapse>> data_per_synapse;
 		std::map<std::string, std::map<PopulationDescriptor, EntryPerNeuron>> data_per_neuron;

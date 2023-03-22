@@ -27,8 +27,7 @@ ConnectionRoutingResult build_connection_routing(std::shared_ptr<Network> const&
 		for (auto const& connection : projection.connections) {
 			num_synapses.push_back(std::max(
 			    hate::math::round_up_integer_division(
-			        connection.weight.value(),
-			        network::placed_atomic::Projection::Connection::Weight::max),
+			        connection.weight.value(), lola::vx::v3::SynapseMatrix::Weight::max),
 			    static_cast<size_t>(1)));
 		}
 		if (num_synapses.empty()) {

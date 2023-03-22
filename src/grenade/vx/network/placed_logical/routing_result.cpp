@@ -1,4 +1,6 @@
 #include "grenade/vx/network/placed_logical/routing_result.h"
+
+#include "hate/timer.h"
 #include <ostream>
 
 namespace grenade::vx::network::placed_logical {

@@ -353,6 +353,57 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 		}
 	}
 
+	// check that target projections fulfil source requirement
+	if (plasticity_rule.enable_requires_one_source_per_row_in_order) {
+		for (auto const& d : plasticity_rule.projections) {
+			std::set<Projection::Connection::Index> rows;
+			std::set<Projection::Connection::Index> columns;
+			std::vector<std::pair<Projection::Connection::Index, Projection::Connection::Index>>
+			    indices;
+			auto const& projection = m_projections.at(d);
+			for (auto const& connection : projection.connections) {
+				rows.insert(connection.index_pre);
+				columns.insert(connection.index_post);
+				indices.push_back({connection.index_pre, connection.index_post});
+			}
+			if (rows.size() * columns.size() != indices.size()) {
+				throw std::runtime_error("Not only one source per row in projection.");
+			}
+			if (!std::is_sorted(indices.begin(), indices.end())) {
+				throw std::runtime_error("Sources of rows are not in order in projection.");
+			}
+			// If the source population is internal, the requirement can only be fulfilled if the
+			// source population neuron event outputs on neuron event output block (or equivalently
+			// the connected PADI-busses) are in order.
+			if (std::holds_alternative<Population>(m_populations.at(projection.population_pre))) {
+				auto const& population_pre =
+				    std::get<Population>(m_populations.at(projection.population_pre));
+				std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> atomic_neurons;
+				for (auto const& neuron : population_pre.neurons) {
+					auto const local_atomic_neurons = neuron.coordinate.get_atomic_neurons();
+					atomic_neurons.insert(
+					    atomic_neurons.end(), local_atomic_neurons.begin(),
+					    local_atomic_neurons.end());
+				}
+				if (!std::is_sorted(
+				        atomic_neurons.begin(), atomic_neurons.end(),
+				        [](auto const& a, auto const& b) {
+					        return a.toNeuronColumnOnDLS()
+					                   .toNeuronEventOutputOnDLS()
+					                   .toNeuronEventOutputOnNeuronBackendBlock() <
+					               b.toNeuronColumnOnDLS()
+					                   .toNeuronEventOutputOnDLS()
+					                   .toNeuronEventOutputOnNeuronBackendBlock();
+				        })) {
+					throw std::runtime_error(
+					    "Projection being in order can't be fulfilled since the source population "
+					    "neurons don't project in order onto PADI-busses, which implies that the "
+					    "synapse rows can't be allocated in order.");
+				}
+			}
+		}
+	}
+
 	// check that target populations exist and are on-chip
 	for (auto const& d : plasticity_rule.populations) {
 		if (!m_populations.contains(d.descriptor)) {
