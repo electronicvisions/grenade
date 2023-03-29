@@ -338,6 +338,10 @@ struct PlasticityRule
 		 * batch entry.
 		 */
 		std::vector<std::vector<signal_flow::Int8>> data;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, RawRecordingData const& data)
+		    SYMBOL_VISIBLE;
 	};
 
 	/**
@@ -355,6 +359,10 @@ struct PlasticityRule
 		std::map<std::string, std::vector<Entry>> data_per_synapse;
 		std::map<std::string, std::vector<Entry>> data_per_neuron;
 		std::map<std::string, Entry> data_array;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, TimedRecordingData const& data)
+		    SYMBOL_VISIBLE;
 	};
 
 	typedef std::variant<RawRecordingData, TimedRecordingData> RecordingData;

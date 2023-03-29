@@ -19,6 +19,7 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::signal_flow::vertex {
 
@@ -242,6 +243,79 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::NeuronViewShape const
 		os << "\n";
 	}
 	os << "\trow: " << shape.row << "\n";
+	os << ")";
+	return os;
+}
+
+std::ostream& operator<<(std::ostream& os, PlasticityRule::RawRecordingData const& data)
+{
+	os << "RawRecordingData(data:\n";
+	for (size_t i = 0; i < data.data.size(); ++i) {
+		os << "\tbatch entry " << i << ":\n";
+		os << "\t\t" << hate::join_string(data.data.at(i), ", ") << "\n";
+	}
+	os << ")";
+	return os;
+}
+
+std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData const& data)
+{
+	os << "TimedRecordingData(\n";
+	os << "\tdata_per_synapse:\n";
+	for (auto const& [name, d] : data.data_per_synapse) {
+		for (size_t p = 0; p < d.size(); ++p) {
+			std::visit(
+			    [&os, name, p](auto const& dd) {
+				    for (size_t b = 0; b < dd.size(); ++b) {
+					    for (size_t s = 0; s < dd.at(b).size(); ++s) {
+						    os << "\t\tobservable(" << name << "), synapse_view(" << p
+						       << "), batch_entry(" << b << "), sample(" << s << "):\n";
+						    os << "\t\t\t" << dd.at(b).at(s).time << "\n";
+						    std::vector<intmax_t> copy(
+						        dd.at(b).at(s).data.begin(), dd.at(b).at(s).data.end());
+						    os << "\t\t\t" << hate::join_string(copy, ", ") << "\n";
+					    }
+				    }
+			    },
+			    d.at(p));
+		}
+	}
+	os << "\tdata_per_neuron:\n";
+	for (auto const& [name, d] : data.data_per_neuron) {
+		for (size_t p = 0; p < d.size(); ++p) {
+			std::visit(
+			    [&os, name, p](auto const& dd) {
+				    for (size_t b = 0; b < dd.size(); ++b) {
+					    for (size_t s = 0; s < dd.at(b).size(); ++s) {
+						    os << "\t\tobservable(" << name << "), neuron_view(" << p
+						       << "), batch_entry(" << b << "), sample(" << s << "):\n";
+						    os << "\t\t\t" << dd.at(b).at(s).time << "\n";
+						    std::vector<intmax_t> copy(
+						        dd.at(b).at(s).data.begin(), dd.at(b).at(s).data.end());
+						    os << "\t\t\t" << hate::join_string(copy, ", ") << "\n";
+					    }
+				    }
+			    },
+			    d.at(p));
+		}
+	}
+	os << "\tdata_array:\n";
+	for (auto const& [name, d] : data.data_array) {
+		std::visit(
+		    [&os, name](auto const& dd) {
+			    for (size_t b = 0; b < dd.size(); ++b) {
+				    for (size_t s = 0; s < dd.at(b).size(); ++s) {
+					    os << "\t\tobservable(" << name << "), batch_entry(" << b << "), sample("
+					       << s << "):\n";
+					    os << "\t\t\t" << dd.at(b).at(s).time << "\n";
+					    std::vector<intmax_t> copy(
+					        dd.at(b).at(s).data.begin(), dd.at(b).at(s).data.end());
+					    os << "\t\t\t" << hate::join_string(copy, ", ") << "\n";
+				    }
+			    }
+		    },
+		    d);
+	}
 	os << ")";
 	return os;
 }
@@ -794,6 +868,10 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		for (size_t i = 0; i < recording.data.size(); ++i) {
 			recording.data.at(i) = data.at(i).at(0).data;
 		}
+		LOG4CXX_TRACE(
+		    log4cxx::Logger::getLogger("grenade.signal_flow.vertex."
+		                               "PlasticityRule.extract_recording_data"),
+		    recording);
 		return recording;
 	} else if (!std::holds_alternative<TimedRecording>(*m_recording)) {
 		throw std::runtime_error("Recording extraction for given recording type not supported.");
@@ -1230,6 +1308,10 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		    obsv);
 	}
 
+	LOG4CXX_TRACE(
+	    log4cxx::Logger::getLogger(
+	        "grenade.signal_flow.vertex.PlasticityRule.extract_recording_data"),
+	    observable_data);
 	return observable_data;
 }
 
