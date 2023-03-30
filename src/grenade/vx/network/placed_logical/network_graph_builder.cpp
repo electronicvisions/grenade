@@ -216,6 +216,70 @@ NetworkGraph build_network_graph(
 	result.m_neuron_translation = neuron_translation;
 	result.m_projection_translation = projection_translation;
 	result.m_plasticity_rule_translation = plasticity_rule_translation;
+
+	// build graph translation
+	auto const synapse_vertices = result.get_synapse_vertices();
+	for (auto const& [d, projection] : network->projections) {
+		auto const& local_synapse_vertices = synapse_vertices.at(d);
+		auto const& population_post =
+		    std::get<Population>(network->populations.at(projection.population_post));
+		result.m_graph_translation.projections[d].resize(projection.connections.size());
+		for (size_t i = 0; i < projection.connections.size(); ++i) {
+			auto const& local_connection = projection.connections.at(i);
+			auto const ans = population_post.neurons.at(local_connection.index_post.first)
+			                     .coordinate.get_placed_compartments()
+			                     .at(local_connection.index_post.second);
+			for (auto const& an_target : routing_result.connection_routing_result.at(d)
+			                                 .at(i)
+			                                 .atomic_neurons_on_target_compartment) {
+				auto const an = ans.at(an_target);
+				auto const vertex_descriptor =
+				    local_synapse_vertices.at(an.toNeuronRowOnDLS().toHemisphereOnDLS());
+				auto const& vertex_property = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
+				    result.get_graph().get_vertex_property(vertex_descriptor));
+				size_t const index_on_vertex = std::distance(
+				    vertex_property.get_columns().begin(),
+				    std::find(
+				        vertex_property.get_columns().begin(), vertex_property.get_columns().end(),
+				        an.toNeuronColumnOnDLS()));
+				result.m_graph_translation.projections[d].at(i).push_back(
+				    std::pair{vertex_descriptor, index_on_vertex});
+			}
+		}
+	}
+	auto const neuron_vertices = result.get_neuron_vertices();
+	for (auto const& [d, pop] : network->populations) {
+		if (!std::holds_alternative<Population>(pop)) {
+			continue;
+		}
+		auto const& population = std::get<Population>(pop);
+		auto const& local_neuron_vertices = neuron_vertices.at(d);
+		result.m_graph_translation.populations[d].resize(population.neurons.size());
+		for (size_t neuron_on_population = 0; neuron_on_population < population.neurons.size();
+		     ++neuron_on_population) {
+			for (auto const& [compartment_on_neuron, atomic_neurons] :
+			     population.neurons.at(neuron_on_population).coordinate.get_placed_compartments()) {
+				for (size_t atomic_neuron_on_compartment = 0;
+				     atomic_neuron_on_compartment < atomic_neurons.size();
+				     ++atomic_neuron_on_compartment) {
+					auto const& atomic_neuron = atomic_neurons.at(atomic_neuron_on_compartment);
+					auto const& local_neuron_vertex = local_neuron_vertices.at(
+					    atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
+					auto const& vertex_property = std::get<signal_flow::vertex::NeuronView>(
+					    result.get_graph().get_vertex_property(local_neuron_vertex));
+					auto const& columns = vertex_property.get_columns();
+					auto const column_iterator = std::find(
+					    columns.begin(), columns.end(), atomic_neuron.toNeuronColumnOnDLS());
+					assert(column_iterator != columns.end());
+					size_t const neuron_column_index =
+					    std::distance(columns.begin(), column_iterator);
+					result.m_graph_translation.populations.at(d)
+					    .at(neuron_on_population)[compartment_on_neuron]
+					    .emplace_back(std::pair{local_neuron_vertex, neuron_column_index});
+				}
+			}
+		}
+	}
 	return result;
 }
 

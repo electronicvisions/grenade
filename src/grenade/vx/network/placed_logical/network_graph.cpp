@@ -158,6 +158,11 @@ NetworkGraph::SpikeLabels NetworkGraph::get_spike_labels() const
 	return spike_labels;
 }
 
+NetworkGraph::GraphTranslation const& NetworkGraph::get_graph_translation() const
+{
+	return m_graph_translation;
+}
+
 bool NetworkGraph::valid() const
 {
 	// TODO: check logical to atomic mapping validity

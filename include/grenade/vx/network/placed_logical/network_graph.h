@@ -122,6 +122,42 @@ struct GENPYBIND(visible) NetworkGraph
 	SpikeLabels get_spike_labels() const SYMBOL_VISIBLE;
 
 	/**
+	 * Translation between unrouted and routed graph representation.
+	 */
+	struct GraphTranslation
+	{
+		/**
+		 * Translation of Projection::Connection to synapses in signal-flow graph.
+		 * For each projection (descriptor) a vector with equal ordering to the connections of the
+		 * projection contains possibly multiple signal-flow graph vertex descriptors and indices on
+		 * synapses on the signal-flow graph vertex property.
+		 */
+		typedef std::map<
+		    ProjectionDescriptor,
+		    std::vector<std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>
+		    Projections;
+		Projections projections;
+
+		/**
+		 * Translation of Population neurons to (multiple) atomic neurons in signal-flow graph.
+		 * For each population (descriptor) a vector with equal ordering to the neurons of the
+		 * population contains for each compartment on the logical neuron and for each atomic neuron
+		 * on the logical neuron compartment a pair of signal-flow graph vertex descriptor and index
+		 * of the corresponding atomic neuron on the signal-flow graph vertex property.
+		 */
+		typedef std::map<
+		    PopulationDescriptor,
+		    std::vector<std::map<
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		        std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>>
+		    Populations;
+		Populations populations;
+	};
+	/** Translation between unrouted and routed graph representation. */
+	GENPYBIND(getter_for(graph_translation))
+	GraphTranslation const& get_graph_translation() const SYMBOL_VISIBLE;
+
+	/**
 	 * Checks validity of hardware graph representation in relation to the abstract network.
 	 * This ensures all required elements and information being present as well as a functionally
 	 * correct mapping and routing.
@@ -146,6 +182,7 @@ private:
 	NeuronTranslation m_neuron_translation;
 	ProjectionTranslation m_projection_translation;
 	PlasticityRuleTranslation m_plasticity_rule_translation;
+	GraphTranslation m_graph_translation;
 
 	friend NetworkGraph build_network_graph(
 	    std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
