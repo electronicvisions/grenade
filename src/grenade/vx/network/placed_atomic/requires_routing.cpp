@@ -32,7 +32,7 @@ bool requires_routing(std::shared_ptr<Network> const& current, std::shared_ptr<N
 		}
 		for (size_t i = 0; i < projection.connections.size(); ++i) {
 			auto const& connection = projection.connections.at(i);
-			auto const& old_connection = projection.connections.at(i);
+			auto const& old_connection = old_projection.connections.at(i);
 			if ((connection.index_pre != old_connection.index_pre) ||
 			    (connection.index_post != old_connection.index_post)) {
 				return true;
