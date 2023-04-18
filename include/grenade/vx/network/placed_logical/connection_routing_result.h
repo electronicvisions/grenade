@@ -1,7 +1,9 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/placed_logical/projection.h"
+#include "hate/visibility.h"
 #include <cstddef>
+#include <iosfwd>
 #include <map>
 #include <vector>
 
@@ -15,6 +17,13 @@ struct GENPYBIND(visible) ConnectionToHardwareRoutes
 {
 	/** Indices of atomic neurons in target compartment. */
 	std::vector<size_t> atomic_neurons_on_target_compartment;
+
+	bool operator==(ConnectionToHardwareRoutes const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ConnectionToHardwareRoutes const& other) const SYMBOL_VISIBLE;
+
+	GENPYBIND(stringstream)
+	friend std::ostream& operator<<(std::ostream& os, ConnectionToHardwareRoutes const& routes)
+	    SYMBOL_VISIBLE;
 };
 
 
