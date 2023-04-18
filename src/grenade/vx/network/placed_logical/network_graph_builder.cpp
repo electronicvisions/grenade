@@ -23,6 +23,7 @@ NetworkGraph build_network_graph(
 	NetworkGraph result;
 	result.m_hardware_network_graph =
 	    placed_atomic::build_network_graph(atomic_network, routing_result.atomic_routing_result);
+	result.m_connection_routing_result = routing_result.connection_routing_result;
 
 	// construct hardware network
 	network::placed_atomic::NetworkBuilder builder;
@@ -294,15 +295,14 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	hate::Timer timer;
 	log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.update_network_graph");
 
-	if (requires_routing(network, network_graph.m_network)) {
+	if (requires_routing(network, network_graph)) {
 		throw std::runtime_error(
 		    "Network graph can only be updated if no new routing is required.");
 	}
 
-	auto const connection_routing_result = build_connection_routing(network);
 	placed_atomic::update_network_graph(
 	    network_graph.m_hardware_network_graph,
-	    build_atomic_network(network, connection_routing_result));
+	    build_atomic_network(network, network_graph.get_connection_routing_result()));
 	network_graph.m_network = network;
 
 	LOG4CXX_TRACE(

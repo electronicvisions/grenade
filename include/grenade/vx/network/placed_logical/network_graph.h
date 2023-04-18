@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/placed_atomic/network_graph.h"
+#include "grenade/vx/network/placed_logical/connection_routing_result.h"
 #include "grenade/vx/network/placed_logical/network.h"
 #include "grenade/vx/network/placed_logical/network_graph_statistics.h"
 #include "grenade/vx/network/placed_logical/population.h"
@@ -27,6 +28,10 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(hardware_network))
 	std::shared_ptr<network::placed_atomic::Network> const& get_hardware_network() const
 	    SYMBOL_VISIBLE;
+
+	/** Connection routing result. TODO: remove once placed_atomic is squashed. */
+	GENPYBIND(getter_for(connection_routing_result))
+	ConnectionRoutingResult const& get_connection_routing_result() const SYMBOL_VISIBLE;
 
 	/** Hardware network graph. TODO: remove once placed_atomic is squashed. */
 	GENPYBIND(getter_for(hardware_network_graph))
@@ -184,6 +189,9 @@ private:
 	ProjectionTranslation m_projection_translation;
 	PlasticityRuleTranslation m_plasticity_rule_translation;
 	GraphTranslation m_graph_translation;
+
+	// TODO: remove once not required anymore
+	ConnectionRoutingResult m_connection_routing_result;
 
 	std::chrono::microseconds m_construction_duration;
 	std::chrono::microseconds m_verification_duration;

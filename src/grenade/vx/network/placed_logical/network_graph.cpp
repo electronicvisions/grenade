@@ -12,6 +12,11 @@ std::shared_ptr<network::placed_atomic::Network> const& NetworkGraph::get_hardwa
 	return m_hardware_network_graph.get_network();
 }
 
+ConnectionRoutingResult const& NetworkGraph::get_connection_routing_result() const
+{
+	return m_connection_routing_result;
+}
+
 placed_atomic::NetworkGraph const& NetworkGraph::get_hardware_network_graph() const
 {
 	return m_hardware_network_graph;
