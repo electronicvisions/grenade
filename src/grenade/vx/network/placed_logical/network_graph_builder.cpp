@@ -226,6 +226,7 @@ NetworkGraph build_network_graph(
 		auto const& population_post =
 		    std::get<Population>(network->populations.at(projection.population_post));
 		result.m_graph_translation.projections[d].resize(projection.connections.size());
+		std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, size_t> index_per_hemisphere;
 		for (size_t i = 0; i < projection.connections.size(); ++i) {
 			auto const& local_connection = projection.connections.at(i);
 			auto const ans = population_post.neurons.at(local_connection.index_post.first)
@@ -235,17 +236,15 @@ NetworkGraph build_network_graph(
 			                                 .at(i)
 			                                 .atomic_neurons_on_target_compartment) {
 				auto const an = ans.at(an_target);
+				auto const hemisphere = an.toNeuronRowOnDLS().toHemisphereOnDLS();
+				if (!index_per_hemisphere.contains(hemisphere)) {
+					index_per_hemisphere[hemisphere] = 0;
+				}
 				auto const vertex_descriptor =
 				    local_synapse_vertices.at(an.toNeuronRowOnDLS().toHemisphereOnDLS());
-				auto const& vertex_property = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
-				    result.get_graph().get_vertex_property(vertex_descriptor));
-				size_t const index_on_vertex = std::distance(
-				    vertex_property.get_columns().begin(),
-				    std::find(
-				        vertex_property.get_columns().begin(), vertex_property.get_columns().end(),
-				        an.toNeuronColumnOnDLS()));
 				result.m_graph_translation.projections[d].at(i).push_back(
-				    std::pair{vertex_descriptor, index_on_vertex});
+				    std::pair{vertex_descriptor, index_per_hemisphere.at(hemisphere)});
+				index_per_hemisphere.at(hemisphere)++;
 			}
 		}
 	}
