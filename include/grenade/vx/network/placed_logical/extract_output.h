@@ -64,8 +64,6 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
  * Extract to be recorded observable data of a plasticity rule.
  * @param data Data containing observables
  * @param network_graph Network graph to use for hardware to logical network translation
- * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the
- * observables
  * @param descriptor Descriptor to plasticity rule to extract observable data for
  * @return Observable data per batch entry
  */
