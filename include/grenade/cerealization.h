@@ -1,5 +1,5 @@
 #pragma once
-#include "haldls/cerealization.tcc"
+#include "cereal/types/haldls/cereal.tcc"
 
 #define EXPLICIT_INSTANTIATE_CEREAL_LOAD_SAVE(CLASS_NAME)                                          \
 	template SYMBOL_VISIBLE void CLASS_NAME ::load(                                                \

@@ -17,6 +17,7 @@
 #include "lola/vx/v3/cadc.h"
 #include "lola/vx/v3/ppu.h"
 #include "lola/vx/v3/synapse.h"
+#include "stadls/vx/v3/container_ticket.h"
 #include "stadls/vx/v3/playback_generator.h"
 #include "stadls/vx/v3/playback_program.h"
 #include "stadls/vx/v3/playback_program_builder.h"
@@ -112,22 +113,18 @@ private:
 	struct BatchEntry
 	{
 		typedef halco::common::typed_array<
-		    std::optional<
-		        stadls::vx::v3::PlaybackProgram::ContainerTicket<haldls::vx::v3::PPUMemoryBlock>>,
+		    std::optional<stadls::vx::v3::ContainerTicket>,
 		    halco::hicann_dls::vx::PPUOnDLS>
 		    ticket_ppu_type;
 
 		ticket_ppu_type m_ppu_result;
 
-		typedef std::optional<
-		    stadls::vx::v3::PlaybackProgram::ContainerTicket<haldls::vx::v3::NullPayloadReadable>>
-		    event_guard_ticket_type;
+		typedef std::optional<stadls::vx::v3::ContainerTicket> event_guard_ticket_type;
 		event_guard_ticket_type m_ticket_events_begin;
 		event_guard_ticket_type m_ticket_events_end;
 
 		typedef halco::common::typed_array<
-		    std::optional<stadls::vx::v3::PlaybackProgram::ContainerTicket<
-		        lola::vx::v3::ExternalPPUMemoryBlock>>,
+		    std::optional<stadls::vx::v3::ContainerTicket>,
 		    halco::hicann_dls::vx::PPUOnDLS>
 		    ticket_extmem_type;
 

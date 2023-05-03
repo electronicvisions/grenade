@@ -9,6 +9,7 @@
 #include "haldls/vx/fpga.h"
 #include "haldls/vx/phy.h"
 #include "haldls/vx/v3/barrier.h"
+#include "stadls/vx/v3/container_ticket.h"
 #include "stadls/vx/v3/playback_program.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 #include "stadls/vx/v3/run.h"
@@ -90,7 +91,7 @@ void perform_post_fail_analysis(
 		// perform stat readout at the end of the experiment
 		auto ticket_arq = builder.read(HicannARQStatusOnFPGA());
 
-		std::vector<PlaybackProgram::ContainerTicket<PhyStatus>> tickets_phy;
+		std::vector<ContainerTicket> tickets_phy;
 		for (auto coord : iter_all<PhyStatusOnFPGA>()) {
 			tickets_phy.emplace_back(builder.read(coord));
 		}

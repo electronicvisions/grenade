@@ -12,6 +12,7 @@
 #include "haldls/vx/v3/timer.h"
 #include "hate/timer.h"
 #include "stadls/visitors.h"
+#include "stadls/vx/container_ticket.h"
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
@@ -171,12 +172,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	hate::Timer const read_timer;
 	PlaybackProgramBuilder read_builder;
-	halco::common::typed_array<
-	    std::optional<PlaybackProgram::ContainerTicket<haldls::vx::v3::PPUMemory>>, PPUMemoryOnDLS>
+	halco::common::typed_array<std::optional<ContainerTicket>, PPUMemoryOnDLS>
 	    read_ticket_ppu_memory;
-	halco::common::typed_array<
-	    std::optional<PlaybackProgram::ContainerTicket<lola::vx::v3::SynapseWeightMatrix>>,
-	    SynapseWeightMatrixOnDLS>
+	halco::common::typed_array<std::optional<ContainerTicket>, SynapseWeightMatrixOnDLS>
 	    read_ticket_synaptic_weights;
 	if (connection_state_storage.enable_differential_config && ppu_symbols) {
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -380,12 +378,15 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
 				assert(read_ticket_ppu_memory[ppu]);
 				connection_state_storage.current_config.ppu_memory[ppu] =
-				    read_ticket_ppu_memory[ppu]->get();
+				    dynamic_cast<haldls::vx::v3::PPUMemory const&>(
+				        read_ticket_ppu_memory[ppu]->get());
 			}
 			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
 				assert(read_ticket_synaptic_weights[coord]);
 				connection_state_storage.current_config.synapse_blocks[coord.toSynapseBlockOnDLS()]
-				    .matrix.weights = read_ticket_synaptic_weights[coord]->get().values;
+				    .matrix.weights = dynamic_cast<lola::vx::v3::SynapseWeightMatrix const&>(
+				                          read_ticket_synaptic_weights[coord]->get())
+				                          .values;
 			}
 			connection_state_storage.current_config_words.clear();
 			haldls::vx::visit_preorder(

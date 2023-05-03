@@ -303,8 +303,8 @@ void ExecutionInstanceBuilder::process(
 			}
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 				assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
-				auto const block =
-				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get();
+				auto const block = dynamic_cast<PPUMemoryBlock const&>(
+				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get());
 				auto const values = from_vector_unit_row(block);
 				auto& samples = sample_batches.at(batch_index).at(0).data;
 
@@ -320,8 +320,8 @@ void ExecutionInstanceBuilder::process(
 		} else {
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 				assert(m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]);
-				auto const local_block =
-				    m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]->get();
+				auto const local_block = dynamic_cast<ExternalPPUMemoryBlock const&>(
+				    m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]->get());
 
 				uint32_t const local_block_size_expectation =
 				    (local_block.size() - ppu_vector_alignment /* num samples */) /
@@ -826,7 +826,9 @@ void ExecutionInstanceBuilder::process(
 					    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(
 					        vertex)[ppu];
 					assert(local_ticket);
-					auto const bytes = local_ticket->get().get_bytes();
+					auto const bytes = dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(
+					                       local_ticket->get())
+					                       .get_bytes();
 					if (bytes.size() != data.get_recorded_scratchpad_memory_size()) {
 						throw std::logic_error(
 						    "Recording scratchpad memory size (" + std::to_string(bytes.size()) +
@@ -851,7 +853,9 @@ void ExecutionInstanceBuilder::process(
 					    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(
 					        vertex)[ppu];
 					assert(local_ticket);
-					auto const bytes = local_ticket->get().get_bytes();
+					auto const bytes = dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(
+					                       local_ticket->get())
+					                       .get_bytes();
 					if (bytes.size() !=
 					    data.get_recorded_scratchpad_memory_size() * data.get_timer().num_periods) {
 						throw std::logic_error(
@@ -948,8 +952,11 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
 			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
 			if (scheduler_finished) {
-				auto const value =
-				    ppu::detail::Status(scheduler_finished->get().at(0).get_value().value());
+				auto const value = ppu::detail::Status(
+				    dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(scheduler_finished->get())
+				        .at(0)
+				        .get_value()
+				        .value());
 				if (value != ppu::detail::Status::idle) {
 					LOG4CXX_ERROR(
 					    logger, "On-PPU scheduler didn't finish operation (" << ppu << ").");
@@ -958,7 +965,11 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 			auto const& scheduler_event_drop_count =
 			    batch_entry.m_ppu_scheduler_event_drop_count[ppu];
 			if (scheduler_event_drop_count) {
-				auto const value = scheduler_event_drop_count->get().at(0).get_value().value();
+				auto const value = dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+				                       scheduler_event_drop_count->get())
+				                       .at(0)
+				                       .get_value()
+				                       .value();
 				if (value != 0) {
 					LOG4CXX_ERROR(
 					    logger, "On-PPU scheduler could not execute all tasks ("
@@ -967,8 +978,11 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 			}
 			for (auto const& timer_event_drop_counts : batch_entry.m_ppu_timer_event_drop_count) {
 				if (timer_event_drop_counts[ppu]) {
-					auto const value =
-					    timer_event_drop_counts[ppu]->get().at(0).get_value().value();
+					auto const value = dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+					                       timer_event_drop_counts[ppu]->get())
+					                       .at(0)
+					                       .get_value()
+					                       .value();
 					if (value != 0) {
 						LOG4CXX_ERROR(
 						    logger, "On-PPU timer could not insert all requested tasks into "
@@ -978,7 +992,8 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 				}
 			}
 			if (batch_entry.m_ppu_mailbox[ppu]) {
-				auto mailbox = batch_entry.m_ppu_mailbox[ppu]->get();
+				auto mailbox = dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+				    batch_entry.m_ppu_mailbox[ppu]->get());
 				LOG4CXX_DEBUG(
 				    logger, "PPU(" << ppu.value() << ") mailbox:\n"
 				                   << mailbox.to_string());

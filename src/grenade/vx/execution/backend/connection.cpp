@@ -31,10 +31,10 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
 	stadls::vx::v3::run(connection, builder.done());
 
-	if (jtag_id_ticket.get().get_version() != 3) {
+	if (dynamic_cast<JTAGIdCode const&>(jtag_id_ticket.get()).get_version() != 3) {
 		std::stringstream ss;
 		ss << "Unexpected chip version: ";
-		ss << jtag_id_ticket.get().get_version();
+		ss << dynamic_cast<JTAGIdCode const&>(jtag_id_ticket.get()).get_version();
 		throw std::runtime_error(ss.str());
 	}
 }
