@@ -87,7 +87,7 @@ RoutingBuilder::get_internal_sources(
 	std::vector<SourceOnPADIBusManager::InternalSource> internal_sources;
 	for (auto const padi_bus : iter_all<PADIBusOnDLS>()) {
 		auto const& local_padi_bus_constraints = padi_bus_constraints[padi_bus];
-		for (auto const neuron : local_padi_bus_constraints.neuron_sources) {
+		for (auto const& neuron : local_padi_bus_constraints.neuron_sources) {
 			SourceOnPADIBusManager::InternalSource source;
 			source.neuron = neuron;
 			if (std::find_if(
@@ -97,7 +97,7 @@ RoutingBuilder::get_internal_sources(
 				internal_sources.push_back(source);
 			}
 		}
-		for (auto const neuron : local_padi_bus_constraints.only_recorded_neurons) {
+		for (auto const& neuron : local_padi_bus_constraints.only_recorded_neurons) {
 			SourceOnPADIBusManager::InternalSource source;
 			source.neuron = neuron;
 			if (std::find_if(

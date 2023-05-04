@@ -815,7 +815,7 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 			}
 		}
 		std::sort(neurons.begin(), neurons.end());
-		for (auto const n : neurons) {
+		for (auto const& n : neurons) {
 			columns[n.toNeuronRowOnDLS().toHemisphereOnDLS()].push_back(
 			    n.toNeuronColumnOnDLS().toSynapseOnSynapseRow());
 		}
@@ -1014,7 +1014,7 @@ NetworkGraphBuilder::add_projection_from_external_input(
 		add_padi_bus(graph, resources, padi_bus, instance);
 	}
 	// add synapse drivers
-	for (auto const synapse_driver : used_synapse_drivers) {
+	for (auto const& synapse_driver : used_synapse_drivers) {
 		add_synapse_driver(graph, resources, synapse_driver, connection_result, instance);
 	}
 	// add synapse array views
@@ -1098,7 +1098,7 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
 		add_padi_bus(graph, resources, padi_bus, instance);
 	}
 	// add synapse drivers
-	for (auto const synapse_driver : used_synapse_drivers) {
+	for (auto const& synapse_driver : used_synapse_drivers) {
 		add_synapse_driver(graph, resources, synapse_driver, connection_result, instance);
 	}
 	// add synapse array views
@@ -1159,7 +1159,7 @@ NetworkGraphBuilder::add_projection_from_internal_input(
 	}
 	// add crossbar nodes from neuron event outputs to PADI busses
 	for (auto const& padi_bus : used_padi_bus) {
-		for (auto const neuron_event_output : used_neuron_event_outputs) {
+		for (auto const& neuron_event_output : used_neuron_event_outputs) {
 			static_assert(
 			    PADIBusOnPADIBusBlock::size == NeuronEventOutputOnNeuronBackendBlock::size);
 			if ((padi_bus.toEnum() % PADIBusOnPADIBusBlock::size) !=
@@ -1176,7 +1176,7 @@ NetworkGraphBuilder::add_projection_from_internal_input(
 		add_padi_bus(graph, resources, padi_bus, instance);
 	}
 	// add synapse drivers
-	for (auto const synapse_driver : used_synapse_drivers) {
+	for (auto const& synapse_driver : used_synapse_drivers) {
 		add_synapse_driver(graph, resources, synapse_driver, connection_result, instance);
 	}
 	// add synapse array views
@@ -1252,7 +1252,7 @@ void NetworkGraphBuilder::add_external_output(
 	}
 	// add crossbar nodes from neuron event outputs
 	std::vector<signal_flow::Input> crossbar_l2_output_inputs;
-	for (auto const neuron_event_output : neuron_event_outputs) {
+	for (auto const& neuron_event_output : neuron_event_outputs) {
 		CrossbarL2OutputOnDLS crossbar_l2_output(
 		    neuron_event_output.toNeuronEventOutputOnNeuronBackendBlock());
 		CrossbarNodeOnDLS coord(
