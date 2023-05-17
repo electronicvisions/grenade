@@ -23,6 +23,7 @@
 #include <tbb/parallel_for_each.h>
 
 #include <algorithm>
+#include <fstream>
 #include <map>
 #include <unordered_map>
 
@@ -38,11 +39,15 @@ MAC::Weight::UnsignedWeight MAC::Weight::toInhibitory() const
 	return UnsignedWeight(-std::min(value(), static_cast<value_type>(0)));
 }
 
-signal_flow::Graph::vertex_descriptor MAC::insert_synram(
+std::pair<
+    signal_flow::Graph::vertex_descriptor,
+    std::optional<signal_flow::Graph::vertex_descriptor>>
+MAC::insert_synram(
     signal_flow::Graph& graph,
     Weights&& weights,
     signal_flow::ExecutionInstance const& instance,
     halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
+    std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& madc_recording_neuron,
     signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
 {
 	using namespace haldls::vx::v3;
@@ -146,7 +151,21 @@ signal_flow::Graph::vertex_descriptor MAC::insert_synram(
 	auto const v2 = graph.add(readout, instance, {v1});
 	// add store
 	signal_flow::vertex::DataOutput data_output(signal_flow::ConnectionType::Int8, x_size);
-	return graph.add(data_output, instance, {v2});
+	// add madc recording
+	if (madc_recording_neuron &&
+	    hemisphere == madc_recording_neuron->toNeuronRowOnDLS().toHemisphereOnDLS() &&
+	    madc_recording_neuron->toNeuronColumnOnDLS().value() < x_size) {
+		signal_flow::vertex::MADCReadoutView madc_readout(
+		    *madc_recording_neuron, signal_flow::vertex::MADCReadoutView::Config::membrane);
+		auto const madc_readout_column = madc_recording_neuron->toNeuronColumnOnDLS().value();
+		auto const v3 =
+		    graph.add(madc_readout, instance, {{v1, {madc_readout_column, madc_readout_column}}});
+		signal_flow::vertex::DataOutput madc_data_output(
+		    signal_flow::ConnectionType::TimedMADCSampleFromChipSequence, 1);
+		return {
+		    graph.add(data_output, instance, {v2}), graph.add(madc_data_output, instance, {v3})};
+	}
+	return {graph.add(data_output, instance, {v2}), std::nullopt};
 }
 
 namespace {
@@ -298,11 +317,18 @@ void MAC::build_graph()
 				    m_weights.at(i + y_range.offset).begin() + x_range.offset,
 				    m_weights.at(i + y_range.offset).begin() + x_range.offset + x_range.size);
 			}
-
+			auto const [cadc_readout_data_vertex, madc_readout_data_vertex] = insert_synram(
+			    m_graph, std::move(local_weights), instance, hemisphere,
+			    m_madc_recording_path == ""
+			        ? std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>(std::nullopt)
+			        : std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>(
+			              m_madc_recording_neuron),
+			    crossbar_input_vertex);
+			if (madc_readout_data_vertex) {
+				m_madc_recording_vertices[instance] = *madc_readout_data_vertex;
+			}
 			hemisphere_outputs[instance].insert(
-			    {hemisphere, signal_flow::Input(insert_synram(
-			                     m_graph, std::move(local_weights), instance, hemisphere,
-			                     crossbar_input_vertex))});
+			    {hemisphere, signal_flow::Input(cadc_readout_data_vertex)});
 		}
 	}
 
@@ -465,6 +491,27 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		    logger, "run(): event inter-spike-interval statistics: "
 		                << "mean(" << boost::accumulators::mean(acc) << "), std("
 		                << std::sqrt(boost::accumulators::variance(acc)) << ")" << std::endl);
+	}
+	if (m_madc_recording_path != "" && !m_madc_recording_vertices.empty()) {
+		if (!std::filesystem::exists(m_madc_recording_path)) {
+			std::ofstream file(m_madc_recording_path);
+			assert(file.is_open());
+			file << "ExecutionIndex\tbatch\ttime\tvalue\n";
+		}
+		std::ofstream file(m_madc_recording_path, std::ios_base::app);
+		assert(file.is_open());
+		for (auto [instance, vertex] : m_madc_recording_vertices) {
+			auto const madc_data =
+			    std::get<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(
+			        output_activation_map.data.at(vertex));
+			for (size_t b = 0; b < output_activation_map.batch_size(); ++b) {
+				auto const& local_madc_data = madc_data.at(b);
+				for (auto const& sample : local_madc_data) {
+					file << instance.toExecutionIndex().value() << "\t" << b << "\t"
+					     << sample.time.value() << "\t" << sample.data.value() << "\n";
+				}
+			}
+		}
 	}
 	LOG4CXX_DEBUG(logger, "run(): output processing time: " << output_timer.print());
 	return output;

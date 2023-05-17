@@ -8,9 +8,11 @@
 #include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
 #include "halco/common/geometry.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/synapse_driver.h"
 #include "lola/vx/v3/synapse.h"
+#include <string>
 
 namespace cereal {
 struct access;
@@ -64,12 +66,18 @@ public:
 	 * @param num_sends Number of times a input activation is sent to the specific row
 	 * @param wait_between_events Wait time between input events in FPGA cycles
 	 * @param enable_loopback Enable loopback of events with statistic analysis
+	 * @param madc_recording_neuron Neuron ID to record via MADC
+	 * @param madc_recording_path Path to which to store MADC neuron membrane recordings in CSV
+	 * format. If file exists new data is appended. By default recording is disabled.
 	 */
 	template <typename WeightsT>
 	MAC(WeightsT&& weights,
 	    size_t num_sends = 1,
 	    common::Time wait_between_events = common::Time(25),
-	    bool enable_loopback = false);
+	    bool enable_loopback = false,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS const& madc_recording_neuron =
+	        halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(),
+	    std::string madc_recording_path = "");
 
 	/**
 	 * Run given set of activations weights given on construction.
@@ -93,14 +101,19 @@ private:
 	 * @param weights Weights to use
 	 * @param instance Execution instance to place onto
 	 * @param hemisphere Hemisphere to place onto
+	 * @param madc_recording_neuron Optional location of neuron to record via MADC
 	 * @param crossbar_input_vertex Incoming crossbar input vertex to use
 	 * @return Data output vertex to measured membrane potential values
 	 */
-	static signal_flow::Graph::vertex_descriptor insert_synram(
+	static std::pair<
+	    signal_flow::Graph::vertex_descriptor,
+	    std::optional<signal_flow::Graph::vertex_descriptor>>
+	insert_synram(
 	    signal_flow::Graph& graph,
 	    Weights&& weights,
 	    signal_flow::ExecutionInstance const& instance,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
+	    std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& madc_recording_neuron,
 	    signal_flow::Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
 
 	bool m_enable_loopback{false};
@@ -114,6 +127,11 @@ private:
 
 	size_t m_num_sends{};
 	common::Time m_wait_between_events{};
+
+	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS m_madc_recording_neuron;
+	std::string m_madc_recording_path;
+	std::unordered_map<signal_flow::ExecutionInstance, signal_flow::Graph::vertex_descriptor>
+	    m_madc_recording_vertices;
 
 	friend struct cereal::access;
 	template <typename Archive>
