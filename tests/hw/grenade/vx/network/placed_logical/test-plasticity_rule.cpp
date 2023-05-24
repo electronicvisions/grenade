@@ -14,6 +14,7 @@
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
+#include "hate/variant.h"
 #include <gtest/gtest.h>
 #include <log4cxx/logger.h>
 
