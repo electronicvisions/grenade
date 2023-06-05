@@ -43,7 +43,7 @@ uint8_t get_rate_counter(NeuronViewHandle const& handle, size_t column)
 
 } // namespace detail
 
-uint8_t NeuronViewHandle::get_rate_counter(size_t column, bool reset)
+inline uint8_t NeuronViewHandle::get_rate_counter(size_t column, bool reset)
 {
 	if (reset) {
 		return detail::get_rate_counter<true>(*this, column);
@@ -68,7 +68,7 @@ NeuronViewHandle::Row get_rate_counters(NeuronViewHandle const& handle)
 
 } // namespace detail
 
-NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
+inline NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
 {
 	if (reset) {
 		return detail::get_rate_counters<true>(*this);
