@@ -508,7 +508,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::ArgMax const& data)
+    [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::ArgMax const& data)
 {
 	// get in edge
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -617,7 +618,8 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::DataOutput const& data)
+    [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::DataOutput const& data)
 {
 	// get in edge
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);

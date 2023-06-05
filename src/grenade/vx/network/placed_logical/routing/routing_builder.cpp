@@ -425,7 +425,7 @@ void RoutingBuilder::apply_source_labels(
 								unset_labels.push_back(std::tuple{descriptor, i, compartment, an});
 							} // else no label is needed
 						} else {
-							auto const& spike_master =
+							[[maybe_unused]] auto const& spike_master =
 							    neurons.at(i).compartments.at(compartment).spike_master;
 							assert(spike_master);
 							assert(spike_master->neuron_on_compartment == an);

@@ -123,7 +123,8 @@ void CEREAL_LOAD_FUNCTION_NAME(Archive& ar, grenade::vx::signal_flow::Graph::gra
 		int v;
 		ar(CEREAL_NVP(u));
 		ar(CEREAL_NVP(v));
-		auto const [_, inserted] = boost::add_edge(vertices.at(u), vertices.at(v), data);
+		[[maybe_unused]] auto const [_, inserted] =
+		    boost::add_edge(vertices.at(u), vertices.at(v), data);
 		assert(inserted);
 	}
 }

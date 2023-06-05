@@ -119,7 +119,7 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
+    [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::MADCReadoutView const& data)
 {
 	using namespace halco::hicann_dls::vx::v3;
