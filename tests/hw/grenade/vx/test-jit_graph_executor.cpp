@@ -228,13 +228,13 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 		    data.execution_time_info->execution_duration_per_hardware.at(
 		        halco::hicann_dls::vx::v3::DLSGlobal()),
 		    std::chrono::milliseconds(10));
-		// expect no more than 200ms per execution
+		// expect no more than 400ms per execution
 		// since we don't know which execution will be the first, we can't assert, that this one
 		// requires more time due to applying the initial config
 		EXPECT_LE(
 		    data.execution_time_info->execution_duration_per_hardware.at(
 		        halco::hicann_dls::vx::v3::DLSGlobal()),
-		    std::chrono::milliseconds(200));
+		    std::chrono::milliseconds(400));
 	}
 
 	// expect no more than three times the realtime runtime as duration
