@@ -155,6 +155,7 @@ struct Compiler
 	    get_libnux_runtime("nux_runtime_vx_v3.o"),
 	    "-Wl,--no-whole-archive",
 	    "-lc",
+	    "-lgcc",
 	    "-Bdynamic",
 	};
 
