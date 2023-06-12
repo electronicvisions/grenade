@@ -282,3 +282,46 @@ TEST(build_network_graph, GranularitySweep)
 		                        << build_network_graph_timer_print << ").");
 	}
 }
+
+TEST(build_network_graph, ExecutionInstance)
+{
+	NetworkBuilder builder;
+
+	ExternalPopulation population_external{1};
+	auto const population_descriptor_input = builder.add(population_external);
+
+	Population population_internal;
+	population_internal.neurons.push_back(Population::Neuron(
+	    get_logical_neuron(AtomicNeuronOnDLS()),
+	    {{CompartmentOnLogicalNeuron(),
+	      Population::Neuron::Compartment(
+	          Population::Neuron::Compartment::SpikeMaster(0, true),
+	          {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}})}}));
+	auto const population_descriptor_output = builder.add(population_internal);
+
+	Projection::Connections projection_connections;
+	projection_connections.push_back(
+	    {{0, CompartmentOnLogicalNeuron()},
+	     {0, CompartmentOnLogicalNeuron()},
+	     Projection::Connection::Weight(63)});
+	Projection projection{
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+	    population_descriptor_input, population_descriptor_output};
+	builder.add(projection);
+
+	auto const network = builder.done();
+
+	auto const routing_result = build_routing(network);
+
+	grenade::vx::signal_flow::ExecutionInstance execution_instance(
+	    grenade::vx::signal_flow::ExecutionIndex(1), DLSGlobal(1));
+	auto network_graph = build_network_graph(network, routing_result, execution_instance);
+
+	for (auto const vertex :
+	     boost::make_iterator_range(boost::vertices(network_graph.get_graph().get_graph()))) {
+		EXPECT_EQ(
+		    network_graph.get_graph().get_execution_instance_map().left.at(
+		        network_graph.get_graph().get_vertex_descriptor_map().left.at(vertex)),
+		    execution_instance);
+	}
+}

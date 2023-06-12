@@ -8,6 +8,7 @@
 #include "grenade/vx/network/placed_logical/population.h"
 #include "grenade/vx/network/placed_logical/projection.h"
 #include "grenade/vx/network/placed_logical/routing_result.h"
+#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "halco/hicann-dls/vx/v3/background.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -31,9 +32,13 @@ namespace grenade::vx::network::placed_logical GENPYBIND_TAG_GRENADE_VX_NETWORK_
  * Build a hardware network representation for a given network.
  * @param network Network for which to build hardware network representation
  * @param routing_result Routing result to use to build hardware network representation
+ * @param execution_instance Execution instance to build the hardware graph into
  */
 NetworkGraph GENPYBIND(visible) build_network_graph(
-    std::shared_ptr<Network> const& network, RoutingResult const& routing_result) SYMBOL_VISIBLE;
+    std::shared_ptr<Network> const& network,
+    RoutingResult const& routing_result,
+    signal_flow::ExecutionInstance const& execution_instance = signal_flow::ExecutionInstance())
+    SYMBOL_VISIBLE;
 
 
 /**

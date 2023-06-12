@@ -17,7 +17,9 @@ using namespace halco::common;
 
 
 NetworkGraph build_network_graph(
-    std::shared_ptr<Network> const& network, RoutingResult const& routing_result)
+    std::shared_ptr<Network> const& network,
+    RoutingResult const& routing_result,
+    signal_flow::ExecutionInstance const& instance)
 {
 	hate::Timer timer;
 	assert(network);
@@ -26,8 +28,6 @@ NetworkGraph build_network_graph(
 	NetworkGraph result;
 	result.m_routing_duration = routing_result.timing_statistics.routing;
 	result.m_network = network;
-
-	signal_flow::ExecutionInstance const instance; // Only one instance used
 
 	NetworkGraphBuilder::Resources resources;
 
