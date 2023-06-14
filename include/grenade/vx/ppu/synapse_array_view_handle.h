@@ -38,7 +38,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Weight values of requested row without column masking
 	 */
-	Row get_weights(size_t index_row);
+	Row get_weights(size_t index_row) const;
 
 	/**
 	 * Set weight values of specified row.
@@ -48,7 +48,7 @@ struct SynapseArrayViewHandle
 	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere or wrong row
 	 * not present in rows.
 	 */
-	void set_weights(Row const& value, size_t index_row);
+	void set_weights(Row const& value, size_t index_row) const;
 
 	/**
 	 * Get causal correlation of specified row.
@@ -57,7 +57,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Correlation values of requested row without column masking
 	 */
-	Row get_causal_correlation(size_t index_row);
+	Row get_causal_correlation(size_t index_row) const;
 
 	/**
 	 * Get acausal correlation of specified row.
@@ -66,7 +66,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Correlation values of requested row without column masking
 	 */
-	Row get_acausal_correlation(size_t index_row);
+	Row get_acausal_correlation(size_t index_row) const;
 
 	/**
 	 * Correlation values of a synapse row.
@@ -86,7 +86,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Correlation values of requested row without column masking
 	 */
-	CorrelationRow get_correlation(size_t index_row, bool reset);
+	CorrelationRow get_correlation(size_t index_row, bool reset) const;
 
 	/**
 	 * Reset correlation measurement of specified row.
@@ -95,7 +95,7 @@ struct SynapseArrayViewHandle
 	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere or wrong row
 	 * not present in the handle.
 	 */
-	void reset_correlation(size_t index_row);
+	void reset_correlation(size_t index_row) const;
 #endif
 };
 
