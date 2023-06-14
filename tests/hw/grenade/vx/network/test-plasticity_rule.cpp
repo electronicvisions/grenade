@@ -708,3 +708,176 @@ TEST(PlasticityRule, ExecutorInitialState)
 	EXPECT_EQ(with_weight_32, weight_32);
 	EXPECT_EQ(with_weight_63, weight_63);
 }
+
+TEST(PlasticityRule, SynapseRowViewHandleRange)
+{
+	using namespace grenade::vx;
+	using namespace grenade::vx::network;
+
+	common::ExecutionInstanceID instance;
+
+	execution::JITGraphExecutor::ChipConfigs chip_configs;
+	chip_configs[instance] = lola::vx::v3::Chip();
+
+	signal_flow::IODataMap inputs;
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+
+	// Construct connection to HW
+	execution::JITGraphExecutor executor;
+
+	NetworkBuilder network_builder;
+
+	Population::Neurons neurons{Population::Neuron(
+	    LogicalNeuronOnDLS(
+	        LogicalNeuronCompartments(
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	        AtomicNeuronOnDLS()),
+	    Population::Neuron::Compartments{
+	        {CompartmentOnLogicalNeuron(),
+	         Population::Neuron::Compartment{
+	             Population::Neuron::Compartment::SpikeMaster(0, false),
+	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+	Population population{std::move(neurons)};
+	auto const population_descriptor = network_builder.add(population);
+
+	Projection::Connections projection_connections;
+	for (size_t i = 0; i < population.neurons.size(); ++i) {
+		projection_connections.push_back(
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(12)});
+	}
+	Projection projection{
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+	    population_descriptor, population_descriptor};
+	auto const projection_descriptor = network_builder.add(projection);
+
+	PlasticityRule plasticity_rule;
+	plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
+	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
+	plasticity_rule.timer.num_periods = 1;
+	plasticity_rule.projections.push_back(projection_descriptor);
+
+	std::stringstream kernel;
+	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/synapse_row_view_handle_range.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
+	kernel << "#include \"libnux/vx/location.h\"\n";
+	kernel << "using namespace grenade::vx::ppu;\n";
+	kernel << "using namespace libnux::vx;\n";
+	kernel << "extern volatile PPUOnDLS ppu;\n";
+	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
+	          "std::array<NeuronViewHandle, 0>&)\n";
+	kernel << "{\n";
+	kernel << "  if (synapses[0].hemisphere != ppu) {\n";
+	kernel << "    return;\n";
+	kernel << "  }\n";
+	kernel << "  for (auto const synapse_row: make_synapse_row_view_handle_range(synapses)) {\n";
+	kernel << "  }\n";
+	kernel << "}\n";
+	plasticity_rule.kernel = kernel.str();
+
+	network_builder.add(plasticity_rule);
+
+	auto const network = network_builder.done();
+	auto const routing_result = routing::PortfolioRouter{}(network);
+	auto const network_graph = build_network_graph(network, routing_result);
+
+	execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+}
+
+TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
+{
+	using namespace grenade::vx;
+	using namespace grenade::vx::network;
+
+	common::ExecutionInstanceID instance;
+
+	execution::JITGraphExecutor::ChipConfigs chip_configs;
+	chip_configs[instance] = lola::vx::v3::Chip();
+
+	signal_flow::IODataMap inputs;
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+
+	// Construct connection to HW
+	execution::JITGraphExecutor executor;
+
+	NetworkBuilder network_builder;
+
+	Population::Neurons neurons{Population::Neuron(
+	    LogicalNeuronOnDLS(
+	        LogicalNeuronCompartments(
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	        AtomicNeuronOnDLS()),
+	    Population::Neuron::Compartments{
+	        {CompartmentOnLogicalNeuron(),
+	         Population::Neuron::Compartment{
+	             Population::Neuron::Compartment::SpikeMaster(0, false),
+	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	               Receptor(Receptor::ID(), Receptor::Type::inhibitory)}}}}})};
+	Population population{std::move(neurons)};
+	auto const population_descriptor = network_builder.add(population);
+
+	Projection::Connections projection_exc_connections;
+	for (size_t i = 0; i < population.neurons.size(); ++i) {
+		projection_exc_connections.push_back(
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(0)});
+	}
+	Projection projection_exc{
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_exc_connections),
+	    population_descriptor, population_descriptor};
+	auto const projection_exc_descriptor = network_builder.add(projection_exc);
+
+	Projection::Connections projection_inh_connections;
+	for (size_t i = 0; i < population.neurons.size(); ++i) {
+		projection_inh_connections.push_back(
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(12)});
+	}
+	Projection projection_inh{
+	    Receptor(Receptor::ID(), Receptor::Type::inhibitory), std::move(projection_inh_connections),
+	    population_descriptor, population_descriptor};
+	auto const projection_inh_descriptor = network_builder.add(projection_inh);
+
+	PlasticityRule plasticity_rule;
+	plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
+	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
+	plasticity_rule.timer.num_periods = 1;
+	plasticity_rule.projections.push_back(projection_exc_descriptor);
+	plasticity_rule.projections.push_back(projection_inh_descriptor);
+
+	std::stringstream kernel;
+	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/synapse_row_view_handle_range.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
+	kernel << "#include \"libnux/vx/location.h\"\n";
+	kernel << "using namespace grenade::vx::ppu;\n";
+	kernel << "using namespace libnux::vx;\n";
+	kernel << "extern volatile PPUOnDLS ppu;\n";
+	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 2>& synapses, "
+	          "std::array<NeuronViewHandle, 0>&)\n";
+	kernel << "{\n";
+	kernel << "  if (synapses[0].hemisphere != ppu) {\n";
+	kernel << "    return;\n";
+	kernel << "  }\n";
+	kernel << "  for (auto const synapse_row: make_synapse_row_view_handle_range(synapses)) "
+	          "{\n";
+	kernel << "  }\n";
+	kernel << "}\n";
+	plasticity_rule.kernel = kernel.str();
+
+	network_builder.add(plasticity_rule);
+
+	auto const network = network_builder.done();
+	auto const routing_result = routing::PortfolioRouter{}(network);
+	auto const network_graph = build_network_graph(network, routing_result);
+
+	execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+}
