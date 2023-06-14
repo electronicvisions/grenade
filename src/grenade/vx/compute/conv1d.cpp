@@ -1,6 +1,5 @@
 #include "grenade/vx/compute/conv1d.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/event.h"
@@ -8,13 +7,11 @@
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
-#include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
-#include <cereal/types/vector.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
 
@@ -122,21 +119,4 @@ std::vector<std::vector<signal_flow::Int8>> Conv1d::run(
 	return output;
 }
 
-template <typename Archive>
-void Conv1d::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_enable_loopback);
-	ar(m_input_size);
-	ar(m_kernel_size);
-	ar(m_in_channels);
-	ar(m_out_channels);
-	ar(m_stride);
-	ar(m_mac);
-	ar(m_num_sends);
-	ar(m_wait_between_events);
-}
-
 } // namespace grenade::vx::compute
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::Conv1d)
-CEREAL_CLASS_VERSION(grenade::vx::compute::Conv1d, 0)

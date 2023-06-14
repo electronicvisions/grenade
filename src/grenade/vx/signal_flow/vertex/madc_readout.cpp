@@ -1,9 +1,7 @@
 #include "grenade/vx/signal_flow/vertex/madc_readout.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
-#include "halco/common/cerealization_geometry.h"
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -71,14 +69,4 @@ bool MADCReadoutView::operator!=(MADCReadoutView const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void MADCReadoutView::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_coord);
-	ar(m_config);
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::MADCReadoutView)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::MADCReadoutView, 0)

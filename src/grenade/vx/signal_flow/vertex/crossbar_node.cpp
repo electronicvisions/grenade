@@ -1,8 +1,6 @@
 #include "grenade/vx/signal_flow/vertex/crossbar_node.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/vertex/background_spike_source.h"
-#include "halco/common/cerealization_geometry.h"
 #include <ostream>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -45,14 +43,4 @@ bool CrossbarNode::operator!=(CrossbarNode const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void CrossbarNode::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_coordinate);
-	ar(m_config);
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::CrossbarNode)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::CrossbarNode, 0)

@@ -1,14 +1,11 @@
 #include "grenade/vx/compute/addition.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
-#include "halco/common/cerealization_geometry.h"
-#include <cereal/types/vector.hpp>
 
 namespace grenade::vx::compute {
 
@@ -107,17 +104,4 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 	return outputs;
 }
 
-template <typename Archive>
-void Addition::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_graph);
-	ar(m_input_vertex);
-	ar(m_other_vertex);
-	ar(m_output_vertex);
-	ar(m_other);
-}
-
 } // namespace grenade::vx::compute
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::Addition)
-CEREAL_CLASS_VERSION(grenade::vx::compute::Addition, 0)

@@ -1,13 +1,10 @@
 #include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
-#include "halco/common/cerealization_geometry.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include <ostream>
 #include <stdexcept>
-#include <cereal/types/vector.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
 
@@ -20,15 +17,6 @@ bool SynapseArrayViewSparse::Synapse::operator==(Synapse const& other) const
 bool SynapseArrayViewSparse::Synapse::operator!=(Synapse const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void SynapseArrayViewSparse::Synapse::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(weight);
-	ar(label);
-	ar(index_row);
-	ar(index_column);
 }
 
 
@@ -147,16 +135,4 @@ bool SynapseArrayViewSparse::operator!=(SynapseArrayViewSparse const& other) con
 	return !(*this == other);
 }
 
-template <typename Archive>
-void SynapseArrayViewSparse::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_synapses);
-	ar(m_columns);
-	ar(m_rows);
-	ar(m_synram);
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::SynapseArrayViewSparse)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::SynapseArrayViewSparse, 0)

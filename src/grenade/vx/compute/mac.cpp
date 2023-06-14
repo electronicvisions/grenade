@@ -1,6 +1,5 @@
 #include "grenade/vx/compute/mac.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/compute/detail/range_split.h"
 #include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -12,13 +11,11 @@
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/transformation/concatenation.h"
 #include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
-#include "halco/common/cerealization_geometry.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
-#include <cereal/types/vector.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
 
@@ -517,19 +514,4 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 	return output;
 }
 
-template <typename Archive>
-void MAC::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_enable_loopback);
-	ar(m_graph);
-	ar(m_input_vertex);
-	ar(m_output_vertex);
-	ar(m_weights);
-	ar(m_num_sends);
-	ar(m_wait_between_events);
-}
-
 } // namespace grenade::vx::compute
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::compute::MAC)
-CEREAL_CLASS_VERSION(grenade::vx::compute::MAC, 0)

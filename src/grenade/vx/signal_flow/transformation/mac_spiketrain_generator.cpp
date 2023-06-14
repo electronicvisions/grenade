@@ -1,12 +1,8 @@
 #include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
 
-#include "grenade/cerealization.h"
-#include "halco/common/cerealization_geometry.h"
-#include "halco/common/cerealization_typed_array.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
-#include <cereal/types/polymorphic.hpp>
 
 namespace grenade::vx::signal_flow::transformation {
 
@@ -163,20 +159,4 @@ bool MACSpikeTrainGenerator::equal(vertex::Transformation::Function const& other
 	       (m_wait_between_events == o->m_wait_between_events);
 }
 
-template <typename Archive>
-void MACSpikeTrainGenerator::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_hemisphere_sizes);
-	ar(m_num_sends);
-	ar(m_wait_between_events);
-}
-
 } // namespace grenade::vx::signal_flow::transformation
-
-CEREAL_REGISTER_TYPE(grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(
-    grenade::vx::signal_flow::vertex::Transformation::Function,
-    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator)
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(
-    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator, 0)

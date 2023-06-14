@@ -1,10 +1,7 @@
 #include "grenade/vx/signal_flow/vertex/synapse_driver.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/vertex/padi_bus.h"
-#include "halco/common/cerealization_geometry.h"
-#include "halco/common/cerealization_typed_array.h"
 #include <ostream>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -18,14 +15,6 @@ bool SynapseDriver::Config::operator==(SynapseDriver::Config const& other) const
 bool SynapseDriver::Config::operator!=(SynapseDriver::Config const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void SynapseDriver::Config::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(row_address_compare_mask);
-	ar(row_modes);
-	ar(enable_address_out);
 }
 
 SynapseDriver::SynapseDriver(Coordinate const& coordinate, Config const& config) :
@@ -72,14 +61,4 @@ bool SynapseDriver::operator!=(SynapseDriver const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void SynapseDriver::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_coordinate);
-	ar(m_config);
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::SynapseDriver)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::SynapseDriver, 1)

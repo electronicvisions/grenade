@@ -1,9 +1,7 @@
 #include "grenade/vx/signal_flow/vertex/padi_bus.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/vertex/crossbar_node.h"
-#include "halco/common/cerealization_geometry.h"
 #include <ostream>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -37,14 +35,4 @@ bool PADIBus::operator!=(PADIBus const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void PADIBus::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_coordinate);
-}
-
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::PADIBus)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::PADIBus, 0)

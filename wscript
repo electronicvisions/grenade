@@ -80,7 +80,17 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'haldls_vx_v3_serealization', 'lola_vx_v3_serealization', 'stadls_vx_v3_serialization', 'TBB'],
+        use = ['grenade_inc', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB'],
+        depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3'] if bld.env.have_ppu_toolchain else [],
+        uselib = 'GRENADE_LIBRARIES',
+    )
+
+    bld(
+        target = 'grenade_vx_serialization',
+        features = 'cxx cxxshlib',
+        source = bld.path.ant_glob('src/cereal/types/grenade/vx/**/*.cpp'),
+        install_path = '${PREFIX}/lib',
+        use = ['grenade_vx', 'haldls_vx_v3_serealization', 'lola_vx_v3_serealization', 'stadls_vx_v3_serialization', 'TBB'],
         depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
@@ -90,7 +100,7 @@ def build(bld):
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp'),
         test_main = 'tests/common/grenade/vx/main.cpp',
-        use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc'],
+        use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc', 'grenade_vx_serialization'],
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=120,
         install_path = '${PREFIX}/bin',

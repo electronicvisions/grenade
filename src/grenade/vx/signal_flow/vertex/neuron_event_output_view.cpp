@@ -1,15 +1,11 @@
 #include "grenade/vx/signal_flow/vertex/neuron_event_output_view.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
-#include "halco/common/cerealization_geometry.h"
 
 #include <algorithm>
 #include <ostream>
 #include <stdexcept>
-#include <cereal/types/map.hpp>
-#include <cereal/types/vector.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
 
@@ -116,13 +112,4 @@ bool NeuronEventOutputView::operator!=(NeuronEventOutputView const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void NeuronEventOutputView::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_neurons);
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::NeuronEventOutputView)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::NeuronEventOutputView, 1)

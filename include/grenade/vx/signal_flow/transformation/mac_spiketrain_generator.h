@@ -19,7 +19,7 @@ class MACSpikeTrainGenerator_get_spike_label_Test;
 
 namespace grenade::vx::signal_flow::transformation {
 
-struct MACSpikeTrainGenerator : public vertex::Transformation::Function
+struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public vertex::Transformation::Function
 {
 	~MACSpikeTrainGenerator() SYMBOL_VISIBLE;
 

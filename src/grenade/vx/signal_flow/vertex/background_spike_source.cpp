@@ -1,8 +1,6 @@
 #include "grenade/vx/signal_flow/vertex/background_spike_source.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/vertex/external_input.h"
-#include "halco/common/cerealization_geometry.h"
 #include <ostream>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -37,14 +35,4 @@ BackgroundSpikeSource::Coordinate const& BackgroundSpikeSource::get_coordinate()
 	return m_coordinate;
 }
 
-template <typename Archive>
-void BackgroundSpikeSource::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(CEREAL_NVP(m_config));
-	ar(CEREAL_NVP(m_coordinate));
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::BackgroundSpikeSource)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::BackgroundSpikeSource, 0)

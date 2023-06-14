@@ -1,6 +1,5 @@
 #include "grenade/vx/signal_flow/vertex/relu.h"
 
-#include "grenade/cerealization.h"
 #include <ostream>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -33,13 +32,4 @@ bool ReLU::operator!=(ReLU const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void ReLU::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_size);
-}
-
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::ReLU)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::ReLU, 0)

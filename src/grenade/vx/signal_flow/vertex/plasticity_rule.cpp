@@ -1,11 +1,8 @@
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 
-#include "grenade/cerealization.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
-#include "halco/common/cerealization_geometry.h"
-#include "halco/common/cerealization_typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/math.h"
@@ -14,11 +11,6 @@
 #include <algorithm>
 #include <ostream>
 #include <stdexcept>
-#include <cereal/types/map.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/variant.hpp>
-#include <cereal/types/vector.hpp>
 #include <inja/inja.hpp>
 #include <log4cxx/logger.h>
 
@@ -32,14 +24,6 @@ bool PlasticityRule::Timer::operator==(Timer const& other) const
 bool PlasticityRule::Timer::operator!=(Timer const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void PlasticityRule::Timer::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(start);
-	ar(period);
-	ar(num_periods);
 }
 
 std::ostream& operator<<(std::ostream& os, PlasticityRule::Timer const& timer)
@@ -57,12 +41,6 @@ bool PlasticityRule::RawRecording::operator==(RawRecording const& other) const
 bool PlasticityRule::RawRecording::operator!=(RawRecording const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void PlasticityRule::RawRecording::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(scratchpad_memory_size);
 }
 
 std::ostream& operator<<(std::ostream& os, PlasticityRule::RawRecording const& recording)
@@ -86,14 +64,6 @@ bool PlasticityRule::TimedRecording::ObservablePerSynapse::operator!=(
     ObservablePerSynapse const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void PlasticityRule::TimedRecording::ObservablePerSynapse::serialize(
-    Archive& ar, std::uint32_t const)
-{
-	ar(type);
-	ar(layout_per_row);
 }
 
 std::ostream& operator<<(
@@ -122,14 +92,6 @@ bool PlasticityRule::TimedRecording::ObservablePerNeuron::operator!=(
 	return !(*this == other);
 }
 
-template <typename Archive>
-void PlasticityRule::TimedRecording::ObservablePerNeuron::serialize(
-    Archive& ar, std::uint32_t const)
-{
-	ar(type);
-	ar(layout);
-}
-
 std::ostream& operator<<(
     std::ostream& os, PlasticityRule::TimedRecording::ObservablePerNeuron const& observable)
 {
@@ -154,13 +116,6 @@ bool PlasticityRule::TimedRecording::ObservableArray::operator!=(ObservableArray
 	return !(*this == other);
 }
 
-template <typename Archive>
-void PlasticityRule::TimedRecording::ObservableArray::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(type);
-	ar(size);
-}
-
 std::ostream& operator<<(
     std::ostream& os, PlasticityRule::TimedRecording::ObservableArray const& observable)
 {
@@ -178,12 +133,6 @@ bool PlasticityRule::TimedRecording::operator==(TimedRecording const& other) con
 bool PlasticityRule::TimedRecording::operator!=(TimedRecording const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void PlasticityRule::TimedRecording::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(observables);
 }
 
 std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecording const& recording)
@@ -208,13 +157,6 @@ bool PlasticityRule::SynapseViewShape::operator!=(SynapseViewShape const& other)
 	return !(*this == other);
 }
 
-template <typename Archive>
-void PlasticityRule::SynapseViewShape::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(num_rows);
-	ar(columns.size());
-}
-
 std::ostream& operator<<(std::ostream& os, PlasticityRule::SynapseViewShape const& shape)
 {
 	os << "SynapseViewShape(num_rows: " << shape.num_rows
@@ -231,14 +173,6 @@ bool PlasticityRule::NeuronViewShape::operator==(NeuronViewShape const& other) c
 bool PlasticityRule::NeuronViewShape::operator!=(NeuronViewShape const& other) const
 {
 	return !(*this == other);
-}
-
-template <typename Archive>
-void PlasticityRule::NeuronViewShape::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(columns);
-	ar(row);
-	ar(neuron_readout_sources);
 }
 
 std::ostream& operator<<(std::ostream& os, PlasticityRule::NeuronViewShape const& shape)
@@ -1390,16 +1324,6 @@ bool PlasticityRule::operator!=(PlasticityRule const& other) const
 	return !(*this == other);
 }
 
-template <typename Archive>
-void PlasticityRule::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(m_kernel);
-	ar(m_timer);
-	ar(m_synapse_view_shapes);
-	ar(m_neuron_view_shapes);
-	ar(m_recording);
-}
-
 std::ostream& operator<<(
     std::ostream& os,
     PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow const& layout)
@@ -1435,8 +1359,3 @@ std::ostream& operator<<(
 }
 
 } // namespace grenade::vx::signal_flow::vertex
-
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::PlasticityRule::Timer)
-EXPLICIT_INSTANTIATE_CEREAL_SERIALIZE(grenade::vx::signal_flow::vertex::PlasticityRule)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::PlasticityRule::Timer, 0)
-CEREAL_CLASS_VERSION(grenade::vx::signal_flow::vertex::PlasticityRule, 3)

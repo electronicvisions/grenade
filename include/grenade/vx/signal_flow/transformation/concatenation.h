@@ -11,7 +11,7 @@ namespace grenade::vx::signal_flow::transformation {
 
 struct SYMBOL_VISIBLE Concatenation : public vertex::Transformation::Function
 {
-	~Concatenation();
+	~Concatenation() SYMBOL_VISIBLE;
 
 	Concatenation() = default;
 
