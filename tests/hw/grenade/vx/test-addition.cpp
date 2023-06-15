@@ -9,6 +9,7 @@
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex.h"
+#include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -33,7 +34,8 @@ TEST(Addition, Single)
 	grenade::vx::signal_flow::vertex::DataInput data_input(
 	    grenade::vx::signal_flow::ConnectionType::Int8, size);
 
-	grenade::vx::signal_flow::vertex::Addition addition(size);
+	grenade::vx::signal_flow::Vertex addition(grenade::vx::signal_flow::vertex::Transformation(
+	    std::make_unique<grenade::vx::signal_flow::vertex::transformation::Addition>(2, size)));
 
 	grenade::vx::signal_flow::vertex::DataOutput data_output(
 	    grenade::vx::signal_flow::ConnectionType::Int8, size);
@@ -44,7 +46,7 @@ TEST(Addition, Single)
 
 	auto const v1 = g.add(external_input, instance, {});
 	auto const v2 = g.add(data_input, instance, {v1});
-	auto const v3 = g.add(addition, instance, {v2, v2});
+	auto const v3 = g.add(std::move(addition), instance, {v2, v2});
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	// Construct map of one connection and connect to HW

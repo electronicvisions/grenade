@@ -9,6 +9,7 @@
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 #include "grenade/vx/signal_flow/vertex/transformation/concatenation.h"
 #include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 #include "hate/math.h"
@@ -359,8 +360,10 @@ void MAC::build_graph()
 				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
 			}
 			// add all data
-			signal_flow::vertex::Addition addition(x_range.size);
-			auto const v_add = m_graph.add(addition, instance, local_inputs);
+			signal_flow::Vertex addition(signal_flow::vertex::Transformation(
+			    std::make_unique<signal_flow::vertex::transformation::Addition>(
+			        local_inputs.size(), x_range.size)));
+			auto const v_add = m_graph.add(std::move(addition), instance, local_inputs);
 			signal_flow::vertex::DataOutput data_output(
 			    signal_flow::ConnectionType::Int8, x_range.size);
 			auto const v_out = m_graph.add(data_output, instance, {v_add});

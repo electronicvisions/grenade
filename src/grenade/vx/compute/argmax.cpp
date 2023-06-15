@@ -6,6 +6,7 @@
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/vertex/transformation/argmax.h"
 
 namespace grenade::vx::compute {
 
@@ -21,8 +22,10 @@ ArgMax::ArgMax(size_t size) : m_graph(), m_input_vertex(), m_output_vertex()
 	auto const v2 = m_graph.add(
 	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
 	    {m_input_vertex});
-	auto const v3 = m_graph.add(
-	    signal_flow::vertex::ArgMax(size, signal_flow::ConnectionType::Int8), instance, {v2});
+	signal_flow::Vertex transformation(signal_flow::vertex::Transformation(
+	    std::make_unique<signal_flow::vertex::transformation::ArgMax>(
+	        size, signal_flow::ConnectionType::Int8)));
+	auto const v3 = m_graph.add(std::move(transformation), instance, {v2});
 	m_output_vertex = m_graph.add(
 	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::UInt32, 1), instance, {v3});
 }

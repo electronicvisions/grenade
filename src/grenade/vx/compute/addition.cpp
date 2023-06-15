@@ -6,6 +6,7 @@
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 
 namespace grenade::vx::compute {
 
@@ -30,7 +31,9 @@ Addition::Addition(std::vector<signal_flow::Int8> const& other) :
 	auto const vo = m_graph.add(
 	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
 	    {m_other_vertex});
-	auto const va = m_graph.add(signal_flow::vertex::Addition(size), instance, {vi, vo});
+	signal_flow::Vertex transformation(signal_flow::vertex::Transformation(
+	    std::make_unique<signal_flow::vertex::transformation::Addition>(2, size)));
+	auto const va = m_graph.add(std::move(transformation), instance, {vi, vo});
 	m_output_vertex = m_graph.add(
 	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::Int8, size), instance, {va});
 }

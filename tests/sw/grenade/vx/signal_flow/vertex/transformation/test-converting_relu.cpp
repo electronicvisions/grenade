@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/signal_flow/vertex/converting_relu.h"
+#include "grenade/vx/signal_flow/vertex/transformation/converting_relu.h"
 
 using namespace grenade::vx::signal_flow;
-using namespace grenade::vx::signal_flow::vertex;
+using namespace grenade::vx::signal_flow::vertex::transformation;
 
 TEST(ConvertingReLU, General)
 {
@@ -17,6 +17,4 @@ TEST(ConvertingReLU, General)
 
 	EXPECT_EQ(config.inputs().front().type, ConnectionType::Int8);
 	EXPECT_EQ(config.output().type, ConnectionType::UInt5);
-
-	EXPECT_EQ(config.get_shift(), 1);
 }

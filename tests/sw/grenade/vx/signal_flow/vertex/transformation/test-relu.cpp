@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/signal_flow/vertex/relu.h"
+#include "grenade/vx/signal_flow/vertex/transformation/relu.h"
 
 using namespace grenade::vx::signal_flow;
-using namespace grenade::vx::signal_flow::vertex;
+using namespace grenade::vx::signal_flow::vertex::transformation;
 
 TEST(ReLU, General)
 {

@@ -1,18 +1,17 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/signal_flow/vertex/addition.h"
+#include "grenade/vx/signal_flow/vertex/transformation/subtraction.h"
 
 using namespace grenade::vx::signal_flow;
-using namespace grenade::vx::signal_flow::vertex;
+using namespace grenade::vx::signal_flow::vertex::transformation;
 
-TEST(Addition, General)
+TEST(Subtraction, General)
 {
-	EXPECT_NO_THROW(Addition(123));
+	EXPECT_NO_THROW(Subtraction(12, 123));
 
-	Addition config(123);
+	Subtraction config(12, 123);
 
-	EXPECT_TRUE(config.variadic_input);
-	EXPECT_EQ(config.inputs().size(), 1);
+	EXPECT_EQ(config.inputs().size(), 12);
 	EXPECT_EQ(config.inputs().front().size, 123);
 	EXPECT_EQ(config.output().size, 123);
 
