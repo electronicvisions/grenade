@@ -9,8 +9,8 @@
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
-#include "grenade/vx/signal_flow/transformation/concatenation.h"
-#include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
+#include "grenade/vx/signal_flow/vertex/transformation/concatenation.h"
+#include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 
@@ -290,7 +290,7 @@ void MAC::build_graph()
 
 		// Add spiketrain generator, connect to crossbar
 		auto spiketrain_generator =
-		    std::make_unique<signal_flow::transformation::MACSpikeTrainGenerator>(
+		    std::make_unique<signal_flow::vertex::transformation::MACSpikeTrainGenerator>(
 		        sizes, m_num_sends, m_wait_between_events);
 		signal_flow::Vertex transformation(
 		    std::move(signal_flow::vertex::Transformation(std::move(spiketrain_generator))));
@@ -381,7 +381,7 @@ void MAC::build_graph()
 		local_inputs.push_back(m_graph.add(data_input, instance, {v}));
 		i++;
 	}
-	auto concatenation = std::make_unique<signal_flow::transformation::Concatenation>(
+	auto concatenation = std::make_unique<signal_flow::vertex::transformation::Concatenation>(
 	    signal_flow::ConnectionType::Int8, x_split_sizes);
 	grenade::vx::signal_flow::Vertex transformation(
 	    std::move(signal_flow::vertex::Transformation(std::move(concatenation))));

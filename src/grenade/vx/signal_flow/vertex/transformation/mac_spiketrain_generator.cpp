@@ -1,10 +1,10 @@
-#include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
+#include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 
-namespace grenade::vx::signal_flow::transformation {
+namespace grenade::vx::signal_flow::vertex::transformation {
 
 MACSpikeTrainGenerator::~MACSpikeTrainGenerator() {}
 
@@ -149,7 +149,7 @@ std::optional<halco::hicann_dls::vx::v3::SpikeLabel> MACSpikeTrainGenerator::get
 	    h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
-bool MACSpikeTrainGenerator::equal(vertex::Transformation::Function const& other) const
+bool MACSpikeTrainGenerator::equal(Transformation::Function const& other) const
 {
 	MACSpikeTrainGenerator const* o = dynamic_cast<MACSpikeTrainGenerator const*>(&other);
 	if (o == nullptr) {
@@ -159,4 +159,4 @@ bool MACSpikeTrainGenerator::equal(vertex::Transformation::Function const& other
 	       (m_wait_between_events == o->m_wait_between_events);
 }
 
-} // namespace grenade::vx::signal_flow::transformation
+} // namespace grenade::vx::signal_flow::vertex::transformation

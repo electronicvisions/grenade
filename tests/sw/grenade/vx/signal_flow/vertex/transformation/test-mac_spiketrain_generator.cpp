@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/signal_flow/transformation/mac_spiketrain_generator.h"
+#include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -28,9 +28,8 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::signal_flow::UInt5 value(grenade::vx::signal_flow::UInt5::max);
 
-		auto const label =
-		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
-		        drv, value);
+		auto const label = grenade::vx::signal_flow::vertex::transformation::
+		    MACSpikeTrainGenerator::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
 		EXPECT_EQ(label->value(), ((0 << 13) | 1 | ((8 % 4) << 14) | ((8 / 4) << 6)));
 	}
@@ -39,9 +38,8 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::bottom);
 		grenade::vx::signal_flow::UInt5 value(grenade::vx::signal_flow::UInt5::max);
 
-		auto const label =
-		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
-		        drv, value);
+		auto const label = grenade::vx::signal_flow::vertex::transformation::
+		    MACSpikeTrainGenerator::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
 		EXPECT_EQ(label->value(), ((1 << 13) | 1 | ((8 % 4) << 14) | ((8 / 4) << 6)));
 	}
@@ -50,9 +48,8 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::signal_flow::UInt5 value(13);
 
-		auto const label =
-		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
-		        drv, value);
+		auto const label = grenade::vx::signal_flow::vertex::transformation::
+		    MACSpikeTrainGenerator::get_spike_label(drv, value);
 		EXPECT_TRUE(static_cast<bool>(label));
 		EXPECT_EQ(label->value(), ((0 << 13) | (32 - 13) | ((24 % 4) << 14) | ((24 / 4) << 6)));
 	}
@@ -61,9 +58,8 @@ TEST(MACSpikeTrainGenerator, get_spike_label)
 		SynapseDriverOnDLS drv(local_drv, SynapseDriverBlockOnDLS::top);
 		grenade::vx::signal_flow::UInt5 value(0);
 
-		auto const label =
-		    grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::get_spike_label(
-		        drv, value);
+		auto const label = grenade::vx::signal_flow::vertex::transformation::
+		    MACSpikeTrainGenerator::get_spike_label(drv, value);
 		EXPECT_FALSE(static_cast<bool>(label));
 	}
 }
@@ -93,10 +89,10 @@ TEST(MACSpikeTrainGenerator, apply)
 	size_t num_sends = 2;
 	grenade::vx::common::Time wait_between_events(3);
 
-	grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator generator(
+	grenade::vx::signal_flow::vertex::transformation::MACSpikeTrainGenerator generator(
 	    {hemisphere_size_top, hemisphere_size_bot}, num_sends, wait_between_events);
-	std::vector<grenade::vx::signal_flow::transformation::MACSpikeTrainGenerator::Value> inputs = {
-	    activations_top, activations_bot};
+	std::vector<grenade::vx::signal_flow::vertex::transformation::MACSpikeTrainGenerator::Value>
+	    inputs = {activations_top, activations_bot};
 	auto const events = generator.apply(inputs);
 
 	EXPECT_TRUE(

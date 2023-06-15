@@ -7,9 +7,9 @@ namespace cereal {
 struct access;
 } // namespace cereal
 
-namespace grenade::vx::signal_flow::transformation {
+namespace grenade::vx::signal_flow::vertex::transformation {
 
-struct SYMBOL_VISIBLE Concatenation : public vertex::Transformation::Function
+struct SYMBOL_VISIBLE Concatenation : public Transformation::Function
 {
 	~Concatenation() SYMBOL_VISIBLE;
 
@@ -25,7 +25,7 @@ struct SYMBOL_VISIBLE Concatenation : public vertex::Transformation::Function
 	std::vector<Port> inputs() const;
 	Port output() const;
 
-	bool equal(vertex::Transformation::Function const& other) const;
+	bool equal(Transformation::Function const& other) const;
 
 	Value apply(std::vector<Value> const& value) const;
 
@@ -38,4 +38,4 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
-} // namespace grenade::vx::signal_flow::transformation
+} // namespace grenade::vx::signal_flow::vertex::transformation

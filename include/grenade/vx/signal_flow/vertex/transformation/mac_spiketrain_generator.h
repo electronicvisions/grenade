@@ -17,9 +17,9 @@ struct access;
 
 class MACSpikeTrainGenerator_get_spike_label_Test;
 
-namespace grenade::vx::signal_flow::transformation {
+namespace grenade::vx::signal_flow::vertex::transformation {
 
-struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public vertex::Transformation::Function
+struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public Transformation::Function
 {
 	~MACSpikeTrainGenerator() SYMBOL_VISIBLE;
 
@@ -42,7 +42,7 @@ struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public vertex::Transformation::Fu
 	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 	Port output() const SYMBOL_VISIBLE;
 
-	bool equal(vertex::Transformation::Function const& other) const SYMBOL_VISIBLE;
+	bool equal(Transformation::Function const& other) const SYMBOL_VISIBLE;
 
 	Value apply(std::vector<Value> const& value) const SYMBOL_VISIBLE;
 
@@ -69,4 +69,4 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
-} // namespace grenade::vx::signal_flow::transformation
+} // namespace grenade::vx::signal_flow::vertex::transformation

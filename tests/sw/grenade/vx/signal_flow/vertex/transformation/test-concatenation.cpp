@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/signal_flow/transformation/concatenation.h"
+#include "grenade/vx/signal_flow/vertex/transformation/concatenation.h"
 
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -9,7 +9,7 @@
 
 using namespace grenade::vx;
 using namespace grenade::vx::signal_flow;
-using namespace grenade::vx::signal_flow::transformation;
+using namespace grenade::vx::signal_flow::vertex::transformation;
 
 TEST(Concatenation, General)
 {

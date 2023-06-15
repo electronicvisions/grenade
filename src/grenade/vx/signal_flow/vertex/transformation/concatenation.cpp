@@ -1,8 +1,8 @@
-#include "grenade/vx/signal_flow/transformation/concatenation.h"
+#include "grenade/vx/signal_flow/vertex/transformation/concatenation.h"
 
 #include <stdexcept>
 
-namespace grenade::vx::signal_flow::transformation {
+namespace grenade::vx::signal_flow::vertex::transformation {
 
 Concatenation::Concatenation(ConnectionType const type, std::vector<size_t> const& sizes) :
     m_type(type), m_sizes(sizes)
@@ -82,7 +82,7 @@ Concatenation::Function::Value Concatenation::apply(std::vector<Function::Value>
 	};
 }
 
-bool Concatenation::equal(vertex::Transformation::Function const& other) const
+bool Concatenation::equal(Transformation::Function const& other) const
 {
 	Concatenation const* o = dynamic_cast<Concatenation const*>(&other);
 	if (o == nullptr) {
@@ -91,4 +91,4 @@ bool Concatenation::equal(vertex::Transformation::Function const& other) const
 	return (m_type == o->m_type) && (m_sizes == o->m_sizes);
 }
 
-} // namespace grenade::vx::signal_flow::transformation
+} // namespace grenade::vx::signal_flow::vertex::transformation
