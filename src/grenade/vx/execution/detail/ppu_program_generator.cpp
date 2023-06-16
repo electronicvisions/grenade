@@ -254,6 +254,7 @@ void scheduling()
 
 ## if length(plasticity_rules_i) > 0
 	auto current = get_time();
+	time_origin = libnux::vx::now();
 	SchedulerSignallerTimer timer(current, current + runtime);
 ## for i in plasticity_rules_i
 	timer_{{i}}.set_first_deadline(current + timer_{{i}}.get_first_deadline());
