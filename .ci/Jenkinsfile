@@ -6,7 +6,7 @@ Map<String, Object> pipelineOptions = [
 		moduleOptions: [modules: ["ppu-toolchain"]],
 		notificationChannel: "#dls-software",
 		configureInstallOptions: "--build-profile=ci",
-		testSlurmResource: [partition: "cube", wafer: 62, "fpga-without-aout": 3],
+		testSlurmResource: getHxTestResource(3),
 		preTestHook: { configureHxCubeBitfile() },
 		testOptions: "--test-execall -j1"
 ]
