@@ -1,1 +1,1 @@
-import pygrenade_vx.network.placed_logical
+from _pygrenade_vx_network import *

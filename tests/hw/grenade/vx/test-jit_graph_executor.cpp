@@ -3,9 +3,9 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/placed_logical/build_routing.h"
-#include "grenade/vx/network/placed_logical/network_builder.h"
-#include "grenade/vx/network/placed_logical/network_graph_builder.h"
+#include "grenade/vx/network/build_routing.h"
+#include "grenade/vx/network/network_builder.h"
+#include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/io_data_list.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -16,7 +16,7 @@
 
 
 using namespace halco::hicann_dls::vx::v3;
-using namespace grenade::vx::network::placed_logical;
+using namespace grenade::vx::network;
 
 TEST(JITGraphExecutor, Empty)
 {

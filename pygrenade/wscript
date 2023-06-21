@@ -63,14 +63,13 @@ def build(bld):
     )
 
     bld(
-        target='_pygrenade_vx_network_placed_logical',
-        source='../include/grenade/vx/network/placed_logical/python_bindings.h',
-        genpybind_tags='grenade_vx_network_placed_logical',
+        target='_pygrenade_vx_network',
+        source='../include/grenade/vx/network/python_bindings.h',
+        genpybind_tags='grenade_vx_network',
         features='genpybind cxx cxxshlib pyext',
         use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
              'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_execution',
-             '_pygrenade_vx_signal_flow',
-             '_pygrenade_vx_network_placed_atomic'],
+             '_pygrenade_vx_signal_flow'],
         install_path='${PREFIX}/lib',
     )
 
@@ -80,7 +79,7 @@ def build(bld):
         use=['_pygrenade_vx_common',
              '_pygrenade_vx_execution',
              '_pygrenade_vx_signal_flow',
-             '_pygrenade_vx_network_placed_logical',
+             '_pygrenade_vx_network',
              'pylogging'],
         relative_trick=True,
         source=bld.path.ant_glob('pygrenade_vx/**/*.py'),
