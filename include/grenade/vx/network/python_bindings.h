@@ -10,8 +10,10 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("_pygrenade_vx_signal_flow");
 })
 
+#include "grenade/vx/network/background_spike_source_population.h"
 #include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/connection_routing_result.h"
+#include "grenade/vx/network/external_population.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"

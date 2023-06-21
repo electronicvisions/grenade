@@ -1,8 +1,9 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/geometry.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include <vector>
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)

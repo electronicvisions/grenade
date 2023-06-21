@@ -1,9 +1,11 @@
 #pragma once
 #include "grenade/vx/network/connection_routing_result.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/typed_array.h"
+#include "halco/hicann-dls/vx/v3/background.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/visibility.h"

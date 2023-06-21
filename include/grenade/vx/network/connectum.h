@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "haldls/vx/v3/event.h"

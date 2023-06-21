@@ -1,9 +1,12 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
+#include "grenade/vx/network/background_spike_source_population.h"
 #include "grenade/vx/network/cadc_recording.h"
+#include "grenade/vx/network/external_population.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
 #include "hate/visibility.h"
 #include <chrono>

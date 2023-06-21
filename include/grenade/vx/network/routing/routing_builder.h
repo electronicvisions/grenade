@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/connection_routing_result.h"
 #include "grenade/vx/network/network.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/routing_constraints.h"
 #include "grenade/vx/network/routing/source_on_padi_bus_manager.h"

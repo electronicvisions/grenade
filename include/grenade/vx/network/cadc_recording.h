@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 

@@ -5,7 +5,7 @@
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/network/plasticity_rule.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/signal_flow/execution_instance.h"

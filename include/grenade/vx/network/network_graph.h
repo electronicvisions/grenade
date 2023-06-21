@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_statistics.h"
-#include "grenade/vx/network/population.h"
+#include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "hate/visibility.h"
 #include <map>
