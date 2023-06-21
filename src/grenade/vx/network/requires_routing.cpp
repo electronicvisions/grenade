@@ -60,7 +60,10 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 		}
 	}
 	// check if MADC recording was added or removed
-	if (static_cast<bool>(current->madc_recording) != static_cast<bool>(old->madc_recording)) {
+	// TODO: Support updating in cases where at least as many neurons are recorded as before
+	if ((static_cast<bool>(current->madc_recording) != static_cast<bool>(old->madc_recording)) ||
+	    (static_cast<bool>(current->madc_recording) &&
+	     (current->madc_recording != old->madc_recording))) {
 		return true;
 	}
 	// check if CADC recording was changed

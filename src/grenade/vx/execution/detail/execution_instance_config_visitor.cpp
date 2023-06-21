@@ -125,23 +125,54 @@ void ExecutionInstanceConfigVisitor::process(
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
-	// MADCReadoutView inputs size equals 1
-	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	// MADCReadoutView inputs size equals 1 or 2
+	assert(boost::in_degree(vertex, m_graph.get_graph()) <= 2);
 
+	// first source
 	// Determine readout chain configuration
-	auto& smux = m_config.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection()];
-	bool const is_odd = data.get_coord().toNeuronColumnOnDLS() % 2;
+	auto& smux = m_config.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(0)];
+	auto const& first_source = data.get_first_source();
+	bool const is_odd = first_source.coord.toNeuronColumnOnDLS() % 2;
 	auto neuron_even = smux.get_neuron_even();
-	neuron_even[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+	neuron_even[first_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
 	smux.set_neuron_even(neuron_even);
 	auto neuron_odd = smux.get_neuron_odd();
-	neuron_odd[data.get_coord().toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+	neuron_odd[first_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 	smux.set_neuron_odd(neuron_odd);
-	m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection()].enable = true;
+	m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(0)].enable =
+	    true;
 	// Configure neuron
-	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.source = data.get_config();
-	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.enable_amplifier = true;
-	m_config.neuron_block.atomic_neurons[data.get_coord()].readout.enable_buffered_access = true;
+	m_config.neuron_block.atomic_neurons[first_source.coord].readout.source = first_source.type;
+	m_config.neuron_block.atomic_neurons[first_source.coord].readout.enable_amplifier = true;
+	m_config.neuron_block.atomic_neurons[first_source.coord].readout.enable_buffered_access = true;
+
+	// second source
+	if (data.get_second_source()) {
+		// Determine readout chain configuration
+		auto& smux = m_config.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(1)];
+		auto const& second_source = *(data.get_second_source());
+		bool const is_odd = second_source.coord.toNeuronColumnOnDLS() % 2;
+		auto neuron_even = smux.get_neuron_even();
+		neuron_even[second_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+		smux.set_neuron_even(neuron_even);
+		auto neuron_odd = smux.get_neuron_odd();
+		neuron_odd[second_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+		smux.set_neuron_odd(neuron_odd);
+		m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(1)].enable =
+		    true;
+		// Configure neuron
+		m_config.neuron_block.atomic_neurons[second_source.coord].readout.source =
+		    second_source.type;
+		m_config.neuron_block.atomic_neurons[second_source.coord].readout.enable_amplifier = true;
+		m_config.neuron_block.atomic_neurons[second_source.coord].readout.enable_buffered_access =
+		    true;
+	}
+
+	// configure source selection
+	m_config.readout_chain.dynamic_mux.input_select_length = data.get_source_selection().period;
+	m_config.readout_chain.dynamic_mux.initially_selected_input =
+	    data.get_source_selection().initial;
+
 	// Configure analog parameters
 	// TODO: should come from calibration
 	for (auto const smux : halco::common::iter_all<SourceMultiplexerOnReadoutSourceSelection>()) {

@@ -37,8 +37,9 @@ TEST(NetworkBuilder, General)
 	auto const descriptor = builder.add(population);
 
 	MADCRecording madc_recording;
-	madc_recording.population = descriptor;
-	madc_recording.neuron_on_population = 0;
+	madc_recording.neurons.resize(1);
+	madc_recording.neurons.at(0).coordinate.population = descriptor;
+	madc_recording.neurons.at(0).coordinate.neuron_on_population = 0;
 
 	// population present, no MADC recording added yet
 	EXPECT_NO_THROW(builder.add(madc_recording));
@@ -56,16 +57,16 @@ TEST(NetworkBuilder, General)
 	builder.done();
 
 	builder.add(population);
-	madc_recording.neuron_on_population = 2;
+	madc_recording.neurons.at(0).coordinate.neuron_on_population = 2;
 	// index out of range
 	EXPECT_THROW(builder.add(madc_recording), std::runtime_error);
 
-	madc_recording.neuron_on_population = 0;
-	madc_recording.population = PopulationDescriptor(123);
+	madc_recording.neurons.at(0).coordinate.neuron_on_population = 0;
+	madc_recording.neurons.at(0).coordinate.population = PopulationDescriptor(123);
 	// population unknown
 	EXPECT_THROW(builder.add(madc_recording), std::runtime_error);
 
-	madc_recording.population = descriptor;
+	madc_recording.neurons.at(0).coordinate.population = descriptor;
 	// population present, no MADC recording added yet
 	EXPECT_NO_THROW(builder.add(madc_recording));
 }

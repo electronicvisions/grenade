@@ -221,45 +221,6 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		}
 	};
 
-	// update MADC in graph such that it resembles the configuration from network to update towards
-	auto const update_madc = [](NetworkGraph& network_graph, Network const& network) {
-		if (!network.madc_recording || !network_graph.m_network->madc_recording) {
-			throw std::runtime_error("Updating network graph only possible, if MADC recording is "
-			                         "neither added nor removed.");
-		}
-		auto const& population =
-		    std::get<Population>(network.populations.at(network.madc_recording->population));
-		auto const neuron = population.neurons.at(network.madc_recording->neuron_on_population)
-		                        .coordinate.get_placed_compartments()
-		                        .at(network.madc_recording->compartment_on_neuron)
-		                        .at(network.madc_recording->atomic_neuron_on_compartment);
-		signal_flow::vertex::MADCReadoutView madc_readout(neuron, network.madc_recording->source);
-		auto const neuron_vertex_descriptor =
-		    network_graph.get_neuron_vertices()
-		        .at(network.madc_recording->population)
-		        .at(neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
-		auto const& neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
-		    network_graph.get_graph().get_vertex_property(neuron_vertex_descriptor));
-		auto const& columns = neuron_vertex.get_columns();
-		auto const in_view_location = static_cast<size_t>(std::distance(
-		    columns.begin(),
-		    std::find(columns.begin(), columns.end(), neuron.toNeuronColumnOnDLS())));
-		assert(in_view_location < columns.size());
-		std::vector<signal_flow::Input> inputs{
-		    {neuron_vertex_descriptor, {in_view_location, in_view_location}}};
-		assert(network_graph.get_madc_sample_output_vertex());
-		assert(
-		    boost::in_degree(
-		        *(network_graph.get_madc_sample_output_vertex()),
-		        network_graph.get_graph().get_graph()) == 1);
-		auto const edges = boost::in_edges(
-		    *(network_graph.get_madc_sample_output_vertex()),
-		    network_graph.get_graph().get_graph());
-		auto const madc_vertex =
-		    boost::source(*(edges.first), network_graph.get_graph().get_graph());
-		network_graph.m_graph.update_and_relocate(madc_vertex, std::move(madc_readout), inputs);
-	};
-
 	// update plasticity rule in graph such that it resembles the configuration from network to
 	// update towards
 	auto const update_plasticity_rule = [](NetworkGraph& network_graph,
@@ -312,9 +273,6 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			continue;
 		}
 		update_weights(network_graph, network, descriptor);
-	}
-	if (network_graph.m_network->madc_recording != network->madc_recording) {
-		update_madc(network_graph, *network);
 	}
 	if (network_graph.m_network->plasticity_rules != network->plasticity_rules) {
 		for (auto const& [descriptor, new_rule] : network->plasticity_rules) {
@@ -1462,15 +1420,20 @@ void NetworkGraphBuilder::add_madc_recording(
     signal_flow::ExecutionInstance const& instance) const
 {
 	hate::Timer timer;
-	auto const& population =
-	    std::get<Population>(m_network.populations.at(madc_recording.population));
-	auto const neuron = population.neurons.at(madc_recording.neuron_on_population);
-	auto const atomic_neuron = neuron.coordinate.get_placed_compartments()
-	                               .at(madc_recording.compartment_on_neuron)
-	                               .at(madc_recording.atomic_neuron_on_compartment);
-	signal_flow::vertex::MADCReadoutView madc_readout(atomic_neuron, madc_recording.source);
+	std::vector<signal_flow::Input> inputs;
+	auto const& population = std::get<Population>(
+	    m_network.populations.at(madc_recording.neurons.at(0).coordinate.population));
+	auto const neuron =
+	    population.neurons.at(madc_recording.neurons.at(0).coordinate.neuron_on_population);
+	auto const atomic_neuron =
+	    neuron.coordinate.get_placed_compartments()
+	        .at(madc_recording.neurons.at(0).coordinate.compartment_on_neuron)
+	        .at(madc_recording.neurons.at(0).coordinate.atomic_neuron_on_compartment);
+	signal_flow::vertex::MADCReadoutView::Source first_source{
+	    atomic_neuron, madc_recording.neurons.at(0).source};
+
 	auto const neuron_vertex_descriptor =
-	    resources.populations.at(madc_recording.population)
+	    resources.populations.at(madc_recording.neurons.at(0).coordinate.population)
 	        .neurons.at(atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
 	auto const neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
 	    graph.get_vertex_property(neuron_vertex_descriptor));
@@ -1479,8 +1442,41 @@ void NetworkGraphBuilder::add_madc_recording(
 	    columns.begin(),
 	    std::find(columns.begin(), columns.end(), atomic_neuron.toNeuronColumnOnDLS())));
 	assert(in_view_location < columns.size());
-	auto const madc_vertex = graph.add(
-	    madc_readout, instance, {{neuron_vertex_descriptor, {in_view_location, in_view_location}}});
+	inputs.push_back(
+	    signal_flow::Input(neuron_vertex_descriptor, {in_view_location, in_view_location}));
+
+	std::optional<signal_flow::vertex::MADCReadoutView::Source> second_source;
+	signal_flow::vertex::MADCReadoutView::SourceSelection source_selection;
+	if (madc_recording.neurons.size() == 2) {
+		auto const& population = std::get<Population>(
+		    m_network.populations.at(madc_recording.neurons.at(1).coordinate.population));
+		auto const neuron =
+		    population.neurons.at(madc_recording.neurons.at(1).coordinate.neuron_on_population);
+		auto const atomic_neuron =
+		    neuron.coordinate.get_placed_compartments()
+		        .at(madc_recording.neurons.at(1).coordinate.compartment_on_neuron)
+		        .at(madc_recording.neurons.at(1).coordinate.atomic_neuron_on_compartment);
+		second_source = signal_flow::vertex::MADCReadoutView::Source{
+		    atomic_neuron, madc_recording.neurons.at(1).source};
+		source_selection.period = haldls::vx::v3::MADCConfig::ActiveMuxInputSelectLength(1);
+
+		auto const neuron_vertex_descriptor =
+		    resources.populations.at(madc_recording.neurons.at(1).coordinate.population)
+		        .neurons.at(atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
+		auto const neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
+		    graph.get_vertex_property(neuron_vertex_descriptor));
+		auto const& columns = neuron_vertex.get_columns();
+		auto const in_view_location = static_cast<size_t>(std::distance(
+		    columns.begin(),
+		    std::find(columns.begin(), columns.end(), atomic_neuron.toNeuronColumnOnDLS())));
+		assert(in_view_location < columns.size());
+		inputs.push_back(
+		    signal_flow::Input(neuron_vertex_descriptor, {in_view_location, in_view_location}));
+	}
+
+	signal_flow::vertex::MADCReadoutView madc_readout(
+	    first_source, second_source, source_selection);
+	auto const madc_vertex = graph.add(madc_readout, instance, inputs);
 	resources.madc_output = graph.add(
 	    signal_flow::vertex::DataOutput(
 	        signal_flow::ConnectionType::TimedMADCSampleFromChipSequence, 1),

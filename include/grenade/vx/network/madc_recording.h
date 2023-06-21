@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/atomic_neuron_on_network.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 
@@ -11,16 +11,22 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  */
 struct GENPYBIND(visible) MADCRecording
 {
-	PopulationDescriptor population{};
+	struct Neuron
+	{
+		AtomicNeuronOnNetwork coordinate{};
+		typedef lola::vx::v3::AtomicNeuron::Readout::Source Source;
+		Source source{Source::membrane};
 
-	size_t neuron_on_population{0};
-	halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron{};
-	size_t atomic_neuron_on_compartment{0};
+		Neuron() = default;
+		Neuron(AtomicNeuronOnNetwork const& coordinate, Source source) SYMBOL_VISIBLE;
 
-	typedef lola::vx::v3::AtomicNeuron::Readout::Source Source GENPYBIND(visible);
-	Source source{Source::membrane};
+		bool operator==(Neuron const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Neuron const& other) const SYMBOL_VISIBLE;
+	};
+	std::vector<Neuron> neurons{};
 
 	MADCRecording() = default;
+	MADCRecording(std::vector<Neuron> const& neurons) SYMBOL_VISIBLE;
 
 	bool operator==(MADCRecording const& other) const SYMBOL_VISIBLE;
 	bool operator!=(MADCRecording const& other) const SYMBOL_VISIBLE;

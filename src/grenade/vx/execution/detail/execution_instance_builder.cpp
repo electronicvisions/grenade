@@ -748,7 +748,9 @@ void ExecutionInstanceBuilder::process(
 			local_transformed_madc_samples.reserve(local_madc_samples.size());
 			for (auto const& local_madc_sample : local_madc_samples) {
 				local_transformed_madc_samples.push_back(signal_flow::TimedMADCSampleFromChip(
-				    common::Time(local_madc_sample.chip_time.value()), local_madc_sample.value));
+				    common::Time(local_madc_sample.chip_time.value()),
+				    signal_flow::MADCSampleFromChip(
+				        local_madc_sample.value, local_madc_sample.channel)));
 			}
 		}
 		m_local_data.data[vertex] = std::move(transformed_madc_samples);

@@ -226,68 +226,79 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 	if (m_madc_recording) {
 		throw std::runtime_error("Only one MADC recording per network possible.");
 	}
-	if (!m_populations.contains(madc_recording.population)) {
-		throw std::runtime_error("MADC recording references unknown population.");
+	if (madc_recording.neurons.size() > 2) {
+		throw std::runtime_error("MADC recording supports recording at most two neurons.");
 	}
-	if (!std::holds_alternative<Population>(m_populations.at(madc_recording.population))) {
-		throw std::runtime_error("MADC recording does not reference internal population.");
-	}
-	if (madc_recording.neuron_on_population >=
-	    std::get<Population>(m_populations.at(madc_recording.population)).neurons.size()) {
-		throw std::runtime_error(
-		    "MADC recording references neuron index out of range of population.");
-	}
-	if (!std::get<Population>(m_populations.at(madc_recording.population))
-	         .neurons.at(madc_recording.neuron_on_population)
-	         .coordinate.get_placed_compartments()
-	         .contains(madc_recording.compartment_on_neuron)) {
-		throw std::runtime_error("MADC recording references non-existent neuron compartment.");
-	}
-	if (madc_recording.atomic_neuron_on_compartment >=
-	    std::get<Population>(m_populations.at(madc_recording.population))
-	        .neurons.at(madc_recording.neuron_on_population)
-	        .coordinate.get_placed_compartments()
-	        .at(madc_recording.compartment_on_neuron)
-	        .size()) {
-		throw std::runtime_error(
-		    "MADC recording references atomic neuron index out of range of neuron.");
-	}
-	if (m_cadc_recording) {
-		for (auto const& neuron : m_cadc_recording->neurons) {
-			if (neuron.population == madc_recording.population &&
-			    neuron.neuron_on_population == madc_recording.neuron_on_population &&
-			    neuron.compartment_on_neuron == madc_recording.compartment_on_neuron &&
-			    neuron.atomic_neuron_on_compartment ==
-			        madc_recording.atomic_neuron_on_compartment &&
-			    neuron.source != madc_recording.source) {
-				throw std::runtime_error(
-				    "MADC recording source conflicts with CADC recording's source.");
+	std::set<AtomicNeuronOnNetwork> unique;
+	std::set<size_t> unique_parity;
+	for (auto const& neuron : madc_recording.neurons) {
+		if (!m_populations.contains(neuron.coordinate.population)) {
+			throw std::runtime_error("MADC recording references unknown population.");
+		}
+		if (!std::holds_alternative<Population>(m_populations.at(neuron.coordinate.population))) {
+			throw std::runtime_error("MADC recording does not reference internal population.");
+		}
+		if (neuron.coordinate.neuron_on_population >=
+		    std::get<Population>(m_populations.at(neuron.coordinate.population)).neurons.size()) {
+			throw std::runtime_error(
+			    "MADC recording references neuron index out of range of population.");
+		}
+		if (m_cadc_recording) {
+			for (auto const& cadc_neuron : m_cadc_recording->neurons) {
+				if (neuron.coordinate.population == cadc_neuron.population &&
+				    neuron.coordinate.neuron_on_population == cadc_neuron.neuron_on_population &&
+				    neuron.coordinate.compartment_on_neuron == cadc_neuron.compartment_on_neuron &&
+				    neuron.coordinate.atomic_neuron_on_compartment ==
+				        cadc_neuron.atomic_neuron_on_compartment &&
+				    neuron.source != cadc_neuron.source) {
+					throw std::runtime_error(
+					    "MADC recording source conflicts with CADC recording's source.");
+				}
 			}
 		}
+		unique_parity.insert(
+		    std::get<Population>(m_populations.at(neuron.coordinate.population))
+		        .neurons.at(neuron.coordinate.neuron_on_population)
+		        .coordinate.get_placed_compartments()
+		        .at(neuron.coordinate.compartment_on_neuron)
+		        .at(neuron.coordinate.atomic_neuron_on_compartment)
+		        .toNeuronColumnOnDLS()
+		        .value() %
+		    2);
+		unique.insert(neuron.coordinate);
+	}
+	if (unique.size() != madc_recording.neurons.size()) {
+		throw std::runtime_error("MADC recording neurons are the same.");
+	}
+	if (unique.size() != unique_parity.size()) {
+		throw std::runtime_error("MADC recording neurons are required to reside in columns with "
+		                         "unique parity (even/odd).");
 	}
 	// check that plasticity rule target population readout settings don't contradict madc recording
 	for (auto const& [_, plasticity_rule] : m_plasticity_rules) {
 		for (auto const& target_population : plasticity_rule.populations) {
 			auto const& population_neurons =
 			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
-			if (target_population.descriptor != madc_recording.population) {
-				continue;
-			}
-			for (size_t j = 0; j < population_neurons.size(); ++j) {
-				if (j != madc_recording.neuron_on_population) {
+			for (auto const& neuron : madc_recording.neurons) {
+				if (target_population.descriptor != neuron.coordinate.population) {
 					continue;
 				}
-				for (auto const& [compartment, denmems] :
-				     target_population.neuron_readout_sources.at(j)) {
-					if (compartment != madc_recording.compartment_on_neuron) {
+				for (size_t j = 0; j < population_neurons.size(); ++j) {
+					if (j != neuron.coordinate.neuron_on_population) {
 						continue;
 					}
-					for (size_t k = 0; k < denmems.size(); ++k) {
-						if (k == madc_recording.atomic_neuron_on_compartment && denmems.at(k) &&
-						    *denmems.at(k) != madc_recording.source) {
-							throw std::runtime_error(
-							    "PlasticityRule neuron readout source doesn't match "
-							    "MADC recording source for same neuron.");
+					for (auto const& [compartment, denmems] :
+					     target_population.neuron_readout_sources.at(j)) {
+						if (compartment != neuron.coordinate.compartment_on_neuron) {
+							continue;
+						}
+						for (size_t k = 0; k < denmems.size(); ++k) {
+							if (k == neuron.coordinate.atomic_neuron_on_compartment &&
+							    denmems.at(k) && *denmems.at(k) != neuron.source) {
+								throw std::runtime_error(
+								    "PlasticityRule neuron readout source doesn't match "
+								    "MADC recording source for same neuron.");
+							}
 						}
 					}
 				}
@@ -321,13 +332,18 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 			throw std::runtime_error(
 			    "CADC recording references neuron index out of range of population.");
 		}
-		if (m_madc_recording && neuron.population == m_madc_recording->population &&
-		    neuron.neuron_on_population == m_madc_recording->neuron_on_population &&
-		    neuron.compartment_on_neuron == m_madc_recording->compartment_on_neuron &&
-		    neuron.atomic_neuron_on_compartment == m_madc_recording->atomic_neuron_on_compartment &&
-		    neuron.source != m_madc_recording->source) {
-			throw std::runtime_error(
-			    "CADC recording source conflicts with MADC recording's source.");
+		if (m_madc_recording) {
+			for (auto const& madc_neuron : m_madc_recording->neurons) {
+				if (neuron.population == madc_neuron.coordinate.population &&
+				    neuron.neuron_on_population == madc_neuron.coordinate.neuron_on_population &&
+				    neuron.compartment_on_neuron == madc_neuron.coordinate.compartment_on_neuron &&
+				    neuron.atomic_neuron_on_compartment ==
+				        madc_neuron.coordinate.atomic_neuron_on_compartment &&
+				    neuron.source != madc_neuron.source) {
+					throw std::runtime_error(
+					    "CADC recording source conflicts with MADC recording's source.");
+				}
+			}
 		}
 		unique.insert(
 		    {neuron.population, neuron.neuron_on_population, neuron.compartment_on_neuron,
@@ -446,24 +462,26 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 		for (auto const& target_population : plasticity_rule.populations) {
 			auto const& population_neurons =
 			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
-			if (target_population.descriptor != m_madc_recording->population) {
-				continue;
-			}
-			for (size_t j = 0; j < population_neurons.size(); ++j) {
-				if (j != m_madc_recording->neuron_on_population) {
+			for (auto const& neuron : m_madc_recording->neurons) {
+				if (target_population.descriptor != neuron.coordinate.population) {
 					continue;
 				}
-				for (auto const& [compartment, denmems] :
-				     target_population.neuron_readout_sources.at(j)) {
-					if (compartment != m_madc_recording->compartment_on_neuron) {
+				for (size_t j = 0; j < population_neurons.size(); ++j) {
+					if (j != neuron.coordinate.neuron_on_population) {
 						continue;
 					}
-					for (size_t k = 0; k < denmems.size(); ++k) {
-						if (k == m_madc_recording->atomic_neuron_on_compartment && denmems.at(k) &&
-						    *denmems.at(k) != m_madc_recording->source) {
-							throw std::runtime_error(
-							    "PlasticityRule neuron readout source doesn't match "
-							    "MADC recording source for same neuron.");
+					for (auto const& [compartment, denmems] :
+					     target_population.neuron_readout_sources.at(j)) {
+						if (compartment != neuron.coordinate.compartment_on_neuron) {
+							continue;
+						}
+						for (size_t k = 0; k < denmems.size(); ++k) {
+							if (k == neuron.coordinate.atomic_neuron_on_compartment &&
+							    denmems.at(k) && *denmems.at(k) != neuron.source) {
+								throw std::runtime_error(
+								    "PlasticityRule neuron readout source doesn't match "
+								    "MADC recording source for same neuron.");
+							}
 						}
 					}
 				}

@@ -2,12 +2,15 @@
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
+#include "haldls/vx/v3/event.h"
+#include "haldls/vx/v3/madc.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
-#include <array>
 #include <cstddef>
 #include <iosfwd>
 #include <optional>
+#include <tuple>
+#include <vector>
 
 namespace cereal {
 struct access;
@@ -28,23 +31,59 @@ struct MADCReadoutView
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
-	typedef halco::hicann_dls::vx::v3::AtomicNeuronOnDLS Coord;
-	typedef lola::vx::v3::AtomicNeuron::Readout::Source Config;
+	struct Source
+	{
+		typedef halco::hicann_dls::vx::v3::AtomicNeuronOnDLS Coord;
+		Coord coord{};
+		typedef lola::vx::v3::AtomicNeuron::Readout::Source Type;
+		Type type{};
+
+		bool operator==(Source const& other) const SYMBOL_VISIBLE;
+		bool operator!=(Source const& other) const SYMBOL_VISIBLE;
+
+		template <typename Archive>
+		void serialize(Archive& ar, std::uint32_t);
+	};
+
+	/**
+	 * Configuration of (timed) selection between the two MADC channels.
+	 */
+	struct SourceSelection
+	{
+		/** Initially selected channel. */
+		typedef halco::hicann_dls::vx::SourceMultiplexerOnReadoutSourceSelection Initial;
+		Initial initial{};
+
+		/** Period with which to switch between channels. */
+		typedef haldls::vx::v3::MADCConfig::ActiveMuxInputSelectLength Period;
+		Period period{};
+
+		bool operator==(SourceSelection const& other) const SYMBOL_VISIBLE;
+		bool operator!=(SourceSelection const& other) const SYMBOL_VISIBLE;
+
+		template <typename Archive>
+		void serialize(Archive& ar, std::uint32_t);
+	};
 
 	MADCReadoutView() = default;
 
 	/**
 	 * Construct MADCReadoutView.
-	 * @param coord Neuron to read out
-	 * @param config Source to read out at neuron
+	 * @param first_source Neuron source and location to read out
+	 * @param second_source Optional second neuron source and location to read out
+	 * @param source_selection Source selection config
 	 */
-	explicit MADCReadoutView(Coord const& coord, Config const& config) SYMBOL_VISIBLE;
+	explicit MADCReadoutView(
+	    Source const& first_source,
+	    std::optional<Source> const& second_source,
+	    SourceSelection const& source_selection) SYMBOL_VISIBLE;
 
-	Coord const& get_coord() const SYMBOL_VISIBLE;
-	Config const& get_config() const SYMBOL_VISIBLE;
+	Source const& get_first_source() const SYMBOL_VISIBLE;
+	std::optional<Source> const& get_second_source() const SYMBOL_VISIBLE;
+	SourceSelection const& get_source_selection() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
-	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
+	std::vector<Port> inputs() const SYMBOL_VISIBLE;
 
 	Port output() const SYMBOL_VISIBLE;
 
@@ -58,8 +97,9 @@ struct MADCReadoutView
 	bool operator!=(MADCReadoutView const& other) const SYMBOL_VISIBLE;
 
 private:
-	Coord m_coord{};
-	Config m_config{};
+	Source m_first_source{};
+	std::optional<Source> m_second_source{};
+	SourceSelection m_source_selection{};
 
 	friend struct cereal::access;
 	template <typename Archive>

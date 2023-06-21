@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/genpybind.h"
+#include "grenade/vx/network/atomic_neuron_on_network.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -35,9 +36,11 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
  * @param network_graph Network graph to use for matching of logical to hardware neurons
  * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the MADC
  * samples
- * @return Time-series MADC sample data per batch entry
+ * @return Time-series MADC sample data per batch entry. Samples are sorted by their ChipTime per
+ * batch-entry and contain their corresponding location alongside the ADC value.
  */
-std::vector<std::vector<std::pair<common::Time, haldls::vx::v3::MADCSampleFromChip::Value>>>
+std::vector<std::vector<
+    std::tuple<common::Time, AtomicNeuronOnNetwork, haldls::vx::v3::MADCSampleFromChip::Value>>>
 extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
     SYMBOL_VISIBLE;
 
@@ -112,18 +115,36 @@ GENPYBIND_MANUAL({
 		hate::Timer timer;
 		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
 		auto const samples = grenade::vx::network::extract_madc_samples(data, network_graph);
-		std::vector<std::pair<pybind11::array_t<float>, pybind11::array_t<int>>> ret(
-		    samples.size());
+		std::vector<std::tuple<
+		    pybind11::array_t<float>, pybind11::array_t<int>, pybind11::array_t<int>,
+		    pybind11::array_t<int>, pybind11::array_t<int>, pybind11::array_t<int>>>
+		    ret(samples.size());
 		for (size_t b = 0; b < samples.size(); ++b) {
 			auto const madc_samples = samples.at(b);
+			if (madc_samples.empty()) {
+				ret.at(b) = std::make_tuple(
+				    pybind11::array_t<float>(0), pybind11::array_t<int>(0),
+				    pybind11::array_t<int>(0), pybind11::array_t<int>(0), pybind11::array_t<int>(0),
+				    pybind11::array_t<int>(0));
+				continue;
+			}
 			pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			pybind11::array_t<int> descriptor(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			pybind11::array_t<int> nrn_on_pop(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			pybind11::array_t<int> comp_on_nrn(static_cast<pybind11::ssize_t>(madc_samples.size()));
+			pybind11::array_t<int> an_on_comp(static_cast<pybind11::ssize_t>(madc_samples.size()));
 			pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(madc_samples.size()));
 			for (size_t i = 0; i < madc_samples.size(); ++i) {
 				auto const& sample = madc_samples.at(i);
-				times.mutable_at(i) = convert_ms(sample.first);
-				values.mutable_at(i) = sample.second.toEnum().value();
+				times.mutable_at(i) = convert_ms(std::get<0>(sample));
+				descriptor.mutable_at(i) = std::get<1>(sample).population.value();
+				nrn_on_pop.mutable_at(i) = std::get<1>(sample).neuron_on_population;
+				comp_on_nrn.mutable_at(i) = std::get<1>(sample).compartment_on_neuron.value();
+				an_on_comp.mutable_at(i) = std::get<1>(sample).atomic_neuron_on_compartment;
+				values.mutable_at(i) = std::get<2>(sample).value();
 			}
-			ret.at(b) = std::make_pair(times, values);
+			ret.at(b) =
+			    std::make_tuple(times, descriptor, nrn_on_pop, comp_on_nrn, an_on_comp, values);
 		}
 		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;

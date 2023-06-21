@@ -27,7 +27,9 @@ class SwTestPygrenadeVx(unittest.TestCase):
         int_pop_descr = network_builder.add(int_pop)
 
         madc_recording = grenade.MADCRecording()
-        madc_recording.population = int_pop_descr
+        madc_recording_neurons = [grenade.MADCRecording.Neuron()]
+        madc_recording_neurons[0].coordinate.population = int_pop_descr
+        madc_recording.neurons = madc_recording_neurons
         network_builder.add(madc_recording)
 
         connections = []

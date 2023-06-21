@@ -153,7 +153,10 @@ MAC::insert_synram(
 	    hemisphere == madc_recording_neuron->toNeuronRowOnDLS().toHemisphereOnDLS() &&
 	    madc_recording_neuron->toNeuronColumnOnDLS().value() < x_size) {
 		signal_flow::vertex::MADCReadoutView madc_readout(
-		    *madc_recording_neuron, signal_flow::vertex::MADCReadoutView::Config::membrane);
+		    signal_flow::vertex::MADCReadoutView::Source{
+		        *madc_recording_neuron,
+		        signal_flow::vertex::MADCReadoutView::Source::Type::membrane},
+		    std::nullopt, signal_flow::vertex::MADCReadoutView::SourceSelection{});
 		auto const madc_readout_column = madc_recording_neuron->toNeuronColumnOnDLS().value();
 		auto const v3 =
 		    graph.add(madc_readout, instance, {{v1, {madc_readout_column, madc_readout_column}}});
@@ -505,7 +508,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 				auto const& local_madc_data = madc_data.at(b);
 				for (auto const& sample : local_madc_data) {
 					file << instance.toExecutionIndex().value() << "\t" << b << "\t"
-					     << sample.time.value() << "\t" << sample.data.value() << "\n";
+					     << sample.time.value() << "\t" << sample.data.value.value() << "\n";
 				}
 			}
 		}

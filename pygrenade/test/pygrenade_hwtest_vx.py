@@ -44,9 +44,11 @@ class HwTestPygrenadeVx(unittest.TestCase):
         int_pop_descr = network_builder.add(int_pop)
 
         if enable_v:
+            madc_recording_neuron = grenade.network.MADCRecording.Neuron()
+            madc_recording_neuron.coordinate.population = int_pop_descr
+            madc_recording_neuron.coordinate.neuron_on_population = 0
             madc_recording = grenade.network.MADCRecording()
-            madc_recording.population = int_pop_descr
-            madc_recording.neuron_on_population = 0
+            madc_recording.neurons = [madc_recording_neuron]
             network_builder.add(madc_recording)
 
         connections = []
