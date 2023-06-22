@@ -17,7 +17,7 @@ using namespace haldls::vx::v3;
 TEST(network_InputGenerator, General)
 {
 	auto const network = std::make_shared<Network>(Network{
-	    {{PopulationDescriptor(0), ExternalPopulation(3)},
+	    {{PopulationDescriptor(0), ExternalSourcePopulation(3)},
 	     {PopulationDescriptor(1),
 	      Population(
 	          {Population::Neuron(

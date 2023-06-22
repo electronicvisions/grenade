@@ -46,7 +46,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	// build network
 	NetworkBuilder network_builder;
 
-	ExternalPopulation population_external{256};
+	ExternalSourcePopulation population_external{256};
 	auto const population_external_descriptor = network_builder.add(population_external);
 
 	Population::Neurons neurons;
@@ -146,7 +146,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	// build network
 	NetworkBuilder network_builder;
 
-	ExternalPopulation population_external{256};
+	ExternalSourcePopulation population_external{256};
 	auto const population_external_descriptor = network_builder.add(population_external);
 
 	Population::Neurons neurons;
@@ -284,7 +284,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	for (auto const& length : lengths) {
 		NetworkBuilder network_builder;
 
-		ExternalPopulation population_external{1};
+		ExternalSourcePopulation population_external{1};
 		auto const population_external_descriptor = network_builder.add(population_external);
 
 		std::vector<PopulationDescriptor> population_internal_descriptors;

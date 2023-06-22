@@ -54,10 +54,10 @@ void test_background_spike_source_regular(
 	// build network
 	NetworkBuilder network_builder;
 
-	BackgroundSpikeSourcePopulation population_background_spike_source{
+	BackgroundSourcePopulation population_background_spike_source{
 	    1,
 	    {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
-	    BackgroundSpikeSourcePopulation::Config{
+	    BackgroundSourcePopulation::Config{
 	        BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(),
 	        BackgroundSpikeSource::Seed(), false}};
 	auto const population_background_spike_source_descriptor =
@@ -152,10 +152,10 @@ void test_background_spike_source_poisson(
 
 	grenade::vx::signal_flow::ExecutionInstance instance;
 
-	BackgroundSpikeSourcePopulation population_background_spike_source{
+	BackgroundSourcePopulation population_background_spike_source{
 	    64,
 	    {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
-	    BackgroundSpikeSourcePopulation::Config{
+	    BackgroundSourcePopulation::Config{
 	        BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(rate),
 	        BackgroundSpikeSource::Seed(1234), true}};
 

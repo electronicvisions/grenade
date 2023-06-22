@@ -14,7 +14,7 @@ using namespace halco::common;
 TEST(network_Network, General)
 {
 	Network network_a{
-	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -28,7 +28,7 @@ TEST(network_Network, General)
 	    {}};
 
 	Network network_b{
-	    {{PopulationDescriptor(2), ExternalPopulation(3)}},
+	    {{PopulationDescriptor(2), ExternalSourcePopulation(3)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -42,7 +42,7 @@ TEST(network_Network, General)
 	    {}};
 
 	Network network_c{
-	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
 	    {{ProjectionDescriptor(4),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -56,7 +56,7 @@ TEST(network_Network, General)
 	    {}};
 
 	Network network_d{
-	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -70,7 +70,7 @@ TEST(network_Network, General)
 	    {}};
 
 	Network network_e{
-	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -86,7 +86,7 @@ TEST(network_Network, General)
 	PlasticityRule rule;
 	rule.kernel = "abc";
 	Network network_f{
-	    {{PopulationDescriptor(1), ExternalPopulation(2)}},
+	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
 	    {{ProjectionDescriptor(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),

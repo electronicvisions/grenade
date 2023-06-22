@@ -1,8 +1,8 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/background_spike_source_population.h"
+#include "grenade/vx/network/background_source_population.h"
 #include "grenade/vx/network/cadc_recording.h"
-#include "grenade/vx/network/external_population.h"
+#include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/population.h"
@@ -28,7 +28,7 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 {
 	std::map<
 	    PopulationDescriptor,
-	    std::variant<Population, ExternalPopulation, BackgroundSpikeSourcePopulation>> const
+	    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>> const
 	    populations;
 	std::map<ProjectionDescriptor, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;

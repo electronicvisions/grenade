@@ -32,7 +32,7 @@ TEST(build_routing, ProjectionOverlap)
 	             Population::Neuron::Compartment{
 	                 Population::Neuron::Compartment::SpikeMaster(0, true),
 	                 {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})}};
-	ExternalPopulation external_population(2);
+	ExternalSourcePopulation external_population(2);
 
 	// no overlap
 	auto descriptor = builder.add(population);
@@ -250,7 +250,7 @@ TEST(build_routing, I100H64O3)
 {
 	NetworkBuilder builder;
 
-	ExternalPopulation population_input(100);
+	ExternalSourcePopulation population_input(100);
 	auto const population_input_descriptor = builder.add(population_input);
 
 	Population population_hidden;

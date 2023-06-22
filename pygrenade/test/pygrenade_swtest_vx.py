@@ -8,7 +8,7 @@ class SwTestPygrenadeVx(unittest.TestCase):
     def test_build_network_graph(self):
         network_builder = grenade.NetworkBuilder()
 
-        ext_pop = grenade.ExternalPopulation(256)
+        ext_pop = grenade.ExternalSourcePopulation(256)
 
         neurons = [grenade.Population.Neuron(halco.LogicalNeuronOnDLS(
             halco.LogicalNeuronCompartments({

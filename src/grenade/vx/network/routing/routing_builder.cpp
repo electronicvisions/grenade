@@ -170,8 +170,8 @@ RoutingBuilder::get_background_sources(
 	for (auto const padi_bus : iter_all<PADIBusOnDLS>()) {
 		std::optional<PopulationDescriptor> descriptor;
 		for (auto const& [d, p] : network.populations) {
-			if (std::holds_alternative<BackgroundSpikeSourcePopulation>(p)) {
-				auto const& coordinate = std::get<BackgroundSpikeSourcePopulation>(p).coordinate;
+			if (std::holds_alternative<BackgroundSourcePopulation>(p)) {
+				auto const& coordinate = std::get<BackgroundSourcePopulation>(p).coordinate;
 				if (coordinate.contains(padi_bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()) &&
 				    PADIBusOnDLS(
 				        coordinate.at(padi_bus.toPADIBusBlockOnDLS().toHemisphereOnDLS()),
@@ -440,9 +440,9 @@ void RoutingBuilder::apply_source_labels(
 					}
 				}
 			}
-		} else if (std::holds_alternative<ExternalPopulation>(population)) {
+		} else if (std::holds_alternative<ExternalSourcePopulation>(population)) {
 			auto& local_labels = result.external_spike_labels[descriptor];
-			local_labels.resize(std::get<ExternalPopulation>(population).size);
+			local_labels.resize(std::get<ExternalSourcePopulation>(population).size);
 			for (size_t i = 0; i < local_labels.size(); ++i) {
 				if (!external.contains(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
 					// TODO: This might happen and in principle is not an error.
@@ -457,11 +457,11 @@ void RoutingBuilder::apply_source_labels(
 					}
 				}
 			}
-		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+		} else if (std::holds_alternative<BackgroundSourcePopulation>(population)) {
 			// Find the root of the label, i.e. without the lower bits depending on the actual
 			// single neuron source.
 			std::map<HemisphereOnDLS, std::set<halco::hicann_dls::vx::v3::SpikeLabel>> local_labels;
-			auto const size = std::get<BackgroundSpikeSourcePopulation>(population).size;
+			auto const size = std::get<BackgroundSourcePopulation>(population).size;
 			for (size_t i = 0; i < size; ++i) {
 				if (!background.contains(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
 					// This shall never happen, since all neurons in a background population are

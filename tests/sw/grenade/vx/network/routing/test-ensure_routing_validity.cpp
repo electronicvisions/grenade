@@ -113,21 +113,21 @@ struct RandomNetworkGenerator
 		return result;
 	}
 
-	std::vector<ExternalPopulation> get_external_populations()
+	std::vector<ExternalSourcePopulation> get_external_populations()
 	{
 		auto const num_sources = get_num_external_sources();
 		auto const num_populations = get_num_external_populations(num_sources);
 		assert(num_sources >= num_populations);
-		std::vector<ExternalPopulation> populations;
+		std::vector<ExternalSourcePopulation> populations;
 		size_t num_unassigned_sources = num_sources;
 		for (size_t pop = 0; pop < num_populations - 1; ++pop) {
 			std::uniform_int_distribution<size_t> d(
 			    0, num_unassigned_sources - (num_populations - pop));
 			auto const size = d(m_rng) + 1;
 			num_unassigned_sources -= size;
-			populations.push_back(ExternalPopulation(size));
+			populations.push_back(ExternalSourcePopulation(size));
 		}
-		populations.push_back(ExternalPopulation(num_unassigned_sources));
+		populations.push_back(ExternalSourcePopulation(num_unassigned_sources));
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		assert(
 		    std::accumulate(
@@ -306,14 +306,14 @@ struct RandomNetworkGenerator
 		return locations;
 	}
 
-	std::vector<BackgroundSpikeSourcePopulation> get_background_populations()
+	std::vector<BackgroundSourcePopulation> get_background_populations()
 	{
 		auto const locations = get_background_source_locations();
 
 		std::bernoulli_distribution enable_random_distribution(
 		    std::uniform_real_distribution<double>{}(m_rng));
 		auto const get_config = [&enable_random_distribution, this]() {
-			BackgroundSpikeSourcePopulation::Config config;
+			BackgroundSourcePopulation::Config config;
 			config.enable_random = enable_random_distribution(m_rng);
 			if (config.enable_random) {
 				std::uniform_int_distribution<BackgroundSpikeSource::Rate::value_type> d_rate(
@@ -329,7 +329,7 @@ struct RandomNetworkGenerator
 			return config;
 		};
 
-		std::vector<BackgroundSpikeSourcePopulation> populations;
+		std::vector<BackgroundSourcePopulation> populations;
 		for (auto const& location : locations) {
 			auto const config = get_config();
 			size_t size = 1;
@@ -337,7 +337,7 @@ struct RandomNetworkGenerator
 				std::uniform_int_distribution<size_t> d_size(0, 8);
 				size = hate::math::pow(2, d_size(m_rng));
 			}
-			populations.push_back(BackgroundSpikeSourcePopulation(size, location, config));
+			populations.push_back(BackgroundSourcePopulation(size, location, config));
 		}
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		return populations;
@@ -395,9 +395,9 @@ struct RandomNetworkGenerator
 	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
-	    std::vector<ExternalPopulation> const& external_populations,
+	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSpikeSourcePopulation> const& background_populations)
+	    std::vector<BackgroundSourcePopulation> const& background_populations)
 	{
 		auto const max_num_projections = get_max_num_projections(internal_populations);
 
@@ -466,13 +466,14 @@ struct RandomNetworkGenerator
 		return {true, true};
 	}
 
-	typed_array<bool, HemisphereOnDLS> supports_connection(ExternalPopulation const& /*pre*/) const
+	typed_array<bool, HemisphereOnDLS> supports_connection(
+	    ExternalSourcePopulation const& /*pre*/) const
 	{
 		return {true, true};
 	}
 
 	typed_array<bool, HemisphereOnDLS> supports_connection(
-	    BackgroundSpikeSourcePopulation const& pre) const
+	    BackgroundSourcePopulation const& pre) const
 	{
 		typed_array<bool, HemisphereOnDLS> ret;
 		ret.fill(false);
@@ -494,9 +495,9 @@ struct RandomNetworkGenerator
 	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
-	    std::vector<ExternalPopulation> const& external_populations,
+	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSpikeSourcePopulation> const& background_populations)
+	    std::vector<BackgroundSourcePopulation> const& background_populations)
 	{
 		std::map<PopulationDescriptor, typed_array<bool, HemisphereOnDLS>> ret;
 		for (auto const& [index, descriptor] : external_population_descriptors) {
@@ -515,9 +516,9 @@ struct RandomNetworkGenerator
 	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
-	    std::vector<ExternalPopulation> const& external_populations,
+	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSpikeSourcePopulation> const& background_populations)
+	    std::vector<BackgroundSourcePopulation> const& background_populations)
 	{
 		std::map<PopulationDescriptor, size_t> population_sizes;
 		for (auto const& [index, descriptor] : external_population_descriptors) {
@@ -551,9 +552,9 @@ struct RandomNetworkGenerator
 	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
 	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
-	    std::vector<ExternalPopulation> const& external_populations,
+	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSpikeSourcePopulation> const& background_populations)
+	    std::vector<BackgroundSourcePopulation> const& background_populations)
 	{
 		if (projections.empty()) {
 			return std::move(projections);

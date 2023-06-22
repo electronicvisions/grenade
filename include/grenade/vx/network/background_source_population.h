@@ -9,8 +9,8 @@
 
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-/** BackgroundSpikeSource spike source population. */
-struct GENPYBIND(visible) BackgroundSpikeSourcePopulation
+/** Background source population. */
+struct GENPYBIND(visible) BackgroundSourcePopulation
 {
 	/** Number of individual sources. */
 	size_t size{0};
@@ -37,16 +37,16 @@ struct GENPYBIND(visible) BackgroundSpikeSourcePopulation
 		friend std::ostream& operator<<(std::ostream& os, Config const& config) SYMBOL_VISIBLE;
 	} config;
 
-	BackgroundSpikeSourcePopulation() = default;
-	BackgroundSpikeSourcePopulation(size_t size, Coordinate const& coordinate, Config const& config)
+	BackgroundSourcePopulation() = default;
+	BackgroundSourcePopulation(size_t size, Coordinate const& coordinate, Config const& config)
 	    SYMBOL_VISIBLE;
 
-	bool operator==(BackgroundSpikeSourcePopulation const& other) const SYMBOL_VISIBLE;
-	bool operator!=(BackgroundSpikeSourcePopulation const& other) const SYMBOL_VISIBLE;
+	bool operator==(BackgroundSourcePopulation const& other) const SYMBOL_VISIBLE;
+	bool operator!=(BackgroundSourcePopulation const& other) const SYMBOL_VISIBLE;
 
 	GENPYBIND(stringstream)
-	friend std::ostream& operator<<(
-	    std::ostream& os, BackgroundSpikeSourcePopulation const& population) SYMBOL_VISIBLE;
+	friend std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation const& population)
+	    SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx::network

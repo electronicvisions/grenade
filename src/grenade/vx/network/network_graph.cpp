@@ -99,8 +99,8 @@ bool NetworkGraph::valid() const
 		}
 		auto const get_size = hate::overloaded(
 		    [](Population const& p) { return p.neurons.size(); },
-		    [](ExternalPopulation const& p) { return p.size; },
-		    [](BackgroundSpikeSourcePopulation const& p) { return p.size; });
+		    [](ExternalSourcePopulation const& p) { return p.size; },
+		    [](BackgroundSourcePopulation const& p) { return p.size; });
 		auto const size = m_spike_labels.at(descriptor).size();
 		auto const expected_size = std::visit(get_size, population);
 		if (size != expected_size) {
@@ -127,7 +127,7 @@ bool NetworkGraph::valid() const
 			    }
 			    return true;
 		    },
-		    [this, descriptor, logger](ExternalPopulation const& p) {
+		    [this, descriptor, logger](ExternalSourcePopulation const& p) {
 			    for (size_t n = 0; n < p.size; ++n) {
 				    if (!m_spike_labels.at(descriptor)
 				             .at(n)
@@ -141,7 +141,7 @@ bool NetworkGraph::valid() const
 			    }
 			    return true;
 		    },
-		    [this, descriptor, logger](BackgroundSpikeSourcePopulation const& p) {
+		    [this, descriptor, logger](BackgroundSourcePopulation const& p) {
 			    for (size_t n = 0; n < p.size; ++n) {
 				    if (!m_spike_labels.at(descriptor)
 				             .at(n)
@@ -327,10 +327,10 @@ bool NetworkGraph::valid() const
 
 	// check that all on-chip background spike sources are represented
 	for (auto const& [descriptor, population] : m_network->populations) {
-		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+		if (!std::holds_alternative<BackgroundSourcePopulation>(population)) {
 			continue;
 		}
-		auto const& pop = std::get<BackgroundSpikeSourcePopulation>(population);
+		auto const& pop = std::get<BackgroundSourcePopulation>(population);
 		if (!m_background_spike_source_vertices.contains(descriptor)) {
 			LOG4CXX_ERROR(
 			    logger, "No hardware network vertices for on-chip background spike source("
@@ -401,10 +401,10 @@ bool NetworkGraph::valid() const
 
 	// check that all on-chip background spike sources feature correct event labels
 	for (auto const& [descriptor, population] : m_network->populations) {
-		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+		if (!std::holds_alternative<BackgroundSourcePopulation>(population)) {
 			continue;
 		}
-		auto const& pop = std::get<BackgroundSpikeSourcePopulation>(population);
+		auto const& pop = std::get<BackgroundSourcePopulation>(population);
 		size_t label_entry = 0;
 		for (auto const& [hemisphere, padi_bus] : pop.coordinate) {
 			auto const& vertex =

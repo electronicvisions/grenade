@@ -33,13 +33,13 @@ public:
 	 * Add off-chip population.
 	 * @param population Population to add
 	 */
-	PopulationDescriptor add(ExternalPopulation const& population) SYMBOL_VISIBLE;
+	PopulationDescriptor add(ExternalSourcePopulation const& population) SYMBOL_VISIBLE;
 
 	/**
 	 * Add on-chip background spike source population.
 	 * @param population Population to add
 	 */
-	PopulationDescriptor add(BackgroundSpikeSourcePopulation const& population) SYMBOL_VISIBLE;
+	PopulationDescriptor add(BackgroundSourcePopulation const& population) SYMBOL_VISIBLE;
 
 	/**
 	 * Add projection between already added populations.
@@ -81,7 +81,7 @@ public:
 private:
 	std::map<
 	    PopulationDescriptor,
-	    std::variant<Population, ExternalPopulation, BackgroundSpikeSourcePopulation>>
+	    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>>
 	    m_populations{};
 	std::map<ProjectionDescriptor, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};

@@ -79,11 +79,11 @@ NetworkGraph build_network_graph(
 			}
 			auto const population_inputs = std::visit(
 			    hate::overloaded(
-			        [&](ExternalPopulation const&) {
+			        [&](ExternalSourcePopulation const&) {
 				        return builder.add_projection_from_external_input(
 				            result.m_graph, resources, descriptor, routing_result, instance);
 			        },
-			        [&](BackgroundSpikeSourcePopulation const&) {
+			        [&](BackgroundSourcePopulation const&) {
 				        return builder.add_projection_from_background_spike_source(
 				            result.m_graph, resources, descriptor, routing_result, instance);
 			        },
@@ -357,7 +357,7 @@ void NetworkGraphBuilder::add_external_input(
 	hate::Timer timer;
 	// only continue if any external population exists
 	if (std::none_of(m_network.populations.begin(), m_network.populations.end(), [](auto const& p) {
-		    return std::holds_alternative<ExternalPopulation>(p.second);
+		    return std::holds_alternative<ExternalSourcePopulation>(p.second);
 	    })) {
 		return;
 	}
@@ -390,10 +390,10 @@ void NetworkGraphBuilder::add_background_spike_sources(
 {
 	hate::Timer timer;
 	for (auto const& [descriptor, population] : m_network.populations) {
-		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+		if (!std::holds_alternative<BackgroundSourcePopulation>(population)) {
 			continue;
 		}
-		auto const& pop = std::get<BackgroundSpikeSourcePopulation>(population);
+		auto const& pop = std::get<BackgroundSourcePopulation>(population);
 		if (!routing_result.background_spike_source_labels.contains(descriptor)) {
 			throw std::runtime_error(
 			    "Connection builder result does not contain spike labels for the population(" +
@@ -624,8 +624,7 @@ void NetworkGraphBuilder::add_crossbar_node(
 	} else { // other (currently only background sources)
 		for (auto const& [dd, d] : resources.background_spike_sources) {
 			for (auto const& [hemisphere, bus] :
-			     std::get<BackgroundSpikeSourcePopulation>(m_network.populations.at(dd))
-			         .coordinate) {
+			     std::get<BackgroundSourcePopulation>(m_network.populations.at(dd)).coordinate) {
 				BackgroundSpikeSourceOnDLS source(
 				    bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size);
 				if (source.toCrossbarInputOnDLS() == coordinate.toCrossbarInputOnDLS()) {
@@ -951,7 +950,8 @@ NetworkGraphBuilder::add_projection_from_external_input(
 {
 	hate::Timer timer;
 	auto const population_pre = m_network.projections.at(descriptor).population_pre;
-	if (!std::holds_alternative<ExternalPopulation>(m_network.populations.at(population_pre))) {
+	if (!std::holds_alternative<ExternalSourcePopulation>(
+	        m_network.populations.at(population_pre))) {
 		throw std::logic_error("Projection's presynaptic population is not external.");
 	}
 	// get used PADI busses, synapse drivers and spl1 addresses
@@ -1038,7 +1038,7 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
 {
 	hate::Timer timer;
 	auto const population_pre = m_network.projections.at(descriptor).population_pre;
-	if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(
+	if (!std::holds_alternative<BackgroundSourcePopulation>(
 	        m_network.populations.at(population_pre))) {
 		throw std::logic_error(
 		    "Projection's presynaptic population is not a background spike source.");
@@ -1079,7 +1079,7 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
 	}
 	// add crossbar nodes from source to PADI busses
 	for (auto const& [hemisphere, bus] :
-	     std::get<BackgroundSpikeSourcePopulation>(m_network.populations.at(population_pre))
+	     std::get<BackgroundSourcePopulation>(m_network.populations.at(population_pre))
 	         .coordinate) {
 		auto const crossbar_input =
 		    BackgroundSpikeSourceOnDLS(
@@ -1420,8 +1420,8 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 					}
 				}
 			}
-		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(pop)) {
-			auto const& population = std::get<BackgroundSpikeSourcePopulation>(pop);
+		} else if (std::holds_alternative<BackgroundSourcePopulation>(pop)) {
+			auto const& population = std::get<BackgroundSourcePopulation>(pop);
 			auto& local_spike_labels = spike_labels[descriptor];
 			if (!connection_result.background_spike_source_labels.contains(descriptor)) {
 				throw std::runtime_error(
@@ -1439,7 +1439,7 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 					local_spike_labels.at(k)[CompartmentOnLogicalNeuron()].push_back(label);
 				}
 			}
-		} else if (std::holds_alternative<ExternalPopulation>(pop)) {
+		} else if (std::holds_alternative<ExternalSourcePopulation>(pop)) {
 			if (!spike_labels.contains(descriptor)) {
 				throw std::runtime_error(
 				    "Connection builder result does not contain spike labels for the "

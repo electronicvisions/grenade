@@ -229,10 +229,9 @@ TEST(RoutingConstraints, get_internal_connections)
 TEST(RoutingConstraints, get_background_connections)
 {
 	NetworkBuilder builder;
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(1)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(1)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -309,7 +308,7 @@ TEST(RoutingConstraints, get_background_connections)
 TEST(RoutingConstraints, get_external_connections)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
+	ExternalSourcePopulation extpop(2);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -378,7 +377,7 @@ TEST(RoutingConstraints, get_external_connections)
 TEST(RoutingConstraints, get_external_connections_per_hemisphere)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
+	ExternalSourcePopulation extpop(2);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -451,7 +450,7 @@ TEST(RoutingConstraints, get_external_connections_per_hemisphere)
 TEST(RoutingConstraints, get_external_sources_to_hemisphere)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
+	ExternalSourcePopulation extpop(2);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -518,11 +517,10 @@ TEST(RoutingConstraints, get_external_sources_to_hemisphere)
 TEST(RoutingConstraints, get_neuron_in_degree)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -602,11 +600,10 @@ TEST(RoutingConstraints, get_neuron_in_degree)
 TEST(RoutingConstraints, get_neuron_in_degree_per_padi_bus)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -691,11 +688,10 @@ TEST(RoutingConstraints, get_neuron_in_degree_per_padi_bus)
 TEST(RoutingConstraints, get_neuron_in_degree_per_receptor_type)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -776,11 +772,10 @@ TEST(RoutingConstraints, get_neuron_in_degree_per_receptor_type)
 TEST(RoutingConstraints, get_neuron_in_degree_per_receptor_type_per_padi_bus)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -871,11 +866,10 @@ TEST(RoutingConstraints, get_neuron_in_degree_per_receptor_type_per_padi_bus)
 TEST(RoutingConstraints, get_num_synapse_rows_per_padi_bus_per_receptor_type)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -969,11 +963,10 @@ TEST(RoutingConstraints, get_num_synapse_rows_per_padi_bus_per_receptor_type)
 TEST(RoutingConstraints, get_num_synapse_rows_per_padi_bus)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -1171,11 +1164,10 @@ TEST(RoutingConstraints, get_neurons_on_padi_bus)
 TEST(RoutingConstraints, get_num_background_sources_on_padi_bus)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -1256,11 +1248,10 @@ TEST(RoutingConstraints, get_num_background_sources_on_padi_bus)
 TEST(RoutingConstraints, get_neuron_event_outputs_on_padi_bus)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(0)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(
@@ -1338,11 +1329,10 @@ TEST(RoutingConstraints, get_neuron_event_outputs_on_padi_bus)
 TEST(RoutingConstraints, get_padi_bus_constraints)
 {
 	NetworkBuilder builder;
-	ExternalPopulation extpop(2);
-	BackgroundSpikeSourcePopulation::Config bgconfig;
+	ExternalSourcePopulation extpop(2);
+	BackgroundSourcePopulation::Config bgconfig;
 	bgconfig.enable_random = true;
-	BackgroundSpikeSourcePopulation bgpop(
-	    2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
+	BackgroundSourcePopulation bgpop(2, {{HemisphereOnDLS(1), PADIBusOnPADIBusBlock(1)}}, bgconfig);
 	Population pop(Population::Neurons{
 	    Population::Neuron(
 	        LogicalNeuronOnDLS(

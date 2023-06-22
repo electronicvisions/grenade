@@ -59,13 +59,11 @@ ConnectionRoutingResult build_connection_routing(std::shared_ptr<Network> const&
 				std::set<size_t> neurons_with_matching_receptor;
 				for (size_t i = 0; i < receptors.size(); ++i) {
 					if (receptors.at(i).contains(projection.receptor)) {
-						if ((std::holds_alternative<BackgroundSpikeSourcePopulation>(
-						         population_pre) &&
-						     std::get<BackgroundSpikeSourcePopulation>(population_pre)
+						if ((std::holds_alternative<BackgroundSourcePopulation>(population_pre) &&
+						     std::get<BackgroundSourcePopulation>(population_pre)
 						         .coordinate.contains(
 						             get_neuron_post(i).toNeuronRowOnDLS().toHemisphereOnDLS())) ||
-						    !std::holds_alternative<BackgroundSpikeSourcePopulation>(
-						        population_pre)) {
+						    !std::holds_alternative<BackgroundSourcePopulation>(population_pre)) {
 							neurons_with_matching_receptor.insert(i);
 						}
 					}

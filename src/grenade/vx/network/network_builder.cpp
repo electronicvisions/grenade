@@ -50,7 +50,7 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 	return descriptor;
 }
 
-PopulationDescriptor NetworkBuilder::add(ExternalPopulation const& population)
+PopulationDescriptor NetworkBuilder::add(ExternalSourcePopulation const& population)
 {
 	hate::Timer timer;
 	PopulationDescriptor descriptor(m_populations.size());
@@ -62,15 +62,15 @@ PopulationDescriptor NetworkBuilder::add(ExternalPopulation const& population)
 	return descriptor;
 }
 
-PopulationDescriptor NetworkBuilder::add(BackgroundSpikeSourcePopulation const& population)
+PopulationDescriptor NetworkBuilder::add(BackgroundSourcePopulation const& population)
 {
 	hate::Timer timer;
 	// check that supplied coordinate doesn't overlap with already added populations
 	for (auto const& [descriptor, other] : m_populations) {
-		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(other)) {
+		if (!std::holds_alternative<BackgroundSourcePopulation>(other)) {
 			continue;
 		}
-		auto const& o = std::get<BackgroundSpikeSourcePopulation>(other);
+		auto const& o = std::get<BackgroundSourcePopulation>(other);
 		for (auto const& [hemisphere, bus] : population.coordinate) {
 			if (o.coordinate.contains(hemisphere) && o.coordinate.at(hemisphere) == bus) {
 				std::stringstream ss;
@@ -182,9 +182,9 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	}
 
 	// check that if source is background the hemisphere matches
-	if (std::holds_alternative<BackgroundSpikeSourcePopulation>(
+	if (std::holds_alternative<BackgroundSourcePopulation>(
 	        m_populations.at(projection.population_pre))) {
-		auto const& pre = std::get<BackgroundSpikeSourcePopulation>(population_pre);
+		auto const& pre = std::get<BackgroundSourcePopulation>(population_pre);
 		for (auto const& connection : projection.connections) {
 			auto const& receptors = population_post.neurons.at(connection.index_post.first)
 			                            .compartments.at(connection.index_post.second)

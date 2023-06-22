@@ -212,11 +212,11 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	std::vector<PopulationDescriptor> internal_population_descriptors;
 	std::vector<PopulationDescriptor> background_population_descriptors;
 	for (auto const& [descriptor, population] : network.populations) {
-		if (std::holds_alternative<ExternalPopulation>(population)) {
+		if (std::holds_alternative<ExternalSourcePopulation>(population)) {
 			external_population_descriptors.push_back(descriptor);
 		} else if (std::holds_alternative<Population>(population)) {
 			internal_population_descriptors.push_back(descriptor);
-		} else if (std::holds_alternative<BackgroundSpikeSourcePopulation>(population)) {
+		} else if (std::holds_alternative<BackgroundSourcePopulation>(population)) {
 			background_population_descriptors.push_back(descriptor);
 		} else {
 			throw std::logic_error("Population type not supported.");
@@ -438,7 +438,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 					    network_graph.get_spike_labels().at(background_population_descriptor);
 					size_t i = 0;
 					for (auto const [hemisphere, padi_bus] :
-					     std::get<BackgroundSpikeSourcePopulation>(
+					     std::get<BackgroundSourcePopulation>(
 					         network.populations.at(background_population_descriptor))
 					         .coordinate) {
 						if (background_spike_source.get().get_coordinate().toPADIBusOnDLS() ==

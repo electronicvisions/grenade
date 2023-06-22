@@ -1,47 +1,47 @@
-#include "grenade/vx/network/background_spike_source_population.h"
+#include "grenade/vx/network/background_source_population.h"
 
 #include <ostream>
 
 namespace grenade::vx::network {
 
-BackgroundSpikeSourcePopulation::BackgroundSpikeSourcePopulation(
+BackgroundSourcePopulation::BackgroundSourcePopulation(
     size_t const size, Coordinate const& coordinate, Config const& config) :
     size(size), coordinate(coordinate), config(config)
 {}
 
-bool BackgroundSpikeSourcePopulation::Config::operator==(
-    BackgroundSpikeSourcePopulation::Config const& other) const
+bool BackgroundSourcePopulation::Config::operator==(
+    BackgroundSourcePopulation::Config const& other) const
 {
 	return period == other.period && rate == other.rate && seed == other.seed && enable_random &&
 	       other.enable_random;
 }
 
-bool BackgroundSpikeSourcePopulation::Config::operator!=(
-    BackgroundSpikeSourcePopulation::Config const& other) const
+bool BackgroundSourcePopulation::Config::operator!=(
+    BackgroundSourcePopulation::Config const& other) const
 {
 	return !(*this == other);
 }
 
-bool BackgroundSpikeSourcePopulation::operator==(BackgroundSpikeSourcePopulation const& other) const
+bool BackgroundSourcePopulation::operator==(BackgroundSourcePopulation const& other) const
 {
 	return size == other.size && coordinate == other.coordinate && config == other.config;
 }
 
-bool BackgroundSpikeSourcePopulation::operator!=(BackgroundSpikeSourcePopulation const& other) const
+bool BackgroundSourcePopulation::operator!=(BackgroundSourcePopulation const& other) const
 {
 	return !(*this == other);
 }
 
-std::ostream& operator<<(std::ostream& os, BackgroundSpikeSourcePopulation::Config const& config)
+std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation::Config const& config)
 {
 	os << "Config(" << config.period << ", " << config.rate << ", " << config.seed
 	   << ", enable_random: " << std::boolalpha << config.enable_random << ")";
 	return os;
 }
 
-std::ostream& operator<<(std::ostream& os, BackgroundSpikeSourcePopulation const& population)
+std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation const& population)
 {
-	os << "BackgroundSpikeSourcePopulation(\n";
+	os << "BackgroundSourcePopulation(\n";
 	os << "\tsize: " << population.size << "\n";
 	os << "\tcoordinate:\n";
 	for (auto const& [hemisphere, padi_bus] : population.coordinate) {

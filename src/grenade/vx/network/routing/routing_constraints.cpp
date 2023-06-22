@@ -133,13 +133,13 @@ RoutingConstraints::get_background_connections() const
 {
 	std::vector<BackgroundConnection> ret;
 	for (auto const& [descriptor, projection] : m_network.projections) {
-		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(
+		if (!std::holds_alternative<BackgroundSourcePopulation>(
 		        m_network.populations.at(projection.population_pre)) ||
 		    !std::holds_alternative<Population>(
 		        m_network.populations.at(projection.population_post))) {
 			continue;
 		}
-		auto const& population_pre = std::get<BackgroundSpikeSourcePopulation>(
+		auto const& population_pre = std::get<BackgroundSourcePopulation>(
 		    m_network.populations.at(projection.population_pre));
 		auto const& population_post =
 		    std::get<Population>(m_network.populations.at(projection.population_post));
@@ -199,7 +199,7 @@ std::vector<RoutingConstraints::ExternalConnection> RoutingConstraints::get_exte
 {
 	std::vector<ExternalConnection> ret;
 	for (auto const& [descriptor, projection] : m_network.projections) {
-		if (!std::holds_alternative<ExternalPopulation>(
+		if (!std::holds_alternative<ExternalSourcePopulation>(
 		        m_network.populations.at(projection.population_pre))) {
 			continue;
 		}
@@ -490,10 +490,10 @@ RoutingConstraints::get_num_background_sources_on_padi_bus() const
 	ret.fill(0);
 
 	for (auto const& [_, pop] : m_network.populations) {
-		if (!std::holds_alternative<BackgroundSpikeSourcePopulation>(pop)) {
+		if (!std::holds_alternative<BackgroundSourcePopulation>(pop)) {
 			continue;
 		}
-		auto const& population = std::get<BackgroundSpikeSourcePopulation>(pop);
+		auto const& population = std::get<BackgroundSourcePopulation>(pop);
 		for (auto const& [hemisphere, bus] : population.coordinate) {
 			ret[PADIBusOnDLS(bus, hemisphere.toPADIBusBlockOnDLS())] = population.size;
 		}
