@@ -1,6 +1,6 @@
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 
-#include "grenade/vx/network/routing/detail/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/synapse_driver_on_dls_manager.h"
 #include "halco/common/iter_all.h"
 #include "hate/indent.h"
 #include "hate/join.h"
@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <log4cxx/logger.h>
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -263,4 +263,4 @@ std::optional<std::vector<SynapseDriverOnDLSManager::Allocation>> SynapseDriverO
 	return std::nullopt;
 }
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

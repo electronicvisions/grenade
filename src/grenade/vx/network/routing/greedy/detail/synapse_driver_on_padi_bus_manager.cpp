@@ -1,11 +1,11 @@
-#include "grenade/vx/network/routing/detail/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/synapse_driver_on_padi_bus_manager.h"
 
 #include "halco/common/iter_all.h"
 #include "hate/timer.h"
 #include <algorithm>
 #include <set>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -466,4 +466,4 @@ bool SynapseDriverOnPADIBusManager::is_contiguous(std::set<SynapseDriver> const&
 	return (*synapse_drivers.rbegin() - *synapse_drivers.begin()) == synapse_drivers.size() - 1;
 }
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail

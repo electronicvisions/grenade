@@ -1,6 +1,6 @@
 #pragma once
-#include "grenade/vx/network/routing/source_on_padi_bus_manager.h"
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/visibility.h"
@@ -8,17 +8,20 @@
 #include <set>
 #include <vector>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 struct SourceOnPADIBusManager
 {
-	typedef grenade::vx::network::routing::SourceOnPADIBusManager::Label Label;
-	typedef grenade::vx::network::routing::SourceOnPADIBusManager::SynapseDriver SynapseDriver;
-	typedef grenade::vx::network::routing::SourceOnPADIBusManager::InternalSource InternalSource;
-	typedef grenade::vx::network::routing::SourceOnPADIBusManager::BackgroundSource
+	typedef grenade::vx::network::routing::greedy::SourceOnPADIBusManager::Label Label;
+	typedef grenade::vx::network::routing::greedy::SourceOnPADIBusManager::SynapseDriver
+	    SynapseDriver;
+	typedef grenade::vx::network::routing::greedy::SourceOnPADIBusManager::InternalSource
+	    InternalSource;
+	typedef grenade::vx::network::routing::greedy::SourceOnPADIBusManager::BackgroundSource
 	    BackgroundSource;
-	typedef grenade::vx::network::routing::SourceOnPADIBusManager::ExternalSource ExternalSource;
-	typedef grenade::vx::network::routing::SourceOnPADIBusManager::Partition Partition;
+	typedef grenade::vx::network::routing::greedy::SourceOnPADIBusManager::ExternalSource
+	    ExternalSource;
+	typedef grenade::vx::network::routing::greedy::SourceOnPADIBusManager::Partition Partition;
 
 	/**
 	 * Split list of indices into source vector into chunks of synapse label size.
@@ -95,4 +98,4 @@ struct SourceOnPADIBusManager
 	    size_t num_synapse_drivers) SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail

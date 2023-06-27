@@ -4,9 +4,9 @@
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
-#include "grenade/vx/network/routing/routing_constraints.h"
-#include "grenade/vx/network/routing/source_on_padi_bus_manager.h"
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/routing_constraints.h"
+#include "grenade/vx/network/routing/greedy/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "grenade/vx/network/routing_options.h"
 #include "grenade/vx/network/routing_result.h"
 #include "halco/common/typed_array.h"
@@ -33,7 +33,7 @@ class Logger;
 typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 struct RoutingBuilder
 {
@@ -262,4 +262,4 @@ private:
 	log4cxx::LoggerPtr m_logger;
 };
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

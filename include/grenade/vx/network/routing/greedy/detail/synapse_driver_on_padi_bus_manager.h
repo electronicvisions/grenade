@@ -1,25 +1,26 @@
 #pragma once
-#include "grenade/vx/network/routing/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_padi_bus_manager.h"
 #include "hate/visibility.h"
 #include <map>
 #include <set>
 #include <vector>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 /**
  * Implementation details of the allocation manager for a single PADI-bus.
  */
 struct SynapseDriverOnPADIBusManager
 {
-	typedef grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Label Label;
-	typedef grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Mask Mask;
-	typedef grenade::vx::network::routing::SynapseDriverOnPADIBusManager::SynapseDriver
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::Label Label;
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::Mask Mask;
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::SynapseDriver
 	    SynapseDriver;
-	typedef grenade::vx::network::routing::SynapseDriverOnPADIBusManager::AllocationRequest
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::AllocationRequest
 	    AllocationRequest;
-	typedef grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Allocation Allocation;
-	typedef grenade::vx::network::routing::SynapseDriverOnPADIBusManager::AllocationPolicy
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::Allocation
+	    Allocation;
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::AllocationPolicy
 	    AllocationPolicy;
 
 	/**
@@ -171,4 +172,4 @@ struct SynapseDriverOnPADIBusManager
 	    std::optional<std::chrono::milliseconds> const& max_duration = std::nullopt) SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail

@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/routing/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_padi_bus_manager.h"
 #include "halco/common/iter_all.h"
 #include <random>
 
 
 using namespace grenade::vx::network;
-using namespace grenade::vx::network::routing;
+using namespace grenade::vx::network::routing::greedy;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 

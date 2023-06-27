@@ -18,7 +18,7 @@ namespace grenade::vx::network {
 
 struct Network;
 
-namespace routing {
+namespace routing::greedy {
 
 /**
  * Accessors for routing constraints for a given abstract network.
@@ -264,6 +264,6 @@ private:
 	ConnectionRoutingResult const& m_connection_routing_result;
 };
 
-} // namespace routing
+} // namespace routing::greedy
 
 } // namespace grenade::vx::network

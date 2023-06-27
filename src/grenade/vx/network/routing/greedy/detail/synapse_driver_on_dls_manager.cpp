@@ -1,10 +1,10 @@
-#include "grenade/vx/network/routing/detail/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/synapse_driver_on_dls_manager.h"
 
-#include "grenade/vx/network/routing/detail/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/synapse_driver_on_padi_bus_manager.h"
 #include "halco/common/iter_all.h"
 #include <log4cxx/logger.h>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -296,4 +296,4 @@ bool SynapseDriverOnDLSManager::valid_solution(
 	return true;
 }
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail

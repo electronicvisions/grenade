@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/network/receptor.h"
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
@@ -17,7 +17,7 @@ class Logger;
 typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 /**
  * Partitioning manager for sources projecting onto internal neurons via events propagated by
@@ -177,4 +177,4 @@ private:
 	DisabledInternalRoutes m_disabled_internal_routes;
 };
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

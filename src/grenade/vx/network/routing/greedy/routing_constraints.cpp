@@ -1,10 +1,10 @@
-#include "grenade/vx/network/routing/routing_constraints.h"
+#include "grenade/vx/network/routing/greedy/routing_constraints.h"
 
 #include "grenade/vx/network/network.h"
 #include "hate/math.h"
 #include <iostream>
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -568,4 +568,4 @@ halco::common::
 	return padi_bus_constraints;
 }
 
-} // namespace grenade::vx::routing::network
+} // namespace grenade::vx::network::routing::greedy

@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 /**
  * Allocation manager for synapse drivers on a single PADI-bus.
@@ -142,4 +142,4 @@ private:
 std::ostream& operator<<(
     std::ostream& os, SynapseDriverOnPADIBusManager::AllocationPolicy const& value) SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

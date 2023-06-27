@@ -1,13 +1,13 @@
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.h"
 
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.tcc"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.tcc"
 #include "halco/common/iter_all.h"
 #include "hate/math.h"
 #include "hate/multidim_iterator.h"
 #include "lola/vx/v3/synapse.h"
 #include <stdexcept>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -164,4 +164,4 @@ SourceOnPADIBusManager::distribute_external_sources_linear(
 	return split_external_sources_per_padi_bus;
 }
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail

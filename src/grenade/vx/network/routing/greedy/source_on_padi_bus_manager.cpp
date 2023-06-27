@@ -1,7 +1,7 @@
-#include "grenade/vx/network/routing/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/source_on_padi_bus_manager.h"
 
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.h"
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.tcc"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.tcc"
 #include "halco/common/iter_all.h"
 #include "hate/indent.h"
 #include "hate/join.h"
@@ -10,7 +10,7 @@
 #include <sstream>
 #include <log4cxx/logger.h>
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -375,4 +375,4 @@ std::optional<SourceOnPADIBusManager::Partition> SourceOnPADIBusManager::solve(
 	return partition;
 }
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

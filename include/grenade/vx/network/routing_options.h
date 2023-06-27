@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "lola/vx/v3/synapse.h"
 #include <chrono>
 #include <iosfwd>
@@ -22,11 +22,11 @@ struct GENPYBIND(visible) RoutingOptions
 	/**
 	 * Policy to be used in synapse driver allocation.
 	 */
-	typedef routing::SynapseDriverOnDLSManager::AllocationPolicy AllocationPolicy;
+	typedef routing::greedy::SynapseDriverOnDLSManager::AllocationPolicy AllocationPolicy;
 	AllocationPolicy synapse_driver_allocation_policy;
-	typedef routing::SynapseDriverOnDLSManager::AllocationPolicyGreedy AllocationPolicyGreedy
-	    GENPYBIND(opaque);
-	typedef routing::SynapseDriverOnDLSManager::AllocationPolicyBacktracking
+	typedef routing::greedy::SynapseDriverOnDLSManager::AllocationPolicyGreedy
+	    AllocationPolicyGreedy GENPYBIND(opaque);
+	typedef routing::greedy::SynapseDriverOnDLSManager::AllocationPolicyBacktracking
 	    AllocationPolicyBacktracking GENPYBIND(opaque);
 
 	/**
@@ -43,12 +43,12 @@ GENPYBIND_MANUAL({
 	auto cls = pybind11::class_<::grenade::vx::network::RoutingOptions::AllocationPolicy>(
 	    parent, "_RoutingOptions_AllocationPolicy");
 	cls.def(
-	       pybind11::init<::grenade::vx::network::routing::SynapseDriverOnDLSManager::
+	       pybind11::init<::grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::
 	                          AllocationPolicyGreedy>(),
-	       pybind11::arg("value") =
-	           ::grenade::vx::network::routing::SynapseDriverOnDLSManager::AllocationPolicyGreedy())
+	       pybind11::arg("value") = ::grenade::vx::network::routing::greedy::
+	           SynapseDriverOnDLSManager::AllocationPolicyGreedy())
 	    .def(
-	        pybind11::init<::grenade::vx::network::routing::SynapseDriverOnDLSManager::
+	        pybind11::init<::grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::
 	                           AllocationPolicyBacktracking>(),
 	        pybind11::arg("value"));
 	parent.attr("RoutingOptions").attr("AllocationPolicy") =

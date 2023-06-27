@@ -1,4 +1,4 @@
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.h"
 
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/iter_all.h"
@@ -8,7 +8,7 @@
 #include "lola/vx/v3/synapse.h"
 #include <numeric>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -50,4 +50,4 @@ typed_array<size_t, PADIBusBlockOnDLS> SourceOnPADIBusManager::get_num_synapse_d
 	return num_synapse_drivers;
 }
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail

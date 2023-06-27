@@ -5,10 +5,10 @@
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
-#include "grenade/vx/network/routing/routing_constraints.h"
+#include "grenade/vx/network/routing/greedy/routing_constraints.h"
 
 using namespace grenade::vx::network;
-using namespace grenade::vx::network::routing;
+using namespace grenade::vx::network::routing::greedy;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 

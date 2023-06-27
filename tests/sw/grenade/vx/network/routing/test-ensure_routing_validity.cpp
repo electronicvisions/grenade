@@ -4,7 +4,7 @@
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "hate/indent.h"
 #include "hate/join.h"
 #include "hate/math.h"
@@ -13,7 +13,7 @@
 #include <ranges>
 
 using namespace grenade::vx::network;
-using namespace grenade::vx::network::routing;
+using namespace grenade::vx::network::routing::greedy;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 using namespace haldls::vx::v3;

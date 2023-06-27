@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/network/routing/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_padi_bus_manager.h"
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
@@ -16,7 +16,7 @@ class Logger;
 typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 /**
  * Allocation manager for synapse drivers on all PADI-busses of one chip.
@@ -127,4 +127,4 @@ private:
 	log4cxx::LoggerPtr m_logger;
 };
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

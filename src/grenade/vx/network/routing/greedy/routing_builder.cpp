@@ -1,9 +1,9 @@
-#include "grenade/vx/network/routing/routing_builder.h"
+#include "grenade/vx/network/routing/greedy/routing_builder.h"
 
 #include "grenade/vx/network/build_connection_weight_split.h"
 #include "grenade/vx/network/exception.h"
-#include "grenade/vx/network/routing/routing_constraints.h"
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/routing_constraints.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/routing_crossbar.h"
@@ -18,7 +18,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <log4cxx/logger.h>
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
@@ -994,4 +994,4 @@ RoutingResult RoutingBuilder::route(
 	return result;
 }
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

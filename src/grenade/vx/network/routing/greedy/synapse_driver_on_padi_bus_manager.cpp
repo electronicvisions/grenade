@@ -1,12 +1,12 @@
-#include "grenade/vx/network/routing/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_padi_bus_manager.h"
 
-#include "grenade/vx/network/routing/detail/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/synapse_driver_on_padi_bus_manager.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
 #include <ostream>
 #include <stdexcept>
 
-namespace grenade::vx::network::routing {
+namespace grenade::vx::network::routing::greedy {
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -203,4 +203,4 @@ std::ostream& operator<<(
 	return os;
 }
 
-} // namespace grenade::vx::network::routing
+} // namespace grenade::vx::network::routing::greedy

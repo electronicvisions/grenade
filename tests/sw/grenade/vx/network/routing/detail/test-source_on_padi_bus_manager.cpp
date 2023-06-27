@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.h"
-#include "grenade/vx/network/routing/detail/source_on_padi_bus_manager.tcc"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.tcc"
 #include "halco/common/iter_all.h"
 #include "lola/vx/v3/synapse.h"
 
 
-using namespace grenade::vx::network::routing::detail;
+using namespace grenade::vx::network::routing::greedy::detail;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
@@ -101,7 +101,7 @@ TEST(detail_SourceOnPADIBusManager, get_allocation_requests_internal)
 	auto const allocation_requests = SourceOnPADIBusManager::get_allocation_requests_internal(
 	    filter, padi_bus, NeuronBackendConfigBlockOnDLS(), num_synapse_drivers);
 
-	std::vector<grenade::vx::network::routing::SynapseDriverOnDLSManager::AllocationRequest>
+	std::vector<grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::AllocationRequest>
 	    expectation{
 	        {{{PADIBusOnDLS(Enum(2)), {{12, false}}}, {PADIBusOnDLS(Enum(6)), {{5, false}}}},
 	         {SourceOnPADIBusManager::Label(8), SourceOnPADIBusManager::Label(8),
@@ -139,7 +139,7 @@ TEST(detail_SourceOnPADIBusManager, get_allocation_requests_background)
 	auto const allocation_requests = SourceOnPADIBusManager::get_allocation_requests_background(
 	    filter, padi_bus, num_synapse_drivers);
 
-	std::vector<grenade::vx::network::routing::SynapseDriverOnDLSManager::AllocationRequest>
+	std::vector<grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::AllocationRequest>
 	    expectation{
 	        {{{PADIBusOnDLS(Enum(2)), {{12, false}}}}, {}, std::nullopt},
 	        {{{PADIBusOnDLS(Enum(2)), {{10, false}}}}, {}, std::nullopt}};
@@ -163,7 +163,7 @@ TEST(detail_SourceOnPADIBusManager, get_allocation_requests_external)
 	auto const allocation_requests =
 	    SourceOnPADIBusManager::get_allocation_requests_external(padi_bus, num_synapse_drivers);
 
-	grenade::vx::network::routing::SynapseDriverOnDLSManager::AllocationRequest expectation{
+	grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::AllocationRequest expectation{
 	    {{PADIBusOnDLS(Enum(2)), {{12, false}}}}, {}, std::nullopt};
 
 	EXPECT_EQ(allocation_requests.shapes, expectation.shapes);

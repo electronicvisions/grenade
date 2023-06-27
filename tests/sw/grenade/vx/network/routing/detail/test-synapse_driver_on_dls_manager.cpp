@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/routing/detail/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/detail/synapse_driver_on_dls_manager.h"
 #include "halco/common/iter_all.h"
 
 
-using namespace grenade::vx::network::routing::detail;
+using namespace grenade::vx::network::routing::greedy::detail;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
@@ -331,7 +331,7 @@ TEST(detail_SynapseDriverOnDLSManager, update_solution)
 	for (auto const& requested_allocation : requested_allocations_per_padi_bus.at(padi_bus).first) {
 		EXPECT_EQ(requested_allocation.label, SynapseDriverOnDLSManager::Label());
 	}
-	std::vector<grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Allocation>
+	std::vector<grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::Allocation>
 	    local_solution{
 	        {{{}}},
 	        {{{}}},
@@ -433,9 +433,9 @@ TEST(detail_SynapseDriverOnDLSManager, valid_solution)
 		std::vector<SynapseDriverOnDLSManager::Allocation> solution{
 		    {{{PADIBusOnDLS(Enum(0)),
 		       {{{{SynapseDriverOnPADIBus(0),
-		           grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Mask()},
-		          {SynapseDriverOnPADIBus(2),
-		           grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Mask()}}}}}},
+		           grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::Mask()},
+		          {SynapseDriverOnPADIBus(2), grenade::vx::network::routing::greedy::
+		                                          SynapseDriverOnPADIBusManager::Mask()}}}}}},
 		     SynapseDriverOnDLSManager::Label(2)}};
 		EXPECT_FALSE(SynapseDriverOnDLSManager::valid_solution(solution, requested_allocations));
 	}
@@ -449,9 +449,9 @@ TEST(detail_SynapseDriverOnDLSManager, valid_solution)
 		std::vector<SynapseDriverOnDLSManager::Allocation> solution{
 		    {{{PADIBusOnDLS(Enum(0)),
 		       {{{{SynapseDriverOnPADIBus(0),
-		           grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Mask()},
-		          {SynapseDriverOnPADIBus(1),
-		           grenade::vx::network::routing::SynapseDriverOnPADIBusManager::Mask()}}}}}},
+		           grenade::vx::network::routing::greedy::SynapseDriverOnPADIBusManager::Mask()},
+		          {SynapseDriverOnPADIBus(1), grenade::vx::network::routing::greedy::
+		                                          SynapseDriverOnPADIBusManager::Mask()}}}}}},
 		     SynapseDriverOnDLSManager::Label(2)}};
 		EXPECT_TRUE(SynapseDriverOnDLSManager::valid_solution(solution, requested_allocations));
 	}

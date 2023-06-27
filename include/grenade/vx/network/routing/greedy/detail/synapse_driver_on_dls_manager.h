@@ -1,6 +1,6 @@
 #pragma once
-#include "grenade/vx/network/routing/synapse_driver_on_dls_manager.h"
-#include "grenade/vx/network/routing/synapse_driver_on_padi_bus_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy/synapse_driver_on_padi_bus_manager.h"
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
@@ -9,19 +9,20 @@
 #include <set>
 #include <vector>
 
-namespace grenade::vx::network::routing::detail {
+namespace grenade::vx::network::routing::greedy::detail {
 
 /**
  * Implementation details of the allocation manager for all PADI-busses.
  */
 struct SynapseDriverOnDLSManager
 {
-	typedef grenade::vx::network::routing::SynapseDriverOnDLSManager::Label Label;
-	typedef grenade::vx::network::routing::SynapseDriverOnDLSManager::SynapseDriver SynapseDriver;
-	typedef grenade::vx::network::routing::SynapseDriverOnDLSManager::AllocationRequest
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::Label Label;
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::SynapseDriver
+	    SynapseDriver;
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::AllocationRequest
 	    AllocationRequest;
-	typedef grenade::vx::network::routing::SynapseDriverOnDLSManager::Allocation Allocation;
-	typedef grenade::vx::network::routing::SynapseDriverOnDLSManager::AllocationPolicy
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::Allocation Allocation;
+	typedef grenade::vx::network::routing::greedy::SynapseDriverOnDLSManager::AllocationPolicy
 	    AllocationPolicy;
 
 	/**
@@ -163,4 +164,4 @@ struct SynapseDriverOnDLSManager
 	    std::vector<AllocationRequest> const& requested_allocations) SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network::routing::detail
+} // namespace grenade::vx::network::routing::greedy::detail
