@@ -4,6 +4,7 @@
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include <ostream>
+#include <set>
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow::vertex {

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <ostream>
+#include <set>
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow::vertex {

@@ -5,6 +5,7 @@
 #include "hate/visibility.h"
 #include <array>
 #include <iosfwd>
+#include <map>
 #include <optional>
 
 namespace cereal {
