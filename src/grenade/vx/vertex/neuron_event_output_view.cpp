@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <ostream>
+#include <set>
 #include <stdexcept>
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>

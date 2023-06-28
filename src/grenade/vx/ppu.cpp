@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <mutex>
+#include <set>
 #include <sstream>
 #include <boost/compute/detail/sha1.hpp>
 #include <log4cxx/logger.h>

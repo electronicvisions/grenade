@@ -5,6 +5,7 @@
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include <ostream>
+#include <set>
 #include <stdexcept>
 #include <cereal/types/vector.hpp>
 

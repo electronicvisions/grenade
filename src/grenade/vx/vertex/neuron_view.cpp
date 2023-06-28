@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <ostream>
+#include <set>
 #include <stdexcept>
 #include <cereal/types/optional.hpp>
 #include <cereal/types/vector.hpp>

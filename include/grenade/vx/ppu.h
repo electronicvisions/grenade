@@ -6,6 +6,7 @@
 #include "lola/vx/v3/ppu.h"
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
