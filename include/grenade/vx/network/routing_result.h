@@ -4,6 +4,7 @@
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/background.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/routing_crossbar.h"
@@ -50,14 +51,26 @@ struct GENPYBIND(visible) RoutingResult
 	ExternalSpikeLabels external_spike_labels;
 
 	/**
-	 * Background spike source configuration for each population.
+	 * Spike label corresponding to each neuron in a background source population.
 	 */
 	typedef std::map<
 	    PopulationDescriptor,
-	    std::
-	        map<halco::hicann_dls::vx::v3::HemisphereOnDLS, halco::hicann_dls::vx::v3::NeuronLabel>>
+	    std::map<
+	        halco::hicann_dls::vx::v3::HemisphereOnDLS,
+	        std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
 	    BackgroundSpikeSourceLabels;
 	BackgroundSpikeSourceLabels background_spike_source_labels;
+
+	/**
+	 * Background spike source mask for each population.
+	 */
+	typedef std::map<
+	    PopulationDescriptor,
+	    std::map<
+	        halco::hicann_dls::vx::v3::HemisphereOnDLS,
+	        haldls::vx::v3::BackgroundSpikeSource::Mask>>
+	    BackgroundSpikeSourceMasks;
+	BackgroundSpikeSourceMasks background_spike_source_masks;
 
 	/**
 	 * Neuron event output address corresponding to each neuron in a on-chip population.

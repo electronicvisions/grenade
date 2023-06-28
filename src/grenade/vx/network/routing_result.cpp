@@ -1,5 +1,6 @@
 #include "grenade/vx/network/routing_result.h"
 
+#include "hate/join.h"
 #include "hate/timer.h"
 #include <ostream>
 
@@ -45,7 +46,7 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 	for (auto const& [descriptor, labels] : result.background_spike_source_labels) {
 		os << '\t' << descriptor << '\n';
 		for (auto const& [hemisphere, label] : labels) {
-			os << "\t\t" << hemisphere << ": " << label << '\n';
+			os << "\t\t" << hemisphere << ": [" << hate::join_string(label, ", ") << "]\n";
 		}
 	}
 

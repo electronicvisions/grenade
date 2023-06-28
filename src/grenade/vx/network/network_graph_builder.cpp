@@ -358,20 +358,36 @@ void NetworkGraphBuilder::add_background_spike_sources(
 			    std::to_string(descriptor) + ").");
 		}
 		auto const& label = routing_result.background_spike_source_labels.at(descriptor);
+		if (pop.config.enable_random) {
+			assert(!(pop.size == 0) && !(pop.size & (pop.size - 1)));
+			if (!routing_result.background_spike_source_masks.contains(descriptor)) {
+				throw std::runtime_error(
+				    "Connection builder result does not contain mask for the population(" +
+				    std::to_string(descriptor) + ").");
+			}
+		} else {
+			assert(pop.size == 1);
+		}
 		haldls::vx::v3::BackgroundSpikeSource config;
 		config.set_period(pop.config.period);
 		config.set_rate(pop.config.rate);
 		config.set_seed(pop.config.seed);
 		config.set_enable(true);
 		config.set_enable_random(pop.config.enable_random);
-		if (pop.config.enable_random) {
-			assert(!(pop.size == 0) && !(pop.size & (pop.size - 1)));
-			config.set_mask(haldls::vx::v3::BackgroundSpikeSource::Mask(pop.size - 1));
-		} else {
-			assert(pop.size == 1);
-		}
 		for (auto const& [hemisphere, bus] : pop.coordinate) {
-			config.set_neuron_label(label.at(hemisphere));
+			if (label.at(hemisphere).size() != pop.size) {
+				throw std::runtime_error(
+				    "Connection builder result does not contain as many spike labels as are "
+				    "neurons in the population(" +
+				    std::to_string(descriptor) + ").");
+			}
+			if (pop.config.enable_random) {
+				auto const& mask = routing_result.background_spike_source_masks.at(descriptor);
+				config.set_mask(mask.at(hemisphere));
+			}
+			// we choose the first label here, which is arbitrary since all other labels are
+			// randomnly chosen or there exists exactly one (enable_random = false)
+			config.set_neuron_label(label.at(hemisphere).at(0).get_neuron_label());
 			signal_flow::vertex::BackgroundSpikeSource background_spike_source(
 			    config, BackgroundSpikeSourceOnDLS(
 			                bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size));
@@ -1387,14 +1403,19 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 				    "population(" +
 				    std::to_string(descriptor) + ").");
 			}
-			local_spike_labels.resize(population.size);
 			auto const& local_labels =
 			    connection_result.background_spike_source_labels.at(descriptor);
+			local_spike_labels.resize(population.size);
 			for (auto const& [hemisphere, base_label] : local_labels) {
+				if (local_labels.at(hemisphere).size() != population.size) {
+					throw std::runtime_error(
+					    "Connection builder result does not contain as many spike labels as are "
+					    "neurons in the population(" +
+					    std::to_string(descriptor) + ").");
+				}
 				for (size_t k = 0; k < population.size; ++k) {
-					halco::hicann_dls::vx::v3::SpikeLabel label;
-					label.set_neuron_label(NeuronLabel(base_label + k));
-					local_spike_labels.at(k)[CompartmentOnLogicalNeuron()].push_back(label);
+					local_spike_labels.at(k)[CompartmentOnLogicalNeuron()].push_back(
+					    local_labels.at(hemisphere).at(k));
 				}
 			}
 		} else if (std::holds_alternative<ExternalSourcePopulation>(pop)) {

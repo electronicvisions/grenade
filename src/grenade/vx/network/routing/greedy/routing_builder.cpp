@@ -458,9 +458,6 @@ void RoutingBuilder::apply_source_labels(
 				}
 			}
 		} else if (std::holds_alternative<BackgroundSourcePopulation>(population)) {
-			// Find the root of the label, i.e. without the lower bits depending on the actual
-			// single neuron source.
-			std::map<HemisphereOnDLS, std::set<halco::hicann_dls::vx::v3::SpikeLabel>> local_labels;
 			auto const size = std::get<BackgroundSourcePopulation>(population).size;
 			for (size_t i = 0; i < size; ++i) {
 				if (!background.contains(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
@@ -471,27 +468,15 @@ void RoutingBuilder::apply_source_labels(
 				} else {
 					for (auto [hemisphere, label] :
 					     background.at(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
-						if (size <= 64) {
-							label = halco::hicann_dls::vx::v3::SpikeLabel(
-							    label.value() & 0b1111111111000000);
-						} else if (size > 64 && size <= 128) {
-							label = halco::hicann_dls::vx::v3::SpikeLabel(
-							    label.value() & 0b1111111110000000);
-						} else if (size > 128) {
-							label = halco::hicann_dls::vx::v3::SpikeLabel(
-							    label.value() & 0b1111111100000000);
-						} else {
-							throw std::logic_error("Impossible background source population size.");
-						}
-						local_labels[hemisphere].insert(label);
+						result.background_spike_source_labels[descriptor][hemisphere].push_back(
+						    label);
 					}
 				}
 			}
-			// There can only be one root label.
-			for (auto const& [hemisphere, labels] : local_labels) {
-				assert(labels.size() == 1);
-				result.background_spike_source_labels[descriptor][hemisphere] =
-				    labels.begin()->get_neuron_label();
+			for (auto const& [hemisphere, _] :
+			     result.background_spike_source_labels.at(descriptor)) {
+				result.background_spike_source_masks[descriptor][hemisphere] =
+				    haldls::vx::v3::BackgroundSpikeSource::Mask(size - 1);
 			}
 		} else {
 			throw std::logic_error("Population type not implemented.");
