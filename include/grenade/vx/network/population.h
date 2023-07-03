@@ -9,6 +9,7 @@
 #include <iosfwd>
 #include <map>
 #include <optional>
+#include <set>
 #include <unordered_set>
 #include <vector>
 

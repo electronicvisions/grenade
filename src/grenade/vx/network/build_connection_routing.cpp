@@ -1,6 +1,7 @@
 #include "grenade/vx/network/build_connection_routing.h"
 
 #include "hate/math.h"
+#include <set>
 #include <stdexcept>
 
 namespace grenade::vx::network {
