@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_builder.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "haldls/vx/v3/event.h"
@@ -58,7 +58,7 @@ TEST(network_InputGenerator, General)
 	    {},
 	    {}});
 
-	auto const routing = build_routing(network);
+	auto const routing = routing::PortfolioRouter()(network);
 
 	auto const network_graph = build_network_graph(network, routing);
 

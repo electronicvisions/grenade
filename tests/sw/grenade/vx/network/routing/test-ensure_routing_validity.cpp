@@ -1,10 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
-#include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/routing/greedy_router.h"
 #include "hate/indent.h"
 #include "hate/join.h"
 #include "hate/math.h"
@@ -13,7 +12,7 @@
 #include <ranges>
 
 using namespace grenade::vx::network;
-using namespace grenade::vx::network::routing::greedy;
+using namespace grenade::vx::network::routing;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 using namespace haldls::vx::v3;
@@ -619,18 +618,18 @@ private:
 
 
 /**
- * Tests routing.
+ * Tests routing with GreedyRouter.
  */
-void test_routing(std::shared_ptr<Network> const& network)
+void test_greedy_router(std::shared_ptr<Network> const& network)
 {
 	try {
 		// constructs routing
 		using namespace std::literals::chrono_literals;
-		RoutingOptions options;
-		options.synapse_driver_allocation_policy =
-		    SynapseDriverOnDLSManager::AllocationPolicyGreedy();
+		GreedyRouter::Options options;
+		options.synapse_driver_allocation_policy = GreedyRouter::Options::AllocationPolicyGreedy();
 		options.synapse_driver_allocation_timeout = 100ms;
-		auto const routing_result = build_routing(network, options);
+		GreedyRouter router(options);
+		auto const routing_result = router(network);
 		// check if network is valid
 		[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
 	} catch (UnsuccessfulRouting const&) {
@@ -638,7 +637,7 @@ void test_routing(std::shared_ptr<Network> const& network)
 }
 
 
-TEST(EnsureRoutingValidity, RandomNetwork)
+TEST(GreedyRouter, EnsureRoutingValidity_RandomNetwork)
 {
 	constexpr size_t num = 100;
 
@@ -646,6 +645,6 @@ TEST(EnsureRoutingValidity, RandomNetwork)
 		auto const seed = std::random_device{}();
 		RandomNetworkGenerator network_generator(seed);
 		auto network = network_generator();
-		EXPECT_NO_THROW(test_routing(network)) << "Seed: " << seed;
+		EXPECT_NO_THROW(test_greedy_router(network)) << "Seed: " << seed;
 	}
 }

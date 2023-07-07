@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/network_builder.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 
 using namespace grenade::vx::network;
 using namespace halco::hicann_dls::vx::v3;
@@ -54,7 +54,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_2);
 
 	auto network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 
 	// same projection
 	descriptor = builder.add(population);
@@ -70,7 +70,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_3);
 
 	network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 
 	// overlap
 	descriptor = builder.add(population);
@@ -95,7 +95,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_5);
 
 	network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 
 	// from external no overlap
 	auto input_descriptor = builder.add(external_population);
@@ -118,7 +118,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_2);
 
 	network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 
 	// from external same projection
 	input_descriptor = builder.add(external_population);
@@ -135,7 +135,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_3);
 
 	network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 
 	// from external overlap
 	input_descriptor = builder.add(external_population);
@@ -161,7 +161,7 @@ TEST(build_routing, ProjectionOverlap)
 	builder.add(projection_5);
 
 	network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 }
 
 TEST(build_routing, EmptyProjection)
@@ -188,7 +188,7 @@ TEST(build_routing, EmptyProjection)
 	auto const projection_descriptor = builder.add(projection);
 
 	auto network = builder.done();
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 
 	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
 }
@@ -243,7 +243,7 @@ TEST(build_routing, DenseInOrder)
 	builder.add(plasticity_rule);
 
 	auto network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 }
 
 TEST(build_routing, I100H64O3)
@@ -348,5 +348,5 @@ TEST(build_routing, I100H64O3)
 	builder.add(projection_inhibitory_ho);
 
 	auto network = builder.done();
-	EXPECT_NO_THROW(build_routing(network));
+	EXPECT_NO_THROW(routing::PortfolioRouter()(network));
 }

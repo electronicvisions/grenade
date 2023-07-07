@@ -882,7 +882,7 @@ void RoutingBuilder::apply_crossbar_nodes_from_internal_to_l2(Result& result) co
 RoutingResult RoutingBuilder::route(
     Network const& network,
     ConnectionRoutingResult const& connection_routing_result,
-    std::optional<RoutingOptions> const& options) const
+    std::optional<GreedyRouter::Options> const& options) const
 {
 	hate::Timer timer;
 	LOG4CXX_DEBUG(m_logger, "route(): Starting routing.");

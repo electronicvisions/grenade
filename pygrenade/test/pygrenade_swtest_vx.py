@@ -50,7 +50,7 @@ class SwTestPygrenadeVx(unittest.TestCase):
 
         network = network_builder.done()
 
-        routing_result = grenade.build_routing(network)
+        routing_result = grenade.routing.PortfolioRouter()(network)
 
         network_graph = grenade.build_network_graph(network, routing_result)
 

@@ -11,7 +11,6 @@ GENPYBIND_MANUAL({
 })
 
 #include "grenade/vx/network/background_source_population.h"
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/connection_routing_result.h"
 #include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/extract_output.h"
@@ -26,4 +25,5 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/requires_routing.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/network/run.h"

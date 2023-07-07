@@ -1,7 +1,6 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -10,6 +9,7 @@
 #include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -86,7 +86,7 @@ TEST(PlasticityRule, RawRecording)
 	auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 	auto const network = network_builder.done();
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::IODataMap inputs;
@@ -454,7 +454,7 @@ TEST(PlasticityRule, TimedRecording)
 		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 		auto const network = network_builder.done();
-		auto const routing_result = build_routing(network);
+		auto const routing_result = routing::PortfolioRouter()(network);
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
@@ -684,7 +684,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
 		auto const network = network_builder.done();
-		auto const routing_result = build_routing(network);
+		auto const routing_result = routing::PortfolioRouter()(network);
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results

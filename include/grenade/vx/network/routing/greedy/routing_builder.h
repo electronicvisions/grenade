@@ -7,7 +7,7 @@
 #include "grenade/vx/network/routing/greedy/routing_constraints.h"
 #include "grenade/vx/network/routing/greedy/source_on_padi_bus_manager.h"
 #include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
-#include "grenade/vx/network/routing_options.h"
+#include "grenade/vx/network/routing/greedy_router.h"
 #include "grenade/vx/network/routing_result.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/event.h"
@@ -44,7 +44,7 @@ struct RoutingBuilder
 	Result route(
 	    Network const& network,
 	    ConnectionRoutingResult const& connection_routing_result,
-	    std::optional<RoutingOptions> const& options = std::nullopt) const SYMBOL_VISIBLE;
+	    std::optional<GreedyRouter::Options> const& options = std::nullopt) const SYMBOL_VISIBLE;
 
 private:
 	void route_internal_crossbar(

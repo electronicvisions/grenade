@@ -3,9 +3,9 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/io_data_list.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -57,7 +57,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	Population population_internal{std::move(neurons)};
 	builder.add(population_internal);
 	auto network = builder.done();
-	auto routing = build_routing(network);
+	auto routing = routing::PortfolioRouter()(network);
 	auto network_graph = build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled
@@ -125,7 +125,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	Population population_internal{std::move(neurons)};
 	builder.add(population_internal);
 	auto network = builder.done();
-	auto routing = build_routing(network);
+	auto routing = routing::PortfolioRouter()(network);
 	auto network_graph = build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode disabled
@@ -190,7 +190,7 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	Population population_internal{std::move(neurons)};
 	builder.add(population_internal);
 	auto network = builder.done();
-	auto routing = build_routing(network);
+	auto routing = routing::PortfolioRouter()(network);
 	auto network_graph = build_network_graph(network, routing);
 
 	// construct JIT executor with differential config mode enabled

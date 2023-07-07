@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 
 #include "hate/timer.h"
 #include <log4cxx/logger.h>
@@ -61,7 +61,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	auto const projection_descriptor = builder.add(projection);
 
 	auto network = builder.done();
-	auto const routing = build_routing(network);
+	auto const routing = routing::PortfolioRouter()(network);
 	auto const network_graph = build_network_graph(network, routing);
 
 	EXPECT_EQ(
@@ -159,7 +159,7 @@ TEST(build_network_graph, EmptyProjection)
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), {}, descriptor, descriptor);
 	auto const projection_descriptor = builder.add(projection);
 	auto network = builder.done();
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 
 	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
 
@@ -204,7 +204,7 @@ TEST(update_network_graph, ProjectionOnBothHemispheres)
 	builder.add(projection);
 	auto const network = builder.done();
 
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 
 	auto network_graph = build_network_graph(network, routing_result);
 
@@ -271,7 +271,7 @@ TEST(build_network_graph, GranularitySweep)
 		auto const network = builder.done();
 		auto const network_timer_print = network_timer.print();
 		hate::Timer build_routing_timer;
-		auto const routing_result = build_routing(network);
+		auto const routing_result = routing::PortfolioRouter()(network);
 		auto const build_routing_timer_print = build_routing_timer.print();
 		hate::Timer build_network_graph_timer;
 		auto network_graph = build_network_graph(network, routing_result);
@@ -311,7 +311,7 @@ TEST(build_network_graph, ExecutionInstance)
 
 	auto const network = builder.done();
 
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 
 	grenade::vx::signal_flow::ExecutionInstance execution_instance(
 	    grenade::vx::signal_flow::ExecutionIndex(1), DLSGlobal(1));

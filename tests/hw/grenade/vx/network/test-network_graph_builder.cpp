@@ -2,7 +2,6 @@
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/network/build_routing.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"
@@ -11,6 +10,7 @@
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
+#include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -81,7 +81,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 	// build network graph
 	auto const network = network_builder.done();
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
 	// generate input
@@ -187,7 +187,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto const network = network_builder.done();
 
 	// build network graph
-	auto const routing_result = build_routing(network);
+	auto const routing_result = routing::PortfolioRouter()(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
 	// generate input
@@ -322,7 +322,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		auto const network = network_builder.done();
 
 		// build network graph
-		auto const routing_result = build_routing(network);
+		auto const routing_result = routing::PortfolioRouter()(network);
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// generate input
