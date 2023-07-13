@@ -17,6 +17,7 @@
 #include "hate/math.h"
 #include "hate/timer.h"
 #include "hate/type_traits.h"
+#include "hate/variant.h"
 #include "lola/vx/ppu.h"
 #include "stadls/vx/constants.h"
 #include <algorithm>
@@ -736,8 +737,15 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
+	auto const has_ppu_usage = [](auto const& be) { return !be.ppu_symbols.empty(); };
+	if (std::any_of(m_batch_entries.begin(), m_batch_entries.end(), has_ppu_usage)) {
+		assert(std::all_of(m_batch_entries.begin(), m_batch_entries.end(), has_ppu_usage));
+		m_local_data_output.read_ppu_symbols.resize(m_batch_entries.size());
+	}
+
 	std::chrono::nanoseconds total_realtime_duration{0};
-	for (auto const& batch_entry : m_batch_entries) {
+	for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+		auto const& batch_entry = m_batch_entries.at(batch_index);
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
 			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
 			if (scheduler_finished) {
@@ -787,6 +795,35 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process()
 				    logger, "PPU(" << ppu.value() << ") mailbox:\n"
 				                   << mailbox.to_string());
 			}
+		}
+		for (auto const& [name, ticket] : batch_entry.ppu_symbols) {
+			std::visit(
+			    hate::overloaded{
+			        [&](std::map<
+			            halco::hicann_dls::vx::v3::HemisphereOnDLS,
+			            stadls::vx::v3::ContainerTicket> const& tickets) {
+				        m_local_data_output.read_ppu_symbols.at(
+				            batch_index)[m_execution_instance][name] =
+				            std::map<
+				                halco::hicann_dls::vx::v3::HemisphereOnDLS,
+				                haldls::vx::v3::PPUMemoryBlock>{
+				                {halco::hicann_dls::vx::v3::HemisphereOnDLS::top,
+				                 dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+				                     tickets.at(halco::hicann_dls::vx::v3::HemisphereOnDLS::top)
+				                         .get())},
+				                {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom,
+				                 dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+				                     tickets.at(halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom)
+				                         .get())}};
+			        },
+			        [&](stadls::vx::v3::ContainerTicket const& ticket) {
+				        m_local_data_output.read_ppu_symbols.resize(m_batch_entries.size());
+				        m_local_data_output.read_ppu_symbols.at(batch_index)
+				            .at(m_execution_instance)[name] =
+				            dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(ticket.get());
+			        },
+			    },
+			    ticket);
 		}
 		if (batch_entry.m_ticket_events_begin && batch_entry.m_ticket_events_end) {
 			total_realtime_duration += std::chrono::nanoseconds(static_cast<size_t>(
@@ -1229,6 +1266,39 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		}
 		// readout recorded scratchpad memory for plasticity rules
 		if (m_has_plasticity_rule) {
+			for (auto const& [descriptor, coords] :
+			     ppu_plasticity_rule_recorded_scratchpad_memory_coord) {
+				for (auto const ppu : iter_all<PPUOnDLS>()) {
+					batch_entry.m_plasticity_rule_recorded_scratchpad_memory.at(descriptor)[ppu] =
+					    builder.read(coords[ppu]);
+				}
+			}
+		}
+		// readout requested PPU symbols
+		for (auto const& name : m_playback_hooks.read_ppu_symbols) {
+			if (!m_ppu_symbols) {
+				throw std::runtime_error("Provided PPU symbols but not PPU program is present.");
+			}
+			if (!m_ppu_symbols->contains(name)) {
+				throw std::runtime_error(
+				    "Provided unknown symbol name via ExecutionInstancePlaybackHooks.");
+			}
+			std::visit(
+			    hate::overloaded{
+			        [&](halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU const& coordinate) {
+				        std::map<HemisphereOnDLS, ContainerTicket> values;
+				        values.emplace(
+				            HemisphereOnDLS::top,
+				            builder.read(PPUMemoryBlockOnDLS(coordinate, PPUOnDLS::top)));
+				        values.emplace(
+				            HemisphereOnDLS::bottom,
+				            builder.read(PPUMemoryBlockOnDLS(coordinate, PPUOnDLS::bottom)));
+				        batch_entry.ppu_symbols[name] = values;
+			        },
+			        [&](halco::hicann_dls::vx::v3::ExternalPPUMemoryBlockOnFPGA const& coordinate) {
+				        batch_entry.ppu_symbols.insert({name, builder.read(coordinate)});
+			        }},
+			    m_ppu_symbols->at(name).coordinate);
 			for (auto const& [descriptor, coords] :
 			     ppu_plasticity_rule_recorded_scratchpad_memory_coord) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {

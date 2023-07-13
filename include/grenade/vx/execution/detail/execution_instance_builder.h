@@ -136,6 +136,16 @@ private:
 		ticket_ppu_type m_ppu_mailbox;
 		std::map<signal_flow::Graph::vertex_descriptor, ticket_extmem_type>
 		    m_plasticity_rule_recorded_scratchpad_memory;
+
+		typedef std::map<
+		    std::string,
+		    std::variant<
+		        std::map<
+		            halco::hicann_dls::vx::v3::HemisphereOnDLS,
+		            stadls::vx::v3::ContainerTicket>,
+		        stadls::vx::v3::ContainerTicket>>
+		    ppu_symbol_ticket_type;
+		ppu_symbol_ticket_type ppu_symbols;
 	};
 
 	std::vector<BatchEntry> m_batch_entries;

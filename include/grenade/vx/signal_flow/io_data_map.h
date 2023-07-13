@@ -8,8 +8,10 @@
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "haldls/vx/v3/ppu.h"
 #include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
+#include "lola/vx/v3/ppu.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -59,6 +61,21 @@ struct GENPYBIND(visible) IODataMap
 	 * Optional time information of performed execution to be filled by executor.
 	 */
 	std::optional<ExecutionTimeInfo> execution_time_info;
+
+	typedef std::vector<std::map<
+	    common::ExecutionInstanceID,
+	    std::map<
+	        std::string,
+	        std::variant<
+	            std::
+	                map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>,
+	            lola::vx::v3::ExternalPPUMemoryBlock>>>>
+	    ReadPPUSymbols;
+
+	/**
+	 * Read PPU symbols corresponding to requested symbols in ExecutionInstancePlaybackHooks.
+	 */
+	ReadPPUSymbols read_ppu_symbols;
 
 	IODataMap() SYMBOL_VISIBLE;
 

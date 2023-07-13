@@ -881,3 +881,91 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 
 	execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
 }
+
+TEST(PlasticityRule, WriteReadPPUSymbol)
+{
+	using namespace grenade::vx;
+	using namespace grenade::vx::network;
+
+	common::ExecutionInstanceID instance;
+
+	execution::JITGraphExecutor::ChipConfigs chip_configs;
+	chip_configs[instance] = lola::vx::v3::Chip();
+
+	signal_flow::IODataMap inputs;
+	inputs.runtime.push_back(
+	    {{instance,
+	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+
+	// Construct connection to HW
+	execution::JITGraphExecutor executor;
+
+	NetworkBuilder network_builder;
+
+	Population::Neurons neurons{Population::Neuron(
+	    LogicalNeuronOnDLS(
+	        LogicalNeuronCompartments(
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	        AtomicNeuronOnDLS()),
+	    Population::Neuron::Compartments{
+	        {CompartmentOnLogicalNeuron(),
+	         Population::Neuron::Compartment{
+	             Population::Neuron::Compartment::SpikeMaster(0, false),
+	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+	Population population{std::move(neurons)};
+	auto const population_descriptor = network_builder.add(population);
+
+	Projection::Connections projection_connections;
+	for (size_t i = 0; i < population.neurons.size(); ++i) {
+		projection_connections.push_back(
+		    {{i, CompartmentOnLogicalNeuron()},
+		     {i, CompartmentOnLogicalNeuron()},
+		     Projection::Connection::Weight(12)});
+	}
+	Projection projection{
+	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+	    population_descriptor, population_descriptor};
+	auto const projection_descriptor = network_builder.add(projection);
+
+	PlasticityRule plasticity_rule;
+	plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
+	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
+	plasticity_rule.timer.num_periods = 1;
+	plasticity_rule.projections.push_back(projection_descriptor);
+
+	std::stringstream kernel;
+	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
+	kernel << "using namespace grenade::vx::ppu;\n";
+	kernel << "volatile uint32_t test;\n";
+	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "
+	          "std::array<NeuronViewHandle, 0>&)\n";
+	kernel << "{\n";
+	kernel << "  static_cast<void>(test);\n";
+	kernel << "}\n";
+	plasticity_rule.kernel = kernel.str();
+
+	network_builder.add(plasticity_rule);
+
+	auto const network = network_builder.done();
+	auto const routing_result = routing::PortfolioRouter{}(network);
+	auto const network_graph = build_network_graph(network, routing_result);
+
+	execution::JITGraphExecutor::PlaybackHooks hooks;
+	haldls::vx::v3::PPUMemoryBlock expectation(halco::hicann_dls::vx::v3::PPUMemoryBlockSize(1));
+	expectation.at(0) =
+	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
+	hooks[common::ExecutionInstanceID()].write_ppu_symbols["test"] =
+	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
+	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::top, expectation},
+	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom, expectation},
+	    };
+	hooks[common::ExecutionInstanceID()].read_ppu_symbols.insert("test");
+
+	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID()).write_ppu_symbols;
+
+	auto const result =
+	    execution::run(executor, network_graph.get_graph(), inputs, chip_configs, hooks);
+
+	EXPECT_EQ(result.read_ppu_symbols.at(0).at(common::ExecutionInstanceID()), expectation_symbols);
+}

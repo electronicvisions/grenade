@@ -5,13 +5,18 @@
 namespace grenade::vx::signal_flow {
 
 IODataMap::IODataMap() :
-    data(), runtime(), execution_time_info(), mutex(std::make_unique<std::mutex>())
+    data(),
+    runtime(),
+    execution_time_info(),
+    read_ppu_symbols(),
+    mutex(std::make_unique<std::mutex>())
 {}
 
 IODataMap::IODataMap(IODataMap&& other) :
     data(std::move(other.data)),
     runtime(std::move(other.runtime)),
     execution_time_info(std::move(other.execution_time_info)),
+    read_ppu_symbols(std::move(other.read_ppu_symbols)),
     mutex(std::move(other.mutex))
 {
 	other.mutex = std::make_unique<std::mutex>();
@@ -22,6 +27,7 @@ IODataMap& IODataMap::operator=(IODataMap&& other)
 	data = std::move(other.data);
 	runtime = std::move(other.runtime);
 	execution_time_info = std::move(other.execution_time_info);
+	read_ppu_symbols = std::move(other.read_ppu_symbols);
 	mutex = std::move(other.mutex);
 	other.mutex = std::make_unique<std::mutex>();
 	return *this;
@@ -47,6 +53,22 @@ void IODataMap::merge(IODataMap&& other)
 			}
 		}
 	}
+	if (!other.read_ppu_symbols.empty()) {
+		if (read_ppu_symbols.empty()) {
+			read_ppu_symbols = std::move(other.read_ppu_symbols);
+			other.read_ppu_symbols.clear();
+		} else {
+			if (read_ppu_symbols.size() != other.read_ppu_symbols.size()) {
+				throw std::runtime_error(
+				    "Read PPU symbols sizes need to match for IODataMap::merge(), but are (" +
+				    std::to_string(read_ppu_symbols.size()) + ") vs. (" +
+				    std::to_string(other.read_ppu_symbols.size()) + ").");
+			}
+			for (size_t i = 0; i < read_ppu_symbols.size(); ++i) {
+				read_ppu_symbols.at(i).merge(other.read_ppu_symbols.at(i));
+			}
+		}
+	}
 	if (execution_time_info && other.execution_time_info) {
 		execution_time_info->merge(*(other.execution_time_info));
 	} else {
@@ -66,11 +88,12 @@ void IODataMap::clear()
 	data.clear();
 	runtime.clear();
 	execution_time_info.reset();
+	read_ppu_symbols.clear();
 }
 
 bool IODataMap::empty() const
 {
-	return data.empty() && runtime.empty();
+	return data.empty() && runtime.empty() && read_ppu_symbols.empty();
 }
 
 namespace {
@@ -93,11 +116,13 @@ size_t unsafe_batch_size(IODataMap const& map)
 bool unsafe_valid(IODataMap const& map, size_t const size)
 {
 	bool const runtime_value = (map.runtime.size() == size) || map.runtime.empty();
+	bool const read_ppu_symbols_value =
+	    (map.read_ppu_symbols.size() == size) || map.read_ppu_symbols.empty();
 	bool const data_value =
 	    std::all_of(map.data.cbegin(), map.data.cend(), [size](auto const& list) {
 		    return std::visit([size](auto const& d) { return d.size() == size; }, list.second);
 	    });
-	return runtime_value && data_value;
+	return runtime_value && read_ppu_symbols_value && data_value;
 }
 
 } // namespace

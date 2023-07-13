@@ -11,6 +11,7 @@
 #include "haldls/vx/v3/omnibus_constants.h"
 #include "haldls/vx/v3/timer.h"
 #include "hate/timer.h"
+#include "hate/variant.h"
 #include "stadls/visitors.h"
 #include "stadls/vx/container_ticket.h"
 #include <log4cxx/logger.h>
@@ -90,6 +91,33 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	auto config = initial_config;
 	auto const ppu_symbols =
 	    std::get<1>(ExecutionInstanceConfigVisitor(graph, execution_instance, config)());
+
+	// inject playback-hook PPU symbols to be overwritten
+	for (auto const& [name, memory_config] : playback_hooks.write_ppu_symbols) {
+		if (!ppu_symbols) {
+			throw std::runtime_error("Provided PPU symbols but no PPU program is present.");
+		}
+		if (!ppu_symbols->contains(name)) {
+			throw std::runtime_error(
+			    "Provided unknown symbol name via ExecutionInstancePlaybackHooks.");
+		}
+		std::visit(
+		    hate::overloaded{
+		        [&](PPUMemoryBlockOnPPU const& coordinate) {
+			        for (auto const& [hemisphere, memory] :
+			             std::get<std::map<HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>>(
+			                 memory_config)) {
+				        config.ppu_memory[hemisphere.toPPUMemoryOnDLS()].set_block(
+				            coordinate, memory);
+			        }
+		        },
+		        [&](ExternalPPUMemoryBlockOnFPGA const& coordinate) {
+			        config.external_ppu_memory.set_subblock(
+			            coordinate.toMin().value(),
+			            std::get<lola::vx::v3::ExternalPPUMemoryBlock>(memory_config));
+		        }},
+		    ppu_symbols->at(name).coordinate);
+	}
 	LOG4CXX_TRACE(
 	    logger,
 	    "operator(): Constructed initial configuration in " << initial_config_timer.print() << ".");
