@@ -2,6 +2,7 @@
 #include "grenade/vx/signal_flow/event.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
+#include "stadls/vx/v3/absolute_time_playback_program_builder.h"
 #include "stadls/vx/v3/playback_generator.h"
 
 namespace grenade::vx::execution::detail::generator {
@@ -16,10 +17,10 @@ public:
 	{}
 
 	typedef hate::Nil Result;
-	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+	typedef stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
 
 private:
 	friend auto stadls::vx::generate<TimedSpikeToChipSequence>(TimedSpikeToChipSequence const&);

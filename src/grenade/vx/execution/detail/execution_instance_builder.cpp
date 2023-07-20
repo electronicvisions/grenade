@@ -1124,7 +1124,12 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 			        m_local_data.data.at(*m_event_input_vertex))
 			        .at(b));
 			auto [builder_events, _] = stadls::vx::generate(event_generator);
-			builder.merge_back(builder_events);
+			if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
+				builder_events.merge(m_playback_hooks.inside_realtime);
+			} else {
+				builder_events.copy(m_playback_hooks.inside_realtime);
+			}
+			builder.merge_back(builder_events.done());
 		}
 		// wait until runtime reached
 		if (!m_local_external_data.runtime.empty() &&

@@ -4,6 +4,7 @@
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
 #include "lola/vx/v3/ppu.h"
+#include "stadls/vx/v3/absolute_time_playback_program_builder.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 #include <map>
 #include <variant>
@@ -29,6 +30,7 @@ struct GENPYBIND(visible) ExecutionInstancePlaybackHooks
 	    stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
 	    stadls::vx::v3::PlaybackProgramBuilder& pre_realtime,
 	    stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_begin,
+	    stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder& inside_realtime,
 	    stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_end,
 	    stadls::vx::v3::PlaybackProgramBuilder& post_realtime,
 	    WritePPUSymbols const& write_ppu_symbols = WritePPUSymbols(),
@@ -41,6 +43,7 @@ struct GENPYBIND(visible) ExecutionInstancePlaybackHooks
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) pre_static_config;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) pre_realtime;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) inside_realtime_begin;
+	stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder GENPYBIND(hidden) inside_realtime;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) inside_realtime_end;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) post_realtime;
 
