@@ -27,7 +27,7 @@ class Timer;
 
 namespace log4cxx {
 class Logger;
-typedef std::shared_ptr<log4cxx::Logger> LoggerPtr;
+typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
