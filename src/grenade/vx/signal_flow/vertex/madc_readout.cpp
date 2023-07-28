@@ -3,6 +3,7 @@
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include <ostream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 
