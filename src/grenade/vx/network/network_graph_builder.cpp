@@ -595,57 +595,33 @@ void NetworkGraphBuilder::add_population(
 		// add a neuron view per hemisphere
 		for (auto&& [row, nrn] : neurons) {
 			signal_flow::vertex::NeuronView::Configs configs;
-			if (!connection_result.execution_instances.at(instance).internal_neuron_labels.contains(
-			        descriptor)) {
-				std::stringstream ss;
-				ss << "Connection builder result does not contain the neuron labels for "
-				   << descriptor << ".";
-				throw std::runtime_error(ss.str());
-			}
 			signal_flow::vertex::NeuronView::Columns columns;
 			for (
 			    auto const& [column, neuron_on_population, compartment_on_neuron, neuron_on_compartment] :
 			    nrn) {
-				if (neuron_on_population >= connection_result.execution_instances.at(instance)
+				std::optional<signal_flow::vertex::NeuronView::Config::Label> label;
+				if (connection_result.execution_instances.at(instance)
+				        .internal_neuron_labels.contains(descriptor) &&
+				    (neuron_on_population < connection_result.execution_instances.at(instance)
 				                                .internal_neuron_labels.at(descriptor)
-				                                .size()) {
-					std::stringstream ss;
-					ss << "Connection builder result does not contain the neuron label for "
-					      "population ("
-					   << descriptor << "), neuron (" << neuron_on_population << ").";
-					throw std::runtime_error(ss.str());
-				}
-				if (!connection_result.execution_instances.at(instance)
-				         .internal_neuron_labels.at(descriptor)
-				         .at(neuron_on_population)
-				         .contains(compartment_on_neuron)) {
-					std::stringstream ss;
-					ss << "Connection builder result does not contain the neuron label for "
-					      "population ("
-					   << descriptor << "), neuron (" << neuron_on_population << "), compartment ("
-					   << compartment_on_neuron << ").";
-					throw std::runtime_error(ss.str());
-				}
-				if (neuron_on_compartment >= connection_result.execution_instances.at(instance)
-				                                 .internal_neuron_labels.at(descriptor)
-				                                 .at(neuron_on_population)
-				                                 .at(compartment_on_neuron)
-				                                 .size()) {
-					std::stringstream ss;
-					ss << "Connection builder result does not contain the neuron label for "
-					      "population ("
-					   << descriptor << "), neuron (" << neuron_on_population << "), compartment ("
-					   << compartment_on_neuron << "), neuron on compartment ("
-					   << neuron_on_compartment << ").";
-					throw std::runtime_error(ss.str());
-				}
-				signal_flow::vertex::NeuronView::Config config{
+				                                .size()) &&
 				    connection_result.execution_instances.at(instance)
 				        .internal_neuron_labels.at(descriptor)
 				        .at(neuron_on_population)
-				        .at(compartment_on_neuron)
-				        .at(neuron_on_compartment),
-				    false /* TODO: expose reset */};
+				        .contains(compartment_on_neuron) &&
+				    (neuron_on_compartment < connection_result.execution_instances.at(instance)
+				                                 .internal_neuron_labels.at(descriptor)
+				                                 .at(neuron_on_population)
+				                                 .at(compartment_on_neuron)
+				                                 .size())) {
+					label = connection_result.execution_instances.at(instance)
+					            .internal_neuron_labels.at(descriptor)
+					            .at(neuron_on_population)
+					            .at(compartment_on_neuron)
+					            .at(neuron_on_compartment);
+				}
+				signal_flow::vertex::NeuronView::Config config{
+				    label, false /* TODO: expose reset */};
 				configs.push_back(config);
 				columns.push_back(column);
 			}
@@ -759,16 +735,10 @@ void NetworkGraphBuilder::add_crossbar_node(
 			vertex = graph.add(vertex, instance, inputs);
 		}
 	} else { // crossbar node not added yet
-		if (!connection_result.execution_instances.at(instance).crossbar_nodes.contains(
-		        coordinate)) {
-			std::stringstream ss;
-			ss << "Trying to add crossbar node at CrossbarNodeOnDLS("
-			   << coordinate.toCrossbarInputOnDLS() << ", " << coordinate.toCrossbarOutputOnDLS()
-			   << ") for which no configuration from the connection result is available.";
-			throw std::logic_error(ss.str());
-		}
-		auto const& config =
-		    connection_result.execution_instances.at(instance).crossbar_nodes.at(coordinate);
+		auto const config =
+		    connection_result.execution_instances.at(instance).crossbar_nodes.contains(coordinate)
+		        ? connection_result.execution_instances.at(instance).crossbar_nodes.at(coordinate)
+		        : haldls::vx::v3::CrossbarNode::drop_all;
 		resources.execution_instances.at(instance).crossbar_nodes[coordinate] = graph.add(
 		    signal_flow::vertex::CrossbarNode(coordinate, config, get_chip_coordinate(instance)),
 		    instance, inputs);
@@ -918,7 +888,8 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
-	if (connection_result.execution_instances.at(instance).connections.at(descriptor).empty()) {
+	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor) ||
+	    connection_result.execution_instances.at(instance).connections.at(descriptor).empty()) {
 		resources.execution_instances.at(instance).projections[descriptor] = {};
 		resources.execution_instances.at(instance).graph_translation.projections[descriptor] = {};
 		return;
@@ -1115,25 +1086,31 @@ NetworkGraphBuilder::add_projection_from_external_input(
 	}
 	auto const& external_spike_labels =
 	    connection_result.execution_instances.at(instance).external_spike_labels.at(population_pre);
-	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
-		throw std::runtime_error(
-		    "Connection builder result does not contain connections for the projection(" +
-		    std::to_string(descriptor) + ").");
-	}
-	auto const num_connections_result =
-	    connection_result.execution_instances.at(instance).connections.at(descriptor).size();
 	auto const num_connections_projection =
 	    m_network.execution_instances.at(instance).projections.at(descriptor).connections.size();
-	if (num_connections_result != num_connections_projection) {
-		throw std::runtime_error(
-		    "Connection builder result connection number(" +
-		    std::to_string(num_connections_result) +
-		    ") is larger than expected number of connections by projection (" +
-		    std::to_string(num_connections_projection) + ").");
+	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
+		if (num_connections_projection != 0) {
+			throw std::runtime_error(
+			    "Connection builder result does not contain connections for the projection(" +
+			    std::to_string(descriptor) + ").");
+		}
+	} else {
+		auto const num_connections_result =
+		    connection_result.execution_instances.at(instance).connections.at(descriptor).size();
+		if (num_connections_result != num_connections_projection) {
+			throw std::runtime_error(
+			    "Connection builder result connection number(" +
+			    std::to_string(num_connections_result) +
+			    ") is larger than expected number of connections by projection (" +
+			    std::to_string(num_connections_projection) + ").");
+		}
 	}
-	size_t i = 0;
-	for (auto const& placed_connections :
-	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
+	for (size_t i = 0;
+	     i <
+	     m_network.execution_instances.at(instance).projections.at(descriptor).connections.size();
+	     ++i) {
+		auto const& placed_connections =
+		    connection_result.execution_instances.at(instance).connections.at(descriptor).at(i);
 		for (auto const& placed_connection : placed_connections) {
 			auto const padi_bus_block =
 			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
@@ -1154,7 +1131,6 @@ NetworkGraphBuilder::add_projection_from_external_input(
 				used_spl1_addresses[padi_bus].insert(label.get_spl1_address());
 			}
 		}
-		i++;
 	}
 	// add crossbar nodes from L2 input to PADI busses
 	for (auto const& padi_bus : used_padi_bus) {
