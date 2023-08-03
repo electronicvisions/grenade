@@ -111,7 +111,7 @@ private:
 	insert_synram(
 	    signal_flow::Graph& graph,
 	    Weights&& weights,
-	    signal_flow::ExecutionInstance const& instance,
+	    common::ExecutionInstanceID const& instance,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
 	    std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& madc_recording_neuron,
 	    signal_flow::Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
@@ -130,7 +130,7 @@ private:
 
 	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS m_madc_recording_neuron;
 	std::string m_madc_recording_path;
-	std::unordered_map<signal_flow::ExecutionInstance, signal_flow::Graph::vertex_descriptor>
+	std::unordered_map<common::ExecutionInstanceID, signal_flow::Graph::vertex_descriptor>
 	    m_madc_recording_vertices;
 
 	friend struct cereal::access;

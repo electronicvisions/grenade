@@ -19,7 +19,7 @@ using namespace halco::common;
 NetworkGraph build_network_graph(
     std::shared_ptr<Network> const& network,
     RoutingResult const& routing_result,
-    signal_flow::ExecutionInstance const& instance)
+    common::ExecutionInstanceID const& instance)
 {
 	hate::Timer timer;
 	assert(network);
@@ -310,7 +310,7 @@ std::vector<signal_flow::Input> NetworkGraphBuilder::get_inputs(
 void NetworkGraphBuilder::add_external_input(
     signal_flow::Graph& graph,
     Resources& resources,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// only continue if any external population exists
@@ -343,7 +343,7 @@ void NetworkGraphBuilder::add_external_input(
 void NetworkGraphBuilder::add_background_spike_sources(
     signal_flow::Graph& graph,
     Resources& resources,
-    signal_flow::ExecutionInstance const& instance,
+    common::ExecutionInstanceID const& instance,
     RoutingResult const& routing_result) const
 {
 	hate::Timer timer;
@@ -408,7 +408,7 @@ void NetworkGraphBuilder::add_population(
     std::map<HemisphereOnDLS, std::vector<signal_flow::Input>> const& input,
     PopulationDescriptor const& descriptor,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	if (resources.populations.contains(
@@ -550,7 +550,7 @@ void NetworkGraphBuilder::add_padi_bus(
     signal_flow::Graph& graph,
     Resources& resources,
     halco::hicann_dls::vx::PADIBusOnDLS const& coordinate,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get incoming crossbar nodes via lookup in the resources
@@ -580,7 +580,7 @@ void NetworkGraphBuilder::add_crossbar_node(
     Resources& resources,
     halco::hicann_dls::vx::CrossbarNodeOnDLS const& coordinate,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get inputs
@@ -635,7 +635,7 @@ void NetworkGraphBuilder::add_synapse_driver(
     Resources& resources,
     halco::hicann_dls::vx::SynapseDriverOnDLS const& coordinate,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get inputs (incoming padi bus)
@@ -677,7 +677,7 @@ void NetworkGraphBuilder::add_neuron_event_output(
     signal_flow::Graph& graph,
     Resources& resources,
     halco::hicann_dls::vx::NeuronEventOutputOnDLS const& coordinate,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get inputs (incoming neuron views)
@@ -757,7 +757,7 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
     Resources& resources,
     ProjectionDescriptor descriptor,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	if (connection_result.connections.at(descriptor).empty()) {
 		resources.projections[descriptor] = {};
@@ -920,7 +920,7 @@ NetworkGraphBuilder::add_projection_from_external_input(
     Resources& resources,
     ProjectionDescriptor const& descriptor,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	auto const population_pre = m_network.projections.at(descriptor).population_pre;
@@ -1008,7 +1008,7 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
     Resources& resources,
     ProjectionDescriptor const& descriptor,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	auto const population_pre = m_network.projections.at(descriptor).population_pre;
@@ -1092,7 +1092,7 @@ NetworkGraphBuilder::add_projection_from_internal_input(
     Resources& resources,
     ProjectionDescriptor const& descriptor,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	if (!std::holds_alternative<Population>(
@@ -1168,7 +1168,7 @@ void NetworkGraphBuilder::add_populations(
     signal_flow::Graph& graph,
     Resources& resources,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	// place all populations without input
 	for (auto const& [descriptor, population] : m_network.populations) {
@@ -1182,7 +1182,7 @@ void NetworkGraphBuilder::add_populations(
 void NetworkGraphBuilder::add_neuron_event_outputs(
     signal_flow::Graph& graph,
     Resources& resources,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	for (auto const coord : iter_all<NeuronEventOutputOnDLS>()) {
 		add_neuron_event_output(graph, resources, coord, instance);
@@ -1193,7 +1193,7 @@ void NetworkGraphBuilder::add_external_output(
     signal_flow::Graph& graph,
     Resources& resources,
     RoutingResult const& connection_result,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get set of neuron event outputs from to be recorded populations
@@ -1246,7 +1246,7 @@ void NetworkGraphBuilder::add_external_output(
 void NetworkGraphBuilder::add_plasticity_rules(
     signal_flow::Graph& graph,
     Resources& resources,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	for (auto const& [descriptor, plasticity_rule] : m_network.plasticity_rules) {
@@ -1438,7 +1438,7 @@ void NetworkGraphBuilder::add_madc_recording(
     signal_flow::Graph& graph,
     Resources& resources,
     MADCRecording const& madc_recording,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	std::vector<signal_flow::Input> inputs;
@@ -1510,7 +1510,7 @@ void NetworkGraphBuilder::add_cadc_recording(
     signal_flow::Graph& graph,
     Resources& resources,
     CADCRecording const& cadc_recording,
-    signal_flow::ExecutionInstance const& instance) const
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	halco::common::typed_array<

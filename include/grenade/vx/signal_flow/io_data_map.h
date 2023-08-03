@@ -1,10 +1,10 @@
 #pragma once
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/common/timed_data.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -54,7 +54,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::vector<std::unordered_map<signal_flow::ExecutionInstance, common::Time>> runtime;
+	std::vector<std::unordered_map<common::ExecutionInstanceID, common::Time>> runtime;
 
 	/**
 	 * Optional time information of performed execution to be filled by executor.
@@ -128,7 +128,7 @@ struct ConstantReferenceIODataMap
 	std::map<signal_flow::detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
-	std::vector<std::unordered_map<signal_flow::ExecutionInstance, common::Time>> runtime;
+	std::vector<std::unordered_map<common::ExecutionInstanceID, common::Time>> runtime;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

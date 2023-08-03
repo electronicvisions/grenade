@@ -16,7 +16,7 @@ void CEREAL_SAVE_FUNCTION_NAME(
 {
 	std::vector<std::pair<
 	    grenade::vx::signal_flow::Graph::vertex_descriptor,
-	    grenade::vx::signal_flow::ExecutionInstance>>
+	    grenade::vx::common::ExecutionInstanceID>>
 	    values;
 	for (auto const& p : data.left) {
 		values.push_back(std::pair{p.first, p.second});
@@ -30,7 +30,7 @@ void CEREAL_LOAD_FUNCTION_NAME(
 {
 	std::vector<std::pair<
 	    grenade::vx::signal_flow::Graph::vertex_descriptor,
-	    grenade::vx::signal_flow::ExecutionInstance>>
+	    grenade::vx::common::ExecutionInstanceID>>
 	    values;
 	ar(CEREAL_NVP(values));
 	for (auto const& p : values) {

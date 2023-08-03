@@ -10,7 +10,6 @@ GENPYBIND_MANUAL({
 })
 
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"

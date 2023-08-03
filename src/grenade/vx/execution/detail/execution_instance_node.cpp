@@ -60,7 +60,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     signal_flow::IODataMap& data_map,
     signal_flow::IODataMap const& input_data_map,
     signal_flow::Graph const& graph,
-    signal_flow::ExecutionInstance const& execution_instance,
+    common::ExecutionInstanceID const& execution_instance,
     lola::vx::v3::Chip const& initial_config,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,

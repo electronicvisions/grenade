@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/madc_recording.h"
@@ -8,7 +9,6 @@
 #include "grenade/vx/network/population_descriptor.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_result.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "halco/hicann-dls/vx/v3/background.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -37,7 +37,7 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 NetworkGraph GENPYBIND(visible) build_network_graph(
     std::shared_ptr<Network> const& network,
     RoutingResult const& routing_result,
-    signal_flow::ExecutionInstance const& execution_instance = signal_flow::ExecutionInstance())
+    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
     SYMBOL_VISIBLE;
 
 
@@ -112,46 +112,46 @@ public:
 	void add_external_input(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_background_spike_sources(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    signal_flow::ExecutionInstance const& instance,
+	    common::ExecutionInstanceID const& instance,
 	    RoutingResult const& routing_result) const;
 
 	void add_padi_bus(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::PADIBusOnDLS const& coordinate,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_crossbar_node(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::CrossbarNodeOnDLS const& coordinate,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_synapse_driver(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::SynapseDriverOnDLS const& coordinate,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_neuron_event_output(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::NeuronEventOutputOnDLS const& coordinate,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_synapse_array_view_sparse(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    ProjectionDescriptor descriptor,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_population(
 	    signal_flow::Graph& graph,
@@ -160,7 +160,7 @@ public:
 	        input,
 	    PopulationDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, signal_flow::Input>
 	add_projection_from_external_input(
@@ -168,7 +168,7 @@ public:
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, signal_flow::Input>
 	add_projection_from_background_spike_source(
@@ -176,7 +176,7 @@ public:
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, signal_flow::Input>
 	add_projection_from_internal_input(
@@ -184,41 +184,41 @@ public:
 	    Resources& resources,
 	    ProjectionDescriptor const& descriptor,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_populations(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_neuron_event_outputs(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_external_output(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    RoutingResult const& connection_result,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_madc_recording(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    MADCRecording const& madc_recording,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_cadc_recording(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    CADCRecording const& cadc_recording,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	void add_plasticity_rules(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    signal_flow::ExecutionInstance const& instance) const;
+	    common::ExecutionInstanceID const& instance) const;
 
 	NetworkGraph::SpikeLabels get_spike_labels(RoutingResult const& connection_result);
 

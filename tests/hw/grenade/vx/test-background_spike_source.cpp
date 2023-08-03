@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -36,7 +36,7 @@ inline void test_background_spike_source_regular(
 
 	grenade::vx::signal_flow::Graph g;
 
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	std::vector<grenade::vx::signal_flow::Input> crossbar_nodes;
 

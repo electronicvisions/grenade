@@ -2,9 +2,9 @@
 #include <map>
 #include <unordered_map>
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/detail/connection_state_storage.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
@@ -38,10 +38,10 @@ public:
 
 	static constexpr char name[] = "JITGraphExecutor";
 
-	typedef std::unordered_map<signal_flow::ExecutionInstance, lola::vx::v3::Chip> ChipConfigs;
+	typedef std::unordered_map<common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
 
 	typedef std::
-	    unordered_map<signal_flow::ExecutionInstance, signal_flow::ExecutionInstancePlaybackHooks>
+	    unordered_map<common::ExecutionInstanceID, signal_flow::ExecutionInstancePlaybackHooks>
 	        PlaybackHooks;
 
 	/**

@@ -66,11 +66,11 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime.push_back(
-	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(100)}});
+	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
-	auto& config = initial_config.at(grenade::vx::signal_flow::ExecutionInstance());
+	    {grenade::vx::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
+	auto& config = initial_config.at(grenade::vx::common::ExecutionInstanceID());
 
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.DifferentialConfig");
 	{
@@ -134,11 +134,11 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime.push_back(
-	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(100)}});
+	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
-	auto& config = initial_config.at(grenade::vx::signal_flow::ExecutionInstance());
+	    {grenade::vx::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
+	auto& config = initial_config.at(grenade::vx::common::ExecutionInstanceID());
 
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.NoDifferentialConfig");
 	{
@@ -199,11 +199,11 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::IODataMap input_map;
 	input_map.runtime.push_back(
-	    {{grenade::vx::signal_flow::ExecutionInstance(),
+	    {{grenade::vx::common::ExecutionInstanceID(),
 	      grenade::vx::common::Time(10000 * grenade::vx::common::Time::fpga_clock_cycles_per_us)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::vx::signal_flow::ExecutionInstance(), lola::vx::v3::Chip()}};
+	    {grenade::vx::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
 
 	std::vector<std::future<grenade::vx::signal_flow::IODataMap>> results;
 	constexpr size_t num_concurrent = 100;

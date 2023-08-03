@@ -4,8 +4,8 @@
 #include <set>
 #include <vector>
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
@@ -44,7 +44,7 @@ public:
 	 */
 	ExecutionInstanceBuilder(
 	    signal_flow::Graph const& graph,
-	    signal_flow::ExecutionInstance const& execution_instance,
+	    common::ExecutionInstanceID const& execution_instance,
 	    signal_flow::IODataMap const& input_list,
 	    signal_flow::IODataMap const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
@@ -84,7 +84,7 @@ public:
 
 private:
 	signal_flow::Graph const& m_graph;
-	signal_flow::ExecutionInstance m_execution_instance;
+	common::ExecutionInstanceID m_execution_instance;
 	signal_flow::IODataMap const& m_input_list;
 	signal_flow::IODataMap const& m_data_output;
 

@@ -1,9 +1,9 @@
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
 #include "hate/timer.h"
@@ -20,7 +20,7 @@ namespace grenade::vx::execution::detail {
 
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     signal_flow::Graph const& graph,
-    signal_flow::ExecutionInstance const& execution_instance,
+    common::ExecutionInstanceID const& execution_instance,
     lola::vx::v3::Chip& chip_config) :
     m_graph(graph),
     m_execution_instance(execution_instance),

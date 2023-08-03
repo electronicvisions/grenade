@@ -10,7 +10,7 @@
 
 #include <log4cxx/logger.h>
 
-#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/supports_input_from.h"
 #include "hate/timer.h"
@@ -125,7 +125,7 @@ Graph& Graph::operator=(Graph&& other)
 
 Graph::vertex_descriptor Graph::add(
     vertex_descriptor const vertex_reference,
-    signal_flow::ExecutionInstance const execution_instance,
+    common::ExecutionInstanceID const execution_instance,
     std::vector<Input> const inputs)
 {
 	return add<>(vertex_reference, execution_instance, inputs);
@@ -133,7 +133,7 @@ Graph::vertex_descriptor Graph::add(
 
 void Graph::add_edges(
     vertex_descriptor descriptor,
-    signal_flow::ExecutionInstance const& execution_instance,
+    common::ExecutionInstanceID const& execution_instance,
     std::vector<Input> const& inputs)
 {
 	// add execution instance (if not already present)
@@ -197,7 +197,7 @@ void Graph::add_edges(
 
 void Graph::add_log(
     vertex_descriptor descriptor,
-    signal_flow::ExecutionInstance const& execution_instance,
+    common::ExecutionInstanceID const& execution_instance,
     hate::Timer const& timer)
 {
 	auto const log = [&](auto const& v) {
@@ -480,8 +480,8 @@ template <typename Vertex, typename InputVertex>
 void Graph::check_execution_instances(
     Vertex const&,
     InputVertex const& input_vertex,
-    signal_flow::ExecutionInstance const& vertex_execution_instance,
-    signal_flow::ExecutionInstance const& input_vertex_execution_instance)
+    common::ExecutionInstanceID const& vertex_execution_instance,
+    common::ExecutionInstanceID const& input_vertex_execution_instance)
 {
 	auto const connection_type = input_vertex.output().type;
 	auto const connection_type_can_connect =
@@ -507,7 +507,7 @@ void Graph::check_execution_instances(
 }
 
 void Graph::check_execution_instance(
-    Vertex const& vertex, signal_flow::ExecutionInstance const& execution_instance)
+    Vertex const& vertex, common::ExecutionInstanceID const& execution_instance)
 {
 	auto const checker = [execution_instance](auto const& v) {
 		if constexpr (std::is_base_of_v<vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
@@ -524,7 +524,7 @@ void Graph::check_execution_instance(
 
 void Graph::check_inputs(
     Vertex const& vertex,
-    signal_flow::ExecutionInstance const& execution_instance,
+    common::ExecutionInstanceID const& execution_instance,
     std::vector<Input> const& inputs)
 {
 	auto const checker = [&](auto const& v) {

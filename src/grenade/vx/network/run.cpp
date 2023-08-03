@@ -1,9 +1,9 @@
 #include "grenade/vx/network/run.h"
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 
 namespace grenade::vx::network {
@@ -48,13 +48,13 @@ signal_flow::IODataMap run(
     signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<signal_flow::ExecutionInstance, lola::vx::v3::Chip>(
-	    signal_flow::ExecutionInstance(), config));
+	configs.insert(std::pair<common::ExecutionInstanceID, lola::vx::v3::Chip>(
+	    common::ExecutionInstanceID(), config));
 
 	grenade::vx::execution::JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(
-	    std::pair<signal_flow::ExecutionInstance, signal_flow::ExecutionInstancePlaybackHooks>(
-	        signal_flow::ExecutionInstance(), std::move(playback_hooks)));
+	    std::pair<common::ExecutionInstanceID, signal_flow::ExecutionInstancePlaybackHooks>(
+	        common::ExecutionInstanceID(), std::move(playback_hooks)));
 
 	auto ret = grenade::vx::execution::run(
 	    executor, network_graph.get_graph(), inputs, configs, playback_hooks_map);

@@ -189,7 +189,7 @@ private:
 	friend NetworkGraph build_network_graph(
 	    std::shared_ptr<Network> const& network,
 	    RoutingResult const& routing_result,
-	    signal_flow::ExecutionInstance const& execution_instance);
+	    common::ExecutionInstanceID const& execution_instance);
 	friend void update_network_graph(
 	    NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
 	friend NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph);

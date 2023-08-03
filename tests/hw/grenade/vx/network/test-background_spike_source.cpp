@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -12,7 +13,6 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -49,7 +49,7 @@ void test_background_spike_source_regular(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -96,7 +96,7 @@ void test_background_spike_source_regular(
 
 	// generate input
 	grenade::vx::signal_flow::IODataMap inputs;
-	inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
+	inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -150,7 +150,7 @@ void test_background_spike_source_poisson(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	BackgroundSourcePopulation population_background_spike_source{
 	    64,
@@ -202,7 +202,7 @@ void test_background_spike_source_poisson(
 
 		// generate input
 		grenade::vx::signal_flow::IODataMap inputs;
-		inputs.runtime.push_back({{grenade::vx::signal_flow::ExecutionInstance(), running_period}});
+		inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
 
 		// run graph with given inputs and return results
 		auto const result_map =

@@ -10,7 +10,7 @@ namespace cereal {
 struct access;
 } // namespace cereal
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace grenade::vx::common GENPYBIND_TAG_GRENADE_VX_COMMON {
 
 /**
  * Unique temporal identifier for a execution instance.
@@ -24,32 +24,32 @@ struct GENPYBIND(inline_base("*")) ExecutionIndex
 };
 
 
-struct ExecutionInstance;
-size_t hash_value(ExecutionInstance const& e) SYMBOL_VISIBLE;
+struct ExecutionInstanceID;
+size_t hash_value(ExecutionInstanceID const& e) SYMBOL_VISIBLE;
 
 /**
  * Execution instance identifier.
  * An execution instance describes a unique physically placed isolated execution.
  * It is placed physically on a global DLS instance.
  */
-struct GENPYBIND(visible) ExecutionInstance
+struct GENPYBIND(visible) ExecutionInstanceID
 {
-	ExecutionInstance() = default;
+	ExecutionInstanceID() = default;
 
-	explicit ExecutionInstance(
+	explicit ExecutionInstanceID(
 	    ExecutionIndex execution_index, halco::hicann_dls::vx::v3::DLSGlobal dls) SYMBOL_VISIBLE;
 
 	halco::hicann_dls::vx::v3::DLSGlobal toDLSGlobal() const SYMBOL_VISIBLE;
 	ExecutionIndex toExecutionIndex() const SYMBOL_VISIBLE;
 
-	bool operator==(ExecutionInstance const& other) const SYMBOL_VISIBLE;
-	bool operator!=(ExecutionInstance const& other) const SYMBOL_VISIBLE;
+	bool operator==(ExecutionInstanceID const& other) const SYMBOL_VISIBLE;
+	bool operator!=(ExecutionInstanceID const& other) const SYMBOL_VISIBLE;
 
 	GENPYBIND(stringstream)
-	friend std::ostream& operator<<(std::ostream& os, ExecutionInstance const& instance)
+	friend std::ostream& operator<<(std::ostream& os, ExecutionInstanceID const& instance)
 	    SYMBOL_VISIBLE;
 
-	friend size_t hash_value(ExecutionInstance const& e) SYMBOL_VISIBLE;
+	friend size_t hash_value(ExecutionInstanceID const& e) SYMBOL_VISIBLE;
 
 	GENPYBIND(expose_as(__hash__))
 	size_t hash() const SYMBOL_VISIBLE;
@@ -63,16 +63,16 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
-} // namespace grenade::vx::signal_flow
+} // namespace grenade::vx::common
 
 namespace std {
 
-HALCO_GEOMETRY_HASH_CLASS(grenade::vx::signal_flow::ExecutionIndex)
+HALCO_GEOMETRY_HASH_CLASS(grenade::vx::common::ExecutionIndex)
 
 template <>
-struct hash<grenade::vx::signal_flow::ExecutionInstance>
+struct hash<grenade::vx::common::ExecutionInstanceID>
 {
-	size_t operator()(grenade::vx::signal_flow::ExecutionInstance const& t) const SYMBOL_VISIBLE;
+	size_t operator()(grenade::vx::common::ExecutionInstanceID const& t) const SYMBOL_VISIBLE;
 };
 
 } // namespace std

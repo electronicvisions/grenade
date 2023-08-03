@@ -195,7 +195,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
         input_generator.add(times, ext_pop_descr)
         inputs = input_generator.done()
         inputs.runtime = [{
-            grenade.signal_flow.ExecutionInstance():
+            grenade.common.ExecutionInstanceID():
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100}] * batch_size
 
         with hxcomm.ManagedConnection() as connection:

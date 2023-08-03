@@ -1,3 +1,4 @@
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -11,7 +12,6 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -41,7 +41,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -100,7 +100,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
 	    inputs.batch_size(),
-	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(num * isi)}});
+	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -141,7 +141,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -206,7 +206,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
 	    inputs.batch_size(),
-	    {{grenade::vx::signal_flow::ExecutionInstance(), grenade::vx::common::Time(num * isi)}});
+	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map =
@@ -247,7 +247,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	// construct shuffled list of neurons
 	Population::Neurons all_neurons;
@@ -337,8 +337,8 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		input_generator.add(input_spike_times, population_external_descriptor);
 		auto inputs = input_generator.done();
 		inputs.runtime.resize(
-		    inputs.batch_size(), {{grenade::vx::signal_flow::ExecutionInstance(),
-		                           grenade::vx::common::Time(num * isi)}});
+		    inputs.batch_size(),
+		    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 		// run graph with given inputs and return results
 		auto const result_map =

@@ -1,3 +1,4 @@
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
@@ -10,7 +11,6 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -26,7 +26,7 @@ using namespace grenade::vx::network;
 
 TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 {
-	grenade::vx::signal_flow::ExecutionInstance instance;
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();

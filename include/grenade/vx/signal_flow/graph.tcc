@@ -1,4 +1,4 @@
-#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "hate/timer.h"
 
@@ -9,7 +9,7 @@ namespace grenade::vx::signal_flow {
 template <typename VertexT>
 Graph::vertex_descriptor Graph::add(
     VertexT&& vertex,
-    signal_flow::ExecutionInstance const execution_instance,
+    common::ExecutionInstanceID const execution_instance,
     std::vector<Input> const inputs)
 {
 	hate::Timer const timer;

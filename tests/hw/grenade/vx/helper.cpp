@@ -1,7 +1,7 @@
 #include "helper.h"
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "halco/common/iter_all.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
@@ -14,7 +14,7 @@ using namespace halco::hicann_dls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 using namespace grenade::vx::execution;
-using namespace grenade::vx::signal_flow;
+using namespace grenade::vx::common;
 
 
 grenade::vx::execution::JITGraphExecutor::ChipConfigs get_chip_configs_bypass_excitatory()
@@ -55,7 +55,7 @@ grenade::vx::execution::JITGraphExecutor::ChipConfigs get_chip_configs_bypass_ex
 		for (auto const block : iter_all<SynapseBlockOnDLS>()) {
 			chip.synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
 		}
-		return {{ExecutionInstance(), chip}};
+		return {{ExecutionInstanceID(), chip}};
 	}
-	return {{ExecutionInstance(), chip}};
+	return {{ExecutionInstanceID(), chip}};
 }

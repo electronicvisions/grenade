@@ -7,7 +7,6 @@
 using namespace grenade::vx;
 using namespace grenade::vx::common;
 using namespace grenade::vx::signal_flow;
-using namespace grenade::vx::signal_flow;
 
 TEST(IODataMap, General)
 {
@@ -25,11 +24,11 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.valid());
 
 	map.runtime.resize(1);
-	map.runtime.at(0)[ExecutionInstance()] = common::Time(0);
+	map.runtime.at(0)[ExecutionInstanceID()] = common::Time(0);
 	EXPECT_FALSE(map.valid());
 	EXPECT_THROW(map.batch_size(), std::runtime_error);
-	std::vector<std::unordered_map<ExecutionInstance, common::Time>> runtime{
-	    {{ExecutionInstance(), common::Time(0)}}, {{ExecutionInstance(), common::Time(1)}}};
+	std::vector<std::unordered_map<ExecutionInstanceID, common::Time>> runtime{
+	    {{ExecutionInstanceID(), common::Time(0)}}, {{ExecutionInstanceID(), common::Time(1)}}};
 	map.runtime = runtime;
 	EXPECT_TRUE(map.valid());
 	EXPECT_EQ(map.batch_size(), 2);
@@ -55,8 +54,8 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.data.contains(1));
 	EXPECT_EQ(map.data.at(1), data_1);
 	EXPECT_EQ(map.runtime, runtime);
-	std::vector<std::unordered_map<ExecutionInstance, common::Time>> runtime_2{
-	    {{ExecutionInstance(), common::Time(0)}}, {{ExecutionInstance(), common::Time(1)}}};
+	std::vector<std::unordered_map<ExecutionInstanceID, common::Time>> runtime_2{
+	    {{ExecutionInstanceID(), common::Time(0)}}, {{ExecutionInstanceID(), common::Time(1)}}};
 	map_2.runtime = runtime_2;
 	map.merge(map_2);
 	EXPECT_EQ(map.runtime, runtime);

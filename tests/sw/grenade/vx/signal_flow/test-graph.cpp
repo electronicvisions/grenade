@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/signal_flow/execution_instance.h"
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
@@ -16,6 +16,7 @@
 #include <cereal/cereal.hpp>
 
 using namespace halco::hicann_dls::vx::v3;
+using namespace grenade::vx::common;
 using namespace grenade::vx::signal_flow;
 using namespace grenade::vx::signal_flow::vertex;
 
@@ -25,20 +26,20 @@ TEST(Graph, check_inputs_size)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataInt8, 123);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// too much input vertices
-	EXPECT_THROW(graph.add(vertex, ExecutionInstance(), {v0}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex, ExecutionInstanceID(), {v0}), std::runtime_error);
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::Int8, 123);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// too little input vertices
-	EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(), {}), std::runtime_error);
 
 	// too much input vertices
-	EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v0, v1}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(), {v0, v1}), std::runtime_error);
 }
 
 
@@ -48,32 +49,32 @@ TEST(Graph, check_input_port)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataInt8, 123);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::Int8, 123);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// wrong port shape
 	DataInput vertex3(ConnectionType::Int8, 42);
-	EXPECT_THROW(graph.add(vertex3, ExecutionInstance(), {v0}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex3, ExecutionInstanceID(), {v0}), std::runtime_error);
 
 	// invalid port restriction
 	EXPECT_THROW(
-	    graph.add(vertex3, ExecutionInstance(), {{v0, {100, 141} /*size=42 but out-of-range*/}}),
+	    graph.add(vertex3, ExecutionInstanceID(), {{v0, {100, 141} /*size=42 but out-of-range*/}}),
 	    std::runtime_error);
 
 	// port restriction not matching input port of vertex (wrong size)
 	EXPECT_THROW(
-	    graph.add(vertex3, ExecutionInstance(), {{v0, {10, 52} /*arbitrary offset, size=43*/}}),
+	    graph.add(vertex3, ExecutionInstanceID(), {{v0, {10, 52} /*arbitrary offset, size=43*/}}),
 	    std::runtime_error);
 
 	// correct port restriction
 	EXPECT_NO_THROW(
-	    graph.add(vertex3, ExecutionInstance(), {{v0, {10, 51} /*arbitrary offset, size=42*/}}));
+	    graph.add(vertex3, ExecutionInstanceID(), {{v0, {10, 51} /*arbitrary offset, size=42*/}}));
 
 	// wrong port type
-	EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v1}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(), {v1}), std::runtime_error);
 }
 
 TEST(Graph, check_execution_instances)
@@ -82,29 +83,29 @@ TEST(Graph, check_execution_instances)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataInt8, 123);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// too much input vertices
-	EXPECT_THROW(graph.add(vertex, ExecutionInstance(), {v0}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex, ExecutionInstanceID(), {v0}), std::runtime_error);
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::Int8, 123);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// ExternalInput -> DataInput not allowed over different execution instances
 	EXPECT_THROW(
-	    graph.add(vertex2, ExecutionInstance(ExecutionIndex(1), DLSGlobal()), {v0}),
+	    graph.add(vertex2, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v0}),
 	    std::runtime_error);
 
 	// Graph:: v0 -> v1 -> v2
 	DataOutput vertex4(ConnectionType::Int8, 123);
-	auto const v2 = graph.add(vertex4, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex4, ExecutionInstanceID(), {v1});
 
 	// DataOutput -> DataInput allowed over differrent execution instances
-	EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstance(ExecutionIndex(1), DLSGlobal()), {v2}));
+	EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v2}));
 
 	// DataOutput -> DataInput only allowed over differrent execution instances
-	EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v2}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(), {v2}), std::runtime_error);
 }
 
 void test_check_acyclicity(bool enable_check)
@@ -113,29 +114,29 @@ void test_check_acyclicity(bool enable_check)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataInt8, 123);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::Int8, 123);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// Graph: v0 -> v1 -> v2
 	DataOutput vertex4(ConnectionType::Int8, 123);
-	auto const v2 = graph.add(vertex4, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex4, ExecutionInstanceID(), {v1});
 
 	// Graph: v0 -> v1 -> v2 ==> v3
-	auto const v3 = graph.add(vertex2, ExecutionInstance(ExecutionIndex(1), DLSGlobal()), {v2});
+	auto const v3 = graph.add(vertex2, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v2});
 
 	// Graph: v0 -> v1 -> v2 ==> v3 -> v4
-	auto const v4 = graph.add(vertex4, ExecutionInstance(ExecutionIndex(1), DLSGlobal()), {v3});
+	auto const v4 = graph.add(vertex4, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v3});
 
 	// DataOutput -> DataInput back to ExecutionIndex(0) leads to cyclicity
 	if (enable_check) {
-		EXPECT_THROW(graph.add(vertex2, ExecutionInstance(), {v4}), std::runtime_error);
+		EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(), {v4}), std::runtime_error);
 	} else {
 		// Note that the graph still won't be executable and the executor will raise the exact same
 		// exception.
-		EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstance(), {v4}));
+		EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstanceID(), {v4}));
 	}
 }
 
@@ -153,15 +154,15 @@ TEST(Graph, check_supports_input_from)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// Graph: v0 -> v1 -> v2
 	CrossbarL2Input vertex3;
-	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex3, ExecutionInstanceID(), {v1});
 
 	// connect loopback via crossbar
 	CrossbarNode vertex4(
@@ -171,14 +172,14 @@ TEST(Graph, check_supports_input_from)
 	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v2 -> v3
-	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
+	auto const v3 = graph.add(vertex4, ExecutionInstanceID(), {v2});
 
 	// Graph: v0 -> v1 -> v2 -> v3 -> v4
 	CrossbarL2Output vertex5;
-	auto const v4 = graph.add(vertex5, ExecutionInstance(), {v3});
+	auto const v4 = graph.add(vertex5, ExecutionInstanceID(), {v3});
 
 	DataOutput vertex6(ConnectionType::TimedSpikeFromChipSequence, 1);
-	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstance(), {v4}));
+	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstanceID(), {v4}));
 
 	// crossbar node not connecting loopback
 	CrossbarNode vertex7(
@@ -186,10 +187,10 @@ TEST(Graph, check_supports_input_from)
 	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v5
-	auto const v5 = graph.add(vertex7, ExecutionInstance(), {v2});
+	auto const v5 = graph.add(vertex7, ExecutionInstanceID(), {v2});
 
 	// Input from crossbar node not connecting to output not supported
-	EXPECT_THROW(graph.add(vertex6, ExecutionInstance(), {v5}), std::runtime_error);
+	EXPECT_THROW(graph.add(vertex6, ExecutionInstanceID(), {v5}), std::runtime_error);
 }
 
 TEST(Graph, recurrence)
@@ -198,24 +199,24 @@ TEST(Graph, recurrence)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// Graph: v1 -> v2
 	CrossbarL2Input vertex3;
-	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex3, ExecutionInstanceID(), {v1});
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v3::CrossbarNode());
-	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
+	auto const v3 = graph.add(crossbar_in, ExecutionInstanceID(), {v2});
 
 	PADIBus::Coordinate c;
 	PADIBus padi_bus(c);
-	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
+	auto const v4 = graph.add(padi_bus, ExecutionInstanceID(), {v3});
 
 	SynapseDriver synapse_driver(
 	    SynapseDriver::Coordinate(),
@@ -223,50 +224,50 @@ TEST(Graph, recurrence)
 	     {vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
 	      vertex::SynapseDriver::Config::RowModes::value_type::excitatory},
 	     false});
-	auto const v5 = graph.add(synapse_driver, ExecutionInstance(), {v4});
+	auto const v5 = graph.add(synapse_driver, ExecutionInstanceID(), {v4});
 
 	SynapseArrayView synapses(
 	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
 	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
 	    SynapseArrayView::Weights{{lola::vx::v3::SynapseMatrix::Weight()}},
 	    SynapseArrayView::Labels{{lola::vx::v3::SynapseMatrix::Label()}});
-	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
+	auto const v6 = graph.add(synapses, ExecutionInstanceID(), {v5});
 
 	NeuronView neurons(
 	    NeuronView::Columns{NeuronColumnOnDLS()},
 	    NeuronView::Configs{{NeuronView::Config::Label(0), true}}, NeuronRowOnDLS());
-	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
+	auto const v7 = graph.add(neurons, ExecutionInstanceID(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
 	    {{NeuronRowOnDLS(), {NeuronEventOutputView::Columns{NeuronColumnOnDLS()}}}});
-	auto const v8 = graph.add(neuron_outputs, ExecutionInstance(), {v7});
+	auto const v8 = graph.add(neuron_outputs, ExecutionInstanceID(), {v7});
 
 	// recurrence
 	CrossbarNode crossbar_recurrent(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v3::CrossbarNode());
-	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstance(), {v8});
+	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstanceID(), {v8});
 
-	auto const v10 = graph.add(v4, ExecutionInstance(), {v3, v9});
+	auto const v10 = graph.add(v4, ExecutionInstanceID(), {v3, v9});
 
-	auto const v11 = graph.add(v5, ExecutionInstance(), {v10});
+	auto const v11 = graph.add(v5, ExecutionInstanceID(), {v10});
 
-	auto const v12 = graph.add(v6, ExecutionInstance(), {v11});
+	auto const v12 = graph.add(v6, ExecutionInstanceID(), {v11});
 
-	auto const v13 = graph.add(v7, ExecutionInstance(), {v12});
+	auto const v13 = graph.add(v7, ExecutionInstanceID(), {v12});
 
-	auto const v14 = graph.add(v8, ExecutionInstance(), {v13});
+	auto const v14 = graph.add(v8, ExecutionInstanceID(), {v13});
 
 	CrossbarNode crossbar_out(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
 	    haldls::vx::v3::CrossbarNode());
-	auto const v15 = graph.add(crossbar_out, ExecutionInstance(), {v14});
+	auto const v15 = graph.add(crossbar_out, ExecutionInstanceID(), {v14});
 
 	CrossbarL2Output crossbar_l2_output;
-	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstance(), {v15});
+	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstanceID(), {v15});
 
 	DataOutput data_output(ConnectionType::TimedSpikeFromChipSequence, 1);
-	graph.add(data_output, ExecutionInstance(), {v16});
+	graph.add(data_output, ExecutionInstanceID(), {v16});
 
 	// assignment, construction
 	Graph graph2(graph); // copy construct
@@ -290,24 +291,24 @@ TEST(Graph, CerealizeCoverage)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// Graph: v1 -> v2
 	CrossbarL2Input vertex3;
-	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex3, ExecutionInstanceID(), {v1});
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v3::CrossbarNode());
-	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
+	auto const v3 = graph.add(crossbar_in, ExecutionInstanceID(), {v2});
 
 	PADIBus::Coordinate c;
 	PADIBus padi_bus(c);
-	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
+	auto const v4 = graph.add(padi_bus, ExecutionInstanceID(), {v3});
 
 	SynapseDriver synapse_driver(
 	    SynapseDriver::Coordinate(),
@@ -315,50 +316,50 @@ TEST(Graph, CerealizeCoverage)
 	     {vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
 	      vertex::SynapseDriver::Config::RowModes::value_type::excitatory},
 	     false});
-	auto const v5 = graph.add(synapse_driver, ExecutionInstance(), {v4});
+	auto const v5 = graph.add(synapse_driver, ExecutionInstanceID(), {v4});
 
 	SynapseArrayView synapses(
 	    SynramOnDLS(), SynapseArrayView::Rows{SynapseRowOnDLS()},
 	    SynapseArrayView::Columns{SynapseOnSynapseRow()},
 	    SynapseArrayView::Weights{{lola::vx::v3::SynapseMatrix::Weight()}},
 	    SynapseArrayView::Labels{{lola::vx::v3::SynapseMatrix::Label()}});
-	auto const v6 = graph.add(synapses, ExecutionInstance(), {v5});
+	auto const v6 = graph.add(synapses, ExecutionInstanceID(), {v5});
 
 	NeuronView neurons(
 	    NeuronView::Columns{NeuronColumnOnDLS()},
 	    NeuronView::Configs{{NeuronView::Config::Label(0), true}}, NeuronRowOnDLS());
-	auto const v7 = graph.add(neurons, ExecutionInstance(), {v6});
+	auto const v7 = graph.add(neurons, ExecutionInstanceID(), {v6});
 
 	NeuronEventOutputView neuron_outputs(
 	    {{NeuronRowOnDLS(), {NeuronEventOutputView::Columns{NeuronColumnOnDLS()}}}});
-	auto const v8 = graph.add(neuron_outputs, ExecutionInstance(), {v7});
+	auto const v8 = graph.add(neuron_outputs, ExecutionInstanceID(), {v7});
 
 	// recurrence
 	CrossbarNode crossbar_recurrent(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarOutputOnDLS(0)),
 	    haldls::vx::CrossbarNode());
-	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstance(), {v8});
+	auto const v9 = graph.add(crossbar_recurrent, ExecutionInstanceID(), {v8});
 
-	auto const v10 = graph.add(v4, ExecutionInstance(), {v3, v9});
+	auto const v10 = graph.add(v4, ExecutionInstanceID(), {v3, v9});
 
-	auto const v11 = graph.add(v5, ExecutionInstance(), {v10});
+	auto const v11 = graph.add(v5, ExecutionInstanceID(), {v10});
 
-	auto const v12 = graph.add(v6, ExecutionInstance(), {v11});
+	auto const v12 = graph.add(v6, ExecutionInstanceID(), {v11});
 
-	auto const v13 = graph.add(v7, ExecutionInstance(), {v12});
+	auto const v13 = graph.add(v7, ExecutionInstanceID(), {v12});
 
-	auto const v14 = graph.add(v8, ExecutionInstance(), {v13});
+	auto const v14 = graph.add(v8, ExecutionInstanceID(), {v13});
 
 	CrossbarNode crossbar_out(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(0), CrossbarL2OutputOnDLS().toCrossbarOutputOnDLS()),
 	    haldls::vx::CrossbarNode());
-	auto const v15 = graph.add(crossbar_out, ExecutionInstance(), {v14});
+	auto const v15 = graph.add(crossbar_out, ExecutionInstanceID(), {v14});
 
 	CrossbarL2Output crossbar_l2_output;
-	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstance(), {v15});
+	auto const v16 = graph.add(crossbar_l2_output, ExecutionInstanceID(), {v15});
 
 	DataOutput data_output(ConnectionType::TimedSpikeFromChipSequence, 1);
-	graph.add(data_output, ExecutionInstance(), {v16});
+	graph.add(data_output, ExecutionInstanceID(), {v16});
 
 	Graph graph2;
 
@@ -381,15 +382,15 @@ TEST(Graph, update)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// Graph: v0 -> v1 -> v2
 	CrossbarL2Input vertex3;
-	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex3, ExecutionInstanceID(), {v1});
 
 	// connect loopback via crossbar
 	CrossbarNode vertex4(
@@ -399,14 +400,14 @@ TEST(Graph, update)
 	    haldls::vx::v3::CrossbarNode());
 
 	// Graph: v0 -> v1 -> v2 -> v3
-	auto const v3 = graph.add(vertex4, ExecutionInstance(), {v2});
+	auto const v3 = graph.add(vertex4, ExecutionInstanceID(), {v2});
 
 	// Graph: v0 -> v1 -> v2 -> v3 -> v4
 	CrossbarL2Output vertex5;
-	auto const v4 = graph.add(vertex5, ExecutionInstance(), {v3});
+	auto const v4 = graph.add(vertex5, ExecutionInstanceID(), {v3});
 
 	DataOutput vertex6(ConnectionType::TimedSpikeFromChipSequence, 1);
-	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstance(), {v4}));
+	EXPECT_NO_THROW(graph.add(vertex6, ExecutionInstanceID(), {v4}));
 
 	// crossbar node not connecting loopback
 	CrossbarNode vertex7(
@@ -433,35 +434,35 @@ TEST(Graph, update_and_relocate)
 
 	// Graph: v0
 	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
-	auto const v0 = graph.add(vertex, ExecutionInstance(), {});
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
 
 	// Graph: v0 -> v1
 	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
-	auto const v1 = graph.add(vertex2, ExecutionInstance(), {v0});
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// Graph: v1 -> v2
 	CrossbarL2Input vertex3;
-	auto const v2 = graph.add(vertex3, ExecutionInstance(), {v1});
+	auto const v2 = graph.add(vertex3, ExecutionInstanceID(), {v1});
 
 	CrossbarNode crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v3::CrossbarNode());
-	auto const v3 = graph.add(crossbar_in, ExecutionInstance(), {v2});
+	auto const v3 = graph.add(crossbar_in, ExecutionInstanceID(), {v2});
 
 	CrossbarNode other_crossbar_in(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(9), CrossbarOutputOnDLS(0)),
 	    haldls::vx::v3::CrossbarNode());
-	auto const other_v3 = graph.add(other_crossbar_in, ExecutionInstance(), {v2});
+	auto const other_v3 = graph.add(other_crossbar_in, ExecutionInstanceID(), {v2});
 
 	CrossbarNode other_crossbar_in_different_padi_bus(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(1)),
 	    haldls::vx::v3::CrossbarNode());
 	auto const other_v3_different_padi_bus =
-	    graph.add(other_crossbar_in_different_padi_bus, ExecutionInstance(), {v2});
+	    graph.add(other_crossbar_in_different_padi_bus, ExecutionInstanceID(), {v2});
 
 	PADIBus::Coordinate c;
 	PADIBus padi_bus(c);
-	auto const v4 = graph.add(padi_bus, ExecutionInstance(), {v3});
+	auto const v4 = graph.add(padi_bus, ExecutionInstanceID(), {v3});
 
 	// working other node
 	EXPECT_NO_THROW(graph.update_and_relocate(v4, PADIBus(PADIBus::Coordinate()), {other_v3}));

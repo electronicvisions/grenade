@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
 #include "grenade/build-config.h"
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/ppu.h"
-#include "grenade/vx/signal_flow/execution_instance.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
