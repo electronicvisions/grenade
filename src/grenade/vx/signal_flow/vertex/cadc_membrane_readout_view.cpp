@@ -81,6 +81,9 @@ std::ostream& operator<<(std::ostream& os, CADCMembraneReadoutView const& config
 bool CADCMembraneReadoutView::supports_input_from(
     NeuronView const& input, std::optional<PortRestriction> const& restriction) const
 {
+	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+		return false;
+	}
 	if (input.get_row().toSynramOnDLS() != m_synram) {
 		return false;
 	}

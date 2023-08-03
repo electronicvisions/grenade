@@ -65,6 +65,9 @@ std::ostream& operator<<(std::ostream& os, NeuronView const& config)
 bool NeuronView::supports_input_from(
     SynapseArrayView const& input, std::optional<PortRestriction> const& restriction) const
 {
+	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+		return false;
+	}
 	if (input.get_synram() != m_row.toSynramOnDLS()) {
 		return false;
 	}

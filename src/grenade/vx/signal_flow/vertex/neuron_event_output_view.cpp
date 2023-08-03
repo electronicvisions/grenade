@@ -10,7 +10,9 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-NeuronEventOutputView::NeuronEventOutputView(Neurons const& neurons) : m_neurons()
+NeuronEventOutputView::NeuronEventOutputView(
+    Neurons const& neurons, ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate), m_neurons()
 {
 	for (auto const& [_, columns_of_inputs] : neurons) {
 		std::set<Columns::value_type> unique;
@@ -77,6 +79,9 @@ std::ostream& operator<<(std::ostream& os, NeuronEventOutputView const& config)
 bool NeuronEventOutputView::supports_input_from(
     NeuronView const& input, std::optional<PortRestriction> const& restriction) const
 {
+	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+		return false;
+	}
 	if (!m_neurons.contains(input.get_row())) {
 		return false;
 	}

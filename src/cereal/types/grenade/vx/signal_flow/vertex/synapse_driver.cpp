@@ -17,6 +17,7 @@ void SynapseDriver::Config::serialize(Archive& ar, std::uint32_t const)
 template <typename Archive>
 void SynapseDriver::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<EntityOnChip>(this));
 	ar(m_coordinate);
 	ar(m_config);
 }

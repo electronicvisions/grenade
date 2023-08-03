@@ -251,6 +251,9 @@ private:
 	    ExecutionInstance const& vertex_execution_instance,
 	    ExecutionInstance const& input_vertex_execution_instance);
 
+	void check_execution_instance(Vertex const& vertex, ExecutionInstance const& execution_instance)
+	    SYMBOL_VISIBLE;
+
 	void check_inputs(
 	    Vertex const& vertex,
 	    ExecutionInstance const& execution_instance,

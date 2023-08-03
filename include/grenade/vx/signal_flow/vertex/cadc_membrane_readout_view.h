@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/cadc.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synram.h"
@@ -28,7 +29,7 @@ struct NeuronView;
 /**
  * Readout of membrane voltages via the CADC.
  */
-struct CADCMembraneReadoutView
+struct CADCMembraneReadoutView : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -56,7 +57,11 @@ struct CADCMembraneReadoutView
 	 */
 	template <typename ColumnsT, typename SynramT, typename SourcesT>
 	explicit CADCMembraneReadoutView(
-	    ColumnsT&& columns, SynramT&& synram, Mode const& mode, SourcesT&& sources);
+	    ColumnsT&& columns,
+	    SynramT&& synram,
+	    Mode const& mode,
+	    SourcesT&& sources,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Synram const& get_synram() const SYMBOL_VISIBLE;

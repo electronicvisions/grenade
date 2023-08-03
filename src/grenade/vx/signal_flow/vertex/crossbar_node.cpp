@@ -5,8 +5,9 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-CrossbarNode::CrossbarNode(Coordinate const& coordinate, Config const& config) :
-    m_coordinate(coordinate), m_config(config)
+CrossbarNode::CrossbarNode(
+    Coordinate const& coordinate, Config const& config, ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate), m_coordinate(coordinate), m_config(config)
 {}
 
 CrossbarNode::Coordinate const& CrossbarNode::get_coordinate() const
@@ -20,9 +21,11 @@ CrossbarNode::Config const& CrossbarNode::get_config() const
 }
 
 bool CrossbarNode::supports_input_from(
-    BackgroundSpikeSource const& input, std::optional<PortRestriction> const&) const
+    BackgroundSpikeSource const& input,
+    std::optional<PortRestriction> const& port_restriction) const
 {
-	return m_coordinate.toCrossbarInputOnDLS() == input.get_coordinate().toCrossbarInputOnDLS();
+	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, port_restriction) &&
+	       (m_coordinate.toCrossbarInputOnDLS() == input.get_coordinate().toCrossbarInputOnDLS());
 }
 
 std::ostream& operator<<(std::ostream& os, CrossbarNode const& config)

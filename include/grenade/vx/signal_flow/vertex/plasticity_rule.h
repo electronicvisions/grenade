@@ -2,6 +2,7 @@
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule/observable_data_type.h"
 #include "halco/common/geometry.h"
@@ -39,7 +40,7 @@ struct SynapseArrayView;
 /**
  * A plasticity rule to operate on synapse array views.
  */
-struct PlasticityRule
+struct PlasticityRule : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -457,13 +458,15 @@ struct PlasticityRule
 	 * @param neuron_view_shapes Shapes of neuron views to alter
 	 * @param recording Optional recording providing memory for the plasticity rule to store
 	 * information during execution.
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
 	PlasticityRule(
 	    std::string kernel,
 	    Timer const& timer,
 	    std::vector<SynapseViewShape> const& synapse_view_shapes,
 	    std::vector<NeuronViewShape> const& neuron_view_shapes,
-	    std::optional<Recording> const& recording) SYMBOL_VISIBLE;
+	    std::optional<Recording> const& recording,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
 
 	/**
 	 * Size (in bytes) of recorded scratchpad memory, which is stored after execution and

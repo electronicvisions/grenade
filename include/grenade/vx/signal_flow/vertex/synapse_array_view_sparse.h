@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synram.h"
 #include "hate/visibility.h"
@@ -24,7 +25,7 @@ namespace grenade::vx::signal_flow::vertex {
 /**
  * A sparse view of synapses connected to a set of synapse drivers.
  */
-struct SynapseArrayViewSparse
+struct SynapseArrayViewSparse : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -58,10 +59,15 @@ struct SynapseArrayViewSparse
 	 * @param rows Coordinates of rows
 	 * @param columns Coordinates of columns
 	 * @param synapses Synapse values
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
 	template <typename SynramT, typename RowsT, typename ColumnsT, typename SynapsesT>
 	explicit SynapseArrayViewSparse(
-	    SynramT&& synram, RowsT&& rows, ColumnsT&& columns, SynapsesT&& synapses);
+	    SynramT&& synram,
+	    RowsT&& rows,
+	    ColumnsT&& columns,
+	    SynapsesT&& synapses,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
 
 	/**
 	 * Accessor to synapse row coordinates via a range.

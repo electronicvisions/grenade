@@ -8,6 +8,7 @@ namespace grenade::vx::signal_flow::vertex {
 template <typename Archive>
 void PADIBus::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<EntityOnChip>(this));
 	ar(m_coordinate);
 }
 

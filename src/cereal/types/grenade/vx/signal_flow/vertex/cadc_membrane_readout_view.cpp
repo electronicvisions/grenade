@@ -9,6 +9,7 @@ namespace grenade::vx::signal_flow::vertex {
 template <typename Archive>
 void CADCMembraneReadoutView::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<EntityOnChip>(this));
 	ar(m_columns);
 	ar(m_synram);
 	ar(m_mode);

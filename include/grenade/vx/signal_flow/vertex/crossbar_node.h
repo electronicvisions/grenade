@@ -2,6 +2,7 @@
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/routing_crossbar.h"
 #include "haldls/vx/v3/routing_crossbar.h"
 #include "hate/visibility.h"
@@ -21,7 +22,7 @@ struct BackgroundSpikeSource;
 /**
  * Crossbar node.
  */
-struct CrossbarNode
+struct CrossbarNode : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -34,8 +35,12 @@ struct CrossbarNode
 	 * Construct node at specified location with specified configuration.
 	 * @param coordinate Location
 	 * @param config Configuration
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
-	CrossbarNode(Coordinate const& coordinate, Config const& config) SYMBOL_VISIBLE;
+	CrossbarNode(
+	    Coordinate const& coordinate,
+	    Config const& config,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	constexpr std::array<Port, 1> inputs() const

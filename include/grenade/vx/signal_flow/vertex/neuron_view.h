@@ -2,6 +2,7 @@
 #include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
@@ -26,7 +27,7 @@ struct SynapseArrayView;
 /**
  * A view of neuron circuits.
  */
-struct NeuronView
+struct NeuronView : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -57,9 +58,14 @@ struct NeuronView
 	 * @param columns Neuron columns
 	 * @param enable_resets Enable values for initial reset of the neurons
 	 * @param row Neuron row
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
 	template <typename ColumnsT, typename ConfigsT, typename RowT>
-	explicit NeuronView(ColumnsT&& columns, ConfigsT&& enable_resets, RowT&& row);
+	explicit NeuronView(
+	    ColumnsT&& columns,
+	    ConfigsT&& enable_resets,
+	    RowT&& row,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Configs const& get_configs() const SYMBOL_VISIBLE;

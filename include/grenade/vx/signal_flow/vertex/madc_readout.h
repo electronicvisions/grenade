@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/madc.h"
@@ -27,7 +28,7 @@ struct NeuronView;
 /**
  * Readout of neuron voltages via the MADC.
  */
-struct MADCReadoutView
+struct MADCReadoutView : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -72,11 +73,13 @@ struct MADCReadoutView
 	 * @param first_source Neuron source and location to read out
 	 * @param second_source Optional second neuron source and location to read out
 	 * @param source_selection Source selection config
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
 	explicit MADCReadoutView(
 	    Source const& first_source,
 	    std::optional<Source> const& second_source,
-	    SourceSelection const& source_selection) SYMBOL_VISIBLE;
+	    SourceSelection const& source_selection,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
 
 	Source const& get_first_source() const SYMBOL_VISIBLE;
 	std::optional<Source> const& get_second_source() const SYMBOL_VISIBLE;

@@ -72,6 +72,7 @@ void PlasticityRule::NeuronViewShape::serialize(Archive& ar, std::uint32_t const
 template <typename Archive>
 void PlasticityRule::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<EntityOnChip>(this));
 	ar(m_kernel);
 	ar(m_timer);
 	ar(m_synapse_view_shapes);

@@ -275,7 +275,9 @@ PlasticityRule::PlasticityRule(
     Timer const& timer,
     std::vector<SynapseViewShape> const& synapse_view_shapes,
     std::vector<NeuronViewShape> const& neuron_view_shapes,
-    std::optional<Recording> const& recording) :
+    std::optional<Recording> const& recording,
+    ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate),
     m_kernel(std::move(kernel)),
     m_timer(timer),
     m_synapse_view_shapes(synapse_view_shapes),
@@ -1301,15 +1303,17 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule const& config)
 }
 
 bool PlasticityRule::supports_input_from(
-    SynapseArrayView const& /*input*/, std::optional<PortRestriction> const& restriction) const
+    SynapseArrayView const& input, std::optional<PortRestriction> const& restriction) const
 {
-	return !restriction;
+	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction) &&
+	       !restriction;
 }
 
 bool PlasticityRule::supports_input_from(
-    NeuronView const& /*input*/, std::optional<PortRestriction> const& restriction) const
+    NeuronView const& input, std::optional<PortRestriction> const& restriction) const
 {
-	return !restriction;
+	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction) &&
+	       !restriction;
 }
 
 bool PlasticityRule::operator==(PlasticityRule const& other) const

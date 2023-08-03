@@ -5,8 +5,9 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-BackgroundSpikeSource::BackgroundSpikeSource(Config const& config, Coordinate const& coordinate) :
-    m_config(config), m_coordinate(coordinate)
+BackgroundSpikeSource::BackgroundSpikeSource(
+    Config const& config, Coordinate const& coordinate, ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate), m_config(config), m_coordinate(coordinate)
 {}
 
 std::ostream& operator<<(std::ostream& os, BackgroundSpikeSource const& config)

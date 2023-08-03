@@ -314,7 +314,7 @@ TEST(build_network_graph, ExecutionInstance)
 	auto const routing_result = routing::PortfolioRouter()(network);
 
 	grenade::vx::signal_flow::ExecutionInstance execution_instance(
-	    grenade::vx::signal_flow::ExecutionIndex(1), DLSGlobal(1));
+	    grenade::vx::signal_flow::ExecutionIndex(1), DLSGlobal());
 	auto network_graph = build_network_graph(network, routing_result, execution_instance);
 
 	for (auto const vertex :

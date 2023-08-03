@@ -6,12 +6,15 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-PADIBus::PADIBus(Coordinate const& coordinate) : m_coordinate(coordinate) {}
+PADIBus::PADIBus(Coordinate const& coordinate, ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate), m_coordinate(coordinate)
+{}
 
 bool PADIBus::supports_input_from(
-    CrossbarNode const& input, std::optional<PortRestriction> const&) const
+    CrossbarNode const& input, std::optional<PortRestriction> const& port_restriction) const
 {
-	return m_coordinate.toCrossbarOutputOnDLS() == input.get_coordinate().toCrossbarOutputOnDLS();
+	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, port_restriction) &&
+	       (m_coordinate.toCrossbarOutputOnDLS() == input.get_coordinate().toCrossbarOutputOnDLS());
 }
 
 PADIBus::Coordinate const& PADIBus::get_coordinate() const

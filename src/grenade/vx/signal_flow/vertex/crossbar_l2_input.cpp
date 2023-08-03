@@ -7,6 +7,10 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
+CrossbarL2Input::CrossbarL2Input(ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate)
+{}
+
 std::ostream& operator<<(std::ostream& os, CrossbarL2Input const&)
 {
 	os << "CrossbarL2Input()";

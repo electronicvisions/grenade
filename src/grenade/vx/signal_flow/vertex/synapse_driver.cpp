@@ -17,8 +17,9 @@ bool SynapseDriver::Config::operator!=(SynapseDriver::Config const& other) const
 	return !(*this == other);
 }
 
-SynapseDriver::SynapseDriver(Coordinate const& coordinate, Config const& config) :
-    m_coordinate(coordinate), m_config(config)
+SynapseDriver::SynapseDriver(
+    Coordinate const& coordinate, Config const& config, ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate), m_coordinate(coordinate), m_config(config)
 {}
 
 SynapseDriver::Coordinate SynapseDriver::get_coordinate() const
@@ -32,12 +33,13 @@ SynapseDriver::Config SynapseDriver::get_config() const
 }
 
 bool SynapseDriver::supports_input_from(
-    PADIBus const& input, std::optional<PortRestriction> const&) const
+    PADIBus const& input, std::optional<PortRestriction> const& port_restriction) const
 {
-	return halco::hicann_dls::vx::v3::PADIBusOnDLS(
-	           m_coordinate.toSynapseDriverOnSynapseDriverBlock().toPADIBusOnPADIBusBlock(),
-	           m_coordinate.toSynapseDriverBlockOnDLS().toPADIBusBlockOnDLS()) ==
-	       input.get_coordinate();
+	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, port_restriction) &&
+	       (halco::hicann_dls::vx::v3::PADIBusOnDLS(
+	            m_coordinate.toSynapseDriverOnSynapseDriverBlock().toPADIBusOnPADIBusBlock(),
+	            m_coordinate.toSynapseDriverBlockOnDLS().toPADIBusBlockOnDLS()) ==
+	        input.get_coordinate());
 }
 
 std::ostream& operator<<(std::ostream& os, SynapseDriver const& config)

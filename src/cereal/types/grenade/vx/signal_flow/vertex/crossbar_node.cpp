@@ -8,6 +8,7 @@ namespace grenade::vx::signal_flow::vertex {
 template <typename Archive>
 void CrossbarNode::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<EntityOnChip>(this));
 	ar(m_coordinate);
 	ar(m_config);
 }

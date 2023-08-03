@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "hate/visibility.h"
 #include <array>
 #include <cstddef>
@@ -24,14 +25,15 @@ struct CrossbarNode;
  * Output from the Crossbar to the FPGA.
  * Since the data from the individual channels are merged, they are also presented merged here.
  */
-struct CrossbarL2Output
+struct CrossbarL2Output : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
 	/**
 	 * Construct CrossbarL2Output.
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
-	CrossbarL2Output() {}
+	CrossbarL2Output(ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = true;
 	constexpr std::array<Port, 1> inputs() const

@@ -32,7 +32,9 @@ bool MADCReadoutView::SourceSelection::operator!=(SourceSelection const& other) 
 MADCReadoutView::MADCReadoutView(
     Source const& first_source,
     std::optional<Source> const& second_source,
-    SourceSelection const& source_selection)
+    SourceSelection const& source_selection,
+    ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate)
 {
 	if (!second_source &&
 	    ((source_selection.period.value() != 0) || (source_selection.initial.value() != 0))) {
@@ -95,6 +97,9 @@ std::ostream& operator<<(std::ostream& os, MADCReadoutView const& config)
 bool MADCReadoutView::supports_input_from(
     NeuronView const& input, std::optional<PortRestriction> const& restriction) const
 {
+	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+		return false;
+	}
 	std::set<Source::Coord> coords;
 	coords.insert(m_first_source.coord);
 	if (m_second_source) {

@@ -2,6 +2,7 @@
 
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
 #include "hxcomm/vx/connection_from_env.h"
@@ -100,16 +101,24 @@ JITGraphExecutor::get_remote_repo_state() const
 bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 {
 	auto const connection_dls_globals = boost::adaptors::keys(m_connections);
-	auto const& execution_instance_map = graph.get_execution_instance_map();
-	auto const& vertex_descriptor_map = graph.get_vertex_descriptor_map();
+
+	auto const find_chip_of_vertex_property = [connection_dls_globals](auto const& v) {
+		if constexpr (std::is_base_of_v<
+		                  signal_flow::vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
+			return std::find(
+			           connection_dls_globals.begin(), connection_dls_globals.end(),
+			           v.get_coordinate_chip()) != connection_dls_globals.end();
+		}
+		return true;
+	};
+
+	auto const find_chip_of_vertex_descriptor = [graph,
+	                                             find_chip_of_vertex_property](auto const vertex) {
+		return std::visit(find_chip_of_vertex_property, graph.get_vertex_property(vertex));
+	};
 
 	auto const vertices = boost::make_iterator_range(boost::vertices(graph.get_graph()));
-	return std::none_of(vertices.begin(), vertices.end(), [&](auto const vertex) {
-		return std::find(
-		           connection_dls_globals.begin(), connection_dls_globals.end(),
-		           execution_instance_map.left.at(vertex_descriptor_map.left.at(vertex))
-		               .toDLSGlobal()) == connection_dls_globals.end();
-	});
+	return std::all_of(vertices.begin(), vertices.end(), find_chip_of_vertex_descriptor);
 }
 
 void JITGraphExecutor::check(signal_flow::Graph const& graph)

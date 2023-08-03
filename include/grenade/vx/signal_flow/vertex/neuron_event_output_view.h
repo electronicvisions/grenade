@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include <array>
@@ -23,7 +24,7 @@ struct NeuronView;
 /**
  * A view of neuron event outputs into the routing crossbar.
  */
-struct NeuronEventOutputView
+struct NeuronEventOutputView : public EntityOnChip
 {
 	constexpr static bool can_connect_different_execution_instances = false;
 
@@ -36,8 +37,11 @@ struct NeuronEventOutputView
 	/**
 	 * Construct NeuronEventOutputView with specified neurons.
 	 * @param neurons Incoming neurons
+	 * @param chip_coordinate Coordinate of chip to use
 	 */
-	NeuronEventOutputView(Neurons const& neurons) SYMBOL_VISIBLE;
+	NeuronEventOutputView(
+	    Neurons const& neurons,
+	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
 
 	Neurons const& get_neurons() const SYMBOL_VISIBLE;
 

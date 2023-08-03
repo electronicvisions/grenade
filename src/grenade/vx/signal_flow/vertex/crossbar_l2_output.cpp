@@ -7,6 +7,10 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
+CrossbarL2Output::CrossbarL2Output(ChipCoordinate const& chip_coordinate) :
+    EntityOnChip(chip_coordinate)
+{}
+
 std::ostream& operator<<(std::ostream& os, CrossbarL2Output const&)
 {
 	os << "CrossbarL2Output()";
@@ -16,6 +20,9 @@ std::ostream& operator<<(std::ostream& os, CrossbarL2Output const&)
 bool CrossbarL2Output::supports_input_from(
     CrossbarNode const& input, std::optional<PortRestriction> const& restriction) const
 {
+	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+		return false;
+	}
 	if (restriction && !restriction->is_restriction_of(input.output())) {
 		throw std::runtime_error(
 		    "Given restriction is not a restriction of input vertex output port.");

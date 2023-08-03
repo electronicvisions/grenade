@@ -23,6 +23,7 @@ void MADCReadoutView::SourceSelection::serialize(Archive& ar, std::uint32_t cons
 template <typename Archive>
 void MADCReadoutView::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<EntityOnChip>(this));
 	ar(m_first_source);
 	ar(m_second_source);
 	ar(m_source_selection);
