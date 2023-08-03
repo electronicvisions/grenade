@@ -3,6 +3,8 @@
 #include "grenade/vx/network/build_connection_routing.h"
 #include "grenade/vx/network/routing/greedy/routing_builder.h"
 #include "hate/timer.h"
+#include <chrono>
+#include <iostream>
 #include <ostream>
 #include <stdexcept>
 
@@ -43,8 +45,20 @@ RoutingResult GreedyRouter::operator()(std::shared_ptr<Network> const& network)
 		throw std::logic_error("Unexpected access to moved-from object.");
 	}
 
-	auto const connection_routing_result = build_connection_routing(network);
-	return m_impl->m_builder.route(*network, connection_routing_result, m_impl->m_options);
+	if (!network) {
+		throw std::runtime_error("Routing only possible for non-null network.");
+	}
+
+	hate::Timer timer;
+	RoutingResult result;
+	for (auto const& [id, execution_instance] : network->execution_instances) {
+		auto const connection_routing_result = build_connection_routing(execution_instance);
+		result.execution_instances.emplace(
+		    id, m_impl->m_builder.route(
+		            execution_instance, connection_routing_result, m_impl->m_options));
+	}
+	result.timing_statistics.routing += std::chrono::microseconds(timer.get_us());
+	return result;
 }
 
 } // namespace grenade::vx::network::routing

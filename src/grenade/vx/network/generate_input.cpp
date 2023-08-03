@@ -7,11 +7,14 @@ namespace grenade::vx::network {
 InputGenerator::InputGenerator(NetworkGraph const& network_graph, size_t const batch_size) :
     m_data(), m_network_graph(network_graph)
 {
-	if (!m_network_graph.get_graph_translation().event_input_vertex) {
-		throw std::runtime_error("Network graph does not feature an event input vertex.");
+	for (auto const& [id, execution_instance] :
+	     m_network_graph.get_graph_translation().execution_instances) {
+		if (!execution_instance.event_input_vertex) {
+			continue;
+		}
+		std::vector<signal_flow::TimedSpikeToChipSequence> spike_batch(batch_size);
+		m_data.data.insert({*execution_instance.event_input_vertex, spike_batch});
 	}
-	std::vector<signal_flow::TimedSpikeToChipSequence> spike_batch(batch_size);
-	m_data.data.insert({*m_network_graph.get_graph_translation().event_input_vertex, spike_batch});
 }
 
 void InputGenerator::add(
@@ -19,15 +22,22 @@ void InputGenerator::add(
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
-		return (projection.second.population_pre == population);
+		return (projection.second.population_pre == population.toPopulationOnExecutionInstance());
 	};
 	if (std::none_of(
-	        m_network_graph.get_network()->projections.begin(),
-	        m_network_graph.get_network()->projections.end(), has_population)) {
+	        m_network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .projections.begin(),
+	        m_network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .projections.end(),
+	        has_population)) {
 		return;
 	}
 
-	auto const neurons = m_network_graph.get_graph_translation().spike_labels.at(population);
+	auto const neurons = m_network_graph.get_graph_translation()
+	                         .execution_instances.at(population.toExecutionInstanceID())
+	                         .spike_labels.at(population.toPopulationOnExecutionInstance());
 
 	signal_flow::TimedSpikeToChipSequence batch_entry;
 	batch_entry.reserve(times.size() * neurons.size());
@@ -44,7 +54,9 @@ void InputGenerator::add(
 		}
 	}
 	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	    m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex));
+	    m_data.data.at(*m_network_graph.get_graph_translation()
+	                        .execution_instances.at(population.toExecutionInstanceID())
+	                        .event_input_vertex));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
 		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
 	}
@@ -55,15 +67,22 @@ void InputGenerator::add(
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
-		return (projection.second.population_pre == population);
+		return (projection.second.population_pre == population.toPopulationOnExecutionInstance());
 	};
 	if (std::none_of(
-	        m_network_graph.get_network()->projections.begin(),
-	        m_network_graph.get_network()->projections.end(), has_population)) {
+	        m_network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .projections.begin(),
+	        m_network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .projections.end(),
+	        has_population)) {
 		return;
 	}
 
-	auto const neurons = m_network_graph.get_graph_translation().spike_labels.at(population);
+	auto const neurons = m_network_graph.get_graph_translation()
+	                         .execution_instances.at(population.toExecutionInstanceID())
+	                         .spike_labels.at(population.toPopulationOnExecutionInstance());
 
 	if (times.size() != neurons.size()) {
 		throw std::runtime_error(
@@ -80,7 +99,7 @@ void InputGenerator::add(
 	for (size_t i = 0; i < times.size(); ++i) {
 		// Exit early if neuron is not connected to any other neuron
 		auto const has_neuron = [population, i](auto const& projection) {
-			if (projection.second.population_pre != population) {
+			if (projection.second.population_pre != population.toPopulationOnExecutionInstance()) {
 				return false;
 			}
 
@@ -97,8 +116,13 @@ void InputGenerator::add(
 		};
 
 		if (std::none_of(
-		        m_network_graph.get_network()->projections.begin(),
-		        m_network_graph.get_network()->projections.end(), has_neuron)) {
+		        m_network_graph.get_network()
+		            ->execution_instances.at(population.toExecutionInstanceID())
+		            .projections.begin(),
+		        m_network_graph.get_network()
+		            ->execution_instances.at(population.toExecutionInstanceID())
+		            .projections.end(),
+		        has_neuron)) {
 			continue;
 		}
 
@@ -115,7 +139,9 @@ void InputGenerator::add(
 		}
 	}
 	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	    m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex));
+	    m_data.data.at(*m_network_graph.get_graph_translation()
+	                        .execution_instances.at(population.toExecutionInstanceID())
+	                        .event_input_vertex));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
 		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
 	}
@@ -127,20 +153,29 @@ void InputGenerator::add(
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
-		return (projection.second.population_pre == population);
+		return (projection.second.population_pre == population.toPopulationOnExecutionInstance());
 	};
 	if (std::none_of(
-	        m_network_graph.get_network()->projections.begin(),
-	        m_network_graph.get_network()->projections.end(), has_population)) {
+	        m_network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .projections.begin(),
+	        m_network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .projections.end(),
+	        has_population)) {
 		return;
 	}
 
-	auto const neurons = m_network_graph.get_graph_translation().spike_labels.at(population);
+	auto const neurons = m_network_graph.get_graph_translation()
+	                         .execution_instances.at(population.toExecutionInstanceID())
+	                         .spike_labels.at(population);
 
 	assert(
 	    times.size() ==
 	    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	        m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex))
+	        m_data.data.at(*m_network_graph.get_graph_translation()
+	                            .execution_instances.at(population.toExecutionInstanceID())
+	                            .event_input_vertex))
 	        .size());
 	for (size_t b = 0; b < times.size(); ++b) {
 		auto const& batch_times = times.at(b);
@@ -152,7 +187,9 @@ void InputGenerator::add(
 
 		auto& data_spikes =
 		    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-		        m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex))
+		        m_data.data.at(*m_network_graph.get_graph_translation()
+		                            .execution_instances.at(population.toExecutionInstanceID())
+		                            .event_input_vertex))
 		        .at(b);
 
 		size_t size = 0;
@@ -164,7 +201,8 @@ void InputGenerator::add(
 		for (size_t i = 0; i < batch_times.size(); ++i) {
 			// Exit early if neuron is not connected to any other neuron
 			auto const has_neuron = [population, i](auto const& projection) {
-				if (projection.second.population_pre != population) {
+				if (projection.second.population_pre !=
+				    population.toPopulationOnExecutionInstance()) {
 					return false;
 				}
 
@@ -182,8 +220,13 @@ void InputGenerator::add(
 			};
 
 			if (std::none_of(
-			        m_network_graph.get_network()->projections.begin(),
-			        m_network_graph.get_network()->projections.end(), has_neuron)) {
+			        m_network_graph.get_network()
+			            ->execution_instances.at(population.toExecutionInstanceID())
+			            .projections.begin(),
+			        m_network_graph.get_network()
+			            ->execution_instances.at(population.toExecutionInstanceID())
+			            .projections.end(),
+			        has_neuron)) {
 				continue;
 			}
 
@@ -204,18 +247,22 @@ void InputGenerator::add(
 
 signal_flow::IODataMap InputGenerator::done()
 {
-	assert(m_network_graph.get_graph_translation().event_input_vertex);
-	auto& spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	    m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex));
-	for (auto& batch : spikes) {
-		std::stable_sort(batch.begin(), batch.end(), [](auto const& a, auto const& b) {
-			return a.time < b.time;
-		});
-	}
 	signal_flow::IODataMap ret;
-	std::vector<signal_flow::TimedSpikeToChipSequence> spike_batch(m_data.batch_size());
-	assert(m_network_graph.get_graph_translation().event_input_vertex);
-	ret.data.insert({*m_network_graph.get_graph_translation().event_input_vertex, spike_batch});
+	for (auto const& [id, execution_instance] :
+	     m_network_graph.get_graph_translation().execution_instances) {
+		if (!execution_instance.event_input_vertex) {
+			continue;
+		}
+		auto& spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
+		    m_data.data.at(*execution_instance.event_input_vertex));
+		for (auto& batch : spikes) {
+			std::stable_sort(batch.begin(), batch.end(), [](auto const& a, auto const& b) {
+				return a.time < b.time;
+			});
+		}
+		std::vector<signal_flow::TimedSpikeToChipSequence> empty_spikes(spikes.size());
+		ret.data.insert({*execution_instance.event_input_vertex, empty_spikes});
+	}
 	std::swap(ret, m_data);
 	return ret;
 }

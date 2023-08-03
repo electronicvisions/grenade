@@ -7,7 +7,9 @@
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "hate/indent.h"
 #include <ostream>
+#include <sstream>
 
 namespace grenade::vx::network {
 
@@ -18,50 +20,57 @@ NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph)
 	assert(network_graph.get_network());
 	auto const& network = *network_graph.get_network();
 
-	statistics.m_num_populations = network.populations.size();
-	statistics.m_num_projections = network.projections.size();
+	for (auto const& [id, execution_instance] : network.execution_instances) {
+		auto& statistics_execution_instance = statistics.m_execution_instances[id];
 
-	for (auto const& [_, population] : network.populations) {
-		if (!std::holds_alternative<Population>(population)) {
-			continue;
+		statistics_execution_instance.m_num_populations = execution_instance.populations.size();
+		statistics_execution_instance.m_num_projections = execution_instance.projections.size();
+
+		for (auto const& [_, population] : execution_instance.populations) {
+			if (!std::holds_alternative<Population>(population)) {
+				continue;
+			}
+			statistics_execution_instance.m_num_neurons +=
+			    std::get<Population>(population).neurons.size();
 		}
-		statistics.m_num_neurons += std::get<Population>(population).neurons.size();
-	}
 
-	for (auto const& [_, projection] : network.projections) {
-		statistics.m_num_synapses += projection.connections.size();
-	}
-
-	statistics.m_neuron_usage =
-	    static_cast<double>(statistics.m_num_neurons) /
-	    static_cast<double>(halco::hicann_dls::vx::v3::AtomicNeuronOnDLS::size);
-
-	size_t num_used_hw_synapses = 0;
-	std::set<halco::hicann_dls::vx::v3::SynapseDriverOnDLS> used_synapse_drivers;
-	for (auto const d :
-	     boost::make_iterator_range(boost::vertices(network_graph.get_graph().get_graph()))) {
-		auto const& vertex_property = network_graph.get_graph().get_vertex_property(d);
-		if (std::holds_alternative<signal_flow::vertex::SynapseDriver>(vertex_property)) {
-			used_synapse_drivers.insert(
-			    std::get<signal_flow::vertex::SynapseDriver>(vertex_property).get_coordinate());
-		} else if (std::holds_alternative<signal_flow::vertex::SynapseArrayViewSparse>(
-		               vertex_property)) {
-			num_used_hw_synapses +=
-			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(vertex_property)
-			        .get_synapses()
-			        .size();
+		for (auto const& [_, projection] : execution_instance.projections) {
+			statistics_execution_instance.m_num_synapses += projection.connections.size();
 		}
+
+		statistics_execution_instance.m_neuron_usage =
+		    static_cast<double>(statistics_execution_instance.m_num_neurons) /
+		    static_cast<double>(halco::hicann_dls::vx::v3::AtomicNeuronOnDLS::size);
+
+		size_t num_used_hw_synapses = 0;
+		std::set<halco::hicann_dls::vx::v3::SynapseDriverOnDLS> used_synapse_drivers;
+		for (auto const& [d, _] : boost::make_iterator_range(
+		         network_graph.get_graph().get_vertex_descriptor_map().right.equal_range(
+		             network_graph.get_graph().get_execution_instance_map().right.at(id)))) {
+			auto const& vertex_property = network_graph.get_graph().get_vertex_property(d);
+			if (std::holds_alternative<signal_flow::vertex::SynapseDriver>(vertex_property)) {
+				used_synapse_drivers.insert(
+				    std::get<signal_flow::vertex::SynapseDriver>(vertex_property).get_coordinate());
+			} else if (std::holds_alternative<signal_flow::vertex::SynapseArrayViewSparse>(
+			               vertex_property)) {
+				num_used_hw_synapses +=
+				    std::get<signal_flow::vertex::SynapseArrayViewSparse>(vertex_property)
+				        .get_synapses()
+				        .size();
+			}
+		}
+		statistics_execution_instance.m_synapse_usage =
+		    static_cast<double>(num_used_hw_synapses) /
+		    static_cast<double>(
+		        halco::hicann_dls::vx::v3::SynapseRowOnDLS::size *
+		        halco::hicann_dls::vx::v3::SynapseOnSynapseRow::size);
+
+		statistics_execution_instance.m_num_synapse_drivers = used_synapse_drivers.size();
+
+		statistics_execution_instance.m_synapse_driver_usage =
+		    static_cast<double>(statistics_execution_instance.m_num_synapse_drivers) /
+		    static_cast<double>(halco::hicann_dls::vx::v3::SynapseDriverOnDLS::size);
 	}
-	statistics.m_synapse_usage = static_cast<double>(num_used_hw_synapses) /
-	                             static_cast<double>(
-	                                 halco::hicann_dls::vx::v3::SynapseRowOnDLS::size *
-	                                 halco::hicann_dls::vx::v3::SynapseOnSynapseRow::size);
-
-	statistics.m_num_synapse_drivers = used_synapse_drivers.size();
-
-	statistics.m_synapse_driver_usage =
-	    static_cast<double>(statistics.m_num_synapse_drivers) /
-	    static_cast<double>(halco::hicann_dls::vx::v3::SynapseDriverOnDLS::size);
 
 	statistics.m_abstract_network_construction_duration = network.construction_duration;
 	statistics.m_hardware_network_construction_duration = network_graph.m_construction_duration;
@@ -72,44 +81,66 @@ NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph)
 }
 
 
-size_t NetworkGraphStatistics::get_num_populations() const
+size_t NetworkGraphStatistics::ExecutionInstance::get_num_populations() const
 {
 	return m_num_populations;
 }
 
-size_t NetworkGraphStatistics::get_num_projections() const
+size_t NetworkGraphStatistics::ExecutionInstance::get_num_projections() const
 {
 	return m_num_projections;
 }
 
-size_t NetworkGraphStatistics::get_num_neurons() const
+size_t NetworkGraphStatistics::ExecutionInstance::get_num_neurons() const
 {
 	return m_num_neurons;
 }
 
-size_t NetworkGraphStatistics::get_num_synapses() const
+size_t NetworkGraphStatistics::ExecutionInstance::get_num_synapses() const
 {
 	return m_num_synapses;
 }
 
-size_t NetworkGraphStatistics::get_num_synapse_drivers() const
+size_t NetworkGraphStatistics::ExecutionInstance::get_num_synapse_drivers() const
 {
 	return m_num_synapse_drivers;
 }
 
-double NetworkGraphStatistics::get_neuron_usage() const
+double NetworkGraphStatistics::ExecutionInstance::get_neuron_usage() const
 {
 	return m_neuron_usage;
 }
 
-double NetworkGraphStatistics::get_synapse_usage() const
+double NetworkGraphStatistics::ExecutionInstance::get_synapse_usage() const
 {
 	return m_synapse_usage;
 }
 
-double NetworkGraphStatistics::get_synapse_driver_usage() const
+double NetworkGraphStatistics::ExecutionInstance::get_synapse_driver_usage() const
 {
 	return m_synapse_driver_usage;
+}
+
+std::ostream& operator<<(std::ostream& os, NetworkGraphStatistics::ExecutionInstance const& value)
+{
+	os << "ExecutionInstance(\n";
+	os << "\tnum populations: " << value.m_num_populations << "\n";
+	os << "\tnum projections: " << value.m_num_projections << "\n";
+	os << "\tnum neurons: " << value.m_num_neurons << "\n";
+	os << "\tnum synapses: " << value.m_num_synapses << "\n";
+	os << "\tnum synapse drivers: " << value.m_num_synapse_drivers << "\n";
+	os << "\tneuron usage: " << value.m_neuron_usage << "\n";
+	os << "\tsynapse usage: " << value.m_synapse_usage << "\n";
+	os << "\tsynapse driver usage: " << value.m_synapse_driver_usage << "\n";
+	os << ")";
+	return os;
+}
+
+
+std::map<common::ExecutionInstanceID, NetworkGraphStatistics::ExecutionInstance> const&
+NetworkGraphStatistics::get_execution_instances() const
+{
+	return m_execution_instances;
 }
 
 std::chrono::microseconds NetworkGraphStatistics::get_abstract_network_construction_duration() const
@@ -135,14 +166,12 @@ std::chrono::microseconds NetworkGraphStatistics::get_routing_duration() const
 std::ostream& operator<<(std::ostream& os, NetworkGraphStatistics const& value)
 {
 	os << "NetworkGraphStatistics(\n";
-	os << "\tnum populations: " << value.m_num_populations << "\n";
-	os << "\tnum projections: " << value.m_num_projections << "\n";
-	os << "\tnum neurons: " << value.m_num_neurons << "\n";
-	os << "\tnum synapses: " << value.m_num_synapses << "\n";
-	os << "\tnum synapse drivers: " << value.m_num_synapse_drivers << "\n";
-	os << "\tneuron usage: " << value.m_neuron_usage << "\n";
-	os << "\tsynapse usage: " << value.m_synapse_usage << "\n";
-	os << "\tsynapse driver usage: " << value.m_synapse_driver_usage << "\n";
+	for (auto const& [id, execution_instance] : value.m_execution_instances) {
+		std::stringstream ss;
+		ss << execution_instance;
+		os << "\t" << id << ":\n";
+		os << hate::indent(ss.str(), "\t\t") << "\n";
+	}
 	os << "\tabstract network construction duration: "
 	   << hate::to_string(value.m_abstract_network_construction_duration) << "\n";
 	os << "\thardware network construction duration: "

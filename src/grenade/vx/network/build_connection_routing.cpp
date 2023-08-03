@@ -6,13 +6,8 @@
 
 namespace grenade::vx::network {
 
-ConnectionRoutingResult build_connection_routing(std::shared_ptr<Network> const& network)
+ConnectionRoutingResult build_connection_routing(Network::ExecutionInstance const& network)
 {
-	if (!network) {
-		throw std::runtime_error("Building connection routing requires network, but supplied "
-		                         "pointer to network is null.");
-	}
-
 	ConnectionRoutingResult result;
 
 	// distribute weight onto multiple synapses
@@ -20,7 +15,7 @@ ConnectionRoutingResult build_connection_routing(std::shared_ptr<Network> const&
 	// we distribute over all neurons in every compartment
 	halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> in_degree;
 	in_degree.fill(0);
-	for (auto const& [descriptor, projection] : network->projections) {
+	for (auto const& [descriptor, projection] : network.projections) {
 		auto& local_result = result[descriptor];
 		local_result.resize(projection.connections.size());
 
@@ -37,11 +32,12 @@ ConnectionRoutingResult build_connection_routing(std::shared_ptr<Network> const&
 		auto const max_num_synapses = *std::max_element(num_synapses.begin(), num_synapses.end());
 		for (size_t p = 0; p < max_num_synapses; ++p) {
 			auto const& population_post =
-			    std::get<Population>(network->populations.at(projection.population_post));
-			auto const& population_pre = network->populations.at(projection.population_pre);
+			    std::get<Population>(network.populations.at(projection.population_post));
+			auto const& population_pre = network.populations.at(projection.population_pre);
 			std::vector<size_t> indices;
 			for (size_t i = 0; i < projection.connections.size(); ++i) {
-				// only find new hardware synapse, if the current connection requires another one
+				// only find new hardware synapse, if the current connection requires another
+				// one
 				if (num_synapses.at(i) <= p) {
 					continue;
 				}

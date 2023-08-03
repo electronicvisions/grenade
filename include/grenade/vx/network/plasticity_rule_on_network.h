@@ -1,14 +1,29 @@
 #pragma once
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
-#include "halco/common/geometry.h"
+#include "grenade/vx/network/plasticity_rule_on_execution_instance.h"
 
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a plasticity rule on a network. */
-struct GENPYBIND(inline_base("*")) PlasticityRuleOnNetwork
-    : public halco::common::detail::BaseType<PlasticityRuleOnNetwork, size_t>
+struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PlasticityRuleOnNetwork
+    : public common::
+          ExecutionInstanceIDMixin<PlasticityRuleOnNetwork, PlasticityRuleOnExecutionInstance>
 {
-	constexpr explicit PlasticityRuleOnNetwork(value_type const value = 0) : base_t(value) {}
+	PlasticityRuleOnNetwork() = default;
+
+	explicit PlasticityRuleOnNetwork(
+	    PlasticityRuleOnExecutionInstance const& population,
+	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID()) :
+	    mixin_t(population, execution_instance)
+	{}
+
+	explicit PlasticityRuleOnNetwork(enum_type const& e) : mixin_t(e) {}
+
+	PlasticityRuleOnExecutionInstance toPlasticityRuleOnExecutionInstance() const
+	{
+		return This();
+	}
 };
 
 } // namespace grenade::vx::network

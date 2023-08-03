@@ -111,7 +111,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	}
 	Projection projection_1{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), projection_connections_1,
-	    population_descriptor_1, population_descriptor_1};
+	    population_descriptor_1.toPopulationOnExecutionInstance(),
+	    population_descriptor_1.toPopulationOnExecutionInstance()};
 	auto const projection_descriptor_1 = network_builder.add(projection_1);
 
 	// projection not at beginning of row
@@ -124,7 +125,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	}
 	Projection projection_2{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), projection_connections_2,
-	    population_descriptor_2, population_descriptor_2};
+	    population_descriptor_2.toPopulationOnExecutionInstance(),
+	    population_descriptor_2.toPopulationOnExecutionInstance()};
 	auto const projection_descriptor_2 = network_builder.add(projection_2);
 
 	// projection not at beginning of column
@@ -137,7 +139,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	}
 	Projection projection_3{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), projection_connections_3,
-	    population_descriptor_1, population_descriptor_1};
+	    population_descriptor_1.toPopulationOnExecutionInstance(),
+	    population_descriptor_1.toPopulationOnExecutionInstance()};
 	auto const projection_descriptor_3 = network_builder.add(projection_3);
 
 	// projection on bottom hemisphere
@@ -150,7 +153,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	}
 	Projection projection_4{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), projection_connections_4,
-	    population_descriptor_4, population_descriptor_4};
+	    population_descriptor_4.toPopulationOnExecutionInstance(),
+	    population_descriptor_4.toPopulationOnExecutionInstance()};
 	auto const projection_descriptor_4 = network_builder.add(projection_4);
 
 	// projection over two hemispheres
@@ -163,7 +167,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	}
 	Projection projection_5{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), projection_connections_5,
-	    population_descriptor_5, population_descriptor_5};
+	    population_descriptor_5.toPopulationOnExecutionInstance(),
+	    population_descriptor_5.toPopulationOnExecutionInstance()};
 	auto const projection_descriptor_5 = network_builder.add(projection_5);
 
 
@@ -175,8 +180,11 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	    PlasticityRule::Timer::Value(0),
 	    PlasticityRule::Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 300), 2};
 	plasticity_rule.projections = std::vector{
-	    projection_descriptor_1, projection_descriptor_2, projection_descriptor_3,
-	    projection_descriptor_4, projection_descriptor_5};
+	    projection_descriptor_1.toProjectionOnExecutionInstance(),
+	    projection_descriptor_2.toProjectionOnExecutionInstance(),
+	    projection_descriptor_3.toProjectionOnExecutionInstance(),
+	    projection_descriptor_4.toProjectionOnExecutionInstance(),
+	    projection_descriptor_5.toProjectionOnExecutionInstance()};
 
 	auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
 
@@ -218,10 +226,12 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 				}
 				for (size_t i = 0; i < sample.data.size(); ++i) {
 					EXPECT_EQ(
-					    static_cast<int>(sample.data.at(i).at(0)), network_graph.get_network()
-					                                                   ->projections.at(descriptor)
-					                                                   .connections.at(i)
-					                                                   .weight);
+					    static_cast<int>(sample.data.at(i).at(0)),
+					    network_graph.get_network()
+					        ->execution_instances.at(instance)
+					        .projections.at(descriptor)
+					        .connections.at(i)
+					        .weight);
 				}
 			}
 		}

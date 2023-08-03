@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/atomic_neuron_on_network.h"
+#include "grenade/vx/network/atomic_neuron_on_execution_instance.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 
@@ -13,12 +13,12 @@ struct GENPYBIND(visible) NeuronRecording
 {
 	struct Neuron
 	{
-		AtomicNeuronOnNetwork coordinate{};
+		AtomicNeuronOnExecutionInstance coordinate{};
 		typedef lola::vx::v3::AtomicNeuron::Readout::Source Source;
 		Source source{Source::membrane};
 
 		Neuron() = default;
-		Neuron(AtomicNeuronOnNetwork const& coordinate, Source source) SYMBOL_VISIBLE;
+		Neuron(AtomicNeuronOnExecutionInstance const& coordinate, Source source) SYMBOL_VISIBLE;
 
 		bool operator==(Neuron const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Neuron const& other) const SYMBOL_VISIBLE;

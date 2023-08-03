@@ -215,8 +215,11 @@ void test_background_spike_source_poisson(
 		expected_label_counts.fill(0);
 		for (auto [nrn, spike] : spikes.at(0)) {
 			auto const& [descriptor, neuron_on_population, compartment_on_neuron] = nrn;
-			auto const& neuron = std::get<Population>(network->populations.at(descriptor))
-			                         .neurons.at(neuron_on_population);
+			auto const& neuron =
+			    std::get<Population>(
+			        network->execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+			            .populations.at(descriptor))
+			        .neurons.at(neuron_on_population);
 			auto const an = neuron.coordinate.get_placed_compartments()
 			                    .at(compartment_on_neuron)
 			                    .at(neuron.compartments.at(compartment_on_neuron)

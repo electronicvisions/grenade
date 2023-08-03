@@ -65,16 +65,20 @@ TEST(CADCRecording, General)
 
 	CADCRecording cadc_recording;
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnNetwork(population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0),
+	    AtomicNeuronOnExecutionInstance(
+	        population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnNetwork(population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0),
+	    AtomicNeuronOnExecutionInstance(
+	        population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnNetwork(population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0),
+	    AtomicNeuronOnExecutionInstance(
+	        population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnNetwork(population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0),
+	    AtomicNeuronOnExecutionInstance(
+	        population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	network_builder.add(cadc_recording);
 

@@ -1,5 +1,7 @@
 #include "grenade/vx/network/atomic_neuron_on_network.h"
 
+#include "grenade/vx/network/atomic_neuron_on_execution_instance.h"
+
 namespace grenade::vx::network {
 
 AtomicNeuronOnNetwork::AtomicNeuronOnNetwork(
@@ -11,6 +13,15 @@ AtomicNeuronOnNetwork::AtomicNeuronOnNetwork(
     neuron_on_population(neuron_on_population),
     compartment_on_neuron(compartment_on_neuron),
     atomic_neuron_on_compartment(atomic_neuron_on_compartment)
+{}
+
+AtomicNeuronOnNetwork::AtomicNeuronOnNetwork(
+    AtomicNeuronOnExecutionInstance const& atomic_neuron_on_execution_instance,
+    common::ExecutionInstanceID const& execution_instance) :
+    population(atomic_neuron_on_execution_instance.population, execution_instance),
+    neuron_on_population(atomic_neuron_on_execution_instance.neuron_on_population),
+    compartment_on_neuron(atomic_neuron_on_execution_instance.compartment_on_neuron),
+    atomic_neuron_on_compartment(atomic_neuron_on_execution_instance.atomic_neuron_on_compartment)
 {}
 
 bool AtomicNeuronOnNetwork::operator==(AtomicNeuronOnNetwork const& other) const

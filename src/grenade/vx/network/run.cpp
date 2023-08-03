@@ -48,8 +48,11 @@ signal_flow::IODataMap run(
     signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
 {
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<common::ExecutionInstanceID, lola::vx::v3::Chip>(
-	    common::ExecutionInstanceID(), config));
+	assert(network_graph.get_network());
+	for (auto const& [execution_instance, _] : network_graph.get_network()->execution_instances) {
+		configs.insert(
+		    std::pair<common::ExecutionInstanceID, lola::vx::v3::Chip>(execution_instance, config));
+	}
 
 	grenade::vx::execution::JITGraphExecutor::PlaybackHooks playback_hooks_map;
 	playback_hooks_map.insert(

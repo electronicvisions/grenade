@@ -3,6 +3,9 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/atomic_neuron_on_network.h"
 #include "grenade/vx/network/network_graph.h"
+#include "grenade/vx/network/plasticity_rule_on_network.h"
+#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/projection_on_network.h"
 #include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include <map>

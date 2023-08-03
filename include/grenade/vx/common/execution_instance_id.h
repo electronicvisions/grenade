@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "halco/common/geometry.h"
+#include "halco/common/mixin.h"
 #include <cstddef>
 
 namespace grenade::vx::common GENPYBIND_TAG_GRENADE_VX_COMMON {
@@ -14,6 +15,9 @@ struct GENPYBIND(inline_base("*")) ExecutionInstanceID
 {
 	constexpr explicit ExecutionInstanceID(value_type const value = 0) : base_t(value) {}
 };
+
+
+HALCO_COORDINATE_MIXIN(ExecutionInstanceIDMixin, ExecutionInstanceID, execution_instance_id)
 
 } // namespace grenade::vx::common
 

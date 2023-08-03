@@ -17,9 +17,7 @@ using namespace halco::common;
 
 
 NetworkGraph build_network_graph(
-    std::shared_ptr<Network> const& network,
-    RoutingResult const& routing_result,
-    common::ExecutionInstanceID const& instance)
+    std::shared_ptr<Network> const& network, RoutingResult const& routing_result)
 {
 	hate::Timer timer;
 	assert(network);
@@ -33,101 +31,125 @@ NetworkGraph build_network_graph(
 
 	NetworkGraphBuilder builder(*network);
 
-	// add external populations input
-	builder.add_external_input(result.m_graph, resources, instance);
+	for (auto const& [instance, _] : network->execution_instances) {
+		resources.execution_instances.emplace(
+		    instance, NetworkGraphBuilder::Resources::ExecutionInstance{});
 
-	// add background spike sources
-	builder.add_background_spike_sources(result.m_graph, resources, instance, routing_result);
+		// add external populations input
+		builder.add_external_input(result.m_graph, resources, instance);
 
-	// add on-chip populations without input
-	builder.add_populations(result.m_graph, resources, routing_result, instance);
+		// add background spike sources
+		builder.add_background_spike_sources(result.m_graph, resources, instance, routing_result);
 
-	// add MADC recording
-	if (network->madc_recording) {
-		builder.add_madc_recording(result.m_graph, resources, *(network->madc_recording), instance);
-	}
+		// add on-chip populations without input
+		builder.add_populations(result.m_graph, resources, routing_result, instance);
 
-	// add CADC recording
-	if (network->cadc_recording) {
-		builder.add_cadc_recording(result.m_graph, resources, *(network->cadc_recording), instance);
-	}
+		// add MADC recording
+		if (network->execution_instances.at(instance).madc_recording) {
+			builder.add_madc_recording(
+			    result.m_graph, resources,
+			    *(network->execution_instances.at(instance).madc_recording), instance);
+		}
 
-	// add pad recording
-	if (network->pad_recording) {
-		builder.add_pad_recording(result.m_graph, resources, *(network->pad_recording), instance);
-	}
+		// add CADC recording
+		if (network->execution_instances.at(instance).cadc_recording) {
+			builder.add_cadc_recording(
+			    result.m_graph, resources,
+			    *(network->execution_instances.at(instance).cadc_recording), instance);
+		}
 
-	// add neuron event outputs
-	builder.add_neuron_event_outputs(result.m_graph, resources, instance);
+		// add pad recording
+		if (network->execution_instances.at(instance).pad_recording) {
+			builder.add_pad_recording(
+			    result.m_graph, resources,
+			    *(network->execution_instances.at(instance).pad_recording), instance);
+		}
 
-	// add external output
-	builder.add_external_output(result.m_graph, resources, routing_result, instance);
+		// add neuron event outputs
+		builder.add_neuron_event_outputs(result.m_graph, resources, instance);
 
-	// add projections iteratively
-	// keep track of unplaced projections
-	// each iteration at least a single projection can be placed and therefore size(projections)
-	// iterations are needed at most
-	std::set<ProjectionOnNetwork> unplaced_projections;
-	for (auto const& [descriptor, _] : network->projections) {
-		unplaced_projections.insert(descriptor);
-	}
-	for (size_t iteration = 0; iteration < network->projections.size(); ++iteration) {
-		std::set<ProjectionOnNetwork> newly_placed_projections;
-		std::map<PopulationOnNetwork, std::map<HemisphereOnDLS, std::vector<signal_flow::Input>>>
-		    inputs;
-		for (auto const descriptor : unplaced_projections) {
-			auto const descriptor_pre = network->projections.at(descriptor).population_pre;
-			// skip projection if presynaptic population is not yet present
-			if (!resources.populations.contains(descriptor_pre) &&
-			    std::holds_alternative<Population>(network->populations.at(descriptor_pre))) {
-				continue;
+		// add external output
+		builder.add_external_output(result.m_graph, resources, routing_result, instance);
+
+		// add projections iteratively
+		// keep track of unplaced projections
+		// each iteration at least a single projection can be placed and therefore size(projections)
+		// iterations are needed at most
+		std::set<ProjectionOnExecutionInstance> unplaced_projections;
+		for (auto const& [descriptor, _] : network->execution_instances.at(instance).projections) {
+			unplaced_projections.insert(descriptor);
+		}
+		for (size_t iteration = 0;
+		     iteration < network->execution_instances.at(instance).projections.size();
+		     ++iteration) {
+			std::set<ProjectionOnExecutionInstance> newly_placed_projections;
+			std::map<
+			    PopulationOnExecutionInstance,
+			    std::map<HemisphereOnDLS, std::vector<signal_flow::Input>>>
+			    inputs;
+			for (auto const descriptor : unplaced_projections) {
+				auto const descriptor_pre = network->execution_instances.at(instance)
+				                                .projections.at(descriptor)
+				                                .population_pre;
+				// skip projection if presynaptic population is not yet present
+				if (!resources.execution_instances.at(instance).populations.contains(
+				        descriptor_pre) &&
+				    std::holds_alternative<Population>(
+				        network->execution_instances.at(instance).populations.at(descriptor_pre))) {
+					continue;
+				}
+				auto const population_inputs = std::visit(
+				    hate::overloaded(
+				        [&](ExternalSourcePopulation const&) {
+					        return builder.add_projection_from_external_input(
+					            result.m_graph, resources, descriptor, routing_result, instance);
+				        },
+				        [&](BackgroundSourcePopulation const&) {
+					        return builder.add_projection_from_background_spike_source(
+					            result.m_graph, resources, descriptor, routing_result, instance);
+				        },
+				        [&](Population const&) {
+					        return builder.add_projection_from_internal_input(
+					            result.m_graph, resources, descriptor, routing_result, instance);
+				        }),
+				    network->execution_instances.at(instance).populations.at(descriptor_pre));
+				newly_placed_projections.insert(descriptor);
+				auto& local_population_inputs = inputs[network->execution_instances.at(instance)
+				                                           .projections.at(descriptor)
+				                                           .population_post];
+				for (auto const& [hemisphere, input] : population_inputs) {
+					local_population_inputs[hemisphere].push_back(input);
+				}
 			}
-			auto const population_inputs = std::visit(
-			    hate::overloaded(
-			        [&](ExternalSourcePopulation const&) {
-				        return builder.add_projection_from_external_input(
-				            result.m_graph, resources, descriptor, routing_result, instance);
-			        },
-			        [&](BackgroundSourcePopulation const&) {
-				        return builder.add_projection_from_background_spike_source(
-				            result.m_graph, resources, descriptor, routing_result, instance);
-			        },
-			        [&](Population const&) {
-				        return builder.add_projection_from_internal_input(
-				            result.m_graph, resources, descriptor, routing_result, instance);
-			        }),
-			    network->populations.at(descriptor_pre));
-			newly_placed_projections.insert(descriptor);
-			auto& local_population_inputs =
-			    inputs[network->projections.at(descriptor).population_post];
-			for (auto const& [hemisphere, input] : population_inputs) {
-				local_population_inputs[hemisphere].push_back(input);
+			// update post-populations
+			for (auto const& [population_post, population_inputs] : inputs) {
+				builder.add_population(
+				    result.m_graph, resources, population_inputs, population_post, routing_result,
+				    instance);
+			}
+			for (auto const descriptor : newly_placed_projections) {
+				unplaced_projections.erase(descriptor);
 			}
 		}
-		// update post-populations
-		for (auto const& [population_post, population_inputs] : inputs) {
-			builder.add_population(
-			    result.m_graph, resources, population_inputs, population_post, routing_result,
-			    instance);
+		assert(unplaced_projections.empty());
+
+		// add plasticity rules
+		builder.add_plasticity_rules(result.m_graph, resources, instance);
+
+		for (auto const& [d, p] : resources.execution_instances.at(instance).projections) {
+			resources.execution_instances.at(instance).graph_translation.synapse_vertices[d] =
+			    p.synapses;
 		}
-		for (auto const descriptor : newly_placed_projections) {
-			unplaced_projections.erase(descriptor);
+		for (auto const& [d, p] : resources.execution_instances.at(instance).populations) {
+			resources.execution_instances.at(instance).graph_translation.neuron_vertices[d] =
+			    p.neurons;
 		}
+		builder.calculate_spike_labels(resources, routing_result, instance);
 	}
-	assert(unplaced_projections.empty());
-
-	// add plasticity rules
-	builder.add_plasticity_rules(result.m_graph, resources, instance);
-
-	builder.calculate_spike_labels(resources, routing_result);
-	for (auto const& [d, p] : resources.projections) {
-		resources.graph_translation.synapse_vertices[d] = p.synapses;
+	for (auto const& [instance, _] : network->execution_instances) {
+		result.m_graph_translation.execution_instances[instance] =
+		    resources.execution_instances.at(instance).graph_translation;
 	}
-	for (auto const& [d, p] : resources.populations) {
-		resources.graph_translation.neuron_vertices[d] = p.neurons;
-	}
-	result.m_graph_translation = resources.graph_translation;
-
 	LOG4CXX_TRACE(
 	    logger, "Built hardware graph representation of network in " << timer.print() << ".");
 	result.m_construction_duration = std::chrono::microseconds(timer.get_us());
@@ -169,12 +191,14 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update synapse array view in hardware graph corresponding to projection
 	auto const update_weights = [](NetworkGraph& network_graph,
 	                               std::shared_ptr<Network> const& network,
-	                               ProjectionOnNetwork const descriptor) {
+	                               ProjectionOnExecutionInstance const descriptor,
+	                               common::ExecutionInstanceID const id) {
 		std::map<
 		    signal_flow::Graph::vertex_descriptor,
 		    signal_flow::vertex::SynapseArrayViewSparse::Synapses>
 		    synapses;
-		auto const synapse_vertices = network_graph.get_graph_translation().synapse_vertices;
+		auto const synapse_vertices =
+		    network_graph.get_graph_translation().execution_instances.at(id).synapse_vertices;
 		for (auto const [_, vertex_descriptor] : synapse_vertices.at(descriptor)) {
 			auto const& old_synapse_array_view =
 			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(
@@ -183,9 +207,11 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			synapses[vertex_descriptor] = signal_flow::vertex::SynapseArrayViewSparse::Synapses{
 			    old_synapses.begin(), old_synapses.end()};
 		}
-		auto const& old_projection = network_graph.get_network()->projections.at(descriptor);
-		auto const& projection = network->projections.at(descriptor);
-		auto const& translation = network_graph.get_graph_translation().projections;
+		auto const& old_projection =
+		    network_graph.get_network()->execution_instances.at(id).projections.at(descriptor);
+		auto const& projection = network->execution_instances.at(id).projections.at(descriptor);
+		auto const& translation =
+		    network_graph.get_graph_translation().execution_instances.at(id).projections;
 		for (size_t i = 0; i < old_projection.connections.size(); ++i) {
 			auto const& connection = projection.connections.at(i);
 			auto const& old_connection = old_projection.connections.at(i);
@@ -221,28 +247,34 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update towards
 	auto const update_plasticity_rule = [](NetworkGraph& network_graph,
 	                                       PlasticityRule const& new_rule,
-	                                       PlasticityRuleOnNetwork descriptor) {
-		if (!network_graph.m_network->plasticity_rules.contains(descriptor)) {
+	                                       PlasticityRuleOnExecutionInstance descriptor,
+	                                       common::ExecutionInstanceID const& id) {
+		if (!network_graph.m_network->execution_instances.at(id).plasticity_rules.contains(
+		        descriptor)) {
 			throw std::runtime_error("Updating network graph only possible, if plasticity rule is "
 			                         "neither added nor removed.");
 		}
-		if (network_graph.m_network->plasticity_rules.at(descriptor).recording !=
-		    new_rule.recording) {
+		if (network_graph.m_network->execution_instances.at(id)
+		        .plasticity_rules.at(descriptor)
+		        .recording != new_rule.recording) {
 			throw std::runtime_error("Updating network graph only possible, if plasticity rule "
 			                         "recording is not changed.");
 		}
 		// TODO (Issue #3991): merge impl. from here and add_plasticity_rule below, requires rework
 		// of resources in order to align interface to NetworkGraph.
-		auto const vertex_descriptor =
-		    network_graph.get_graph_translation().plasticity_rule_vertices.at(descriptor);
+		auto const vertex_descriptor = network_graph.get_graph_translation()
+		                                   .execution_instances.at(id)
+		                                   .plasticity_rule_vertices.at(descriptor);
 		std::vector<signal_flow::Input> inputs;
-		auto const synapse_vertices = network_graph.get_graph_translation().synapse_vertices;
+		auto const synapse_vertices =
+		    network_graph.get_graph_translation().execution_instances.at(id).synapse_vertices;
 		for (auto const& d : new_rule.projections) {
 			for (auto const& [_, p] : synapse_vertices.at(d)) {
 				inputs.push_back({p});
 			}
 		}
-		auto const neuron_vertices = network_graph.get_graph_translation().neuron_vertices;
+		auto const neuron_vertices =
+		    network_graph.get_graph_translation().execution_instances.at(id).neuron_vertices;
 		for (auto const& d : new_rule.populations) {
 			for (auto const& [_, p] : neuron_vertices.at(d.descriptor)) {
 				inputs.push_back({p});
@@ -264,16 +296,22 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	assert(network);
 	assert(network_graph.m_network);
 
-	for (auto const& [descriptor, projection] : network->projections) {
-		auto const& old_projection = network_graph.m_network->projections.at(descriptor);
-		if (!requires_change(projection, old_projection)) {
-			continue;
+	for (auto const& [id, execution_instance] : network->execution_instances) {
+		for (auto const& [descriptor, projection] :
+		     network->execution_instances.at(id).projections) {
+			auto const& old_projection =
+			    network_graph.m_network->execution_instances.at(id).projections.at(descriptor);
+			if (!requires_change(projection, old_projection)) {
+				continue;
+			}
+			update_weights(network_graph, network, descriptor, id);
 		}
-		update_weights(network_graph, network, descriptor);
-	}
-	if (network_graph.m_network->plasticity_rules != network->plasticity_rules) {
-		for (auto const& [descriptor, new_rule] : network->plasticity_rules) {
-			update_plasticity_rule(network_graph, new_rule, descriptor);
+		if (network_graph.m_network->execution_instances.at(id).plasticity_rules !=
+		    network->execution_instances.at(id).plasticity_rules) {
+			for (auto const& [descriptor, new_rule] :
+			     network->execution_instances.at(id).plasticity_rules) {
+				update_plasticity_rule(network_graph, new_rule, descriptor, id);
+			}
 		}
 	}
 	network_graph.m_network = network;
@@ -311,9 +349,11 @@ void NetworkGraphBuilder::add_external_input(
 {
 	hate::Timer timer;
 	// only continue if any external population exists
-	if (std::none_of(m_network.populations.begin(), m_network.populations.end(), [](auto const& p) {
-		    return std::holds_alternative<ExternalSourcePopulation>(p.second);
-	    })) {
+	if (std::none_of(
+	        m_network.execution_instances.at(instance).populations.begin(),
+	        m_network.execution_instances.at(instance).populations.end(), [](auto const& p) {
+		        return std::holds_alternative<ExternalSourcePopulation>(p.second);
+	        })) {
 		return;
 	}
 
@@ -331,8 +371,9 @@ void NetworkGraphBuilder::add_external_input(
 	signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
 	auto const crossbar_l2_input_vertex =
 	    graph.add(crossbar_l2_input, instance, {data_input_vertex});
-	resources.graph_translation.event_input_vertex = event_input_vertex;
-	resources.crossbar_l2_input = crossbar_l2_input_vertex;
+	resources.execution_instances.at(instance).graph_translation.event_input_vertex =
+	    event_input_vertex;
+	resources.execution_instances.at(instance).crossbar_l2_input = crossbar_l2_input_vertex;
 	LOG4CXX_TRACE(
 	    m_logger, "add_external_input(): Added external input in " << timer.print() << ".");
 }
@@ -344,20 +385,25 @@ void NetworkGraphBuilder::add_background_spike_sources(
     RoutingResult const& routing_result) const
 {
 	hate::Timer timer;
-	for (auto const& [descriptor, population] : m_network.populations) {
+	for (auto const& [descriptor, population] :
+	     m_network.execution_instances.at(instance).populations) {
 		if (!std::holds_alternative<BackgroundSourcePopulation>(population)) {
 			continue;
 		}
 		auto const& pop = std::get<BackgroundSourcePopulation>(population);
-		if (!routing_result.background_spike_source_labels.contains(descriptor)) {
+		if (!routing_result.execution_instances.at(instance)
+		         .background_spike_source_labels.contains(descriptor)) {
 			throw std::runtime_error(
 			    "Connection builder result does not contain spike labels for the population(" +
 			    std::to_string(descriptor) + ").");
 		}
-		auto const& label = routing_result.background_spike_source_labels.at(descriptor);
+		auto const& label =
+		    routing_result.execution_instances.at(instance).background_spike_source_labels.at(
+		        descriptor);
 		if (pop.config.enable_random) {
 			assert(!(pop.size == 0) && !(pop.size & (pop.size - 1)));
-			if (!routing_result.background_spike_source_masks.contains(descriptor)) {
+			if (!routing_result.execution_instances.at(instance)
+			         .background_spike_source_masks.contains(descriptor)) {
 				throw std::runtime_error(
 				    "Connection builder result does not contain mask for the population(" +
 				    std::to_string(descriptor) + ").");
@@ -379,7 +425,8 @@ void NetworkGraphBuilder::add_background_spike_sources(
 				    std::to_string(descriptor) + ").");
 			}
 			if (pop.config.enable_random) {
-				auto const& mask = routing_result.background_spike_source_masks.at(descriptor);
+				auto const& mask = routing_result.execution_instances.at(instance)
+				                       .background_spike_source_masks.at(descriptor);
 				config.set_mask(mask.at(hemisphere));
 			}
 			// we choose the first label here, which is arbitrary since all other labels are
@@ -390,7 +437,8 @@ void NetworkGraphBuilder::add_background_spike_sources(
 			                bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size));
 			auto const background_spike_source_vertex =
 			    graph.add(background_spike_source, instance, {});
-			resources.graph_translation.background_spike_source_vertices[descriptor][hemisphere] =
+			resources.execution_instances.at(instance)
+			    .graph_translation.background_spike_source_vertices[descriptor][hemisphere] =
 			    background_spike_source_vertex;
 		}
 	}
@@ -403,16 +451,17 @@ void NetworkGraphBuilder::add_population(
     signal_flow::Graph& graph,
     Resources& resources,
     std::map<HemisphereOnDLS, std::vector<signal_flow::Input>> const& input,
-    PopulationOnNetwork const& descriptor,
+    PopulationOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
-	if (resources.populations.contains(
+	if (resources.execution_instances.at(instance).populations.contains(
 	        descriptor)) { // population already added, readd by data-reference with new input
 		for (auto const& [hemisphere, new_input] : input) {
-			auto const old_neuron_view_vertex =
-			    resources.populations.at(descriptor).neurons.at(hemisphere);
+			auto const old_neuron_view_vertex = resources.execution_instances.at(instance)
+			                                        .populations.at(descriptor)
+			                                        .neurons.at(hemisphere);
 			// use all former inputs
 			auto inputs = get_inputs(graph, old_neuron_view_vertex);
 			// append new input
@@ -420,8 +469,12 @@ void NetworkGraphBuilder::add_population(
 			// add by using present data from former vertex with new inputs
 			auto const neuron_view_vertex = graph.add(old_neuron_view_vertex, instance, inputs);
 			// update graph translation and resources
-			resources.populations.at(descriptor).neurons.at(hemisphere) = neuron_view_vertex;
-			auto& local_graph_translation = resources.graph_translation.populations.at(descriptor);
+			resources.execution_instances.at(instance)
+			    .populations.at(descriptor)
+			    .neurons.at(hemisphere) = neuron_view_vertex;
+			auto& local_graph_translation =
+			    resources.execution_instances.at(instance).graph_translation.populations.at(
+			        descriptor);
 			for (auto& neuron : local_graph_translation) {
 				for (auto& [_, ans] : neuron) {
 					for (auto& an : ans) {
@@ -433,7 +486,8 @@ void NetworkGraphBuilder::add_population(
 			}
 		}
 	} else { // population not added before
-		auto const& population = std::get<Population>(m_network.populations.at(descriptor));
+		auto const& population = std::get<Population>(
+		    m_network.execution_instances.at(instance).populations.at(descriptor));
 		// split neuron locations into hemispheres
 		std::map<
 		    NeuronRowOnDLS, std::vector<std::tuple<
@@ -455,12 +509,14 @@ void NetworkGraphBuilder::add_population(
 				return std::get<0>(a) < std::get<0>(b);
 			});
 		}
-		auto& local_graph_translation = resources.graph_translation.populations[descriptor];
+		auto& local_graph_translation =
+		    resources.execution_instances.at(instance).graph_translation.populations[descriptor];
 		local_graph_translation.resize(population.neurons.size());
 		// add a neuron view per hemisphere
 		for (auto&& [row, nrn] : neurons) {
 			signal_flow::vertex::NeuronView::Configs configs;
-			if (!connection_result.internal_neuron_labels.contains(descriptor)) {
+			if (!connection_result.execution_instances.at(instance).internal_neuron_labels.contains(
+			        descriptor)) {
 				std::stringstream ss;
 				ss << "Connection builder result does not contain the neuron labels for "
 				   << descriptor << ".";
@@ -470,15 +526,17 @@ void NetworkGraphBuilder::add_population(
 			for (
 			    auto const& [column, neuron_on_population, compartment_on_neuron, neuron_on_compartment] :
 			    nrn) {
-				if (neuron_on_population >=
-				    connection_result.internal_neuron_labels.at(descriptor).size()) {
+				if (neuron_on_population >= connection_result.execution_instances.at(instance)
+				                                .internal_neuron_labels.at(descriptor)
+				                                .size()) {
 					std::stringstream ss;
 					ss << "Connection builder result does not contain the neuron label for "
 					      "population ("
 					   << descriptor << "), neuron (" << neuron_on_population << ").";
 					throw std::runtime_error(ss.str());
 				}
-				if (!connection_result.internal_neuron_labels.at(descriptor)
+				if (!connection_result.execution_instances.at(instance)
+				         .internal_neuron_labels.at(descriptor)
 				         .at(neuron_on_population)
 				         .contains(compartment_on_neuron)) {
 					std::stringstream ss;
@@ -488,7 +546,8 @@ void NetworkGraphBuilder::add_population(
 					   << compartment_on_neuron << ").";
 					throw std::runtime_error(ss.str());
 				}
-				if (neuron_on_compartment >= connection_result.internal_neuron_labels.at(descriptor)
+				if (neuron_on_compartment >= connection_result.execution_instances.at(instance)
+				                                 .internal_neuron_labels.at(descriptor)
 				                                 .at(neuron_on_population)
 				                                 .at(compartment_on_neuron)
 				                                 .size()) {
@@ -501,7 +560,8 @@ void NetworkGraphBuilder::add_population(
 					throw std::runtime_error(ss.str());
 				}
 				signal_flow::vertex::NeuronView::Config config{
-				    connection_result.internal_neuron_labels.at(descriptor)
+				    connection_result.execution_instances.at(instance)
+				        .internal_neuron_labels.at(descriptor)
 				        .at(neuron_on_population)
 				        .at(compartment_on_neuron)
 				        .at(neuron_on_compartment),
@@ -520,7 +580,9 @@ void NetworkGraphBuilder::add_population(
 			}
 			// add neuron view to graph and vertex descriptor to resources
 			auto const neuron_view_vertex = graph.add(neuron_view, instance, inputs);
-			resources.populations[descriptor].neurons[row.toHemisphereOnDLS()] = neuron_view_vertex;
+			resources.execution_instances.at(instance)
+			    .populations[descriptor]
+			    .neurons[row.toHemisphereOnDLS()] = neuron_view_vertex;
 			for (
 			    size_t c = 0;
 			    auto const& [_, neuron_on_population, compartment_on_neuron, neuron_on_compartment] :
@@ -552,20 +614,20 @@ void NetworkGraphBuilder::add_padi_bus(
 	hate::Timer timer;
 	// get incoming crossbar nodes via lookup in the resources
 	std::vector<signal_flow::Input> inputs;
-	for (auto const& [c, d] : resources.crossbar_nodes) {
+	for (auto const& [c, d] : resources.execution_instances.at(instance).crossbar_nodes) {
 		auto const local_padi_bus = c.toCrossbarOutputOnDLS().toPADIBusOnDLS();
 		if (local_padi_bus && (*local_padi_bus == coordinate)) {
 			inputs.push_back(d);
 		}
 	}
-	if (resources.padi_busses.contains(
+	if (resources.execution_instances.at(instance).padi_busses.contains(
 	        coordinate)) { // padi bus already added, readd with new inputs
-		auto& vertex = resources.padi_busses.at(coordinate);
+		auto& vertex = resources.execution_instances.at(instance).padi_busses.at(coordinate);
 		if (inputs != get_inputs(graph, vertex)) { // only readd when inputs changed
 			vertex = graph.add(vertex, instance, inputs);
 		}
 	} else { // padi bus not added yet
-		resources.padi_busses[coordinate] =
+		resources.execution_instances.at(instance).padi_busses[coordinate] =
 		    graph.add(signal_flow::vertex::PADIBus(coordinate), instance, inputs);
 	}
 	LOG4CXX_TRACE(
@@ -583,19 +645,23 @@ void NetworkGraphBuilder::add_crossbar_node(
 	// get inputs
 	std::vector<signal_flow::Input> inputs;
 	if (coordinate.toCrossbarInputOnDLS().toSPL1Address()) { // from crossbar l2 input
-		if (!resources.crossbar_l2_input) {
+		if (!resources.execution_instances.at(instance).crossbar_l2_input) {
 			throw std::logic_error("Trying to add crossbar node from L2 without l2 input vertex.");
 		}
-		inputs.push_back(*resources.crossbar_l2_input);
+		inputs.push_back(*resources.execution_instances.at(instance).crossbar_l2_input);
 	} else if (coordinate.toCrossbarInputOnDLS()
 	               .toNeuronEventOutputOnDLS()) { // from neuron event output
 		auto const neuron_event_output =
 		    *(coordinate.toCrossbarInputOnDLS().toNeuronEventOutputOnDLS());
-		inputs.push_back(resources.neuron_event_outputs.at(neuron_event_output));
+		inputs.push_back(resources.execution_instances.at(instance).neuron_event_outputs.at(
+		    neuron_event_output));
 	} else { // other (currently only background sources)
-		for (auto const& [dd, d] : resources.graph_translation.background_spike_source_vertices) {
+		for (auto const& [dd, d] : resources.execution_instances.at(instance)
+		                               .graph_translation.background_spike_source_vertices) {
 			for (auto const& [hemisphere, bus] :
-			     std::get<BackgroundSourcePopulation>(m_network.populations.at(dd)).coordinate) {
+			     std::get<BackgroundSourcePopulation>(
+			         m_network.execution_instances.at(instance).populations.at(dd))
+			         .coordinate) {
 				BackgroundSpikeSourceOnDLS source(
 				    bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size);
 				if (source.toCrossbarInputOnDLS() == coordinate.toCrossbarInputOnDLS()) {
@@ -605,22 +671,24 @@ void NetworkGraphBuilder::add_crossbar_node(
 		}
 	}
 	// add crossbar node to graph
-	if (resources.crossbar_nodes.contains(
+	if (resources.execution_instances.at(instance).crossbar_nodes.contains(
 	        coordinate)) { // crossbar node already present, readd with new inputs
-		auto& vertex = resources.crossbar_nodes.at(coordinate);
+		auto& vertex = resources.execution_instances.at(instance).crossbar_nodes.at(coordinate);
 		if (inputs != get_inputs(graph, vertex)) { // only readd when inputs changed
 			vertex = graph.add(vertex, instance, inputs);
 		}
 	} else { // crossbar node not added yet
-		if (!connection_result.crossbar_nodes.contains(coordinate)) {
+		if (!connection_result.execution_instances.at(instance).crossbar_nodes.contains(
+		        coordinate)) {
 			std::stringstream ss;
 			ss << "Trying to add crossbar node at CrossbarNodeOnDLS("
 			   << coordinate.toCrossbarInputOnDLS() << ", " << coordinate.toCrossbarOutputOnDLS()
 			   << ") for which no configuration from the connection result is available.";
 			throw std::logic_error(ss.str());
 		}
-		auto const& config = connection_result.crossbar_nodes.at(coordinate);
-		resources.crossbar_nodes[coordinate] =
+		auto const& config =
+		    connection_result.execution_instances.at(instance).crossbar_nodes.at(coordinate);
+		resources.execution_instances.at(instance).crossbar_nodes[coordinate] =
 		    graph.add(signal_flow::vertex::CrossbarNode(coordinate, config), instance, inputs);
 	}
 	LOG4CXX_TRACE(
@@ -639,10 +707,11 @@ void NetworkGraphBuilder::add_synapse_driver(
 	PADIBusOnDLS const padi_bus(
 	    coordinate.toSynapseDriverOnSynapseDriverBlock().toPADIBusOnPADIBusBlock(),
 	    coordinate.toSynapseDriverBlockOnDLS().toPADIBusBlockOnDLS());
-	std::vector<signal_flow::Input> const inputs = {resources.padi_busses.at(padi_bus)};
-	if (resources.synapse_drivers.contains(
+	std::vector<signal_flow::Input> const inputs = {
+	    resources.execution_instances.at(instance).padi_busses.at(padi_bus)};
+	if (resources.execution_instances.at(instance).synapse_drivers.contains(
 	        coordinate)) { // synapse driver already present, readd with new inputs
-		auto& vertex = resources.synapse_drivers.at(coordinate);
+		auto& vertex = resources.execution_instances.at(instance).synapse_drivers.at(coordinate);
 		if (inputs !=
 		    get_inputs(
 		        graph, vertex)) { // only readd when inputs changed (FIXME: this never happens)
@@ -654,17 +723,22 @@ void NetworkGraphBuilder::add_synapse_driver(
 			auto const synapse_row = SynapseRowOnDLS(
 			    coordinate.toSynapseDriverOnSynapseDriverBlock().toSynapseRowOnSynram()[r],
 			    coordinate.toSynapseDriverBlockOnDLS().toSynramOnDLS());
-			if (!connection_result.synapse_row_modes.contains(synapse_row)) {
+			if (!connection_result.execution_instances.at(instance).synapse_row_modes.contains(
+			        synapse_row)) {
 				throw std::runtime_error(
 				    "Connection builder result does not contain the mode for the synapse row(" +
 				    std::to_string(synapse_row) + ").");
 			}
-			row_modes[r] = connection_result.synapse_row_modes.at(synapse_row);
+			row_modes[r] = connection_result.execution_instances.at(instance).synapse_row_modes.at(
+			    synapse_row);
 		}
 		signal_flow::vertex::SynapseDriver synapse_driver(
-		    coordinate, {connection_result.synapse_driver_compare_masks.at(coordinate), row_modes,
-		                 true /* TODO: expose */});
-		resources.synapse_drivers[coordinate] = graph.add(synapse_driver, instance, inputs);
+		    coordinate,
+		    {connection_result.execution_instances.at(instance).synapse_driver_compare_masks.at(
+		         coordinate),
+		     row_modes, true /* TODO: expose */});
+		resources.execution_instances.at(instance).synapse_drivers[coordinate] =
+		    graph.add(synapse_driver, instance, inputs);
 	}
 	LOG4CXX_TRACE(
 	    m_logger, "add_synapse_driver(): Added " << coordinate << " in " << timer.print() << ".");
@@ -680,16 +754,19 @@ void NetworkGraphBuilder::add_neuron_event_output(
 	// get inputs (incoming neuron views)
 	std::map<HemisphereOnDLS, std::vector<signal_flow::Input>> hemisphere_inputs;
 	signal_flow::vertex::NeuronEventOutputView::Neurons neurons;
-	for (auto const& [descriptor, pop] : resources.populations) {
+	for (auto const& [descriptor, pop] : resources.execution_instances.at(instance).populations) {
 		auto const is_outgoing_projection = [&](auto const& proj) {
 			return proj.second.population_pre == descriptor;
 		};
 		// skip if the population neither has outgoing projections nor its spikes shall be recorded
 		bool const has_outgoing_projection =
 		    std::find_if(
-		        m_network.projections.begin(), m_network.projections.end(),
-		        is_outgoing_projection) != m_network.projections.end();
-		auto const& population = std::get<Population>(m_network.populations.at(descriptor));
+		        m_network.execution_instances.at(instance).projections.begin(),
+		        m_network.execution_instances.at(instance).projections.end(),
+		        is_outgoing_projection) !=
+		    m_network.execution_instances.at(instance).projections.end();
+		auto const& population = std::get<Population>(
+		    m_network.execution_instances.at(instance).populations.at(descriptor));
 		bool const enable_record_spikes =
 		    std::any_of(population.neurons.begin(), population.neurons.end(), [](auto const nrn) {
 			    for (auto const& [_, compartment] : nrn.compartments) {
@@ -742,7 +819,7 @@ void NetworkGraphBuilder::add_neuron_event_output(
 	if (inputs.empty()) {
 		return;
 	}
-	resources.neuron_event_outputs[coordinate] =
+	resources.execution_instances.at(instance).neuron_event_outputs[coordinate] =
 	    graph.add(signal_flow::vertex::NeuronEventOutputView(std::move(neurons)), instance, inputs);
 	LOG4CXX_TRACE(
 	    m_logger,
@@ -752,21 +829,24 @@ void NetworkGraphBuilder::add_neuron_event_output(
 void NetworkGraphBuilder::add_synapse_array_view_sparse(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionOnNetwork descriptor,
+    ProjectionOnExecutionInstance descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
-	if (connection_result.connections.at(descriptor).empty()) {
-		resources.projections[descriptor] = {};
-		resources.graph_translation.projections[descriptor] = {};
+	if (connection_result.execution_instances.at(instance).connections.at(descriptor).empty()) {
+		resources.execution_instances.at(instance).projections[descriptor] = {};
+		resources.execution_instances.at(instance).graph_translation.projections[descriptor] = {};
 		return;
 	}
 	hate::Timer timer;
 	// get columns of post-synaptic population
 	std::map<HemisphereOnDLS, signal_flow::vertex::SynapseArrayViewSparse::Columns> columns;
-	auto const post_descriptor = m_network.projections.at(descriptor).population_post;
-	if (resources.populations.contains(post_descriptor)) { // post population already present
-		for (auto const& [coord, d] : resources.populations.at(post_descriptor).neurons) {
+	auto const post_descriptor =
+	    m_network.execution_instances.at(instance).projections.at(descriptor).population_post;
+	if (resources.execution_instances.at(instance).populations.contains(
+	        post_descriptor)) { // post population already present
+		for (auto const& [coord, d] :
+		     resources.execution_instances.at(instance).populations.at(post_descriptor).neurons) {
 			auto const& neuron_view =
 			    std::get<signal_flow::vertex::NeuronView>(graph.get_vertex_property(d));
 			auto& local_columns = columns[coord];
@@ -775,7 +855,8 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 			}
 		}
 	} else { // post population not present yet
-		auto const& population = std::get<Population>(m_network.populations.at(post_descriptor));
+		auto const& population = std::get<Population>(
+		    m_network.execution_instances.at(instance).populations.at(post_descriptor));
 		// NeuronEventOutputView requires sorted locations
 		std::vector<AtomicNeuronOnDLS> neurons;
 		for (auto const& nrn : population.neurons) {
@@ -792,12 +873,13 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	// get used synapse drivers and synapse rows
 	std::map<HemisphereOnDLS, std::set<SynapseDriverOnDLS>> used_synapse_drivers;
 	std::map<HemisphereOnDLS, std::set<SynapseRowOnSynram>> used_synapse_rows;
-	if (!connection_result.connections.contains(descriptor)) {
+	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
 		throw std::runtime_error(
 		    "Connection builder result does not contain connections for the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
+	for (auto const& placed_connections :
+	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
 		for (auto const& placed_connection : placed_connections) {
 			auto const hemisphere =
 			    placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
@@ -834,7 +916,8 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	}
 	// get synapses
 	std::map<HemisphereOnDLS, signal_flow::vertex::SynapseArrayViewSparse::Synapses> synapses;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
+	for (auto const& placed_connections :
+	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
 		for (auto const& placed_connection : placed_connections) {
 			auto const hemisphere =
 			    placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
@@ -857,14 +940,16 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 	for (auto const& [hemisphere, synapse_drivers] : used_synapse_drivers) {
 		auto& local_inputs = inputs[hemisphere];
 		for (auto const& synapse_driver : synapse_drivers) {
-			if (!resources.synapse_drivers.contains(synapse_driver)) {
+			if (!resources.execution_instances.at(instance).synapse_drivers.contains(
+			        synapse_driver)) {
 				std::stringstream ss;
 				ss << synapse_driver
 				   << " required by synapse array view not present in network graph builder "
-				      "resources.";
+				      "resources.execution_instances.at(instance).";
 				throw std::runtime_error(ss.str());
 			}
-			local_inputs.push_back(resources.synapse_drivers.at(synapse_driver));
+			local_inputs.push_back(
+			    resources.execution_instances.at(instance).synapse_drivers.at(synapse_driver));
 		}
 	}
 	// add vertices
@@ -882,17 +967,22 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 		    synram, std::move(rs), std::move(cs), std::move(syns));
 
 		assert(
-		    !resources.projections.contains(descriptor) ||
-		    !resources.projections.at(descriptor).synapses.contains(hemisphere));
-		resources.projections[descriptor].synapses[hemisphere] =
+		    !resources.execution_instances.at(instance).projections.contains(descriptor) ||
+		    !resources.execution_instances.at(instance)
+		         .projections.at(descriptor)
+		         .synapses.contains(hemisphere));
+		resources.execution_instances.at(instance).projections[descriptor].synapses[hemisphere] =
 		    graph.add(config, instance, inputs.at(hemisphere));
 	}
 	// add translation
-	auto& local_graph_translation = resources.graph_translation.projections[descriptor];
-	local_graph_translation.resize(m_network.projections.at(descriptor).connections.size());
+	auto& local_graph_translation =
+	    resources.execution_instances.at(instance).graph_translation.projections[descriptor];
+	local_graph_translation.resize(
+	    m_network.execution_instances.at(instance).projections.at(descriptor).connections.size());
 	std::map<HemisphereOnDLS, size_t> synapse_index;
 	for (size_t c = 0;
-	     auto const& placed_connections : connection_result.connections.at(descriptor)) {
+	     auto const& placed_connections :
+	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
 		for (auto const& placed_connection : placed_connections) {
 			auto const hemisphere =
 			    placed_connection.synapse_row.toSynramOnDLS().toHemisphereOnDLS();
@@ -900,7 +990,9 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 				synapse_index[hemisphere] = 0;
 			}
 			local_graph_translation.at(c).push_back(std::pair{
-			    resources.projections.at(descriptor).synapses.at(hemisphere),
+			    resources.execution_instances.at(instance)
+			        .projections.at(descriptor)
+			        .synapses.at(hemisphere),
 			    synapse_index.at(hemisphere)});
 			synapse_index.at(hemisphere)++;
 		}
@@ -915,33 +1007,38 @@ std::map<HemisphereOnDLS, signal_flow::Input>
 NetworkGraphBuilder::add_projection_from_external_input(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionOnNetwork const& descriptor,
+    ProjectionOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
-	auto const population_pre = m_network.projections.at(descriptor).population_pre;
+	auto const population_pre =
+	    m_network.execution_instances.at(instance).projections.at(descriptor).population_pre;
 	if (!std::holds_alternative<ExternalSourcePopulation>(
-	        m_network.populations.at(population_pre))) {
+	        m_network.execution_instances.at(instance).populations.at(population_pre))) {
 		throw std::logic_error("Projection's presynaptic population is not external.");
 	}
 	// get used PADI busses, synapse drivers and spl1 addresses
 	std::set<PADIBusOnDLS> used_padi_bus;
 	std::set<SynapseDriverOnDLS> used_synapse_drivers;
 	std::map<PADIBusOnDLS, std::set<SPL1Address>> used_spl1_addresses;
-	if (!connection_result.external_spike_labels.contains(population_pre)) {
+	if (!connection_result.execution_instances.at(instance).external_spike_labels.contains(
+	        population_pre)) {
 		throw std::runtime_error(
 		    "Connection builder result does not contain spike labels for the population(" +
 		    std::to_string(population_pre) + ") from external input.");
 	}
-	auto const& external_spike_labels = connection_result.external_spike_labels.at(population_pre);
-	if (!connection_result.connections.contains(descriptor)) {
+	auto const& external_spike_labels =
+	    connection_result.execution_instances.at(instance).external_spike_labels.at(population_pre);
+	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
 		throw std::runtime_error(
 		    "Connection builder result does not contain connections for the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
-	auto const num_connections_result = connection_result.connections.at(descriptor).size();
-	auto const num_connections_projection = m_network.projections.at(descriptor).connections.size();
+	auto const num_connections_result =
+	    connection_result.execution_instances.at(instance).connections.at(descriptor).size();
+	auto const num_connections_projection =
+	    m_network.execution_instances.at(instance).projections.at(descriptor).connections.size();
 	if (num_connections_result != num_connections_projection) {
 		throw std::runtime_error(
 		    "Connection builder result connection number(" +
@@ -950,7 +1047,8 @@ NetworkGraphBuilder::add_projection_from_external_input(
 		    std::to_string(num_connections_projection) + ").");
 	}
 	size_t i = 0;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
+	for (auto const& placed_connections :
+	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
 		for (auto const& placed_connection : placed_connections) {
 			auto const padi_bus_block =
 			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
@@ -963,8 +1061,10 @@ NetworkGraphBuilder::add_projection_from_external_input(
 			    placed_connection.synapse_row.toSynapseRowOnSynram()
 			        .toSynapseDriverOnSynapseDriverBlock(),
 			    placed_connection.synapse_row.toSynramOnDLS().toSynapseDriverBlockOnDLS()));
-			auto const index_pre =
-			    m_network.projections.at(descriptor).connections.at(i).index_pre.first;
+			auto const index_pre = m_network.execution_instances.at(instance)
+			                           .projections.at(descriptor)
+			                           .connections.at(i)
+			                           .index_pre.first;
 			for (auto label : external_spike_labels.at(index_pre)) {
 				used_spl1_addresses[padi_bus].insert(label.get_spl1_address());
 			}
@@ -991,8 +1091,8 @@ NetworkGraphBuilder::add_projection_from_external_input(
 	add_synapse_array_view_sparse(graph, resources, descriptor, connection_result, instance);
 	// add population
 	std::map<HemisphereOnDLS, signal_flow::Input> inputs(
-	    resources.projections.at(descriptor).synapses.begin(),
-	    resources.projections.at(descriptor).synapses.end());
+	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.begin(),
+	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.end());
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_external(): Added projection(" << descriptor << ") in "
 	                                                                  << timer.print() << ".");
@@ -1003,27 +1103,30 @@ std::map<HemisphereOnDLS, signal_flow::Input>
 NetworkGraphBuilder::add_projection_from_background_spike_source(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionOnNetwork const& descriptor,
+    ProjectionOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
-	auto const population_pre = m_network.projections.at(descriptor).population_pre;
+	auto const population_pre =
+	    m_network.execution_instances.at(instance).projections.at(descriptor).population_pre;
 	if (!std::holds_alternative<BackgroundSourcePopulation>(
-	        m_network.populations.at(population_pre))) {
+	        m_network.execution_instances.at(instance).populations.at(population_pre))) {
 		throw std::logic_error(
 		    "Projection's presynaptic population is not a background spike source.");
 	}
 	// get used PADI busses and synapse drivers
 	std::set<PADIBusOnDLS> used_padi_bus;
 	std::set<SynapseDriverOnDLS> used_synapse_drivers;
-	if (!connection_result.connections.contains(descriptor)) {
+	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
 		throw std::runtime_error(
 		    "Connection builder result does not contain connections the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
-	auto const num_connections_result = connection_result.connections.at(descriptor).size();
-	auto const num_connections_projection = m_network.projections.at(descriptor).connections.size();
+	auto const num_connections_result =
+	    connection_result.execution_instances.at(instance).connections.at(descriptor).size();
+	auto const num_connections_projection =
+	    m_network.execution_instances.at(instance).projections.at(descriptor).connections.size();
 	if (num_connections_result != num_connections_projection) {
 		throw std::runtime_error(
 		    "Connection builder result connection number(" +
@@ -1032,7 +1135,8 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
 		    std::to_string(num_connections_projection) + ").");
 	}
 	size_t i = 0;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
+	for (auto const& placed_connections :
+	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
 		for (auto const& placed_connection : placed_connections) {
 			auto const padi_bus_block =
 			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
@@ -1050,7 +1154,8 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
 	}
 	// add crossbar nodes from source to PADI busses
 	for (auto const& [hemisphere, bus] :
-	     std::get<BackgroundSourcePopulation>(m_network.populations.at(population_pre))
+	     std::get<BackgroundSourcePopulation>(
+	         m_network.execution_instances.at(instance).populations.at(population_pre))
 	         .coordinate) {
 		auto const crossbar_input =
 		    BackgroundSpikeSourceOnDLS(
@@ -1075,8 +1180,8 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
 	add_synapse_array_view_sparse(graph, resources, descriptor, connection_result, instance);
 	// add population
 	std::map<HemisphereOnDLS, signal_flow::Input> inputs(
-	    resources.projections.at(descriptor).synapses.begin(),
-	    resources.projections.at(descriptor).synapses.end());
+	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.begin(),
+	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.end());
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_background_spike_source(): Added projection("
 	                  << descriptor << ") in " << timer.print() << ".");
@@ -1087,23 +1192,27 @@ std::map<HemisphereOnDLS, signal_flow::Input>
 NetworkGraphBuilder::add_projection_from_internal_input(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionOnNetwork const& descriptor,
+    ProjectionOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	if (!std::holds_alternative<Population>(
-	        m_network.populations.at(m_network.projections.at(descriptor).population_pre))) {
+	        m_network.execution_instances.at(instance).populations.at(
+	            m_network.execution_instances.at(instance)
+	                .projections.at(descriptor)
+	                .population_pre))) {
 		throw std::logic_error("Projection's presynaptic population is not internal.");
 	}
-	if (!connection_result.connections.contains(descriptor)) {
+	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
 		throw std::runtime_error(
 		    "Connection builder result does not contain connections for the projection(" +
 		    std::to_string(descriptor) + ").");
 	}
 	// get possibly used neuron event outputs
-	auto const& population = std::get<Population>(
-	    m_network.populations.at(m_network.projections.at(descriptor).population_pre));
+	auto const& population =
+	    std::get<Population>(m_network.execution_instances.at(instance).populations.at(
+	        m_network.execution_instances.at(instance).projections.at(descriptor).population_pre));
 	std::set<NeuronEventOutputOnDLS> used_neuron_event_outputs;
 	for (auto const& neuron : population.neurons) {
 		for (auto const& an : neuron.coordinate.get_atomic_neurons()) {
@@ -1113,7 +1222,8 @@ NetworkGraphBuilder::add_projection_from_internal_input(
 	// get used PADI busses and synapse drivers
 	std::set<PADIBusOnDLS> used_padi_bus;
 	std::set<SynapseDriverOnDLS> used_synapse_drivers;
-	for (auto const& placed_connections : connection_result.connections.at(descriptor)) {
+	for (auto const& placed_connections :
+	     connection_result.execution_instances.at(instance).connections.at(descriptor)) {
 		for (auto const& placed_connection : placed_connections) {
 			auto const padi_bus_block =
 			    placed_connection.synapse_row.toSynramOnDLS().toPADIBusBlockOnDLS();
@@ -1153,8 +1263,8 @@ NetworkGraphBuilder::add_projection_from_internal_input(
 	add_synapse_array_view_sparse(graph, resources, descriptor, connection_result, instance);
 	// add population
 	std::map<HemisphereOnDLS, signal_flow::Input> inputs(
-	    resources.projections.at(descriptor).synapses.begin(),
-	    resources.projections.at(descriptor).synapses.end());
+	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.begin(),
+	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.end());
 	LOG4CXX_TRACE(
 	    m_logger, "add_projection_from_internal(): Added projection(" << descriptor << ") in "
 	                                                                  << timer.print() << ".");
@@ -1168,7 +1278,8 @@ void NetworkGraphBuilder::add_populations(
     common::ExecutionInstanceID const& instance) const
 {
 	// place all populations without input
-	for (auto const& [descriptor, population] : m_network.populations) {
+	for (auto const& [descriptor, population] :
+	     m_network.execution_instances.at(instance).populations) {
 		if (!std::holds_alternative<Population>(population)) {
 			continue;
 		}
@@ -1195,7 +1306,7 @@ void NetworkGraphBuilder::add_external_output(
 	hate::Timer timer;
 	// get set of neuron event outputs from to be recorded populations
 	std::set<NeuronEventOutputOnDLS> neuron_event_outputs;
-	for (auto const& [descriptor, pop] : m_network.populations) {
+	for (auto const& [descriptor, pop] : m_network.execution_instances.at(instance).populations) {
 		if (!std::holds_alternative<Population>(pop)) {
 			continue;
 		}
@@ -1228,12 +1339,13 @@ void NetworkGraphBuilder::add_external_output(
 		CrossbarNodeOnDLS coord(
 		    crossbar_l2_output.toCrossbarOutputOnDLS(), neuron_event_output.toCrossbarInputOnDLS());
 		add_crossbar_node(graph, resources, coord, connection_result, instance);
-		crossbar_l2_output_inputs.push_back(resources.crossbar_nodes.at(coord));
+		crossbar_l2_output_inputs.push_back(
+		    resources.execution_instances.at(instance).crossbar_nodes.at(coord));
 	}
 	// add crossbar l2 output
 	auto const crossbar_l2_output =
 	    graph.add(signal_flow::vertex::CrossbarL2Output(), instance, crossbar_l2_output_inputs);
-	resources.graph_translation.event_output_vertex = graph.add(
+	resources.execution_instances.at(instance).graph_translation.event_output_vertex = graph.add(
 	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1),
 	    instance, {crossbar_l2_output});
 	LOG4CXX_TRACE(
@@ -1246,11 +1358,13 @@ void NetworkGraphBuilder::add_plasticity_rules(
     common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
-	for (auto const& [descriptor, plasticity_rule] : m_network.plasticity_rules) {
+	for (auto const& [descriptor, plasticity_rule] :
+	     m_network.execution_instances.at(instance).plasticity_rules) {
 		std::vector<signal_flow::Input> inputs;
 		std::vector<signal_flow::vertex::PlasticityRule::SynapseViewShape> synapse_view_shapes;
 		for (auto const& d : plasticity_rule.projections) {
-			for (auto const& [_, p] : resources.projections.at(d).synapses) {
+			for (auto const& [_, p] :
+			     resources.execution_instances.at(instance).projections.at(d).synapses) {
 				inputs.push_back({p});
 				auto const& synapse_view = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
 				    graph.get_vertex_property(p));
@@ -1268,13 +1382,16 @@ void NetworkGraphBuilder::add_plasticity_rules(
 			    std::vector<std::optional<
 			        signal_flow::vertex::PlasticityRule::NeuronViewShape::NeuronReadoutSource>>>
 			    neuron_readout_sources;
-			for (auto const& [_, p] : resources.populations.at(d.descriptor).neurons) {
+			for (auto const& [_, p] :
+			     resources.execution_instances.at(instance).populations.at(d.descriptor).neurons) {
 				auto const& neuron_view =
 				    std::get<signal_flow::vertex::NeuronView>(graph.get_vertex_property(p));
 				neuron_readout_sources[p].resize(neuron_view.get_columns().size());
 			}
 			for (size_t i = 0;
-			     auto const& nrn : resources.graph_translation.populations.at(d.descriptor)) {
+			     auto const& nrn :
+			     resources.execution_instances.at(instance).graph_translation.populations.at(
+			         d.descriptor)) {
 				for (auto const& [compartment, ans] : nrn) {
 					for (size_t an = 0; an < ans.size(); ++an) {
 						neuron_readout_sources.at(ans.at(an).first).at(ans.at(an).second) =
@@ -1283,7 +1400,8 @@ void NetworkGraphBuilder::add_plasticity_rules(
 				}
 				++i;
 			}
-			for (auto const& [_, p] : resources.populations.at(d.descriptor).neurons) {
+			for (auto const& [_, p] :
+			     resources.execution_instances.at(instance).populations.at(d.descriptor).neurons) {
 				inputs.push_back({p});
 				auto const& neuron_view =
 				    std::get<signal_flow::vertex::NeuronView>(graph.get_vertex_property(p));
@@ -1304,10 +1422,11 @@ void NetworkGraphBuilder::add_plasticity_rules(
 		    plasticity_rule.recording);
 		auto const output = vertex.output();
 		auto const plasticity_rule_descriptor = graph.add(std::move(vertex), instance, inputs);
-		resources.graph_translation.plasticity_rule_vertices[descriptor] =
-		    plasticity_rule_descriptor;
+		resources.execution_instances.at(instance)
+		    .graph_translation.plasticity_rule_vertices[descriptor] = plasticity_rule_descriptor;
 		if (plasticity_rule.recording) {
-			resources.graph_translation.plasticity_rule_output_vertices[descriptor] = graph.add(
+			resources.execution_instances.at(instance)
+			    .graph_translation.plasticity_rule_output_vertices[descriptor] = graph.add(
 			    signal_flow::vertex::DataOutput(output.type, output.size), instance,
 			    {plasticity_rule_descriptor});
 		}
@@ -1317,11 +1436,14 @@ void NetworkGraphBuilder::add_plasticity_rules(
 }
 
 void NetworkGraphBuilder::calculate_spike_labels(
-    Resources& resources, RoutingResult const& connection_result) const
+    Resources& resources,
+    RoutingResult const& connection_result,
+    common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
-	auto& spike_labels = resources.graph_translation.spike_labels;
-	for (auto const& [descriptor, labels] : connection_result.external_spike_labels) {
+	auto& spike_labels = resources.execution_instances.at(instance).graph_translation.spike_labels;
+	for (auto const& [descriptor, labels] :
+	     connection_result.execution_instances.at(instance).external_spike_labels) {
 		auto& local = spike_labels[descriptor];
 		size_t i = 0;
 		for (auto const& ll : labels) {
@@ -1333,23 +1455,27 @@ void NetworkGraphBuilder::calculate_spike_labels(
 			i++;
 		}
 	}
-	for (auto const& [descriptor, pop] : m_network.populations) {
+	for (auto const& [descriptor, pop] : m_network.execution_instances.at(instance).populations) {
 		if (std::holds_alternative<Population>(pop)) {
 			auto const& population = std::get<Population>(pop);
 			auto& local_spike_labels = spike_labels[descriptor];
 			local_spike_labels.resize(population.neurons.size());
-			if (!connection_result.internal_neuron_labels.contains(descriptor)) {
+			if (!connection_result.execution_instances.at(instance).internal_neuron_labels.contains(
+			        descriptor)) {
 				throw std::runtime_error(
-				    "Connection builder result does not contain neuron labels for the population(" +
+				    "Connection builder result does not contain neuron labels for the "
+				    "population(" +
 				    std::to_string(descriptor) + ").");
 			}
 
 			auto const& local_neuron_labels =
-			    connection_result.internal_neuron_labels.at(descriptor);
+			    connection_result.execution_instances.at(instance).internal_neuron_labels.at(
+			        descriptor);
 
 			if (local_neuron_labels.size() != population.neurons.size()) {
 				std::stringstream ss;
-				ss << "Connection builder result does not contain the neuron labels for population "
+				ss << "Connection builder result does not contain the neuron labels for "
+				      "population "
 				      "("
 				   << descriptor << ").";
 				throw std::runtime_error(ss.str());
@@ -1367,7 +1493,8 @@ void NetworkGraphBuilder::calculate_spike_labels(
 					}
 					if (ans.size() != local_neuron_labels.at(i).at(compartment_on_neuron).size()) {
 						std::stringstream ss;
-						ss << "Connection builder result does not contain the neuron labels for "
+						ss << "Connection builder result does not contain the neuron labels "
+						      "for "
 						      "population ("
 						   << descriptor << "), neuron (" << i << "), compartment ("
 						   << compartment_on_neuron << ").";
@@ -1395,19 +1522,21 @@ void NetworkGraphBuilder::calculate_spike_labels(
 		} else if (std::holds_alternative<BackgroundSourcePopulation>(pop)) {
 			auto const& population = std::get<BackgroundSourcePopulation>(pop);
 			auto& local_spike_labels = spike_labels[descriptor];
-			if (!connection_result.background_spike_source_labels.contains(descriptor)) {
+			if (!connection_result.execution_instances.at(instance)
+			         .background_spike_source_labels.contains(descriptor)) {
 				throw std::runtime_error(
 				    "Connection builder result does not contain neuron labels for the "
 				    "population(" +
 				    std::to_string(descriptor) + ").");
 			}
-			auto const& local_labels =
-			    connection_result.background_spike_source_labels.at(descriptor);
+			auto const& local_labels = connection_result.execution_instances.at(instance)
+			                               .background_spike_source_labels.at(descriptor);
 			local_spike_labels.resize(population.size);
 			for (auto const& [hemisphere, base_label] : local_labels) {
 				if (local_labels.at(hemisphere).size() != population.size) {
 					throw std::runtime_error(
-					    "Connection builder result does not contain as many spike labels as are "
+					    "Connection builder result does not contain as many spike labels as "
+					    "are "
 					    "neurons in the population(" +
 					    std::to_string(descriptor) + ").");
 				}
@@ -1428,7 +1557,8 @@ void NetworkGraphBuilder::calculate_spike_labels(
 		}
 	}
 	LOG4CXX_TRACE(
-	    m_logger, "get_spike_labels(): Calculated spike labels in " << timer.print() << ".");
+	    m_logger, "get_spike_labels(): Calculated spike labels for " << instance << " in "
+	                                                                 << timer.print() << ".");
 }
 
 void NetworkGraphBuilder::add_madc_recording(
@@ -1439,8 +1569,9 @@ void NetworkGraphBuilder::add_madc_recording(
 {
 	hate::Timer timer;
 	std::vector<signal_flow::Input> inputs;
-	auto const& population = std::get<Population>(
-	    m_network.populations.at(madc_recording.neurons.at(0).coordinate.population));
+	auto const& population =
+	    std::get<Population>(m_network.execution_instances.at(instance).populations.at(
+	        madc_recording.neurons.at(0).coordinate.population));
 	auto const neuron =
 	    population.neurons.at(madc_recording.neurons.at(0).coordinate.neuron_on_population);
 	auto const atomic_neuron =
@@ -1451,7 +1582,8 @@ void NetworkGraphBuilder::add_madc_recording(
 	    atomic_neuron, madc_recording.neurons.at(0).source};
 
 	auto const neuron_vertex_descriptor =
-	    resources.populations.at(madc_recording.neurons.at(0).coordinate.population)
+	    resources.execution_instances.at(instance)
+	        .populations.at(madc_recording.neurons.at(0).coordinate.population)
 	        .neurons.at(atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
 	auto const neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
 	    graph.get_vertex_property(neuron_vertex_descriptor));
@@ -1466,8 +1598,9 @@ void NetworkGraphBuilder::add_madc_recording(
 	std::optional<signal_flow::vertex::MADCReadoutView::Source> second_source;
 	signal_flow::vertex::MADCReadoutView::SourceSelection source_selection;
 	if (madc_recording.neurons.size() == 2) {
-		auto const& population = std::get<Population>(
-		    m_network.populations.at(madc_recording.neurons.at(1).coordinate.population));
+		auto const& population =
+		    std::get<Population>(m_network.execution_instances.at(instance).populations.at(
+		        madc_recording.neurons.at(1).coordinate.population));
 		auto const neuron =
 		    population.neurons.at(madc_recording.neurons.at(1).coordinate.neuron_on_population);
 		auto const atomic_neuron =
@@ -1479,7 +1612,8 @@ void NetworkGraphBuilder::add_madc_recording(
 		source_selection.period = haldls::vx::v3::MADCConfig::ActiveMuxInputSelectLength(1);
 
 		auto const neuron_vertex_descriptor =
-		    resources.populations.at(madc_recording.neurons.at(1).coordinate.population)
+		    resources.execution_instances.at(instance)
+		        .populations.at(madc_recording.neurons.at(1).coordinate.population)
 		        .neurons.at(atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
 		auto const neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
 		    graph.get_vertex_property(neuron_vertex_descriptor));
@@ -1495,10 +1629,11 @@ void NetworkGraphBuilder::add_madc_recording(
 	signal_flow::vertex::MADCReadoutView madc_readout(
 	    first_source, second_source, source_selection);
 	auto const madc_vertex = graph.add(madc_readout, instance, inputs);
-	resources.graph_translation.madc_sample_output_vertex = graph.add(
-	    signal_flow::vertex::DataOutput(
-	        signal_flow::ConnectionType::TimedMADCSampleFromChipSequence, 1),
-	    instance, {madc_vertex});
+	resources.execution_instances.at(instance).graph_translation.madc_sample_output_vertex =
+	    graph.add(
+	        signal_flow::vertex::DataOutput(
+	            signal_flow::ConnectionType::TimedMADCSampleFromChipSequence, 1),
+	        instance, {madc_vertex});
 	LOG4CXX_TRACE(
 	    m_logger, "add_madc_recording(): Added MADC recording in " << timer.print() << ".");
 }
@@ -1517,7 +1652,8 @@ void NetworkGraphBuilder::add_cadc_recording(
 	    neurons;
 	for (auto const& neuron : cadc_recording.neurons) {
 		auto const& population =
-		    std::get<Population>(m_network.populations.at(neuron.coordinate.population));
+		    std::get<Population>(m_network.execution_instances.at(instance).populations.at(
+		        neuron.coordinate.population));
 		auto const an = population.neurons.at(neuron.coordinate.neuron_on_population)
 		                    .coordinate.get_placed_compartments()
 		                    .at(neuron.coordinate.compartment_on_neuron)
@@ -1536,7 +1672,8 @@ void NetworkGraphBuilder::add_cadc_recording(
 		assert(sorted_index < sorted_neurons.size());
 		signal_flow::PortRestriction const port_restriction(sorted_index, sorted_index);
 		signal_flow::Input const input(
-		    resources.populations.at(neuron.coordinate.population)
+		    resources.execution_instances.at(instance)
+		        .populations.at(neuron.coordinate.population)
 		        .neurons.at(an.toNeuronRowOnDLS().toHemisphereOnDLS()),
 		    port_restriction);
 		neurons[an.toNeuronRowOnDLS()].push_back({an.toNeuronColumnOnDLS(), input, neuron.source});
@@ -1560,8 +1697,9 @@ void NetworkGraphBuilder::add_cadc_recording(
 		signal_flow::vertex::DataOutput data_output(
 		    signal_flow::ConnectionType::Int8, vertex.output().size);
 		auto const cv = graph.add(std::move(vertex), instance, inputs);
-		resources.graph_translation.cadc_sample_output_vertex.push_back(
-		    graph.add(data_output, instance, {cv}));
+		resources.execution_instances.at(instance)
+		    .graph_translation.cadc_sample_output_vertex.push_back(
+		        graph.add(data_output, instance, {cv}));
 	}
 	LOG4CXX_TRACE(
 	    m_logger, "add_cadc_recording(): Added CADC recording in " << timer.print() << ".");
@@ -1576,8 +1714,9 @@ void NetworkGraphBuilder::add_pad_recording(
 	hate::Timer timer;
 	for (auto const& [pad, pad_recording_source] : pad_recording.recordings) {
 		auto const& pad_recording_neuron = pad_recording_source.neuron;
-		auto const& population = std::get<Population>(
-		    m_network.populations.at(pad_recording_neuron.coordinate.population));
+		auto const& population =
+		    std::get<Population>(m_network.execution_instances.at(instance).populations.at(
+		        pad_recording_neuron.coordinate.population));
 		auto const& neuron =
 		    population.neurons.at(pad_recording_neuron.coordinate.neuron_on_population);
 		auto const atomic_neuron =
@@ -1588,7 +1727,8 @@ void NetworkGraphBuilder::add_pad_recording(
 		    atomic_neuron, pad_recording_neuron.source, pad_recording_source.enable_buffered};
 
 		auto const neuron_vertex_descriptor =
-		    resources.populations.at(pad_recording_neuron.coordinate.population)
+		    resources.execution_instances.at(instance)
+		        .populations.at(pad_recording_neuron.coordinate.population)
 		        .neurons.at(atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
 		auto const neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
 		    graph.get_vertex_property(neuron_vertex_descriptor));

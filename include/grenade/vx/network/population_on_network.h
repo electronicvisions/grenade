@@ -1,14 +1,28 @@
 #pragma once
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
-#include "halco/common/geometry.h"
+#include "grenade/vx/network/population_on_execution_instance.h"
 
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a population on a network. */
-struct GENPYBIND(inline_base("*")) PopulationOnNetwork
-    : public halco::common::detail::BaseType<PopulationOnNetwork, size_t>
+struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PopulationOnNetwork
+    : public common::ExecutionInstanceIDMixin<PopulationOnNetwork, PopulationOnExecutionInstance>
 {
-	constexpr explicit PopulationOnNetwork(value_type const value = 0) : base_t(value) {}
+	PopulationOnNetwork() = default;
+
+	explicit PopulationOnNetwork(
+	    PopulationOnExecutionInstance const& population,
+	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID()) :
+	    mixin_t(population, execution_instance)
+	{}
+
+	explicit PopulationOnNetwork(enum_type const& e) : mixin_t(e) {}
+
+	PopulationOnExecutionInstance toPopulationOnExecutionInstance() const
+	{
+		return This();
+	}
 };
 
 } // namespace grenade::vx::network

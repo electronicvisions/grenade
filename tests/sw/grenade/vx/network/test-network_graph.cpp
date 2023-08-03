@@ -28,6 +28,8 @@ TEST(NetworkGraph_valid, synapse_exchange)
 {
 	NetworkBuilder builder;
 
+	grenade::vx::common::ExecutionInstanceID instance;
+
 	auto pre_descriptor = builder.add(ExternalSourcePopulation(2));
 
 	Population population({
@@ -60,10 +62,14 @@ TEST(NetworkGraph_valid, synapse_exchange)
 
 	// expect error when we exchange the synapses of different sources to the same target in the
 	// routing result
-	auto connection_0 = routing.connections.at(projection_descriptor).at(0);
-	auto connection_1 = routing.connections.at(projection_descriptor).at(1);
-	routing.connections.at(projection_descriptor).at(0) = connection_1;
-	routing.connections.at(projection_descriptor).at(1) = connection_0;
+	auto connection_0 =
+	    routing.execution_instances.at(instance).connections.at(projection_descriptor).at(0);
+	auto connection_1 =
+	    routing.execution_instances.at(instance).connections.at(projection_descriptor).at(1);
+	routing.execution_instances.at(instance).connections.at(projection_descriptor).at(0) =
+	    connection_1;
+	routing.execution_instances.at(instance).connections.at(projection_descriptor).at(1) =
+	    connection_0;
 
 	EXPECT_THROW((build_network_graph(network, routing)), InvalidNetworkGraph);
 }
@@ -71,6 +77,8 @@ TEST(NetworkGraph_valid, synapse_exchange)
 TEST(NetworkGraph_valid, synapse_count)
 {
 	NetworkBuilder builder;
+
+	grenade::vx::common::ExecutionInstanceID instance;
 
 	auto pre_descriptor = builder.add(ExternalSourcePopulation(1));
 
@@ -101,8 +109,17 @@ TEST(NetworkGraph_valid, synapse_count)
 
 	// expect error when we exchange the label of a synapse in the routing result
 	lola::vx::v3::SynapseMatrix::Label wrong_label(42); // arbitrary choice
-	assert(routing.connections.at(projection_descriptor).at(0).at(0).label != wrong_label);
-	routing.connections.at(projection_descriptor).at(0).at(0).label = wrong_label;
+	assert(
+	    routing.execution_instances.at(instance)
+	        .connections.at(projection_descriptor)
+	        .at(0)
+	        .at(0)
+	        .label != wrong_label);
+	routing.execution_instances.at(instance)
+	    .connections.at(projection_descriptor)
+	    .at(0)
+	    .at(0)
+	    .label = wrong_label;
 
 	EXPECT_THROW((build_network_graph(network, routing)), InvalidNetworkGraph);
 }

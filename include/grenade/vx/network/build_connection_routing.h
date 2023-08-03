@@ -10,9 +10,9 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 /**
  * Build a connection routing for a given network.
  * This is the first step in two-stage routing towards a hardware data-flow graph representation.
- * @param network Network for which to build connection routing
+ * @param network Network execution instance for which to build connection routing
  */
 ConnectionRoutingResult GENPYBIND(visible)
-    build_connection_routing(std::shared_ptr<Network> const& network) SYMBOL_VISIBLE;
+    build_connection_routing(Network::ExecutionInstance const& network) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx::network

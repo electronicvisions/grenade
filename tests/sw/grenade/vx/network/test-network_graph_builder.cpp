@@ -65,20 +65,39 @@ TEST(logical_network_build_network_graph, Multapses)
 	auto const network_graph = build_network_graph(network, routing);
 
 	EXPECT_EQ(
-	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(0).size(),
+	    network_graph.get_graph_translation()
+	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .projections.at(projection_descriptor)
+	        .at(0)
+	        .size(),
 	    1);
 	EXPECT_EQ(
-	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(1).size(),
+	    network_graph.get_graph_translation()
+	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .projections.at(projection_descriptor)
+	        .at(1)
+	        .size(),
 	    2);
 	EXPECT_EQ(
-	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(2).size(),
+	    network_graph.get_graph_translation()
+	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .projections.at(projection_descriptor)
+	        .at(2)
+	        .size(),
 	    1);
 	EXPECT_EQ(
-	    network_graph.get_graph_translation().projections.at(projection_descriptor).at(3).size(),
+	    network_graph.get_graph_translation()
+	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .projections.at(projection_descriptor)
+	        .at(3)
+	        .size(),
 	    max_weight_multiplier);
 	{
 		auto const& local_translation =
-		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(0);
+		    network_graph.get_graph_translation()
+		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .projections.at(projection_descriptor)
+		        .at(0);
 		EXPECT_EQ(
 		    connections.at(0).weight.value(),
 		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
@@ -88,7 +107,10 @@ TEST(logical_network_build_network_graph, Multapses)
 	}
 	{
 		auto const& local_translation =
-		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(1);
+		    network_graph.get_graph_translation()
+		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .projections.at(projection_descriptor)
+		        .at(1);
 		EXPECT_EQ(
 		    lola::vx::v3::SynapseMatrix::Weight::max,
 		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
@@ -104,7 +126,10 @@ TEST(logical_network_build_network_graph, Multapses)
 	}
 	{
 		auto const& local_translation =
-		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(2);
+		    network_graph.get_graph_translation()
+		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .projections.at(projection_descriptor)
+		        .at(2);
 		EXPECT_EQ(
 		    connections.at(2).weight.value(),
 		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
@@ -114,7 +139,10 @@ TEST(logical_network_build_network_graph, Multapses)
 	}
 	{
 		auto const& local_translation =
-		    network_graph.get_graph_translation().projections.at(projection_descriptor).at(3);
+		    network_graph.get_graph_translation()
+		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .projections.at(projection_descriptor)
+		        .at(3);
 		EXPECT_EQ(
 		    lola::vx::v3::SynapseMatrix::Weight::max,
 		    std::get<grenade::vx::signal_flow::vertex::SynapseArrayViewSparse>(
@@ -161,7 +189,8 @@ TEST(build_network_graph, EmptyProjection)
 	auto network = builder.done();
 	auto const routing_result = routing::PortfolioRouter()(network);
 
-	EXPECT_TRUE(routing_result.connections.contains(projection_descriptor));
+	EXPECT_TRUE(routing_result.execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	                .connections.contains(projection_descriptor));
 
 	[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
 }
@@ -264,7 +293,8 @@ TEST(build_network_graph, GranularitySweep)
 				}
 				Projection projection{
 				    Receptor(Receptor::ID(), Receptor::Type::excitatory),
-				    std::move(projection_connections), stim, hwpop};
+				    std::move(projection_connections), stim.toPopulationOnExecutionInstance(),
+				    hwpop.toPopulationOnExecutionInstance()};
 				builder.add(projection);
 			}
 		}
@@ -285,10 +315,12 @@ TEST(build_network_graph, GranularitySweep)
 
 TEST(build_network_graph, ExecutionInstance)
 {
+	grenade::vx::common::ExecutionInstanceID execution_instance(1);
+
 	NetworkBuilder builder;
 
 	ExternalSourcePopulation population_external{1};
-	auto const population_descriptor_input = builder.add(population_external);
+	auto const population_descriptor_input = builder.add(population_external, execution_instance);
 
 	Population population_internal;
 	population_internal.neurons.push_back(Population::Neuron(
@@ -297,7 +329,7 @@ TEST(build_network_graph, ExecutionInstance)
 	      Population::Neuron::Compartment(
 	          Population::Neuron::Compartment::SpikeMaster(0, true),
 	          {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}})}}));
-	auto const population_descriptor_output = builder.add(population_internal);
+	auto const population_descriptor_output = builder.add(population_internal, execution_instance);
 
 	Projection::Connections projection_connections;
 	projection_connections.push_back(
@@ -307,14 +339,13 @@ TEST(build_network_graph, ExecutionInstance)
 	Projection projection{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
 	    population_descriptor_input, population_descriptor_output};
-	builder.add(projection);
+	builder.add(projection, execution_instance);
 
 	auto const network = builder.done();
 
 	auto const routing_result = routing::PortfolioRouter()(network);
 
-	grenade::vx::common::ExecutionInstanceID execution_instance(1);
-	auto network_graph = build_network_graph(network, routing_result, execution_instance);
+	auto network_graph = build_network_graph(network, routing_result);
 
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(network_graph.get_graph().get_graph()))) {

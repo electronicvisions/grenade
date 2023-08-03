@@ -8,6 +8,9 @@
 
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
+struct AtomicNeuronOnExecutionInstance;
+
+
 struct GENPYBIND(visible) AtomicNeuronOnNetwork
 {
 	PopulationOnNetwork population{};
@@ -16,6 +19,10 @@ struct GENPYBIND(visible) AtomicNeuronOnNetwork
 	size_t atomic_neuron_on_compartment{0};
 
 	AtomicNeuronOnNetwork() = default;
+	AtomicNeuronOnNetwork(
+	    AtomicNeuronOnExecutionInstance const& atomic_neuron_on_execution_instance,
+	    common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
+
 	AtomicNeuronOnNetwork(
 	    PopulationOnNetwork population,
 	    size_t neuron_on_population,

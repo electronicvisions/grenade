@@ -10,13 +10,13 @@
 namespace grenade::vx::network {
 
 NetworkBuilder::NetworkBuilder() :
-    m_populations(),
-    m_projections(),
+    m_execution_instances(),
     m_duration(0),
-    m_logger(log4cxx::Logger::getLogger("grenade.logical_network.NetworkBuilder"))
+    m_logger(log4cxx::Logger::getLogger("grenade.network.NetworkBuilder"))
 {}
 
-PopulationOnNetwork NetworkBuilder::add(Population const& population)
+PopulationOnNetwork NetworkBuilder::add(
+    Population const& population, common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	// check population is valid
@@ -26,7 +26,7 @@ PopulationOnNetwork NetworkBuilder::add(Population const& population)
 
 	// check that supplied neurons don't overlap with already added populations
 	auto const atomic_neurons = population.get_atomic_neurons();
-	for (auto const& [descriptor, other] : m_populations) {
+	for (auto const& [descriptor, other] : m_execution_instances[execution_instance].populations) {
 		if (!std::holds_alternative<Population>(other)) {
 			continue;
 		}
@@ -42,19 +42,27 @@ PopulationOnNetwork NetworkBuilder::add(Population const& population)
 			}
 		}
 	}
-	PopulationOnNetwork descriptor(m_populations.size());
-	m_populations.insert({descriptor, population});
+	PopulationOnNetwork descriptor(
+	    PopulationOnExecutionInstance(m_execution_instances[execution_instance].populations.size()),
+	    execution_instance);
+	m_execution_instances[execution_instance].populations.insert(
+	    {descriptor.toPopulationOnExecutionInstance(), population});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added population(" << descriptor << ") in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 	return descriptor;
 }
 
-PopulationOnNetwork NetworkBuilder::add(ExternalSourcePopulation const& population)
+PopulationOnNetwork NetworkBuilder::add(
+    ExternalSourcePopulation const& population,
+    common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
-	PopulationOnNetwork descriptor(m_populations.size());
-	m_populations.insert({descriptor, population});
+	PopulationOnNetwork descriptor(
+	    PopulationOnExecutionInstance(m_execution_instances[execution_instance].populations.size()),
+	    execution_instance);
+	m_execution_instances[execution_instance].populations.insert(
+	    {descriptor.toPopulationOnExecutionInstance(), population});
 	LOG4CXX_TRACE(
 	    m_logger,
 	    "add(): Added external population(" << descriptor << ") in " << timer.print() << ".");
@@ -62,11 +70,13 @@ PopulationOnNetwork NetworkBuilder::add(ExternalSourcePopulation const& populati
 	return descriptor;
 }
 
-PopulationOnNetwork NetworkBuilder::add(BackgroundSourcePopulation const& population)
+PopulationOnNetwork NetworkBuilder::add(
+    BackgroundSourcePopulation const& population,
+    common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	// check that supplied coordinate doesn't overlap with already added populations
-	for (auto const& [descriptor, other] : m_populations) {
+	for (auto const& [descriptor, other] : m_execution_instances[execution_instance].populations) {
 		if (!std::holds_alternative<BackgroundSourcePopulation>(other)) {
 			continue;
 		}
@@ -97,8 +107,11 @@ PopulationOnNetwork NetworkBuilder::add(BackgroundSourcePopulation const& popula
 		}
 	}
 
-	PopulationOnNetwork descriptor(m_populations.size());
-	m_populations.insert({descriptor, population});
+	PopulationOnNetwork descriptor(
+	    PopulationOnExecutionInstance(m_execution_instances[execution_instance].populations.size()),
+	    execution_instance);
+	m_execution_instances[execution_instance].populations.insert(
+	    {descriptor.toPopulationOnExecutionInstance(), population});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added background spike source population(" << descriptor << ") in "
 	                                                                 << timer.print() << ".");
@@ -106,18 +119,25 @@ PopulationOnNetwork NetworkBuilder::add(BackgroundSourcePopulation const& popula
 	return descriptor;
 }
 
-ProjectionOnNetwork NetworkBuilder::add(Projection const& projection)
+ProjectionOnNetwork NetworkBuilder::add(
+    Projection const& projection, common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
-	auto const& population_pre = m_populations.at(projection.population_pre);
+	auto const& population_pre =
+	    m_execution_instances.at(execution_instance).populations.at(projection.population_pre);
+
+	if (!m_execution_instances.contains(execution_instance)) {
+		throw std::runtime_error("Projection can't be added to non-existing execution instance.");
+	}
 
 	// check that target population is not external
-	if (!std::holds_alternative<Population>(m_populations.at(projection.population_post))) {
+	if (!std::holds_alternative<Population>(m_execution_instances.at(execution_instance)
+	                                            .populations.at(projection.population_post))) {
 		throw std::runtime_error("Only projections with on-chip neuron population are supported.");
 	}
 
-	auto const& population_post =
-	    std::get<Population>(m_populations.at(projection.population_post));
+	auto const& population_post = std::get<Population>(
+	    m_execution_instances.at(execution_instance).populations.at(projection.population_post));
 
 	// check that no single connection index is out of range of its population
 	auto const get_size = hate::overloaded(
@@ -184,7 +204,8 @@ ProjectionOnNetwork NetworkBuilder::add(Projection const& projection)
 
 	// check that if source is background the hemisphere matches
 	if (std::holds_alternative<BackgroundSourcePopulation>(
-	        m_populations.at(projection.population_pre))) {
+	        m_execution_instances.at(execution_instance)
+	            .populations.at(projection.population_pre))) {
 		auto const& pre = std::get<BackgroundSourcePopulation>(population_pre);
 		for (auto const& connection : projection.connections) {
 			auto const& receptors = population_post.neurons.at(connection.index_post.first)
@@ -211,8 +232,11 @@ ProjectionOnNetwork NetworkBuilder::add(Projection const& projection)
 		}
 	}
 
-	ProjectionOnNetwork descriptor(m_projections.size());
-	m_projections.insert({descriptor, projection});
+	ProjectionOnNetwork descriptor(
+	    ProjectionOnExecutionInstance(m_execution_instances[execution_instance].projections.size()),
+	    execution_instance);
+	m_execution_instances[execution_instance].projections.insert(
+	    {descriptor.toProjectionOnExecutionInstance(), projection});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added projection(" << descriptor << ", " << projection.population_pre
 	                                         << " -> " << projection.population_post << ") in "
@@ -221,31 +245,42 @@ ProjectionOnNetwork NetworkBuilder::add(Projection const& projection)
 	return descriptor;
 }
 
-void NetworkBuilder::add(MADCRecording const& madc_recording)
+void NetworkBuilder::add(
+    MADCRecording const& madc_recording, common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
-	if (m_madc_recording) {
+	if (!m_execution_instances.contains(execution_instance)) {
+		throw std::runtime_error(
+		    "MADCRecording can't be added to non-existing execution instance.");
+	}
+	if (m_execution_instances.at(execution_instance).madc_recording) {
 		throw std::runtime_error("Only one MADC recording per network possible.");
 	}
 	if (madc_recording.neurons.size() > 2) {
 		throw std::runtime_error("MADC recording supports recording at most two neurons.");
 	}
-	std::set<AtomicNeuronOnNetwork> unique;
+	std::set<AtomicNeuronOnExecutionInstance> unique;
 	std::set<size_t> unique_parity;
 	for (auto const& neuron : madc_recording.neurons) {
-		if (!m_populations.contains(neuron.coordinate.population)) {
+		if (!m_execution_instances.at(execution_instance)
+		         .populations.contains(neuron.coordinate.population)) {
 			throw std::runtime_error("MADC recording references unknown population.");
 		}
-		if (!std::holds_alternative<Population>(m_populations.at(neuron.coordinate.population))) {
+		if (!std::holds_alternative<Population>(
+		        m_execution_instances.at(execution_instance)
+		            .populations.at(neuron.coordinate.population))) {
 			throw std::runtime_error("MADC recording does not reference internal population.");
 		}
 		if (neuron.coordinate.neuron_on_population >=
-		    std::get<Population>(m_populations.at(neuron.coordinate.population)).neurons.size()) {
+		    std::get<Population>(m_execution_instances.at(execution_instance)
+		                             .populations.at(neuron.coordinate.population))
+		        .neurons.size()) {
 			throw std::runtime_error(
 			    "MADC recording references neuron index out of range of population.");
 		}
-		if (m_cadc_recording) {
-			for (auto const& cadc_neuron : m_cadc_recording->neurons) {
+		if (m_execution_instances.at(execution_instance).cadc_recording) {
+			for (auto const& cadc_neuron :
+			     m_execution_instances.at(execution_instance).cadc_recording->neurons) {
 				if (neuron.coordinate == cadc_neuron.coordinate &&
 				    neuron.source != cadc_neuron.source) {
 					throw std::runtime_error(
@@ -253,8 +288,9 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 				}
 			}
 		}
-		if (m_pad_recording) {
-			for (auto const& [_, pad_source] : m_pad_recording->recordings) {
+		if (m_execution_instances.at(execution_instance).pad_recording) {
+			for (auto const& [_, pad_source] :
+			     m_execution_instances.at(execution_instance).pad_recording->recordings) {
 				auto const& pad_neuron = pad_source.neuron;
 				if (neuron.coordinate == pad_neuron.coordinate &&
 				    neuron.source != pad_neuron.source) {
@@ -264,7 +300,8 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 			}
 		}
 		unique_parity.insert(
-		    std::get<Population>(m_populations.at(neuron.coordinate.population))
+		    std::get<Population>(m_execution_instances.at(execution_instance)
+		                             .populations.at(neuron.coordinate.population))
 		        .neurons.at(neuron.coordinate.neuron_on_population)
 		        .coordinate.get_placed_compartments()
 		        .at(neuron.coordinate.compartment_on_neuron)
@@ -282,10 +319,13 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 		                         "unique parity (even/odd).");
 	}
 	// check that plasticity rule target population readout settings don't contradict madc recording
-	for (auto const& [_, plasticity_rule] : m_plasticity_rules) {
+	for (auto const& [_, plasticity_rule] :
+	     m_execution_instances.at(execution_instance).plasticity_rules) {
 		for (auto const& target_population : plasticity_rule.populations) {
 			auto const& population_neurons =
-			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
+			    std::get<Population>(m_execution_instances.at(execution_instance)
+			                             .populations.at(target_population.descriptor))
+			        .neurons;
 			for (auto const& neuron : madc_recording.neurons) {
 				if (target_population.descriptor != neuron.coordinate.population) {
 					continue;
@@ -312,32 +352,43 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 			}
 		}
 	}
-	m_madc_recording = madc_recording;
+	m_execution_instances.at(execution_instance).madc_recording = madc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added MADC recording in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
-void NetworkBuilder::add(CADCRecording const& cadc_recording)
+void NetworkBuilder::add(
+    CADCRecording const& cadc_recording, common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
-	if (m_cadc_recording) {
+	if (!m_execution_instances.contains(execution_instance)) {
+		throw std::runtime_error(
+		    "CADCRecording can't be added to non-existing execution instance.");
+	}
+	if (m_execution_instances[execution_instance].cadc_recording) {
 		throw std::runtime_error("Only one CADC recording per network possible.");
 	}
-	std::set<AtomicNeuronOnNetwork> unique;
+	std::set<AtomicNeuronOnExecutionInstance> unique;
 	for (auto const& neuron : cadc_recording.neurons) {
-		if (!m_populations.contains(neuron.coordinate.population)) {
+		if (!m_execution_instances.at(execution_instance)
+		         .populations.contains(neuron.coordinate.population)) {
 			throw std::runtime_error("CADC recording references unknown population.");
 		}
-		if (!std::holds_alternative<Population>(m_populations.at(neuron.coordinate.population))) {
+		if (!std::holds_alternative<Population>(
+		        m_execution_instances.at(execution_instance)
+		            .populations.at(neuron.coordinate.population))) {
 			throw std::runtime_error("CADC recording does not reference internal population.");
 		}
 		if (neuron.coordinate.neuron_on_population >=
-		    std::get<Population>(m_populations.at(neuron.coordinate.population)).neurons.size()) {
+		    std::get<Population>(m_execution_instances.at(execution_instance)
+		                             .populations.at(neuron.coordinate.population))
+		        .neurons.size()) {
 			throw std::runtime_error(
 			    "CADC recording references neuron index out of range of population.");
 		}
-		if (m_madc_recording) {
-			for (auto const& madc_neuron : m_madc_recording->neurons) {
+		if (m_execution_instances.at(execution_instance).madc_recording) {
+			for (auto const& madc_neuron :
+			     m_execution_instances.at(execution_instance).madc_recording->neurons) {
 				if (neuron.coordinate == madc_neuron.coordinate &&
 				    neuron.source != madc_neuron.source) {
 					throw std::runtime_error(
@@ -345,8 +396,9 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 				}
 			}
 		}
-		if (m_pad_recording) {
-			for (auto const& [_, pad_source] : m_pad_recording->recordings) {
+		if (m_execution_instances.at(execution_instance).pad_recording) {
+			for (auto const& [_, pad_source] :
+			     m_execution_instances.at(execution_instance).pad_recording->recordings) {
 				auto const& pad_neuron = pad_source.neuron;
 				if (neuron.coordinate == pad_neuron.coordinate &&
 				    neuron.source != pad_neuron.source) {
@@ -360,37 +412,44 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 	if (unique.size() != cadc_recording.neurons.size()) {
 		throw std::runtime_error("CADC recording neurons are not unique.");
 	}
-	m_cadc_recording = cadc_recording;
+	m_execution_instances.at(execution_instance).cadc_recording = cadc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added CADC recording in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
-void NetworkBuilder::add(PadRecording const& pad_recording)
+void NetworkBuilder::add(
+    PadRecording const& pad_recording, common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
-	if (m_pad_recording) {
+	if (m_execution_instances.at(execution_instance).pad_recording) {
 		throw std::runtime_error("Only one pad recording per network possible.");
 	}
-	std::set<AtomicNeuronOnNetwork> unique;
+	std::set<AtomicNeuronOnExecutionInstance> unique;
 	std::set<halco::hicann_dls::vx::v3::HemisphereOnDLS> unique_hemisphere;
 	std::set<std::pair<halco::hicann_dls::vx::v3::HemisphereOnDLS, int>> unique_parity;
 	size_t num_buffered = 0;
 	size_t num_unbuffered = 0;
 	for (auto const& [_, source] : pad_recording.recordings) {
 		auto const& neuron = source.neuron;
-		if (!m_populations.contains(neuron.coordinate.population)) {
+		if (!m_execution_instances.at(execution_instance)
+		         .populations.contains(neuron.coordinate.population)) {
 			throw std::runtime_error("Pad recording references unknown population.");
 		}
-		if (!std::holds_alternative<Population>(m_populations.at(neuron.coordinate.population))) {
+		if (!std::holds_alternative<Population>(
+		        m_execution_instances.at(execution_instance)
+		            .populations.at(neuron.coordinate.population))) {
 			throw std::runtime_error("Pad recording does not reference internal population.");
 		}
 		if (neuron.coordinate.neuron_on_population >=
-		    std::get<Population>(m_populations.at(neuron.coordinate.population)).neurons.size()) {
+		    std::get<Population>(m_execution_instances.at(execution_instance)
+		                             .populations.at(neuron.coordinate.population))
+		        .neurons.size()) {
 			throw std::runtime_error(
 			    "Pad recording references neuron index out of range of population.");
 		}
-		if (m_madc_recording) {
-			for (auto const& madc_neuron : m_madc_recording->neurons) {
+		if (m_execution_instances.at(execution_instance).madc_recording) {
+			for (auto const& madc_neuron :
+			     m_execution_instances.at(execution_instance).madc_recording->neurons) {
 				if (neuron.coordinate == madc_neuron.coordinate &&
 				    neuron.source != madc_neuron.source) {
 					throw std::runtime_error(
@@ -398,8 +457,9 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 				}
 			}
 		}
-		if (m_cadc_recording) {
-			for (auto const& cadc_neuron : m_cadc_recording->neurons) {
+		if (m_execution_instances.at(execution_instance).cadc_recording) {
+			for (auto const& cadc_neuron :
+			     m_execution_instances.at(execution_instance).cadc_recording->neurons) {
 				if (neuron.coordinate == cadc_neuron.coordinate &&
 				    neuron.source != cadc_neuron.source) {
 					throw std::runtime_error(
@@ -408,7 +468,8 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 			}
 		}
 		unique.insert(neuron.coordinate);
-		auto const an = std::get<Population>(m_populations.at(neuron.coordinate.population))
+		auto const an = std::get<Population>(m_execution_instances.at(execution_instance)
+		                                         .populations.at(neuron.coordinate.population))
 		                    .neurons.at(neuron.coordinate.neuron_on_population)
 		                    .coordinate.get_placed_compartments()
 		                    .at(neuron.coordinate.compartment_on_neuron)
@@ -435,10 +496,13 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 		                         "exclusive {hemisphere, parity}s.");
 	}
 	// check that plasticity rule target population readout settings don't contradict pad recording
-	for (auto const& [_, plasticity_rule] : m_plasticity_rules) {
+	for (auto const& [_, plasticity_rule] :
+	     m_execution_instances.at(execution_instance).plasticity_rules) {
 		for (auto const& target_population : plasticity_rule.populations) {
 			auto const& population_neurons =
-			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
+			    std::get<Population>(m_execution_instances.at(execution_instance)
+			                             .populations.at(target_population.descriptor))
+			        .neurons;
 			for (auto const& [_, source] : pad_recording.recordings) {
 				auto const& neuron = source.neuron;
 				if (target_population.descriptor != neuron.coordinate.population) {
@@ -466,19 +530,24 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 			}
 		}
 	}
-
-	m_pad_recording = pad_recording;
+	m_execution_instances.at(execution_instance).pad_recording = pad_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added pad recording in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
-PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rule)
+PlasticityRuleOnNetwork NetworkBuilder::add(
+    PlasticityRule const& plasticity_rule, common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 
+	if (!m_execution_instances.contains(execution_instance)) {
+		throw std::runtime_error(
+		    "PlasticityRule can't be added to non-existing execution instance.");
+	}
+
 	// check that target projections exist
 	for (auto const& d : plasticity_rule.projections) {
-		if (!m_projections.contains(d)) {
+		if (!m_execution_instances.at(execution_instance).projections.contains(d)) {
 			throw std::runtime_error(
 			    "PlasticityRule projection descriptor not present in network.");
 		}
@@ -491,7 +560,7 @@ PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rul
 			std::set<Projection::Connection::Index> columns;
 			std::vector<std::pair<Projection::Connection::Index, Projection::Connection::Index>>
 			    indices;
-			auto const& projection = m_projections.at(d);
+			auto const& projection = m_execution_instances.at(execution_instance).projections.at(d);
 			for (auto const& connection : projection.connections) {
 				rows.insert(connection.index_pre);
 				columns.insert(connection.index_post);
@@ -506,9 +575,12 @@ PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rul
 			// If the source population is internal, the requirement can only be fulfilled if the
 			// source population neuron event outputs on neuron event output block (or equivalently
 			// the connected PADI-busses) are in order.
-			if (std::holds_alternative<Population>(m_populations.at(projection.population_pre))) {
+			if (std::holds_alternative<Population>(
+			        m_execution_instances.at(execution_instance)
+			            .populations.at(projection.population_pre))) {
 				auto const& population_pre =
-				    std::get<Population>(m_populations.at(projection.population_pre));
+				    std::get<Population>(m_execution_instances.at(execution_instance)
+				                             .populations.at(projection.population_pre));
 				std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> atomic_neurons;
 				for (auto const& neuron : population_pre.neurons) {
 					auto const local_atomic_neurons = neuron.coordinate.get_atomic_neurons();
@@ -537,18 +609,20 @@ PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rul
 
 	// check that target populations exist and are on-chip
 	for (auto const& d : plasticity_rule.populations) {
-		if (!m_populations.contains(d.descriptor)) {
+		if (!m_execution_instances.at(execution_instance).populations.contains(d.descriptor)) {
 			throw std::runtime_error(
 			    "PlasticityRule population descriptor not present in network.");
 		}
-		if (!std::holds_alternative<Population>(m_populations.at(d.descriptor))) {
+		if (!std::holds_alternative<Population>(
+		        m_execution_instances.at(execution_instance).populations.at(d.descriptor))) {
 			throw std::runtime_error("PlasticityRule population not on chip.");
 		}
 	}
 
 	// check that target population readout options match population shape
 	for (auto const& d : plasticity_rule.populations) {
-		auto const& population = std::get<Population>(m_populations.at(d.descriptor));
+		auto const& population = std::get<Population>(
+		    m_execution_instances.at(execution_instance).populations.at(d.descriptor));
 		auto const& readout_sources = d.neuron_readout_sources;
 		if (population.neurons.size() != readout_sources.size()) {
 			throw std::runtime_error("PlasticityRule population neuron readout source count "
@@ -573,11 +647,14 @@ PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rul
 	}
 
 	// check that target population readout settings don't contradict madc recording
-	if (m_madc_recording) {
+	if (m_execution_instances.at(execution_instance).madc_recording) {
 		for (auto const& target_population : plasticity_rule.populations) {
 			auto const& population_neurons =
-			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
-			for (auto const& neuron : m_madc_recording->neurons) {
+			    std::get<Population>(m_execution_instances.at(execution_instance)
+			                             .populations.at(target_population.descriptor))
+			        .neurons;
+			for (auto const& neuron :
+			     m_execution_instances.at(execution_instance).madc_recording->neurons) {
 				if (target_population.descriptor != neuron.coordinate.population) {
 					continue;
 				}
@@ -604,8 +681,11 @@ PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rul
 		}
 	}
 
-	PlasticityRuleOnNetwork descriptor(m_plasticity_rules.size());
-	m_plasticity_rules.insert({descriptor, plasticity_rule});
+	PlasticityRuleOnNetwork descriptor(PlasticityRuleOnExecutionInstance(
+	    m_execution_instances.at(execution_instance).plasticity_rules.size()));
+	m_execution_instances.at(execution_instance)
+	    .plasticity_rules.insert(
+	        {descriptor.toPlasticityRuleOnExecutionInstance(), plasticity_rule});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added plasticity_rule(" << descriptor << ") in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
@@ -615,13 +695,7 @@ PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rul
 std::shared_ptr<Network> NetworkBuilder::done()
 {
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
-	auto const ret = std::make_shared<Network>(
-	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording),
-	    std::move(m_cadc_recording), std::move(m_pad_recording), std::move(m_plasticity_rules),
-	    m_duration);
-	m_madc_recording.reset();
-	m_cadc_recording.reset();
-	m_pad_recording.reset();
+	auto const ret = std::make_shared<Network>(std::move(m_execution_instances), m_duration);
 	m_duration = std::chrono::microseconds(0);
 	assert(ret);
 	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);

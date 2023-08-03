@@ -7,25 +7,25 @@
 
 namespace grenade::vx::network {
 
-bool Network::operator==(Network const& other) const
+bool Network::ExecutionInstance::operator==(Network::ExecutionInstance const& other) const
 {
 	return populations == other.populations && projections == other.projections &&
 	       madc_recording == other.madc_recording && cadc_recording == other.cadc_recording &&
 	       pad_recording == other.pad_recording && plasticity_rules == other.plasticity_rules;
 }
 
-bool Network::operator!=(Network const& other) const
+bool Network::ExecutionInstance::operator!=(Network::ExecutionInstance const& other) const
 {
 	return !(*this == other);
 }
 
-std::ostream& operator<<(std::ostream& os, Network const& network)
+std::ostream& operator<<(std::ostream& os, Network::ExecutionInstance const& execution_instance)
 {
-	os << "Network(\n";
+	os << "ExecutionInstance(\n";
 	os << "\tpopulations:\n";
 	{
 		std::vector<std::string> pops;
-		for (auto const& [descriptor, population] : network.populations) {
+		for (auto const& [descriptor, population] : execution_instance.populations) {
 			std::stringstream ss;
 			ss << descriptor << ": ";
 			std::visit([&ss](auto const& pop) { ss << pop; }, population);
@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& os, Network const& network)
 	}
 	{
 		std::stringstream ss;
-		for (auto const& [descriptor, projection] : network.projections) {
+		for (auto const& [descriptor, projection] : execution_instance.projections) {
 			ss << descriptor << ": " << projection << "\n";
 		}
 		os << hate::indent(ss.str(), "\t\t");
@@ -44,12 +44,36 @@ std::ostream& operator<<(std::ostream& os, Network const& network)
 	}
 	{
 		std::stringstream ss;
-		for (auto const& [descriptor, rule] : network.plasticity_rules) {
+		for (auto const& [descriptor, rule] : execution_instance.plasticity_rules) {
 			ss << descriptor << ": " << rule << "\n";
 		}
 		os << hate::indent(ss.str(), "\t\t");
 	}
 	os << "\n)";
+	return os;
+}
+
+
+bool Network::operator==(Network const& other) const
+{
+	return execution_instances == other.execution_instances;
+}
+
+bool Network::operator!=(Network const& other) const
+{
+	return !(*this == other);
+}
+
+std::ostream& operator<<(std::ostream& os, Network const& network)
+{
+	os << "Network(\n";
+	for (auto [id, execution_instance] : network.execution_instances) {
+		os << "\t" << id << ":\n";
+		std::stringstream ss;
+		ss << execution_instance;
+		os << hate::indent(ss.str(), "\t") << "\n";
+	}
+	os << ")";
 	return os;
 }
 

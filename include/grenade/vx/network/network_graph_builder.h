@@ -32,13 +32,9 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  * Build a hardware network representation for a given network.
  * @param network Network for which to build hardware network representation
  * @param routing_result Routing result to use to build hardware network representation
- * @param execution_instance Execution instance to build the hardware graph into
  */
 NetworkGraph GENPYBIND(visible) build_network_graph(
-    std::shared_ptr<Network> const& network,
-    RoutingResult const& routing_result,
-    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-    SYMBOL_VISIBLE;
+    std::shared_ptr<Network> const& network, RoutingResult const& routing_result) SYMBOL_VISIBLE;
 
 
 /**
@@ -61,36 +57,45 @@ public:
 
 	struct Resources
 	{
-		struct PlacedPopulation
+		struct ExecutionInstance
 		{
-			std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>
-			    neurons;
+			struct PlacedPopulation
+			{
+				std::map<
+				    halco::hicann_dls::vx::HemisphereOnDLS,
+				    signal_flow::Graph::vertex_descriptor>
+				    neurons;
+			};
+
+			struct PlacedProjection
+			{
+				std::map<
+				    halco::hicann_dls::vx::HemisphereOnDLS,
+				    signal_flow::Graph::vertex_descriptor>
+				    synapses;
+			};
+
+			std::optional<signal_flow::Graph::vertex_descriptor> crossbar_l2_input;
+			std::map<
+			    halco::hicann_dls::vx::v3::CrossbarNodeOnDLS,
+			    signal_flow::Graph::vertex_descriptor>
+			    crossbar_nodes;
+			std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, signal_flow::Graph::vertex_descriptor>
+			    padi_busses;
+			std::map<
+			    halco::hicann_dls::vx::v3::SynapseDriverOnDLS,
+			    signal_flow::Graph::vertex_descriptor>
+			    synapse_drivers;
+			std::map<
+			    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
+			    signal_flow::Graph::vertex_descriptor>
+			    neuron_event_outputs;
+			std::map<PopulationOnExecutionInstance, PlacedPopulation> populations;
+			std::map<ProjectionOnExecutionInstance, PlacedProjection> projections;
+			NetworkGraph::GraphTranslation::ExecutionInstance graph_translation;
 		};
 
-		struct PlacedProjection
-		{
-			std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>
-			    synapses;
-		};
-
-		std::optional<signal_flow::Graph::vertex_descriptor> crossbar_l2_input;
-		std::
-		    map<halco::hicann_dls::vx::v3::CrossbarNodeOnDLS, signal_flow::Graph::vertex_descriptor>
-		        crossbar_nodes;
-		std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, signal_flow::Graph::vertex_descriptor>
-		    padi_busses;
-		std::map<
-		    halco::hicann_dls::vx::v3::SynapseDriverOnDLS,
-		    signal_flow::Graph::vertex_descriptor>
-		    synapse_drivers;
-		std::map<
-		    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
-		    signal_flow::Graph::vertex_descriptor>
-		    neuron_event_outputs;
-		std::map<PopulationOnNetwork, PlacedPopulation> populations;
-		std::map<ProjectionOnNetwork, PlacedProjection> projections;
-
-		NetworkGraph::GraphTranslation graph_translation;
+		std::map<common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 	};
 
 	static std::vector<signal_flow::Input> get_inputs(
@@ -136,7 +141,7 @@ public:
 	void add_synapse_array_view_sparse(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionOnNetwork descriptor,
+	    ProjectionOnExecutionInstance descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -145,7 +150,7 @@ public:
 	    Resources& resources,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, std::vector<signal_flow::Input>> const&
 	        input,
-	    PopulationOnNetwork const& descriptor,
+	    PopulationOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -153,7 +158,7 @@ public:
 	add_projection_from_external_input(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionOnNetwork const& descriptor,
+	    ProjectionOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -161,7 +166,7 @@ public:
 	add_projection_from_background_spike_source(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionOnNetwork const& descriptor,
+	    ProjectionOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -169,7 +174,7 @@ public:
 	add_projection_from_internal_input(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionOnNetwork const& descriptor,
+	    ProjectionOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -213,7 +218,10 @@ public:
 	    Resources& resources,
 	    common::ExecutionInstanceID const& instance) const;
 
-	void calculate_spike_labels(Resources& resources, RoutingResult const& connection_result) const;
+	void calculate_spike_labels(
+	    Resources& resources,
+	    RoutingResult const& connection_result,
+	    common::ExecutionInstanceID const& instance) const;
 
 private:
 	Network const& m_network;

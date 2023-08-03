@@ -57,7 +57,8 @@ TEST(PlasticityRule, RawRecording)
 	}
 	Projection projection{
 	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
-	    population_descriptor, population_descriptor};
+	    population_descriptor.toPopulationOnExecutionInstance(),
+	    population_descriptor.toPopulationOnExecutionInstance()};
 	auto const projection_descriptor = network_builder.add(projection);
 
 	PlasticityRule plasticity_rule;
@@ -163,7 +164,7 @@ TEST(PlasticityRule, TimedRecording)
 		// FIXME: Fix is required in order in routing
 		std::uniform_int_distribution num_projection_distribution(1, 3);
 		size_t const num_projections = num_projection_distribution(rng);
-		std::vector<ProjectionOnNetwork> projection_descriptors;
+		std::vector<ProjectionOnExecutionInstance> projection_descriptors;
 		std::vector<PlasticityRule::PopulationHandle> population_descriptors;
 		for (size_t p = 0; p < num_projections; ++p) {
 			std::uniform_int_distribution neuron_distribution(1, 3);
@@ -227,8 +228,9 @@ TEST(PlasticityRule, TimedRecording)
 			}
 			Projection projection{
 			    Receptor(Receptor::ID(), Receptor::Type::excitatory),
-			    std::move(projection_connections), population_descriptor_s,
-			    population_descriptor_t};
+			    std::move(projection_connections),
+			    population_descriptor_s.toPopulationOnExecutionInstance(),
+			    population_descriptor_t.toPopulationOnExecutionInstance()};
 			projection_descriptors.push_back(network_builder.add(projection));
 			PlasticityRule::PopulationHandle population_handle_t;
 			population_handle_t.descriptor = population_descriptor_t;
@@ -522,7 +524,8 @@ TEST(PlasticityRule, TimedRecording)
 								            EXPECT_EQ(sample.time, time);
 								            EXPECT_EQ(
 								                sample.data.size(),
-								                network->projections
+								                network->execution_instances.at(instance)
+								                    .projections
 								                    .at(plasticity_rule.projections.at(p))
 								                    .connections.size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
@@ -563,9 +566,10 @@ TEST(PlasticityRule, TimedRecording)
 								            EXPECT_EQ(
 								                sample.data.size(),
 								                std::get<Population>(
-								                    network->populations.at(
-								                        plasticity_rule.populations.at(p)
-								                            .descriptor))
+								                    network->execution_instances.at(instance)
+								                        .populations.at(
+								                            plasticity_rule.populations.at(p)
+								                                .descriptor))
 								                    .neurons.size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
 									            EXPECT_EQ(

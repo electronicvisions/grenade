@@ -10,7 +10,8 @@ using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
 
 RoutingConstraints::RoutingConstraints(
-    Network const& network, ConnectionRoutingResult const& connection_routing_result) :
+    Network::ExecutionInstance const& network,
+    ConnectionRoutingResult const& connection_routing_result) :
     m_network(network), m_connection_routing_result(connection_routing_result)
 {}
 
@@ -225,12 +226,12 @@ std::vector<RoutingConstraints::ExternalConnection> RoutingConstraints::get_exte
 }
 
 halco::common::typed_array<
-    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnNetwork, size_t>>>,
+    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnExecutionInstance, size_t>>>,
     halco::hicann_dls::vx::v3::HemisphereOnDLS>
 RoutingConstraints::get_external_connections_per_hemisphere() const
 {
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnNetwork, size_t>>>,
+	    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnExecutionInstance, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ret;
 
@@ -242,14 +243,14 @@ RoutingConstraints::get_external_connections_per_hemisphere() const
 }
 
 halco::common::typed_array<
-    std::map<Receptor::Type, std::set<std::pair<PopulationOnNetwork, size_t>>>,
+    std::map<Receptor::Type, std::set<std::pair<PopulationOnExecutionInstance, size_t>>>,
     halco::hicann_dls::vx::v3::HemisphereOnDLS>
 RoutingConstraints::get_external_sources_to_hemisphere() const
 {
 	auto const external_connections_per_hemisphere = get_external_connections_per_hemisphere();
 
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::set<std::pair<PopulationOnNetwork, size_t>>>,
+	    std::map<Receptor::Type, std::set<std::pair<PopulationOnExecutionInstance, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ret;
 

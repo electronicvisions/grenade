@@ -17,46 +17,48 @@ using namespace haldls::vx::v3;
 TEST(network_InputGenerator, General)
 {
 	auto const network = std::make_shared<Network>(Network{
-	    {{PopulationOnNetwork(0), ExternalSourcePopulation(3)},
-	     {PopulationOnNetwork(1),
-	      Population(
-	          {Population::Neuron(
-	               LogicalNeuronOnDLS(
-	                   LogicalNeuronCompartments(
-	                       {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-	                   AtomicNeuronOnDLS(Enum(0))),
-	               Population::Neuron::Compartments{
-	                   {CompartmentOnLogicalNeuron(),
-	                    Population::Neuron::Compartment{
-	                        Population::Neuron::Compartment::SpikeMaster(0, false),
-	                        {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}),
-	           Population::Neuron(
-	               LogicalNeuronOnDLS(
-	                   LogicalNeuronCompartments(
-	                       {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-	                   AtomicNeuronOnDLS(Enum(1))),
-	               Population::Neuron::Compartments{
-	                   {CompartmentOnLogicalNeuron(),
-	                    Population::Neuron::Compartment{
-	                        Population::Neuron::Compartment::SpikeMaster(0, false),
-	                        {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})})}},
-	    {{ProjectionOnNetwork(0),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {
-	              Projection::Connection(
-	                  {0, CompartmentOnLogicalNeuron()}, {0, CompartmentOnLogicalNeuron()},
-	                  Projection::Connection::Weight(63)),
-	              Projection::Connection(
-	                  {1, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
-	                  Projection::Connection::Weight(63)) // third source not connected -> we
-	                                                      // expect events to be filtered
-	          },
-	          PopulationOnNetwork(0), PopulationOnNetwork(1))}},
-	    std::nullopt,
-	    std::nullopt,
-	    std::nullopt,
-	    {},
+	    {{common::ExecutionInstanceID(),
+	      Network::ExecutionInstance{
+	          {{PopulationOnExecutionInstance(0), ExternalSourcePopulation(3)},
+	           {PopulationOnExecutionInstance(1),
+	            Population(
+	                {Population::Neuron(
+	                     LogicalNeuronOnDLS(
+	                         LogicalNeuronCompartments(
+	                             {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	                         AtomicNeuronOnDLS(Enum(0))),
+	                     Population::Neuron::Compartments{
+	                         {CompartmentOnLogicalNeuron(),
+	                          Population::Neuron::Compartment{
+	                              Population::Neuron::Compartment::SpikeMaster(0, false),
+	                              {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}),
+	                 Population::Neuron(
+	                     LogicalNeuronOnDLS(
+	                         LogicalNeuronCompartments(
+	                             {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	                         AtomicNeuronOnDLS(Enum(1))),
+	                     Population::Neuron::Compartments{
+	                         {CompartmentOnLogicalNeuron(),
+	                          Population::Neuron::Compartment{
+	                              Population::Neuron::Compartment::SpikeMaster(0, false),
+	                              {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})})}},
+	          {{ProjectionOnExecutionInstance(0),
+	            Projection(
+	                Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	                {
+	                    Projection::Connection(
+	                        {0, CompartmentOnLogicalNeuron()}, {0, CompartmentOnLogicalNeuron()},
+	                        Projection::Connection::Weight(63)),
+	                    Projection::Connection(
+	                        {1, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
+	                        Projection::Connection::Weight(63)) // third source not connected -> we
+	                                                            // expect events to be filtered
+	                },
+	                PopulationOnExecutionInstance(0), PopulationOnExecutionInstance(1))}},
+	          std::nullopt,
+	          std::nullopt,
+	          std::nullopt,
+	          {}}}},
 	    {}});
 
 	auto const routing = routing::PortfolioRouter()(network);
@@ -107,11 +109,11 @@ TEST(network_InputGenerator, General)
 	auto add = [&](size_t i) {
 		assert(i < 3);
 		if (i == 0) {
-			generator.add(times_broadcasted_over_neurons_and_batches, PopulationOnNetwork(0));
+			generator.add(times_broadcasted_over_neurons_and_batches, PopulationOnNetwork());
 		} else if (i == 1) {
-			generator.add(times_broadcasted_over_batches, PopulationOnNetwork(0));
+			generator.add(times_broadcasted_over_batches, PopulationOnNetwork());
 		} else if (i == 2) {
-			generator.add(times_not_broadcasted, PopulationOnNetwork(0));
+			generator.add(times_not_broadcasted, PopulationOnNetwork());
 		}
 	};
 
@@ -124,31 +126,44 @@ TEST(network_InputGenerator, General)
 		signal_flow::IODataMap const data = generator.done();
 
 		EXPECT_EQ(data.batch_size(), batch_size);
-		EXPECT_TRUE(network_graph.get_graph_translation().event_input_vertex);
-		EXPECT_TRUE(data.data.contains(*network_graph.get_graph_translation().event_input_vertex));
+		EXPECT_TRUE(network_graph.get_graph_translation()
+		                .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		                .event_input_vertex);
+		EXPECT_TRUE(data.data.contains(
+		    *network_graph.get_graph_translation()
+		         .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		         .event_input_vertex));
 		EXPECT_TRUE(std::holds_alternative<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-		    data.data.at(*network_graph.get_graph_translation().event_input_vertex)));
+		    data.data.at(*network_graph.get_graph_translation()
+		                      .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		                      .event_input_vertex)));
 		auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-		    data.data.at(*network_graph.get_graph_translation().event_input_vertex));
+		    data.data.at(*network_graph.get_graph_translation()
+		                      .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		                      .event_input_vertex));
 		EXPECT_EQ(spikes.size(), batch_size);
 
 		assert(network_graph.get_graph_translation()
-		           .spike_labels.at(PopulationOnNetwork(0))
+		           .execution_instances.at(common::ExecutionInstanceID())
+		           .spike_labels.at(PopulationOnExecutionInstance(0))
 		           .at(0)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
 		auto const spike_label_0 = *(network_graph.get_graph_translation()
-		                                 .spike_labels.at(PopulationOnNetwork(0))
+		                                 .execution_instances.at(common::ExecutionInstanceID())
+		                                 .spike_labels.at(PopulationOnExecutionInstance(0))
 		                                 .at(0)
 		                                 .at(CompartmentOnLogicalNeuron())
 		                                 .at(0));
 		assert(network_graph.get_graph_translation()
-		           .spike_labels.at(PopulationOnNetwork(0))
+		           .execution_instances.at(common::ExecutionInstanceID())
+		           .spike_labels.at(PopulationOnExecutionInstance(0))
 		           .at(1)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
 		auto const spike_label_1 = *(network_graph.get_graph_translation()
-		                                 .spike_labels.at(PopulationOnNetwork(0))
+		                                 .execution_instances.at(common::ExecutionInstanceID())
+		                                 .spike_labels.at(PopulationOnExecutionInstance(0))
 		                                 .at(1)
 		                                 .at(CompartmentOnLogicalNeuron())
 		                                 .at(0));

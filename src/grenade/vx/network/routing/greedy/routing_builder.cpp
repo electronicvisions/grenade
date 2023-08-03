@@ -75,13 +75,13 @@ void RoutingBuilder::route_internal_crossbar(
 
 std::pair<
     std::vector<SourceOnPADIBusManager::InternalSource>,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>>
+    std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>>
 RoutingBuilder::get_internal_sources(
     RoutingConstraints const& /*constraints*/,
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
         halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
-    Network const& network) const
+    Network::ExecutionInstance const& network) const
 {
 	// All neurons which are present at the PADI-bus are to be added.
 	std::vector<SourceOnPADIBusManager::InternalSource> internal_sources;
@@ -121,8 +121,8 @@ RoutingBuilder::get_internal_sources(
 		}
 	}
 	// find descriptors
-	std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> descriptors(
-	    internal_sources.size());
+	std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
+	    descriptors(internal_sources.size());
 	for (auto const& [d, p] : network.populations) {
 		if (std::holds_alternative<Population>(p)) {
 			auto const& pp = std::get<Population>(p);
@@ -155,20 +155,21 @@ RoutingBuilder::get_internal_sources(
 
 std::pair<
     std::vector<SourceOnPADIBusManager::BackgroundSource>,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>>
+    std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>>
 RoutingBuilder::get_background_sources(
     RoutingConstraints const& /*constraints*/,
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
         halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
-    Network const& network) const
+    Network::ExecutionInstance const& network) const
 {
 	// All background spike sources act as source because they can't be filtered before reaching
 	// their PADI-bus.
 	std::vector<SourceOnPADIBusManager::BackgroundSource> background_sources;
-	std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> descriptors;
+	std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
+	    descriptors;
 	for (auto const padi_bus : iter_all<PADIBusOnDLS>()) {
-		std::optional<PopulationOnNetwork> descriptor;
+		std::optional<PopulationOnExecutionInstance> descriptor;
 		for (auto const& [d, p] : network.populations) {
 			if (std::holds_alternative<BackgroundSourcePopulation>(p)) {
 				auto const& coordinate = std::get<BackgroundSourcePopulation>(p).coordinate;
@@ -186,7 +187,7 @@ RoutingBuilder::get_background_sources(
 		}
 		auto const& local_padi_bus_constraints = padi_bus_constraints[padi_bus];
 		std::vector<SourceOnPADIBusManager::BackgroundSource> local_background_sources;
-		std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>
+		std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
 		    local_descriptors;
 		for (size_t i = 0; i < local_padi_bus_constraints.num_background_spike_sources; ++i) {
 			SourceOnPADIBusManager::BackgroundSource source;
@@ -219,20 +220,20 @@ RoutingBuilder::get_background_sources(
 
 std::pair<
     std::vector<SourceOnPADIBusManager::ExternalSource>,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>>
+    std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>>
 RoutingBuilder::get_external_sources(
     RoutingConstraints const& constraints,
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
         halco::hicann_dls::vx::v3::PADIBusOnDLS> const& /*padi_bus_constraints*/,
-    Network const& network) const
+    Network::ExecutionInstance const& network) const
 {
 	// All external sources act as sources.
 	// External sources which don't act as sources to any connection are ignored, since they can't
 	// be recorded currently.
 	std::vector<SourceOnPADIBusManager::ExternalSource> external_sources;
 	auto const external_connections = constraints.get_external_connections();
-	std::set<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>
+	std::set<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
 	    external_source_descriptors;
 	for (auto const& connection : external_connections) {
 		auto const source_pop = network.projections.at(connection.descriptor.first).population_pre;
@@ -260,7 +261,7 @@ RoutingBuilder::get_external_sources(
 		source.out_degree.at(connection.receptor_type)[connection.target]++;
 	}
 	auto const descriptors =
-	    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>{
+	    std::vector<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>{
 	        external_source_descriptors.begin(), external_source_descriptors.end()};
 	LOG4CXX_DEBUG(
 	    m_logger, "get_external_sources(): Got " << external_sources.size() << " sources.");
@@ -268,10 +269,11 @@ RoutingBuilder::get_external_sources(
 }
 
 std::map<
-    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
     halco::hicann_dls::vx::v3::SpikeLabel>
 RoutingBuilder::get_internal_labels(
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         descriptors,
     SourceOnPADIBusManager::Partition const& partition,
     std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const
@@ -280,7 +282,7 @@ RoutingBuilder::get_internal_labels(
 	// The latter is assigned linearly here, since its assignment does not have any influence on the
 	// later steps, it only has to be unambiguous.
 	std::map<
-	    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+	    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
 	    halco::hicann_dls::vx::v3::SpikeLabel>
 	    labels;
 	for (size_t i = 0; i < partition.internal.size(); ++i) {
@@ -300,10 +302,11 @@ RoutingBuilder::get_internal_labels(
 }
 
 std::map<
-    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
     std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 RoutingBuilder::get_background_labels(
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         descriptors,
     std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
     SourceOnPADIBusManager::Partition const& partition,
@@ -313,7 +316,7 @@ RoutingBuilder::get_background_labels(
 	// The latter is assigned linearly here, since its assignment does not have any influence on the
 	// later steps, it only has to be unambiguous.
 	std::map<
-	    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+	    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
 	    std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	    labels;
 	for (size_t i = 0; i < partition.background.size(); ++i) {
@@ -338,10 +341,11 @@ RoutingBuilder::get_background_labels(
 }
 
 std::map<
-    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
     std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 RoutingBuilder::get_external_labels(
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         descriptors,
     SourceOnPADIBusManager::Partition const& partition,
     std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const
@@ -352,7 +356,7 @@ RoutingBuilder::get_external_labels(
 	// The static label part used for crossbar filtering is aligned to the requirements in
 	// apply_crossbar_internal().
 	std::map<
-	    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+	    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
 	    std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	    labels;
 	for (size_t i = 0; i < partition.external.size(); ++i) {
@@ -381,20 +385,21 @@ RoutingBuilder::get_external_labels(
 void RoutingBuilder::apply_source_labels(
     RoutingConstraints const& constraints,
     std::map<
-        std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
         halco::hicann_dls::vx::v3::SpikeLabel> const& internal,
     std::map<
-        std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
         std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& background,
     std::map<
-        std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
         std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& external,
-    Network const& network,
+    Network::ExecutionInstance const& network,
     Result& result) const
 {
 	auto const neither_recorded_nor_source_neurons =
 	    constraints.get_neither_recorded_nor_source_neurons();
-	std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron, size_t>>
+	std::vector<
+	    std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron, size_t>>
 	    unset_labels;
 	for (auto const& [descriptor, population] : network.populations) {
 		if (std::holds_alternative<Population>(population)) {
@@ -518,7 +523,9 @@ void RoutingBuilder::apply_source_labels(
 	}
 }
 
-std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<RoutingBuilder::PlacedConnection>>
+std::map<
+    std::pair<ProjectionOnExecutionInstance, size_t>,
+    std::vector<RoutingBuilder::PlacedConnection>>
 RoutingBuilder::place_routed_connections(
     std::vector<RoutedConnection> const& connections,
     std::vector<halco::hicann_dls::vx::v3::SynapseRowOnDLS> const& synapse_rows) const
@@ -528,7 +535,9 @@ RoutingBuilder::place_routed_connections(
 	// x   x x   x
 	// x x x x x x
 	std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, size_t> num_placed_connections_by_target;
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<RoutingBuilder::PlacedConnection>>
+	std::map<
+	    std::pair<ProjectionOnExecutionInstance, size_t>,
+	    std::vector<RoutingBuilder::PlacedConnection>>
 	    ret;
 	for (auto const& connection : connections) {
 		auto const num_connections = num_placed_connections_by_target[connection.target];
@@ -542,13 +551,17 @@ RoutingBuilder::place_routed_connections(
 }
 
 template <typename Connection>
-std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<RoutingBuilder::PlacedConnection>>
+std::map<
+    std::pair<ProjectionOnExecutionInstance, size_t>,
+    std::vector<RoutingBuilder::PlacedConnection>>
 RoutingBuilder::place_routed_connections(
     std::vector<Connection> const& connections,
     std::map<Receptor::Type, std::vector<halco::hicann_dls::vx::v3::SynapseRowOnDLS>> const&
         synapse_rows) const
 {
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<RoutingBuilder::PlacedConnection>>
+	std::map<
+	    std::pair<ProjectionOnExecutionInstance, size_t>,
+	    std::vector<RoutingBuilder::PlacedConnection>>
 	    ret;
 	for (auto const& [receptor_type, rows] : synapse_rows) {
 		std::vector<RoutedConnection> routed_connections;
@@ -566,23 +579,26 @@ RoutingBuilder::place_routed_connections(
 }
 
 template <typename Sources>
-std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<RoutingBuilder::PlacedConnection>>
+std::map<
+    std::pair<ProjectionOnExecutionInstance, size_t>,
+    std::vector<RoutingBuilder::PlacedConnection>>
 RoutingBuilder::place_routed_connections(
     std::vector<SourceOnPADIBusManager::Partition::Group> const& partition,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         descriptors,
     Sources const& sources,
     std::vector<SynapseDriverOnDLSManager::Allocation> const& padi_bus_allocations,
     size_t offset,
     RoutingConstraints const& constraints,
-    Network const& network,
+    Network::ExecutionInstance const& network,
     Result& result) const
 {
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>> ret;
+	std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>> ret;
 	for (size_t i = 0; i < partition.size(); ++i) {
 		auto const& local_allocation = padi_bus_allocations.at(i + offset);
 		auto const& local_sources = partition.at(i).sources;
-		std::set<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>>
+		std::set<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
 		    local_descriptors;
 		for (auto const& ls : local_sources) {
 			local_descriptors.insert(descriptors.at(ls));
@@ -697,24 +713,29 @@ RoutingBuilder::place_routed_connections(
 	return ret;
 }
 
-std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<RoutingBuilder::PlacedConnection>>
+std::map<
+    std::pair<ProjectionOnExecutionInstance, size_t>,
+    std::vector<RoutingBuilder::PlacedConnection>>
 RoutingBuilder::place_routed_connections(
     SourceOnPADIBusManager::Partition const& partition,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         internal_descriptors,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         background_descriptors,
-    std::vector<std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>> const&
+    std::vector<
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         external_descriptors,
     std::vector<SourceOnPADIBusManager::InternalSource> const& internal_sources,
     std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
     std::vector<SourceOnPADIBusManager::ExternalSource> const& external_sources,
     std::vector<SynapseDriverOnDLSManager::Allocation> const& padi_bus_allocations,
     RoutingConstraints const& constraints,
-    Network const& network,
+    Network::ExecutionInstance const& network,
     Result& result) const
 {
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>> ret;
+	std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>> ret;
 	ret.merge(place_routed_connections(
 	    partition.internal, internal_descriptors, internal_sources, padi_bus_allocations, 0,
 	    constraints, network, result));
@@ -728,19 +749,19 @@ RoutingBuilder::place_routed_connections(
 }
 
 void RoutingBuilder::apply_routed_connections(
-    std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>> const&
+    std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>> const&
         placed_connections,
     std::map<
-        std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
         halco::hicann_dls::vx::v3::SpikeLabel> const& internal_labels,
     std::map<
-        std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
         std::map<HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& background_labels,
     std::map<
-        std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron>,
+        std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>,
         std::map<PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>> const& external_labels,
 
-    Network const& network,
+    Network::ExecutionInstance const& network,
     Result& result) const
 {
 	// Using the placement of the connections and their properties like weight and calculating their
@@ -758,7 +779,7 @@ void RoutingBuilder::apply_routed_connections(
 			        .at(i)
 			        .atomic_neurons_on_target_compartment.size());
 			for (size_t j = 0; auto const& placed_connection : local_placed_connection_list) {
-				RoutingResult::PlacedConnection local_placed_connection;
+				Result::PlacedConnection local_placed_connection;
 				auto const synapse_row = placed_connection.synapse_row;
 				auto const synapse_on_row = placed_connection.synapse_on_row;
 				std::tuple const population_descriptor{
@@ -784,7 +805,7 @@ void RoutingBuilder::apply_routed_connections(
 					throw std::logic_error("Source label not found.");
 				}
 				local_placed_connections.at(i).push_back(
-				    RoutingResult::PlacedConnection{weight, label, synapse_row, synapse_on_row});
+				    Result::PlacedConnection{weight, label, synapse_row, synapse_on_row});
 				j++;
 			}
 		}
@@ -879,8 +900,8 @@ void RoutingBuilder::apply_crossbar_nodes_from_internal_to_l2(Result& result) co
 	}
 }
 
-RoutingResult RoutingBuilder::route(
-    Network const& network,
+RoutingBuilder::Result RoutingBuilder::route(
+    Network::ExecutionInstance const& network,
     ConnectionRoutingResult const& connection_routing_result,
     std::optional<GreedyRouter::Options> const& options) const
 {
@@ -975,7 +996,6 @@ RoutingResult RoutingBuilder::route(
 
 	LOG4CXX_DEBUG(m_logger, "route(): Got result: " << result);
 	LOG4CXX_TRACE(m_logger, "route(): Finished routing in " << timer.print());
-	result.timing_statistics.routing = std::chrono::microseconds(timer.get_us());
 	return result;
 }
 

@@ -33,7 +33,7 @@ struct GENPYBIND(visible) ConnectionToHardwareRoutes
  * Contains a translation for each connection of each projection.
  * The order of the translations matches the order of the connections in the projection.
  */
-typedef std::map<ProjectionOnNetwork, std::vector<ConnectionToHardwareRoutes>>
+typedef std::map<ProjectionOnExecutionInstance, std::vector<ConnectionToHardwareRoutes>>
     ConnectionRoutingResult;
 
 } // namespace grenade::vx::network

@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population_on_network.h"
-#include "grenade/vx/network/projection_on_network.h"
+#include "grenade/vx/network/population_on_execution_instance.h"
+#include "grenade/vx/network/projection_on_execution_instance.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "hate/visibility.h"
 #include <map>
@@ -20,7 +20,7 @@ struct GENPYBIND(visible) PlasticityRule
 	 * Descriptor to projections this rule has access to.
 	 * All projections are required to be dense and in order.
 	 */
-	std::vector<ProjectionOnNetwork> projections{};
+	std::vector<ProjectionOnExecutionInstance> projections{};
 
 	/**
 	 * Population handle parameters.
@@ -32,7 +32,7 @@ struct GENPYBIND(visible) PlasticityRule
 		/**
 		 * Descriptor of population.
 		 */
-		PopulationOnNetwork descriptor;
+		PopulationOnExecutionInstance descriptor;
 		/**
 		 * Readout source specification per neuron circuit used for static configuration such that
 		 * the plasticity rule can read the specified signal.
@@ -153,8 +153,10 @@ struct GENPYBIND(visible) PlasticityRule
 
 		typedef signal_flow::vertex::PlasticityRule::TimedRecordingData::Entry EntryArray;
 
-		std::map<std::string, std::map<ProjectionOnNetwork, EntryPerSynapse>> data_per_synapse;
-		std::map<std::string, std::map<PopulationOnNetwork, EntryPerNeuron>> data_per_neuron;
+		std::map<std::string, std::map<ProjectionOnExecutionInstance, EntryPerSynapse>>
+		    data_per_synapse;
+		std::map<std::string, std::map<PopulationOnExecutionInstance, EntryPerNeuron>>
+		    data_per_neuron;
 		std::map<std::string, EntryArray> data_array;
 	};
 

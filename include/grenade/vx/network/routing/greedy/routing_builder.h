@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/connection_routing_result.h"
 #include "grenade/vx/network/network.h"
-#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/greedy/routing_constraints.h"
 #include "grenade/vx/network/routing/greedy/source_on_padi_bus_manager.h"
@@ -39,10 +39,10 @@ struct RoutingBuilder
 {
 	RoutingBuilder() SYMBOL_VISIBLE;
 
-	typedef RoutingResult Result;
+	typedef RoutingResult::ExecutionInstance Result;
 
 	Result route(
-	    Network const& network,
+	    Network::ExecutionInstance const& network,
 	    ConnectionRoutingResult const& connection_routing_result,
 	    std::optional<GreedyRouter::Options> const& options = std::nullopt) const SYMBOL_VISIBLE;
 
@@ -58,7 +58,7 @@ private:
 	std::pair<
 	    std::vector<SourceOnPADIBusManager::InternalSource>,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>>
 	get_internal_sources(
@@ -66,12 +66,12 @@ private:
 	    halco::common::typed_array<
 	        RoutingConstraints::PADIBusConstraints,
 	        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
-	    Network const& network) const;
+	    Network::ExecutionInstance const& network) const;
 
 	std::pair<
 	    std::vector<SourceOnPADIBusManager::BackgroundSource>,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>>
 	get_background_sources(
@@ -79,12 +79,12 @@ private:
 	    halco::common::typed_array<
 	        RoutingConstraints::PADIBusConstraints,
 	        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
-	    Network const& network) const;
+	    Network::ExecutionInstance const& network) const;
 
 	std::pair<
 	    std::vector<SourceOnPADIBusManager::ExternalSource>,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>>
 	get_external_sources(
@@ -92,17 +92,17 @@ private:
 	    halco::common::typed_array<
 	        RoutingConstraints::PADIBusConstraints,
 	        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
-	    Network const& network) const;
+	    Network::ExecutionInstance const& network) const;
 
 	std::map<
 	    std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	    halco::hicann_dls::vx::v3::SpikeLabel>
 	get_internal_labels(
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& descriptors,
 	    SourceOnPADIBusManager::Partition const& partition,
@@ -110,13 +110,13 @@ private:
 
 	std::map<
 	    std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	get_background_labels(
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& descriptors,
 	    std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
@@ -125,13 +125,13 @@ private:
 
 	std::map<
 	    std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	    std::map<halco::hicann_dls::vx::v3::PADIBusOnDLS, halco::hicann_dls::vx::v3::SpikeLabel>>
 	get_external_labels(
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& descriptors,
 	    SourceOnPADIBusManager::Partition const& partition,
@@ -141,13 +141,13 @@ private:
 	    RoutingConstraints const& constraints,
 	    std::map<
 	        std::tuple<
-	            PopulationOnNetwork,
+	            PopulationOnExecutionInstance,
 	            size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	        halco::hicann_dls::vx::v3::SpikeLabel> const& internal,
 	    std::map<
 	        std::tuple<
-	            PopulationOnNetwork,
+	            PopulationOnExecutionInstance,
 	            size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	        std::map<
@@ -155,18 +155,18 @@ private:
 	            halco::hicann_dls::vx::v3::SpikeLabel>> const& background,
 	    std::map<
 	        std::tuple<
-	            PopulationOnNetwork,
+	            PopulationOnExecutionInstance,
 	            size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	        std::map<
 	            halco::hicann_dls::vx::v3::PADIBusOnDLS,
 	            halco::hicann_dls::vx::v3::SpikeLabel>> const& external,
-	    Network const& network,
+	    Network::ExecutionInstance const& network,
 	    Result& result) const;
 
 	struct RoutedConnection
 	{
-		std::pair<ProjectionOnNetwork, size_t> descriptor;
+		std::pair<ProjectionOnExecutionInstance, size_t> descriptor;
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 	};
 
@@ -176,46 +176,46 @@ private:
 		halco::hicann_dls::vx::v3::SynapseOnSynapseRow synapse_on_row;
 	};
 
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>>
+	std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>>
 	place_routed_connections(
 	    std::vector<RoutedConnection> const& connections,
 	    std::vector<halco::hicann_dls::vx::v3::SynapseRowOnDLS> const& synapse_rows) const;
 
 	template <typename Connection>
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>>
+	std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>>
 	place_routed_connections(
 	    std::vector<Connection> const& connections,
 	    std::map<Receptor::Type, std::vector<halco::hicann_dls::vx::v3::SynapseRowOnDLS>> const&
 	        synapse_rows) const;
 
 	template <typename Sources>
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>>
+	std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>>
 	place_routed_connections(
 	    std::vector<SourceOnPADIBusManager::Partition::Group> const& partition,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& descriptors,
 	    Sources const& sources,
 	    std::vector<SynapseDriverOnDLSManager::Allocation> const& padi_bus_allocations,
 	    size_t offset,
 	    RoutingConstraints const& constraints,
-	    Network const& network,
+	    Network::ExecutionInstance const& network,
 	    Result& result) const;
 
-	std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>>
+	std::map<std::pair<ProjectionOnExecutionInstance, size_t>, std::vector<PlacedConnection>>
 	place_routed_connections(
 	    SourceOnPADIBusManager::Partition const& partition,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& internal_descriptors,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& background_descriptors,
 	    std::vector<std::tuple<
-	        PopulationOnNetwork,
+	        PopulationOnExecutionInstance,
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& external_descriptors,
 	    std::vector<SourceOnPADIBusManager::InternalSource> const& internal_sources,
@@ -223,21 +223,22 @@ private:
 	    std::vector<SourceOnPADIBusManager::ExternalSource> const& external_sources,
 	    std::vector<SynapseDriverOnDLSManager::Allocation> const& padi_bus_allocations,
 	    RoutingConstraints const& constraints,
-	    Network const& network,
+	    Network::ExecutionInstance const& network,
 	    Result& result) const;
 
 	void apply_routed_connections(
-	    std::map<std::pair<ProjectionOnNetwork, size_t>, std::vector<PlacedConnection>> const&
-	        placed_connections,
+	    std::map<
+	        std::pair<ProjectionOnExecutionInstance, size_t>,
+	        std::vector<PlacedConnection>> const& placed_connections,
 	    std::map<
 	        std::tuple<
-	            PopulationOnNetwork,
+	            PopulationOnExecutionInstance,
 	            size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	        halco::hicann_dls::vx::v3::SpikeLabel> const& internal_labels,
 	    std::map<
 	        std::tuple<
-	            PopulationOnNetwork,
+	            PopulationOnExecutionInstance,
 	            size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	        std::map<
@@ -245,13 +246,13 @@ private:
 	            halco::hicann_dls::vx::v3::SpikeLabel>> const& background_labels,
 	    std::map<
 	        std::tuple<
-	            PopulationOnNetwork,
+	            PopulationOnExecutionInstance,
 	            size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	        std::map<
 	            halco::hicann_dls::vx::v3::PADIBusOnDLS,
 	            halco::hicann_dls::vx::v3::SpikeLabel>> const& external_labels,
-	    Network const& network,
+	    Network::ExecutionInstance const& network,
 	    Result& result) const;
 
 	void apply_crossbar_nodes_from_l2(Result& result) const;

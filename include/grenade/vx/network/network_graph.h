@@ -1,8 +1,10 @@
 #pragma once
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_statistics.h"
 #include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/projection_on_network.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "hate/visibility.h"
 #include <map>
@@ -32,83 +34,96 @@ struct GENPYBIND(visible) NetworkGraph
 	 */
 	struct GraphTranslation
 	{
-		/** Vertex descriptor at which to insert external spike data. */
-		std::optional<signal_flow::Graph::vertex_descriptor> event_input_vertex;
+		struct ExecutionInstance
+		{
+			/** Vertex descriptor at which to insert external spike data. */
+			std::optional<signal_flow::Graph::vertex_descriptor> event_input_vertex;
 
-		/** Vertex descriptor from which to extract recorded spike data. */
-		std::optional<signal_flow::Graph::vertex_descriptor> event_output_vertex;
+			/** Vertex descriptor from which to extract recorded spike data. */
+			std::optional<signal_flow::Graph::vertex_descriptor> event_output_vertex;
 
-		/** Vertex descriptor from which to extract recorded madc sample data. */
-		std::optional<signal_flow::Graph::vertex_descriptor> madc_sample_output_vertex;
+			/** Vertex descriptor from which to extract recorded madc sample data. */
+			std::optional<signal_flow::Graph::vertex_descriptor> madc_sample_output_vertex;
 
-		/** Vertex descriptor from which to extract recorded cadc sample data. */
-		std::vector<signal_flow::Graph::vertex_descriptor> cadc_sample_output_vertex;
+			/** Vertex descriptor from which to extract recorded cadc sample data. */
+			std::vector<signal_flow::Graph::vertex_descriptor> cadc_sample_output_vertex;
 
-		/** Vertex descriptors of synapse views. */
-		std::map<
-		    ProjectionOnNetwork,
-		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
-		    synapse_vertices;
+			/** Vertex descriptors of synapse views. */
+			std::map<
+			    ProjectionOnExecutionInstance,
+			    std::map<
+			        halco::hicann_dls::vx::HemisphereOnDLS,
+			        signal_flow::Graph::vertex_descriptor>>
+			    synapse_vertices;
 
-		/** Vertex descriptors of neuron views. */
-		std::map<
-		    PopulationOnNetwork,
-		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
-		    neuron_vertices;
+			/** Vertex descriptors of neuron views. */
+			std::map<
+			    PopulationOnExecutionInstance,
+			    std::map<
+			        halco::hicann_dls::vx::HemisphereOnDLS,
+			        signal_flow::Graph::vertex_descriptor>>
+			    neuron_vertices;
 
-		/** Vertex descriptors of background spike sources. */
-		std::map<
-		    PopulationOnNetwork,
-		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
-		    background_spike_source_vertices;
+			/** Vertex descriptors of background spike sources. */
+			std::map<
+			    PopulationOnExecutionInstance,
+			    std::map<
+			        halco::hicann_dls::vx::HemisphereOnDLS,
+			        signal_flow::Graph::vertex_descriptor>>
+			    background_spike_source_vertices;
 
-		/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory. */
-		std::map<PlasticityRuleOnNetwork, signal_flow::Graph::vertex_descriptor>
-		    plasticity_rule_output_vertices;
+			/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory.
+			 */
+			std::map<PlasticityRuleOnExecutionInstance, signal_flow::Graph::vertex_descriptor>
+			    plasticity_rule_output_vertices;
 
-		/** Vertex descriptor of plasticity rules. */
-		std::map<PlasticityRuleOnNetwork, signal_flow::Graph::vertex_descriptor>
-		    plasticity_rule_vertices;
+			/** Vertex descriptor of plasticity rules. */
+			std::map<PlasticityRuleOnExecutionInstance, signal_flow::Graph::vertex_descriptor>
+			    plasticity_rule_vertices;
 
-		/**
-		 * Spike labels corresponding to each neuron in a population.
-		 * For external populations these are the input spike labels, for internal population this
-		 * is only given for populations with enabled recording.
-		 */
-		typedef std::map<
-		    PopulationOnNetwork,
-		    std::vector<std::map<
-		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-		        std::vector<std::optional<halco::hicann_dls::vx::v3::SpikeLabel>>>>>
-		    SpikeLabels;
-		SpikeLabels spike_labels;
+			/**
+			 * Spike labels corresponding to each neuron in a population.
+			 * For external populations these are the input spike labels, for internal population
+			 * this is only given for populations with enabled recording.
+			 */
+			typedef std::map<
+			    PopulationOnExecutionInstance,
+			    std::vector<std::map<
+			        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+			        std::vector<std::optional<halco::hicann_dls::vx::v3::SpikeLabel>>>>>
+			    SpikeLabels;
+			SpikeLabels spike_labels;
 
-		/**
-		 * Translation of Projection::Connection to synapses in signal-flow graph.
-		 * For each projection (descriptor) a vector with equal ordering to the connections of the
-		 * projection contains possibly multiple signal-flow graph vertex descriptors and indices on
-		 * synapses on the signal-flow graph vertex property.
-		 */
-		typedef std::map<
-		    ProjectionOnNetwork,
-		    std::vector<std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>
-		    Projections;
-		Projections projections;
+			/**
+			 * Translation of Projection::Connection to synapses in signal-flow graph.
+			 * For each projection (descriptor) a vector with equal ordering to the connections of
+			 * the projection contains possibly multiple signal-flow graph vertex descriptors and
+			 * indices on synapses on the signal-flow graph vertex property.
+			 */
+			typedef std::map<
+			    ProjectionOnExecutionInstance,
+			    std::vector<std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>
+			    Projections;
+			Projections projections;
 
-		/**
-		 * Translation of Population neurons to (multiple) atomic neurons in signal-flow graph.
-		 * For each population (descriptor) a vector with equal ordering to the neurons of the
-		 * population contains for each compartment on the logical neuron and for each atomic neuron
-		 * on the logical neuron compartment a pair of signal-flow graph vertex descriptor and index
-		 * of the corresponding atomic neuron on the signal-flow graph vertex property.
-		 */
-		typedef std::map<
-		    PopulationOnNetwork,
-		    std::vector<std::map<
-		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-		        std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>>
-		    Populations;
-		Populations populations;
+			/**
+			 * Translation of Population neurons to (multiple) atomic neurons in signal-flow graph.
+			 * For each population (descriptor) a vector with equal ordering to the neurons of the
+			 * population contains for each compartment on the logical neuron and for each atomic
+			 * neuron on the logical neuron compartment a pair of signal-flow graph vertex
+			 * descriptor and index of the corresponding atomic neuron on the signal-flow graph
+			 * vertex property.
+			 */
+			typedef std::map<
+			    PopulationOnExecutionInstance,
+			    std::vector<std::map<
+			        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+			        std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>>
+			    Populations;
+			Populations populations;
+		};
+
+		std::map<common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 	};
 	/** Translation between unrouted and routed graph representation. */
 	GENPYBIND(getter_for(graph_translation))
@@ -154,9 +169,7 @@ private:
 	std::chrono::microseconds m_routing_duration;
 
 	friend NetworkGraph build_network_graph(
-	    std::shared_ptr<Network> const& network,
-	    RoutingResult const& routing_result,
-	    common::ExecutionInstanceID const& execution_instance);
+	    std::shared_ptr<Network> const& network, RoutingResult const& routing_result);
 	friend void update_network_graph(
 	    NetworkGraph& network_graph, std::shared_ptr<Network> const& network);
 	friend NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph);

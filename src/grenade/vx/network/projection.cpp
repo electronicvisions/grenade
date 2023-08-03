@@ -36,8 +36,8 @@ std::ostream& operator<<(std::ostream& os, Projection::Connection const& connect
 Projection::Projection(
     Receptor const& receptor,
     Connections const& connections,
-    PopulationOnNetwork const population_pre,
-    PopulationOnNetwork const population_post) :
+    PopulationOnExecutionInstance const population_pre,
+    PopulationOnExecutionInstance const population_post) :
     receptor(receptor),
     connections(connections),
     population_pre(population_pre),
@@ -47,8 +47,8 @@ Projection::Projection(
 Projection::Projection(
     Receptor const& receptor,
     Connections&& connections,
-    PopulationOnNetwork const population_pre,
-    PopulationOnNetwork const population_post) :
+    PopulationOnExecutionInstance const population_pre,
+    PopulationOnExecutionInstance const population_post) :
     receptor(receptor),
     connections(std::move(connections)),
     population_pre(population_pre),

@@ -2,7 +2,7 @@
 
 namespace grenade::vx::network {
 
-NeuronRecording::Neuron::Neuron(AtomicNeuronOnNetwork const& coordinate, Source source) :
+NeuronRecording::Neuron::Neuron(AtomicNeuronOnExecutionInstance const& coordinate, Source source) :
     coordinate(coordinate), source(source)
 {}
 

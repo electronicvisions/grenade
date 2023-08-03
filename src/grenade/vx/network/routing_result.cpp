@@ -7,14 +7,16 @@
 namespace grenade::vx::network {
 
 std::ostream& operator<<(
-    std::ostream& os, grenade::vx::network::RoutingResult::PlacedConnection const& connection)
+    std::ostream& os,
+    grenade::vx::network::RoutingResult::ExecutionInstance::PlacedConnection const& connection)
 {
 	os << connection.weight << " " << connection.label << " " << connection.synapse_row << " "
 	   << connection.synapse_on_row;
 	return os;
 }
 
-std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult const& result)
+std::ostream& operator<<(
+    std::ostream& os, grenade::vx::network::RoutingResult::ExecutionInstance const& result)
 {
 	os << "Connections:\n";
 	for (auto const& [descriptor, projection] : result.connections) {
@@ -85,6 +87,16 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult c
 		os << '\t' << node_coordinate << " " << node << '\n';
 	}
 
+	return os;
+}
+
+std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult const& result)
+{
+	os << "RoutingResult(\n";
+	for (auto const& [id, execution_instance] : result.execution_instances) {
+		os << id << ": " << execution_instance << "\n";
+	}
+	os << ")";
 	return os;
 }
 

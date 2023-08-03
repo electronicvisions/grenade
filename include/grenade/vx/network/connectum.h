@@ -1,5 +1,6 @@
 #pragma once
-#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/projection_on_network.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -7,6 +8,7 @@
 #include "haldls/vx/v3/event.h"
 #include "hate/visibility.h"
 #include <iosfwd>
+#include <map>
 #include <variant>
 #include <vector>
 
@@ -14,9 +16,11 @@ namespace grenade::vx::network {
 
 struct ConnectumConnection
 {
-	typedef std::
-	    tuple<PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
-	        Source;
+	typedef std::tuple<
+	    PopulationOnExecutionInstance,
+	    size_t,
+	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
+	    Source;
 	Source source;
 
 	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
@@ -38,7 +42,16 @@ struct ConnectumConnection
 	    SYMBOL_VISIBLE;
 };
 
-typedef std::vector<ConnectumConnection> Connectum;
+
+struct Connectum
+{
+	std::map<common::ExecutionInstanceID, std::vector<ConnectumConnection>> execution_instances;
+
+	bool operator==(Connectum const& other) const SYMBOL_VISIBLE;
+	bool operator!=(Connectum const& other) const SYMBOL_VISIBLE;
+
+	friend std::ostream& operator<<(std::ostream& os, Connectum const& connectum) SYMBOL_VISIBLE;
+};
 
 struct Network;
 struct NetworkGraph;

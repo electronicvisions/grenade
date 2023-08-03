@@ -62,7 +62,7 @@ TEST(NetworkBuilder, General)
 	EXPECT_THROW(builder.add(madc_recording), std::runtime_error);
 
 	madc_recording.neurons.at(0).coordinate.neuron_on_population = 0;
-	madc_recording.neurons.at(0).coordinate.population = PopulationOnNetwork(123);
+	madc_recording.neurons.at(0).coordinate.population = PopulationOnExecutionInstance(123);
 	// population unknown
 	EXPECT_THROW(builder.add(madc_recording), std::runtime_error);
 

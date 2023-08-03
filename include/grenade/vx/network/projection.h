@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -53,29 +53,29 @@ struct GENPYBIND(visible) Projection
 	Connections connections{};
 
 	/** Descriptor to pre-synaptic population. */
-	PopulationOnNetwork population_pre{};
+	PopulationOnExecutionInstance population_pre{};
 	/** Descriptor to post-synaptic population. */
-	PopulationOnNetwork population_post{};
+	PopulationOnExecutionInstance population_post{};
 
 	Projection() = default;
 	Projection(
 	    Receptor const& receptor,
 	    Connections const& connections,
-	    PopulationOnNetwork population_pre,
-	    PopulationOnNetwork population_post) SYMBOL_VISIBLE;
+	    PopulationOnExecutionInstance population_pre,
+	    PopulationOnExecutionInstance population_post) SYMBOL_VISIBLE;
 	Projection(
 	    Receptor const& receptor,
 	    Connections&& connections,
-	    PopulationOnNetwork population_pre,
-	    PopulationOnNetwork population_post) SYMBOL_VISIBLE;
+	    PopulationOnExecutionInstance population_pre,
+	    PopulationOnExecutionInstance population_post) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		using namespace grenade::vx::network;
 
 		auto const from_numpy = [](GENPYBIND_PARENT_TYPE& self, Receptor const& receptor,
 		                           pybind11::array_t<size_t> const& pyconnections,
-		                           PopulationOnNetwork const population_pre,
-		                           PopulationOnNetwork const population_post) {
+		                           PopulationOnExecutionInstance const population_pre,
+		                           PopulationOnExecutionInstance const population_post) {
 			if (pyconnections.ndim() != 2) {
 				throw std::runtime_error("Expected connections array to be of dimension 2.");
 			}

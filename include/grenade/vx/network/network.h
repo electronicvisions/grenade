@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/background_source_population.h"
 #include "grenade/vx/network/cadc_recording.h"
@@ -6,11 +7,11 @@
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/pad_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
-#include "grenade/vx/network/plasticity_rule_on_network.h"
+#include "grenade/vx/network/plasticity_rule_on_execution_instance.h"
 #include "grenade/vx/network/population.h"
-#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/projection.h"
-#include "grenade/vx/network/projection_on_network.h"
+#include "grenade/vx/network/projection_on_execution_instance.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <iosfwd>
@@ -29,15 +30,30 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  */
 struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Network>")) Network
 {
-	std::map<
-	    PopulationOnNetwork,
-	    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>> const
-	    populations;
-	std::map<ProjectionOnNetwork, Projection> const projections;
-	std::optional<MADCRecording> const madc_recording;
-	std::optional<CADCRecording> const cadc_recording;
-	std::optional<PadRecording> const pad_recording;
-	std::map<PlasticityRuleOnNetwork, PlasticityRule> const plasticity_rules;
+	/**
+	 * Part of network requiring synchronized execution and realtime communication.
+	 */
+	struct ExecutionInstance
+	{
+		std::map<
+		    PopulationOnExecutionInstance,
+		    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>>
+		    populations;
+		std::map<ProjectionOnExecutionInstance, Projection> projections;
+		std::optional<MADCRecording> madc_recording;
+		std::optional<CADCRecording> cadc_recording;
+		std::optional<PadRecording> pad_recording;
+		std::map<PlasticityRuleOnExecutionInstance, PlasticityRule> plasticity_rules;
+
+		bool operator==(ExecutionInstance const& other) const SYMBOL_VISIBLE;
+		bool operator!=(ExecutionInstance const& other) const SYMBOL_VISIBLE;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(
+		    std::ostream& os, ExecutionInstance const& execution_instance) SYMBOL_VISIBLE;
+	};
+
+	std::map<common::ExecutionInstanceID, ExecutionInstance> const execution_instances;
 
 	/**
 	 * Duration spent during construction of network.

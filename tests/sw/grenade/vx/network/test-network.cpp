@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
@@ -8,116 +9,140 @@
 #include <chrono>
 
 using namespace grenade::vx::network;
+using namespace grenade::vx::common;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
 TEST(network_Network, General)
 {
 	Network network_a{
-	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionOnNetwork(3),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    MADCRecording{},
-	    CADCRecording{},
-	    PadRecording{},
-	    {},
+	    {{ExecutionInstanceID(),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       CADCRecording{},
+	       PadRecording{},
+	       {}}}},
 	    {}};
 
 	Network network_b{
-	    {{PopulationOnNetwork(2), ExternalSourcePopulation(3)}},
-	    {{ProjectionOnNetwork(3),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    MADCRecording{},
-	    CADCRecording{},
-	    PadRecording{},
-	    {},
+	    {{ExecutionInstanceID(),
+	      {{{PopulationOnExecutionInstance(2), ExternalSourcePopulation(3)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       CADCRecording{},
+	       PadRecording{},
+	       {}}}},
 	    {}};
 
 	Network network_c{
-	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionOnNetwork(4),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    MADCRecording{},
-	    CADCRecording{},
-	    PadRecording{},
-	    {},
+	    {{ExecutionInstanceID(),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(4),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       CADCRecording{},
+	       PadRecording{},
+	       {}}}},
 	    {}};
 
 	Network network_d{
-	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionOnNetwork(3),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    std::nullopt,
-	    CADCRecording{},
-	    PadRecording{},
-	    {},
+	    {{ExecutionInstanceID(),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       std::nullopt,
+	       CADCRecording{},
+	       PadRecording{},
+	       {}}}},
 	    {}};
 
 	Network network_e{
-	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionOnNetwork(3),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    MADCRecording{},
-	    std::nullopt,
-	    PadRecording{},
-	    {},
+	    {{ExecutionInstanceID(),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       std::nullopt,
+	       PadRecording{},
+	       {}}}},
 	    {}};
 
 	PlasticityRule rule;
 	rule.kernel = "abc";
 	Network network_f{
-	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionOnNetwork(3),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    MADCRecording{},
-	    CADCRecording{},
-	    PadRecording{},
-	    {{PlasticityRuleOnNetwork(), rule}},
+	    {{ExecutionInstanceID(),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       CADCRecording{},
+	       PadRecording{},
+	       {{PlasticityRuleOnExecutionInstance(), rule}}}}},
 	    {}};
 
 	Network network_g{
-	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionOnNetwork(3),
-	      Projection(
-	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	          {Projection::Connection(
-	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
-	              Projection::Connection::Weight(6))},
-	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
-	    MADCRecording{},
-	    CADCRecording{},
-	    std::nullopt,
-	    {},
+	    {{ExecutionInstanceID(1),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       CADCRecording{},
+	       PadRecording{},
+	       {}}}},
+	    {}};
+
+	Network network_h{
+	    {{ExecutionInstanceID(1),
+	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	       {{ProjectionOnExecutionInstance(3),
+	         Projection(
+	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	             {Projection::Connection(
+	                 {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	                 Projection::Connection::Weight(6))},
+	             PopulationOnExecutionInstance(1), PopulationOnExecutionInstance(1))}},
+	       MADCRecording{},
+	       CADCRecording{},
+	       std::nullopt,
+	       {}}}},
 	    {}};
 
 	Network network_copy(network_a);
@@ -128,4 +153,5 @@ TEST(network_Network, General)
 	EXPECT_NE(network_e, network_copy);
 	EXPECT_NE(network_f, network_copy);
 	EXPECT_NE(network_g, network_copy);
+	EXPECT_NE(network_h, network_copy);
 }
