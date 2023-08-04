@@ -287,7 +287,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		ExternalSourcePopulation population_external{1};
 		auto const population_external_descriptor = network_builder.add(population_external);
 
-		std::vector<PopulationDescriptor> population_internal_descriptors;
+		std::vector<PopulationOnNetwork> population_internal_descriptors;
 		for (size_t n = 0; n < length; ++n) {
 			Population::Neurons neurons{all_neurons.at(n)};
 			for (size_t i = 0; i < neurons.size(); ++i) {

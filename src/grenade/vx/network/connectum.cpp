@@ -208,9 +208,9 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	                << timer_check_non_overlapping_vertices.print() << ".");
 
 	hate::Timer timer_split_population_descriptors;
-	std::vector<PopulationDescriptor> external_population_descriptors;
-	std::vector<PopulationDescriptor> internal_population_descriptors;
-	std::vector<PopulationDescriptor> background_population_descriptors;
+	std::vector<PopulationOnNetwork> external_population_descriptors;
+	std::vector<PopulationOnNetwork> internal_population_descriptors;
+	std::vector<PopulationOnNetwork> background_population_descriptors;
 	for (auto const& [descriptor, population] : network.populations) {
 		if (std::holds_alternative<ExternalSourcePopulation>(population)) {
 			external_population_descriptors.push_back(descriptor);
@@ -231,7 +231,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 	    [&connectum](
 	        HardwareConnectionPath const& path,
 	        std::tuple<
-	            PopulationDescriptor, size_t,
+	            PopulationOnNetwork, size_t,
 	            halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron> const& descriptor,
 	        halco::hicann_dls::vx::v3::SpikeLabel const& label) {
 		    auto const neuron_label = label.get_neuron_label();

@@ -10,7 +10,7 @@ TEST(network_MADCRecording, General)
 {
 	MADCRecording recording;
 	recording.neurons.resize(1);
-	recording.neurons.at(0).coordinate.population = PopulationDescriptor(12);
+	recording.neurons.at(0).coordinate.population = PopulationOnNetwork(12);
 	recording.neurons.at(0).coordinate.neuron_on_population = 13;
 	recording.neurons.at(0).coordinate.compartment_on_neuron = CompartmentOnLogicalNeuron(14);
 	recording.neurons.at(0).coordinate.atomic_neuron_on_compartment = 15;
@@ -18,9 +18,9 @@ TEST(network_MADCRecording, General)
 
 	MADCRecording recording_copy(recording);
 	EXPECT_EQ(recording, recording_copy);
-	recording_copy.neurons.at(0).coordinate.population = PopulationDescriptor(11);
+	recording_copy.neurons.at(0).coordinate.population = PopulationOnNetwork(11);
 	EXPECT_NE(recording, recording_copy);
-	recording_copy.neurons.at(0).coordinate.population = PopulationDescriptor(12);
+	recording_copy.neurons.at(0).coordinate.population = PopulationOnNetwork(12);
 	EXPECT_EQ(recording, recording_copy);
 	recording_copy.neurons.at(0).coordinate.neuron_on_population = 12;
 	EXPECT_NE(recording, recording_copy);

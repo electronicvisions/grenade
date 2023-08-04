@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
 #include <cstddef>
@@ -10,14 +10,14 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) AtomicNeuronOnNetwork
 {
-	PopulationDescriptor population{};
+	PopulationOnNetwork population{};
 	size_t neuron_on_population{0};
 	halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron{};
 	size_t atomic_neuron_on_compartment{0};
 
 	AtomicNeuronOnNetwork() = default;
 	AtomicNeuronOnNetwork(
-	    PopulationDescriptor population,
+	    PopulationOnNetwork population,
 	    size_t neuron_on_population,
 	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron,
 	    size_t atomic_neuron_on_compartment) SYMBOL_VISIBLE;

@@ -15,7 +15,7 @@ InputGenerator::InputGenerator(NetworkGraph const& network_graph, size_t const b
 }
 
 void InputGenerator::add(
-    std::vector<common::Time> const& times, PopulationDescriptor const population)
+    std::vector<common::Time> const& times, PopulationOnNetwork const population)
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
@@ -51,7 +51,7 @@ void InputGenerator::add(
 }
 
 void InputGenerator::add(
-    std::vector<std::vector<common::Time>> const& times, PopulationDescriptor const population)
+    std::vector<std::vector<common::Time>> const& times, PopulationOnNetwork const population)
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {
@@ -123,7 +123,7 @@ void InputGenerator::add(
 
 void InputGenerator::add(
     std::vector<std::vector<std::vector<common::Time>>> const& times,
-    PopulationDescriptor const population)
+    PopulationOnNetwork const population)
 {
 	// Exit early if population is not connected to any other population
 	auto const has_population = [population](auto const& projection) {

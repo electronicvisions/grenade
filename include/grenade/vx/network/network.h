@@ -5,9 +5,11 @@
 #include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
+#include "grenade/vx/network/plasticity_rule_on_network.h"
 #include "grenade/vx/network/population.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/network/projection.h"
+#include "grenade/vx/network/projection_on_network.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <iosfwd>
@@ -27,13 +29,13 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Network>")) Network
 {
 	std::map<
-	    PopulationDescriptor,
+	    PopulationOnNetwork,
 	    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>> const
 	    populations;
-	std::map<ProjectionDescriptor, Projection> const projections;
+	std::map<ProjectionOnNetwork, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;
 	std::optional<CADCRecording> const cadc_recording;
-	std::map<PlasticityRuleDescriptor, PlasticityRule> const plasticity_rules;
+	std::map<PlasticityRuleOnNetwork, PlasticityRule> const plasticity_rules;
 
 	/**
 	 * Duration spent during construction of network.

@@ -33,7 +33,7 @@ TEST(network_Projection, General)
 	    {Projection::Connection(
 	        {12, CompartmentOnLogicalNeuron()}, {13, CompartmentOnLogicalNeuron()},
 	        Projection::Connection::Weight(14))},
-	    PopulationDescriptor(15), PopulationDescriptor(16));
+	    PopulationOnNetwork(15), PopulationOnNetwork(16));
 
 	Projection projection_copy(projection);
 	EXPECT_EQ(projection, projection_copy);
@@ -49,10 +49,10 @@ TEST(network_Projection, General)
 	    {12, CompartmentOnLogicalNeuron()}, {13, CompartmentOnLogicalNeuron()},
 	    Projection::Connection::Weight(14));
 	EXPECT_EQ(projection, projection_copy);
-	projection_copy.population_pre = PopulationDescriptor(14);
+	projection_copy.population_pre = PopulationOnNetwork(14);
 	EXPECT_NE(projection, projection_copy);
-	projection_copy.population_pre = PopulationDescriptor(15);
+	projection_copy.population_pre = PopulationOnNetwork(15);
 	EXPECT_EQ(projection, projection_copy);
-	projection_copy.population_post = PopulationDescriptor(15);
+	projection_copy.population_post = PopulationOnNetwork(15);
 	EXPECT_NE(projection, projection_copy);
 }

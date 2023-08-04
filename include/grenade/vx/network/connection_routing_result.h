@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/projection.h"
+#include "grenade/vx/network/projection_on_network.h"
 #include "hate/visibility.h"
 #include <cstddef>
 #include <iosfwd>
@@ -33,7 +33,7 @@ struct GENPYBIND(visible) ConnectionToHardwareRoutes
  * Contains a translation for each connection of each projection.
  * The order of the translations matches the order of the connections in the projection.
  */
-typedef std::map<ProjectionDescriptor, std::vector<ConnectionToHardwareRoutes>>
+typedef std::map<ProjectionOnNetwork, std::vector<ConnectionToHardwareRoutes>>
     ConnectionRoutingResult;
 
 } // namespace grenade::vx::network

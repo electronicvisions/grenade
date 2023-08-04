@@ -3,7 +3,7 @@
 namespace grenade::vx::network {
 
 AtomicNeuronOnNetwork::AtomicNeuronOnNetwork(
-    PopulationDescriptor population,
+    PopulationOnNetwork population,
     size_t neuron_on_population,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron,
     size_t atomic_neuron_on_compartment) :

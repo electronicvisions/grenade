@@ -6,7 +6,7 @@
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/network/plasticity_rule.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -87,8 +87,8 @@ public:
 		    halco::hicann_dls::vx::v3::NeuronEventOutputOnDLS,
 		    signal_flow::Graph::vertex_descriptor>
 		    neuron_event_outputs;
-		std::map<PopulationDescriptor, PlacedPopulation> populations;
-		std::map<ProjectionDescriptor, PlacedProjection> projections;
+		std::map<PopulationOnNetwork, PlacedPopulation> populations;
+		std::map<ProjectionOnNetwork, PlacedProjection> projections;
 
 		NetworkGraph::GraphTranslation graph_translation;
 	};
@@ -136,7 +136,7 @@ public:
 	void add_synapse_array_view_sparse(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionDescriptor descriptor,
+	    ProjectionOnNetwork descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -145,7 +145,7 @@ public:
 	    Resources& resources,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, std::vector<signal_flow::Input>> const&
 	        input,
-	    PopulationDescriptor const& descriptor,
+	    PopulationOnNetwork const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -153,7 +153,7 @@ public:
 	add_projection_from_external_input(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionDescriptor const& descriptor,
+	    ProjectionOnNetwork const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -161,7 +161,7 @@ public:
 	add_projection_from_background_spike_source(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionDescriptor const& descriptor,
+	    ProjectionOnNetwork const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
@@ -169,7 +169,7 @@ public:
 	add_projection_from_internal_input(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    ProjectionDescriptor const& descriptor,
+	    ProjectionOnNetwork const& descriptor,
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 

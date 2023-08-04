@@ -100,7 +100,7 @@ TEST(CADCRecording, General)
 	std::set<grenade::vx::signal_flow::Int8> unique_values;
 	for (size_t i = 0; i < result.size(); ++i) {
 		std::map<
-		    std::tuple<PopulationDescriptor, size_t, CompartmentOnLogicalNeuron, size_t>, size_t>
+		    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron, size_t>, size_t>
 		    samples_per_neuron;
 		auto const& samples = result.at(i);
 		for (auto const& sample : samples) {

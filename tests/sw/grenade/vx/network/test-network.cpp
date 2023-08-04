@@ -14,70 +14,70 @@ using namespace halco::common;
 TEST(network_Network, General)
 {
 	Network network_a{
-	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionDescriptor(3),
+	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
+	    {{ProjectionOnNetwork(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {Projection::Connection(
 	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
 	              Projection::Connection::Weight(6))},
-	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
 	    {},
 	    {}};
 
 	Network network_b{
-	    {{PopulationDescriptor(2), ExternalSourcePopulation(3)}},
-	    {{ProjectionDescriptor(3),
+	    {{PopulationOnNetwork(2), ExternalSourcePopulation(3)}},
+	    {{ProjectionOnNetwork(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {Projection::Connection(
 	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
 	              Projection::Connection::Weight(6))},
-	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
 	    {},
 	    {}};
 
 	Network network_c{
-	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionDescriptor(4),
+	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
+	    {{ProjectionOnNetwork(4),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {Projection::Connection(
 	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
 	              Projection::Connection::Weight(6))},
-	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
 	    {},
 	    {}};
 
 	Network network_d{
-	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionDescriptor(3),
+	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
+	    {{ProjectionOnNetwork(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {Projection::Connection(
 	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
 	              Projection::Connection::Weight(6))},
-	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    std::nullopt,
 	    CADCRecording{},
 	    {},
 	    {}};
 
 	Network network_e{
-	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionDescriptor(3),
+	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
+	    {{ProjectionOnNetwork(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {Projection::Connection(
 	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
 	              Projection::Connection::Weight(6))},
-	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    std::nullopt,
 	    {},
@@ -86,17 +86,17 @@ TEST(network_Network, General)
 	PlasticityRule rule;
 	rule.kernel = "abc";
 	Network network_f{
-	    {{PopulationDescriptor(1), ExternalSourcePopulation(2)}},
-	    {{ProjectionDescriptor(3),
+	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
+	    {{ProjectionOnNetwork(3),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {Projection::Connection(
 	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
 	              Projection::Connection::Weight(6))},
-	          PopulationDescriptor(1), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
-	    {{PlasticityRuleDescriptor(), rule}},
+	    {{PlasticityRuleOnNetwork(), rule}},
 	    {}};
 
 	Network network_copy(network_a);

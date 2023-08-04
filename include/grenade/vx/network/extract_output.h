@@ -24,7 +24,7 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  * @return Time-series neuron spike data per batch entry
  */
 std::vector<std::map<
-    std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
+    std::tuple<PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<common::Time>>>
 extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
     SYMBOL_VISIBLE;
@@ -50,7 +50,7 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
  */
 std::vector<std::vector<std::tuple<
     common::Time,
-    PopulationDescriptor,
+    PopulationOnNetwork,
     size_t,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
     size_t,
@@ -68,7 +68,7 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
-    PlasticityRuleDescriptor descriptor) SYMBOL_VISIBLE;
+    PlasticityRuleOnNetwork descriptor) SYMBOL_VISIBLE;
 
 
 /**

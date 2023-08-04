@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/neuron.h"
 
@@ -13,7 +13,7 @@ struct GENPYBIND(visible) CADCRecording
 {
 	struct Neuron
 	{
-		PopulationDescriptor population{};
+		PopulationOnNetwork population{};
 		size_t neuron_on_population{0};
 		halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron{};
 		size_t atomic_neuron_on_compartment{0};
@@ -22,7 +22,7 @@ struct GENPYBIND(visible) CADCRecording
 
 		Neuron() = default;
 		Neuron(
-		    PopulationDescriptor population,
+		    PopulationOnNetwork population,
 		    size_t neuron_on_population,
 		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron,
 		    size_t atomic_neuron_on_compartment,

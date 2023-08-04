@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_statistics.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "hate/visibility.h"
 #include <map>
@@ -46,28 +46,28 @@ struct GENPYBIND(visible) NetworkGraph
 
 		/** Vertex descriptors of synapse views. */
 		std::map<
-		    ProjectionDescriptor,
+		    ProjectionOnNetwork,
 		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
 		    synapse_vertices;
 
 		/** Vertex descriptors of neuron views. */
 		std::map<
-		    PopulationDescriptor,
+		    PopulationOnNetwork,
 		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
 		    neuron_vertices;
 
 		/** Vertex descriptors of background spike sources. */
 		std::map<
-		    PopulationDescriptor,
+		    PopulationOnNetwork,
 		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
 		    background_spike_source_vertices;
 
 		/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory. */
-		std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
+		std::map<PlasticityRuleOnNetwork, signal_flow::Graph::vertex_descriptor>
 		    plasticity_rule_output_vertices;
 
 		/** Vertex descriptor of plasticity rules. */
-		std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
+		std::map<PlasticityRuleOnNetwork, signal_flow::Graph::vertex_descriptor>
 		    plasticity_rule_vertices;
 
 		/**
@@ -76,7 +76,7 @@ struct GENPYBIND(visible) NetworkGraph
 		 * is only given for populations with enabled recording.
 		 */
 		typedef std::map<
-		    PopulationDescriptor,
+		    PopulationOnNetwork,
 		    std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<std::optional<halco::hicann_dls::vx::v3::SpikeLabel>>>>>
@@ -90,7 +90,7 @@ struct GENPYBIND(visible) NetworkGraph
 		 * synapses on the signal-flow graph vertex property.
 		 */
 		typedef std::map<
-		    ProjectionDescriptor,
+		    ProjectionOnNetwork,
 		    std::vector<std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>
 		    Projections;
 		Projections projections;
@@ -103,7 +103,7 @@ struct GENPYBIND(visible) NetworkGraph
 		 * of the corresponding atomic neuron on the signal-flow graph vertex property.
 		 */
 		typedef std::map<
-		    PopulationDescriptor,
+		    PopulationOnNetwork,
 		    std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<std::pair<signal_flow::Graph::vertex_descriptor, size_t>>>>>
@@ -140,8 +140,8 @@ struct GENPYBIND(visible) NetworkGraph
 	typedef std::vector<std::vector<PlacedConnection>> PlacedConnections;
 
 	std::vector<PlacedConnection> get_placed_connection(
-	    ProjectionDescriptor descriptor, size_t index) const SYMBOL_VISIBLE;
-	PlacedConnections get_placed_connections(ProjectionDescriptor descriptor) const SYMBOL_VISIBLE;
+	    ProjectionOnNetwork descriptor, size_t index) const SYMBOL_VISIBLE;
+	PlacedConnections get_placed_connections(ProjectionOnNetwork descriptor) const SYMBOL_VISIBLE;
 
 private:
 	std::shared_ptr<Network> m_network;

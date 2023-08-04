@@ -49,9 +49,9 @@ struct RandomNetworkGenerator
 		}
 		std::shuffle(population_add_order.begin(), population_add_order.end(), m_rng);
 
-		std::map<size_t, PopulationDescriptor> external_population_descriptors;
-		std::map<size_t, PopulationDescriptor> internal_population_descriptors;
-		std::map<size_t, PopulationDescriptor> background_population_descriptors;
+		std::map<size_t, PopulationOnNetwork> external_population_descriptors;
+		std::map<size_t, PopulationOnNetwork> internal_population_descriptors;
+		std::map<size_t, PopulationOnNetwork> background_population_descriptors;
 		for (auto const& [type, index] : population_add_order) {
 			switch (type) {
 				case PopulationType::external: {
@@ -391,9 +391,9 @@ struct RandomNetworkGenerator
 	}
 
 	std::vector<Projection> get_projections(
-	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& external_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& internal_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& background_population_descriptors,
 	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
 	    std::vector<BackgroundSourcePopulation> const& background_populations)
@@ -428,7 +428,7 @@ struct RandomNetworkGenerator
 
 		for (size_t i = 0; i < internal_populations.size(); ++i) {
 			for (auto const& [type, index] : populations_pre.at(i)) {
-				PopulationDescriptor population_pre;
+				PopulationOnNetwork population_pre;
 				switch (type) {
 					case PopulationType::external: {
 						population_pre = external_population_descriptors.at(index);
@@ -483,22 +483,22 @@ struct RandomNetworkGenerator
 	}
 
 	bool supports_connection(
-	    std::map<PopulationDescriptor, typed_array<bool, HemisphereOnDLS>> const& support,
-	    PopulationDescriptor const& pre_descriptor,
+	    std::map<PopulationOnNetwork, typed_array<bool, HemisphereOnDLS>> const& support,
+	    PopulationOnNetwork const& pre_descriptor,
 	    HemisphereOnDLS const& post_hemisphere)
 	{
 		return support.at(pre_descriptor)[post_hemisphere];
 	}
 
-	std::map<PopulationDescriptor, typed_array<bool, HemisphereOnDLS>> get_supports_connection(
-	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
+	std::map<PopulationOnNetwork, typed_array<bool, HemisphereOnDLS>> get_supports_connection(
+	    std::map<size_t, PopulationOnNetwork> const& external_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& internal_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& background_population_descriptors,
 	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
 	    std::vector<BackgroundSourcePopulation> const& background_populations)
 	{
-		std::map<PopulationDescriptor, typed_array<bool, HemisphereOnDLS>> ret;
+		std::map<PopulationOnNetwork, typed_array<bool, HemisphereOnDLS>> ret;
 		for (auto const& [index, descriptor] : external_population_descriptors) {
 			ret[descriptor] = supports_connection(external_populations.at(index));
 		}
@@ -511,15 +511,15 @@ struct RandomNetworkGenerator
 		return ret;
 	}
 
-	std::map<PopulationDescriptor, size_t> get_population_sizes(
-	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
+	std::map<PopulationOnNetwork, size_t> get_population_sizes(
+	    std::map<size_t, PopulationOnNetwork> const& external_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& internal_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& background_population_descriptors,
 	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
 	    std::vector<BackgroundSourcePopulation> const& background_populations)
 	{
-		std::map<PopulationDescriptor, size_t> population_sizes;
+		std::map<PopulationOnNetwork, size_t> population_sizes;
 		for (auto const& [index, descriptor] : external_population_descriptors) {
 			population_sizes[descriptor] = external_populations.at(index).size;
 		}
@@ -548,9 +548,9 @@ struct RandomNetworkGenerator
 
 	std::vector<Projection> add_connections(
 	    std::vector<Projection>&& projections,
-	    std::map<size_t, PopulationDescriptor> const& external_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& internal_population_descriptors,
-	    std::map<size_t, PopulationDescriptor> const& background_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& external_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& internal_population_descriptors,
+	    std::map<size_t, PopulationOnNetwork> const& background_population_descriptors,
 	    std::vector<ExternalSourcePopulation> const& external_populations,
 	    std::vector<Population> const& internal_populations,
 	    std::vector<BackgroundSourcePopulation> const& background_populations)

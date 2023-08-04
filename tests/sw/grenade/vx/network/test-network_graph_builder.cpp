@@ -233,8 +233,8 @@ TEST(build_network_graph, GranularitySweep)
 
 		hate::Timer network_timer;
 		NetworkBuilder builder;
-		std::vector<PopulationDescriptor> input_pops;
-		std::vector<PopulationDescriptor> hw_pops;
+		std::vector<PopulationOnNetwork> input_pops;
+		std::vector<PopulationOnNetwork> hw_pops;
 		for (size_t i = 0; i < num_pops; ++i) {
 			ExternalSourcePopulation population_external{neuron_per_pop};
 			input_pops.push_back(builder.add(population_external));

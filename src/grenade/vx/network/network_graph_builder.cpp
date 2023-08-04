@@ -62,13 +62,13 @@ NetworkGraph build_network_graph(
 	// keep track of unplaced projections
 	// each iteration at least a single projection can be placed and therefore size(projections)
 	// iterations are needed at most
-	std::set<ProjectionDescriptor> unplaced_projections;
+	std::set<ProjectionOnNetwork> unplaced_projections;
 	for (auto const& [descriptor, _] : network->projections) {
 		unplaced_projections.insert(descriptor);
 	}
 	for (size_t iteration = 0; iteration < network->projections.size(); ++iteration) {
-		std::set<ProjectionDescriptor> newly_placed_projections;
-		std::map<PopulationDescriptor, std::map<HemisphereOnDLS, std::vector<signal_flow::Input>>>
+		std::set<ProjectionOnNetwork> newly_placed_projections;
+		std::map<PopulationOnNetwork, std::map<HemisphereOnDLS, std::vector<signal_flow::Input>>>
 		    inputs;
 		for (auto const descriptor : unplaced_projections) {
 			auto const descriptor_pre = network->projections.at(descriptor).population_pre;
@@ -164,7 +164,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update synapse array view in hardware graph corresponding to projection
 	auto const update_weights = [](NetworkGraph& network_graph,
 	                               std::shared_ptr<Network> const& network,
-	                               ProjectionDescriptor const descriptor) {
+	                               ProjectionOnNetwork const descriptor) {
 		std::map<
 		    signal_flow::Graph::vertex_descriptor,
 		    signal_flow::vertex::SynapseArrayViewSparse::Synapses>
@@ -216,7 +216,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update towards
 	auto const update_plasticity_rule = [](NetworkGraph& network_graph,
 	                                       PlasticityRule const& new_rule,
-	                                       PlasticityRuleDescriptor descriptor) {
+	                                       PlasticityRuleOnNetwork descriptor) {
 		if (!network_graph.m_network->plasticity_rules.contains(descriptor)) {
 			throw std::runtime_error("Updating network graph only possible, if plasticity rule is "
 			                         "neither added nor removed.");
@@ -398,7 +398,7 @@ void NetworkGraphBuilder::add_population(
     signal_flow::Graph& graph,
     Resources& resources,
     std::map<HemisphereOnDLS, std::vector<signal_flow::Input>> const& input,
-    PopulationDescriptor const& descriptor,
+    PopulationOnNetwork const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
@@ -747,7 +747,7 @@ void NetworkGraphBuilder::add_neuron_event_output(
 void NetworkGraphBuilder::add_synapse_array_view_sparse(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionDescriptor descriptor,
+    ProjectionOnNetwork descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
@@ -910,7 +910,7 @@ std::map<HemisphereOnDLS, signal_flow::Input>
 NetworkGraphBuilder::add_projection_from_external_input(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionDescriptor const& descriptor,
+    ProjectionOnNetwork const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
@@ -998,7 +998,7 @@ std::map<HemisphereOnDLS, signal_flow::Input>
 NetworkGraphBuilder::add_projection_from_background_spike_source(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionDescriptor const& descriptor,
+    ProjectionOnNetwork const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {
@@ -1082,7 +1082,7 @@ std::map<HemisphereOnDLS, signal_flow::Input>
 NetworkGraphBuilder::add_projection_from_internal_input(
     signal_flow::Graph& graph,
     Resources& resources,
-    ProjectionDescriptor const& descriptor,
+    ProjectionOnNetwork const& descriptor,
     RoutingResult const& connection_result,
     common::ExecutionInstanceID const& instance) const
 {

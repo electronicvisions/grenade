@@ -11,15 +11,14 @@ class GENPYBIND(visible) InputGenerator
 public:
 	InputGenerator(NetworkGraph const& network_graph, size_t batch_size = 1) SYMBOL_VISIBLE;
 
-	void add(std::vector<common::Time> const& times, PopulationDescriptor population)
-	    SYMBOL_VISIBLE;
+	void add(std::vector<common::Time> const& times, PopulationOnNetwork population) SYMBOL_VISIBLE;
 
-	void add(std::vector<std::vector<common::Time>> const& times, PopulationDescriptor population)
+	void add(std::vector<std::vector<common::Time>> const& times, PopulationOnNetwork population)
 	    SYMBOL_VISIBLE;
 
 	void add(
 	    std::vector<std::vector<std::vector<common::Time>>> const& times,
-	    PopulationDescriptor population) SYMBOL_VISIBLE;
+	    PopulationOnNetwork population) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		auto const convert_ms = [](float const t) {
@@ -31,7 +30,7 @@ public:
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self,
 		        std::vector<std::vector<std::vector<float>>> const& times,
-		        grenade::vx::network::PopulationDescriptor const population) {
+		        grenade::vx::network::PopulationOnNetwork const population) {
 			    std::vector<std::vector<std::vector<grenade::vx::common::Time>>> gtimes;
 			    gtimes.resize(times.size());
 			    for (size_t b = 0; auto& gt_b : gtimes) {
@@ -54,7 +53,7 @@ public:
 		    "add",
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self, std::vector<float> const& times,
-		        grenade::vx::network::PopulationDescriptor const population) {
+		        grenade::vx::network::PopulationOnNetwork const population) {
 			    std::vector<grenade::vx::common::Time> gtimes;
 			    gtimes.reserve(times.size());
 			    std::transform(times.begin(), times.end(), std::back_inserter(gtimes), convert_ms);
@@ -65,7 +64,7 @@ public:
 		    "add",
 		    [convert_ms](
 		        GENPYBIND_PARENT_TYPE& self, std::vector<std::vector<float>> const& times,
-		        grenade::vx::network::PopulationDescriptor const population) {
+		        grenade::vx::network::PopulationOnNetwork const population) {
 			    std::vector<std::vector<grenade::vx::common::Time>> gtimes;
 			    gtimes.resize(times.size());
 			    for (size_t i = 0; auto& gt : gtimes) {

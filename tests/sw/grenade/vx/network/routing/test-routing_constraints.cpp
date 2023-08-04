@@ -127,7 +127,7 @@ TEST(RoutingConstraints_InternalConnection, toPADIBusOnDLS)
 {
 	RoutingConstraints::InternalConnection connection{
 	    AtomicNeuronOnDLS(Enum(53)), AtomicNeuronOnDLS(Enum(270)),
-	    std::pair{ProjectionDescriptor(), 0}, Receptor::Type::excitatory};
+	    std::pair{ProjectionOnNetwork(), 0}, Receptor::Type::excitatory};
 	EXPECT_EQ(
 	    connection.toPADIBusOnDLS(),
 	    PADIBusOnDLS(PADIBusOnPADIBusBlock(1), PADIBusBlockOnDLS::bottom));
@@ -137,7 +137,7 @@ TEST(RoutingConstraints_BackgroundConnection, toPADIBusOnDLS)
 {
 	RoutingConstraints::BackgroundConnection connection{
 	    BackgroundSpikeSourceOnDLS(5), AtomicNeuronOnDLS(Enum(270)),
-	    std::pair{ProjectionDescriptor(), 0}, Receptor::Type::excitatory};
+	    std::pair{ProjectionOnNetwork(), 0}, Receptor::Type::excitatory};
 	EXPECT_EQ(
 	    connection.toPADIBusOnDLS(),
 	    PADIBusOnDLS(PADIBusOnPADIBusBlock(1), PADIBusBlockOnDLS::bottom));
@@ -146,7 +146,7 @@ TEST(RoutingConstraints_BackgroundConnection, toPADIBusOnDLS)
 TEST(RoutingConstraints_ExternalConnection, toPADIBusBlockOnDLS)
 {
 	RoutingConstraints::ExternalConnection connection{
-	    AtomicNeuronOnDLS(Enum(270)), std::pair{ProjectionDescriptor(), 0},
+	    AtomicNeuronOnDLS(Enum(270)), std::pair{ProjectionOnNetwork(), 0},
 	    Receptor::Type::excitatory};
 	EXPECT_EQ(connection.toPADIBusBlockOnDLS(), PADIBusBlockOnDLS::bottom);
 }
@@ -431,19 +431,19 @@ TEST(RoutingConstraints, get_external_connections_per_hemisphere)
 	EXPECT_TRUE(external_connections[HemisphereOnDLS(1)].contains(Receptor::Type::inhibitory));
 
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::vector<std::pair<ProjectionDescriptor, size_t>>>,
+	    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnNetwork, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    expectation;
 	expectation[HemisphereOnDLS(1)][Receptor::Type::inhibitory] =
-	    std::vector<std::pair<ProjectionDescriptor, size_t>>{
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_0, 0},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_0, 1},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_0, 2},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_0, 3},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_1, 0},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_1, 1},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_1, 2},
-	        std::pair<ProjectionDescriptor, size_t>{proj_descriptor_1, 3}};
+	    std::vector<std::pair<ProjectionOnNetwork, size_t>>{
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_0, 0},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_0, 1},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_0, 2},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_0, 3},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_1, 0},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_1, 1},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_1, 2},
+	        std::pair<ProjectionOnNetwork, size_t>{proj_descriptor_1, 3}};
 	EXPECT_EQ(external_connections, expectation);
 }
 
@@ -504,13 +504,13 @@ TEST(RoutingConstraints, get_external_sources_to_hemisphere)
 	EXPECT_TRUE(external_sources[HemisphereOnDLS(1)].contains(Receptor::Type::inhibitory));
 
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::set<std::pair<PopulationDescriptor, size_t>>>,
+	    std::map<Receptor::Type, std::set<std::pair<PopulationOnNetwork, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    expectation;
 	expectation[HemisphereOnDLS(1)][Receptor::Type::inhibitory] =
-	    std::set<std::pair<PopulationDescriptor, size_t>>{
-	        std::pair<PopulationDescriptor, size_t>{extpop_descriptor, 0},
-	        std::pair<PopulationDescriptor, size_t>{extpop_descriptor, 1}};
+	    std::set<std::pair<PopulationOnNetwork, size_t>>{
+	        std::pair<PopulationOnNetwork, size_t>{extpop_descriptor, 0},
+	        std::pair<PopulationOnNetwork, size_t>{extpop_descriptor, 1}};
 	EXPECT_EQ(external_sources, expectation);
 }
 

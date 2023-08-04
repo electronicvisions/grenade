@@ -17,8 +17,8 @@ using namespace haldls::vx::v3;
 TEST(network_InputGenerator, General)
 {
 	auto const network = std::make_shared<Network>(Network{
-	    {{PopulationDescriptor(0), ExternalSourcePopulation(3)},
-	     {PopulationDescriptor(1),
+	    {{PopulationOnNetwork(0), ExternalSourcePopulation(3)},
+	     {PopulationOnNetwork(1),
 	      Population(
 	          {Population::Neuron(
 	               LogicalNeuronOnDLS(
@@ -40,7 +40,7 @@ TEST(network_InputGenerator, General)
 	                    Population::Neuron::Compartment{
 	                        Population::Neuron::Compartment::SpikeMaster(0, false),
 	                        {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})})}},
-	    {{ProjectionDescriptor(0),
+	    {{ProjectionOnNetwork(0),
 	      Projection(
 	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
 	          {
@@ -52,7 +52,7 @@ TEST(network_InputGenerator, General)
 	                  Projection::Connection::Weight(63)) // third source not connected -> we
 	                                                      // expect events to be filtered
 	          },
-	          PopulationDescriptor(0), PopulationDescriptor(1))}},
+	          PopulationOnNetwork(0), PopulationOnNetwork(1))}},
 	    std::nullopt,
 	    std::nullopt,
 	    {},
@@ -106,11 +106,11 @@ TEST(network_InputGenerator, General)
 	auto add = [&](size_t i) {
 		assert(i < 3);
 		if (i == 0) {
-			generator.add(times_broadcasted_over_neurons_and_batches, PopulationDescriptor(0));
+			generator.add(times_broadcasted_over_neurons_and_batches, PopulationOnNetwork(0));
 		} else if (i == 1) {
-			generator.add(times_broadcasted_over_batches, PopulationDescriptor(0));
+			generator.add(times_broadcasted_over_batches, PopulationOnNetwork(0));
 		} else if (i == 2) {
-			generator.add(times_not_broadcasted, PopulationDescriptor(0));
+			generator.add(times_not_broadcasted, PopulationOnNetwork(0));
 		}
 	};
 
@@ -132,22 +132,22 @@ TEST(network_InputGenerator, General)
 		EXPECT_EQ(spikes.size(), batch_size);
 
 		assert(network_graph.get_graph_translation()
-		           .spike_labels.at(PopulationDescriptor(0))
+		           .spike_labels.at(PopulationOnNetwork(0))
 		           .at(0)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
 		auto const spike_label_0 = *(network_graph.get_graph_translation()
-		                                 .spike_labels.at(PopulationDescriptor(0))
+		                                 .spike_labels.at(PopulationOnNetwork(0))
 		                                 .at(0)
 		                                 .at(CompartmentOnLogicalNeuron())
 		                                 .at(0));
 		assert(network_graph.get_graph_translation()
-		           .spike_labels.at(PopulationDescriptor(0))
+		           .spike_labels.at(PopulationOnNetwork(0))
 		           .at(1)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
 		auto const spike_label_1 = *(network_graph.get_graph_translation()
-		                                 .spike_labels.at(PopulationDescriptor(0))
+		                                 .spike_labels.at(PopulationOnNetwork(0))
 		                                 .at(1)
 		                                 .at(CompartmentOnLogicalNeuron())
 		                                 .at(0));

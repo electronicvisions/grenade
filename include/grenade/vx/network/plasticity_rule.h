@@ -1,8 +1,8 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/projection.h"
+#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/projection_on_network.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
-#include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include <map>
 #include <optional>
@@ -20,7 +20,7 @@ struct GENPYBIND(visible) PlasticityRule
 	 * Descriptor to projections this rule has access to.
 	 * All projections are required to be dense and in order.
 	 */
-	std::vector<ProjectionDescriptor> projections{};
+	std::vector<ProjectionOnNetwork> projections{};
 
 	/**
 	 * Population handle parameters.
@@ -32,7 +32,7 @@ struct GENPYBIND(visible) PlasticityRule
 		/**
 		 * Descriptor of population.
 		 */
-		PopulationDescriptor descriptor;
+		PopulationOnNetwork descriptor;
 		/**
 		 * Readout source specification per neuron circuit used for static configuration such that
 		 * the plasticity rule can read the specified signal.
@@ -153,8 +153,8 @@ struct GENPYBIND(visible) PlasticityRule
 
 		typedef signal_flow::vertex::PlasticityRule::TimedRecordingData::Entry EntryArray;
 
-		std::map<std::string, std::map<ProjectionDescriptor, EntryPerSynapse>> data_per_synapse;
-		std::map<std::string, std::map<PopulationDescriptor, EntryPerNeuron>> data_per_neuron;
+		std::map<std::string, std::map<ProjectionOnNetwork, EntryPerSynapse>> data_per_synapse;
+		std::map<std::string, std::map<PopulationOnNetwork, EntryPerNeuron>> data_per_neuron;
 		std::map<std::string, EntryArray> data_array;
 	};
 
@@ -173,13 +173,6 @@ struct GENPYBIND(visible) PlasticityRule
 	    SYMBOL_VISIBLE;
 };
 
-
-/** Descriptor to be used to identify a plasticity rule. */
-struct GENPYBIND(inline_base("*")) PlasticityRuleDescriptor
-    : public halco::common::detail::BaseType<PlasticityRuleDescriptor, size_t>
-{
-	constexpr explicit PlasticityRuleDescriptor(value_type const value = 0) : base_t(value) {}
-};
 
 typedef common::TimedData<std::vector<std::vector<int8_t>>> _SingleEntryPerSynapseInt8
     GENPYBIND(opaque(false));
@@ -208,9 +201,3 @@ typedef common::TimedData<std::vector<
     _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false));
 
 } // namespace grenade::vx::network
-
-namespace std {
-
-HALCO_GEOMETRY_HASH_CLASS(grenade::vx::network::PlasticityRuleDescriptor)
-
-} // namespace std

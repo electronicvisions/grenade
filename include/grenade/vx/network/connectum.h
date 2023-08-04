@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "haldls/vx/v3/event.h"
@@ -13,7 +13,7 @@ namespace grenade::vx::network {
 struct ConnectumConnection
 {
 	typedef std::
-	    tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
+	    tuple<PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
 	        Source;
 	Source source;
 

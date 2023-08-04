@@ -163,7 +163,7 @@ TEST(PlasticityRule, TimedRecording)
 		// FIXME: Fix is required in order in routing
 		std::uniform_int_distribution num_projection_distribution(1, 3);
 		size_t const num_projections = num_projection_distribution(rng);
-		std::vector<ProjectionDescriptor> projection_descriptors;
+		std::vector<ProjectionOnNetwork> projection_descriptors;
 		std::vector<PlasticityRule::PopulationHandle> population_descriptors;
 		for (size_t p = 0; p < num_projections; ++p) {
 			std::uniform_int_distribution neuron_distribution(1, 3);

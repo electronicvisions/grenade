@@ -1,6 +1,8 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/connection_routing_result.h"
+#include "grenade/vx/network/population_on_network.h"
+#include "grenade/vx/network/projection_on_network.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
@@ -39,14 +41,14 @@ struct GENPYBIND(visible) RoutingResult
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
 	};
-	typedef std::map<ProjectionDescriptor, std::vector<std::vector<PlacedConnection>>> Connections;
+	typedef std::map<ProjectionOnNetwork, std::vector<std::vector<PlacedConnection>>> Connections;
 	Connections connections;
 
 	/**
 	 * Spike label corresponding to each neuron in a external population.
 	 */
 	typedef std::
-	    map<PopulationDescriptor, std::vector<std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
+	    map<PopulationOnNetwork, std::vector<std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
 	        ExternalSpikeLabels;
 	ExternalSpikeLabels external_spike_labels;
 
@@ -54,7 +56,7 @@ struct GENPYBIND(visible) RoutingResult
 	 * Spike label corresponding to each neuron in a background source population.
 	 */
 	typedef std::map<
-	    PopulationDescriptor,
+	    PopulationOnNetwork,
 	    std::map<
 	        halco::hicann_dls::vx::v3::HemisphereOnDLS,
 	        std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
@@ -65,7 +67,7 @@ struct GENPYBIND(visible) RoutingResult
 	 * Background spike source mask for each population.
 	 */
 	typedef std::map<
-	    PopulationDescriptor,
+	    PopulationOnNetwork,
 	    std::map<
 	        halco::hicann_dls::vx::v3::HemisphereOnDLS,
 	        haldls::vx::v3::BackgroundSpikeSource::Mask>>
@@ -76,7 +78,7 @@ struct GENPYBIND(visible) RoutingResult
 	 * Neuron event output address corresponding to each neuron in a on-chip population.
 	 */
 	typedef std::map<
-	    PopulationDescriptor,
+	    PopulationOnNetwork,
 	    std::vector<std::map<
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 	        std::vector<std::optional<haldls::vx::v3::NeuronBackendConfig::AddressOut>>>>>

@@ -637,7 +637,7 @@ bool NetworkGraph::valid() const
 }
 
 std::vector<NetworkGraph::PlacedConnection> NetworkGraph::get_placed_connection(
-    ProjectionDescriptor const descriptor, size_t const index) const
+    ProjectionOnNetwork const descriptor, size_t const index) const
 {
 	std::vector<NetworkGraph::PlacedConnection> ret;
 
@@ -666,7 +666,7 @@ std::vector<NetworkGraph::PlacedConnection> NetworkGraph::get_placed_connection(
 }
 
 NetworkGraph::PlacedConnections NetworkGraph::get_placed_connections(
-    ProjectionDescriptor const descriptor) const
+    ProjectionOnNetwork const descriptor) const
 {
 	PlacedConnections placed_connections;
 	assert(m_network);

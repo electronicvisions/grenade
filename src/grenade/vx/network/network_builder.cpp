@@ -16,7 +16,7 @@ NetworkBuilder::NetworkBuilder() :
     m_logger(log4cxx::Logger::getLogger("grenade.logical_network.NetworkBuilder"))
 {}
 
-PopulationDescriptor NetworkBuilder::add(Population const& population)
+PopulationOnNetwork NetworkBuilder::add(Population const& population)
 {
 	hate::Timer timer;
 	// check population is valid
@@ -42,7 +42,7 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 			}
 		}
 	}
-	PopulationDescriptor descriptor(m_populations.size());
+	PopulationOnNetwork descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added population(" << descriptor << ") in " << timer.print() << ".");
@@ -50,10 +50,10 @@ PopulationDescriptor NetworkBuilder::add(Population const& population)
 	return descriptor;
 }
 
-PopulationDescriptor NetworkBuilder::add(ExternalSourcePopulation const& population)
+PopulationOnNetwork NetworkBuilder::add(ExternalSourcePopulation const& population)
 {
 	hate::Timer timer;
-	PopulationDescriptor descriptor(m_populations.size());
+	PopulationOnNetwork descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
 	    m_logger,
@@ -62,7 +62,7 @@ PopulationDescriptor NetworkBuilder::add(ExternalSourcePopulation const& populat
 	return descriptor;
 }
 
-PopulationDescriptor NetworkBuilder::add(BackgroundSourcePopulation const& population)
+PopulationOnNetwork NetworkBuilder::add(BackgroundSourcePopulation const& population)
 {
 	hate::Timer timer;
 	// check that supplied coordinate doesn't overlap with already added populations
@@ -97,7 +97,7 @@ PopulationDescriptor NetworkBuilder::add(BackgroundSourcePopulation const& popul
 		}
 	}
 
-	PopulationDescriptor descriptor(m_populations.size());
+	PopulationOnNetwork descriptor(m_populations.size());
 	m_populations.insert({descriptor, population});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added background spike source population(" << descriptor << ") in "
@@ -106,7 +106,7 @@ PopulationDescriptor NetworkBuilder::add(BackgroundSourcePopulation const& popul
 	return descriptor;
 }
 
-ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
+ProjectionOnNetwork NetworkBuilder::add(Projection const& projection)
 {
 	hate::Timer timer;
 	auto const& population_pre = m_populations.at(projection.population_pre);
@@ -211,7 +211,7 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 		}
 	}
 
-	ProjectionDescriptor descriptor(m_projections.size());
+	ProjectionOnNetwork descriptor(m_projections.size());
 	m_projections.insert({descriptor, projection});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added projection(" << descriptor << ", " << projection.population_pre
@@ -318,8 +318,7 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 		throw std::runtime_error("Only one CADC recording per network possible.");
 	}
 	std::set<std::tuple<
-	    PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-	    size_t>>
+	    PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t>>
 	    unique;
 	for (auto const& neuron : cadc_recording.neurons) {
 		if (!m_populations.contains(neuron.population)) {
@@ -358,7 +357,7 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
-PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_rule)
+PlasticityRuleOnNetwork NetworkBuilder::add(PlasticityRule const& plasticity_rule)
 {
 	hate::Timer timer;
 
@@ -490,7 +489,7 @@ PlasticityRuleDescriptor NetworkBuilder::add(PlasticityRule const& plasticity_ru
 		}
 	}
 
-	PlasticityRuleDescriptor descriptor(m_plasticity_rules.size());
+	PlasticityRuleOnNetwork descriptor(m_plasticity_rules.size());
 	m_plasticity_rules.insert({descriptor, plasticity_rule});
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added plasticity_rule(" << descriptor << ") in " << timer.print() << ".");

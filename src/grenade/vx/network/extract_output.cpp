@@ -7,7 +7,7 @@
 namespace grenade::vx::network {
 
 std::vector<std::map<
-    std::tuple<PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
+    std::tuple<PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<common::Time>>>
 extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
@@ -16,7 +16,7 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
 
 	std::vector<std::map<
 	    std::tuple<
-	        PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
+	        PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
 	    std::vector<common::Time>>>
 	    logical_neuron_events(data.batch_size());
 
@@ -25,8 +25,7 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
 		std::map<
 		    halco::hicann_dls::vx::v3::SpikeLabel,
 		    std::tuple<
-		        PopulationDescriptor, size_t,
-		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>
+		        PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>>
 		    label_lookup;
 		assert(network_graph.get_network());
 		for (auto const& [descriptor, population] : network_graph.get_network()->populations) {
@@ -108,7 +107,7 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 
 std::vector<std::vector<std::tuple<
     common::Time,
-    PopulationDescriptor,
+    PopulationOnNetwork,
     size_t,
     halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
     size_t,
@@ -156,14 +155,14 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 	}
 
 	std::vector<std::vector<std::tuple<
-	    common::Time, PopulationDescriptor, size_t,
+	    common::Time, PopulationOnNetwork, size_t,
 	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t, signal_flow::Int8>>>
 	    ret(hardware_samples.size());
 
 	std::map<
 	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
 	    std::tuple<
-	        PopulationDescriptor, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+	        PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 	        size_t>>
 	    location_lookup;
 
@@ -204,10 +203,10 @@ namespace {
 
 template <typename T>
 void extract_plasticity_rule_recording_data_per_synapse(
-    std::map<ProjectionDescriptor, PlasticityRule::TimedRecordingData::EntryPerSynapse>&
+    std::map<ProjectionOnNetwork, PlasticityRule::TimedRecordingData::EntryPerSynapse>&
         local_logical_data,
     size_t const num_periods,
-    ProjectionDescriptor const& descriptor,
+    ProjectionOnNetwork const& descriptor,
     NetworkGraph const& network_graph,
     size_t const batch_size,
     size_t const hardware_index,
@@ -245,10 +244,10 @@ void extract_plasticity_rule_recording_data_per_synapse(
 
 template <typename T>
 void extract_plasticity_rule_recording_data_per_neuron(
-    std::map<PopulationDescriptor, PlasticityRule::TimedRecordingData::EntryPerNeuron>&
+    std::map<PopulationOnNetwork, PlasticityRule::TimedRecordingData::EntryPerNeuron>&
         local_logical_data,
     size_t const num_periods,
-    PopulationDescriptor const& descriptor,
+    PopulationOnNetwork const& descriptor,
     size_t const batch_size,
     std::vector<std::map<
         halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
@@ -300,7 +299,7 @@ void extract_plasticity_rule_recording_data_per_neuron(
 PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
     signal_flow::IODataMap const& data,
     NetworkGraph const& network_graph,
-    PlasticityRuleDescriptor descriptor)
+    PlasticityRuleOnNetwork descriptor)
 {
 	assert(network_graph.get_network());
 	if (!network_graph.get_network()->plasticity_rules.contains(descriptor)) {

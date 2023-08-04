@@ -27,19 +27,19 @@ public:
 	 * The population is expected to feature unique and unused neuron locations.
 	 * @param population Population to add
 	 */
-	PopulationDescriptor add(Population const& population) SYMBOL_VISIBLE;
+	PopulationOnNetwork add(Population const& population) SYMBOL_VISIBLE;
 
 	/**
 	 * Add off-chip population.
 	 * @param population Population to add
 	 */
-	PopulationDescriptor add(ExternalSourcePopulation const& population) SYMBOL_VISIBLE;
+	PopulationOnNetwork add(ExternalSourcePopulation const& population) SYMBOL_VISIBLE;
 
 	/**
 	 * Add on-chip background spike source population.
 	 * @param population Population to add
 	 */
-	PopulationDescriptor add(BackgroundSourcePopulation const& population) SYMBOL_VISIBLE;
+	PopulationOnNetwork add(BackgroundSourcePopulation const& population) SYMBOL_VISIBLE;
 
 	/**
 	 * Add projection between already added populations.
@@ -48,7 +48,7 @@ public:
 	 * post-synaptic neurons and features the same receptor type.
 	 * @param projection Projection to add
 	 */
-	ProjectionDescriptor add(Projection const& projection) SYMBOL_VISIBLE;
+	ProjectionOnNetwork add(Projection const& projection) SYMBOL_VISIBLE;
 
 	/**
 	 * Add MADC recording of a single neuron.
@@ -72,7 +72,7 @@ public:
 	 * Add plasticity rule on already added projections.
 	 * @param plasticity_rule PlasticityRule to add
 	 */
-	PlasticityRuleDescriptor add(PlasticityRule const& plasticity_rule) SYMBOL_VISIBLE;
+	PlasticityRuleOnNetwork add(PlasticityRule const& plasticity_rule) SYMBOL_VISIBLE;
 
 	NetworkBuilder() SYMBOL_VISIBLE;
 
@@ -80,13 +80,13 @@ public:
 
 private:
 	std::map<
-	    PopulationDescriptor,
+	    PopulationOnNetwork,
 	    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>>
 	    m_populations{};
-	std::map<ProjectionDescriptor, Projection> m_projections{};
+	std::map<ProjectionOnNetwork, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
-	std::map<PlasticityRuleDescriptor, PlasticityRule> m_plasticity_rules{};
+	std::map<PlasticityRuleOnNetwork, PlasticityRule> m_plasticity_rules{};
 	std::chrono::microseconds m_duration;
 	log4cxx::LoggerPtr m_logger;
 };

@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/network/connection_routing_result.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/typed_array.h"
@@ -52,7 +52,7 @@ struct RoutingConstraints
 		/** Target neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
-		std::pair<ProjectionDescriptor, size_t> descriptor;
+		std::pair<ProjectionOnNetwork, size_t> descriptor;
 		/** Receptor type of connection. */
 		Receptor::Type receptor_type;
 
@@ -79,7 +79,7 @@ struct RoutingConstraints
 		/** Target neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
-		std::pair<ProjectionDescriptor, size_t> descriptor;
+		std::pair<ProjectionOnNetwork, size_t> descriptor;
 		/** Receptor type of connection. */
 		Receptor::Type receptor_type;
 
@@ -104,7 +104,7 @@ struct RoutingConstraints
 		/** Target neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
-		std::pair<ProjectionDescriptor, size_t> descriptor;
+		std::pair<ProjectionOnNetwork, size_t> descriptor;
 		/** Receptor type of connection. */
 		Receptor::Type receptor_type;
 
@@ -125,7 +125,7 @@ struct RoutingConstraints
 	 * Get number of external connections placed onto each chip hemisphere per receptor type.
 	 */
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::vector<std::pair<ProjectionDescriptor, size_t>>>,
+	    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnNetwork, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	get_external_connections_per_hemisphere() const SYMBOL_VISIBLE;
 
@@ -133,7 +133,7 @@ struct RoutingConstraints
 	 * Get number of external sources projecting onto each chip hemisphere per receptor type.
 	 */
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::set<std::pair<PopulationDescriptor, size_t>>>,
+	    std::map<Receptor::Type, std::set<std::pair<PopulationOnNetwork, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	get_external_sources_to_hemisphere() const SYMBOL_VISIBLE;
 

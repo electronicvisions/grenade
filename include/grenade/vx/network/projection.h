@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/population_descriptor.h"
+#include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/geometry.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -53,29 +53,29 @@ struct GENPYBIND(visible) Projection
 	Connections connections{};
 
 	/** Descriptor to pre-synaptic population. */
-	PopulationDescriptor population_pre{};
+	PopulationOnNetwork population_pre{};
 	/** Descriptor to post-synaptic population. */
-	PopulationDescriptor population_post{};
+	PopulationOnNetwork population_post{};
 
 	Projection() = default;
 	Projection(
 	    Receptor const& receptor,
 	    Connections const& connections,
-	    PopulationDescriptor population_pre,
-	    PopulationDescriptor population_post) SYMBOL_VISIBLE;
+	    PopulationOnNetwork population_pre,
+	    PopulationOnNetwork population_post) SYMBOL_VISIBLE;
 	Projection(
 	    Receptor const& receptor,
 	    Connections&& connections,
-	    PopulationDescriptor population_pre,
-	    PopulationDescriptor population_post) SYMBOL_VISIBLE;
+	    PopulationOnNetwork population_pre,
+	    PopulationOnNetwork population_post) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		using namespace grenade::vx::network;
 
 		auto const from_numpy = [](GENPYBIND_PARENT_TYPE& self, Receptor const& receptor,
 		                           pybind11::array_t<size_t> const& pyconnections,
-		                           PopulationDescriptor const population_pre,
-		                           PopulationDescriptor const population_post) {
+		                           PopulationOnNetwork const population_pre,
+		                           PopulationOnNetwork const population_post) {
 			if (pyconnections.ndim() != 2) {
 				throw std::runtime_error("Expected connections array to be of dimension 2.");
 			}
@@ -116,18 +116,4 @@ struct GENPYBIND(visible) Projection
 std::ostream& operator<<(std::ostream& os, Projection::Connection::Index const& index)
     SYMBOL_VISIBLE;
 
-
-/** Descriptor to be used to identify a projection. */
-struct GENPYBIND(inline_base("*")) ProjectionDescriptor
-    : public halco::common::detail::BaseType<ProjectionDescriptor, size_t>
-{
-	constexpr explicit ProjectionDescriptor(value_type const value = 0) : base_t(value) {}
-};
-
 } // namespace grenade::vx::network
-
-namespace std {
-
-HALCO_GEOMETRY_HASH_CLASS(grenade::vx::network::ProjectionDescriptor)
-
-} // namespace std
