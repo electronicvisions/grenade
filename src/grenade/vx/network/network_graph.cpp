@@ -20,63 +20,6 @@ signal_flow::Graph const& NetworkGraph::get_graph() const
 	return m_graph;
 }
 
-std::optional<signal_flow::Graph::vertex_descriptor> const& NetworkGraph::get_event_input_vertex()
-    const
-{
-	return m_event_input_vertex;
-}
-
-std::optional<signal_flow::Graph::vertex_descriptor> const& NetworkGraph::get_event_output_vertex()
-    const
-{
-	return m_event_output_vertex;
-}
-
-std::optional<signal_flow::Graph::vertex_descriptor> const&
-NetworkGraph::get_madc_sample_output_vertex() const
-{
-	return m_madc_sample_output_vertex;
-}
-
-std::vector<signal_flow::Graph::vertex_descriptor> const&
-NetworkGraph::get_cadc_sample_output_vertex() const
-{
-	return m_cadc_sample_output_vertex;
-}
-
-std::map<
-    ProjectionDescriptor,
-    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>> const&
-NetworkGraph::get_synapse_vertices() const
-{
-	return m_synapse_vertices;
-}
-
-std::map<
-    PopulationDescriptor,
-    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>> const&
-NetworkGraph::get_neuron_vertices() const
-{
-	return m_neuron_vertices;
-}
-
-std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
-NetworkGraph::get_plasticity_rule_output_vertices() const
-{
-	return m_plasticity_rule_output_vertices;
-}
-
-std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
-NetworkGraph::get_plasticity_rule_vertices() const
-{
-	return m_plasticity_rule_vertices;
-}
-
-NetworkGraph::SpikeLabels const& NetworkGraph::get_spike_labels() const
-{
-	return m_spike_labels;
-}
-
 NetworkGraph::GraphTranslation const& NetworkGraph::get_graph_translation() const
 {
 	return m_graph_translation;
@@ -93,7 +36,7 @@ bool NetworkGraph::valid() const
 
 	// check that for each neuron/source in every population an event-label is known
 	for (auto const& [descriptor, population] : m_network->populations) {
-		if (!m_spike_labels.contains(descriptor)) {
+		if (!m_graph_translation.spike_labels.contains(descriptor)) {
 			LOG4CXX_ERROR(logger, "No spike-labels for population(" << descriptor << ") present.");
 			return false;
 		}
@@ -101,7 +44,7 @@ bool NetworkGraph::valid() const
 		    [](Population const& p) { return p.neurons.size(); },
 		    [](ExternalSourcePopulation const& p) { return p.size; },
 		    [](BackgroundSourcePopulation const& p) { return p.size; });
-		auto const size = m_spike_labels.at(descriptor).size();
+		auto const size = m_graph_translation.spike_labels.at(descriptor).size();
 		auto const expected_size = std::visit(get_size, population);
 		if (size != expected_size) {
 			LOG4CXX_ERROR(
@@ -115,7 +58,9 @@ bool NetworkGraph::valid() const
 			    for (size_t n = 0; n < p.neurons.size(); ++n) {
 				    for (auto const& [compartment, ans] :
 				         p.neurons.at(n).coordinate.get_placed_compartments()) {
-					    if (!m_spike_labels.at(descriptor).at(n).contains(compartment)) {
+					    if (!m_graph_translation.spike_labels.at(descriptor)
+					             .at(n)
+					             .contains(compartment)) {
 						    LOG4CXX_ERROR(
 						        logger, "No spike-labels for compartment ("
 						                    << compartment << ") on neuron (" << n
@@ -129,7 +74,7 @@ bool NetworkGraph::valid() const
 		    },
 		    [this, descriptor, logger](ExternalSourcePopulation const& p) {
 			    for (size_t n = 0; n < p.size; ++n) {
-				    if (!m_spike_labels.at(descriptor)
+				    if (!m_graph_translation.spike_labels.at(descriptor)
 				             .at(n)
 				             .contains(CompartmentOnLogicalNeuron())) {
 					    LOG4CXX_ERROR(
@@ -143,7 +88,7 @@ bool NetworkGraph::valid() const
 		    },
 		    [this, descriptor, logger](BackgroundSourcePopulation const& p) {
 			    for (size_t n = 0; n < p.size; ++n) {
-				    if (!m_spike_labels.at(descriptor)
+				    if (!m_graph_translation.spike_labels.at(descriptor)
 				             .at(n)
 				             .contains(CompartmentOnLogicalNeuron())) {
 					    LOG4CXX_ERROR(
@@ -176,7 +121,7 @@ bool NetworkGraph::valid() const
 					    !compartment.spike_master->enable_record_spikes) {
 						continue;
 					}
-					auto const& label = m_spike_labels.at(descriptor)
+					auto const& label = m_graph_translation.spike_labels.at(descriptor)
 					                        .at(i)
 					                        .at(compartment_on_neuron)
 					                        .at(compartment.spike_master->neuron_on_compartment);
@@ -200,7 +145,7 @@ bool NetworkGraph::valid() const
 		if (!std::holds_alternative<Population>(population)) {
 			continue;
 		}
-		if (!m_neuron_vertices.contains(descriptor)) {
+		if (!m_graph_translation.neuron_vertices.contains(descriptor)) {
 			LOG4CXX_ERROR(
 			    logger, "No hardware graph vertex available for population(" << descriptor << ").");
 			return false;
@@ -213,7 +158,8 @@ bool NetworkGraph::valid() const
 			}
 		}
 		std::set<AtomicNeuronOnDLS> hardware_network_neurons;
-		for (auto const& [hemisphere, vertex_descriptor] : m_neuron_vertices.at(descriptor)) {
+		for (auto const& [hemisphere, vertex_descriptor] :
+		     m_graph_translation.neuron_vertices.at(descriptor)) {
 			auto const& vertex = std::get<signal_flow::vertex::NeuronView>(
 			    m_graph.get_vertex_property(vertex_descriptor));
 			auto const row = vertex.get_row();
@@ -282,8 +228,10 @@ bool NetworkGraph::valid() const
 					auto const& vertex = std::get<signal_flow::vertex::NeuronView>(
 					    m_graph.get_vertex_property(vertex_descriptor));
 					auto const& configs = vertex.get_configs();
-					auto const& expected_label =
-					    m_spike_labels.at(descriptor).at(n).at(compartment).at(an);
+					auto const& expected_label = m_graph_translation.spike_labels.at(descriptor)
+					                                 .at(n)
+					                                 .at(compartment)
+					                                 .at(an);
 					if (static_cast<bool>(expected_label) !=
 					    static_cast<bool>(configs.at(index_on_vertex).label)) {
 						LOG4CXX_ERROR(
@@ -331,14 +279,15 @@ bool NetworkGraph::valid() const
 			continue;
 		}
 		auto const& pop = std::get<BackgroundSourcePopulation>(population);
-		if (!m_background_spike_source_vertices.contains(descriptor)) {
+		if (!m_graph_translation.background_spike_source_vertices.contains(descriptor)) {
 			LOG4CXX_ERROR(
 			    logger, "No hardware network vertices for on-chip background spike source("
 			                << descriptor << ").");
 			return false;
 		}
 		for (auto const& [hemisphere, padi_bus] : pop.coordinate) {
-			if (!m_background_spike_source_vertices.at(descriptor).contains(hemisphere)) {
+			if (!m_graph_translation.background_spike_source_vertices.at(descriptor)
+			         .contains(hemisphere)) {
 				LOG4CXX_ERROR(
 				    logger, "No hardware network vertex for on-chip background spike source("
 				                << descriptor << ") on " << hemisphere << ".");
@@ -346,7 +295,8 @@ bool NetworkGraph::valid() const
 			}
 			auto const& vertex =
 			    std::get<signal_flow::vertex::BackgroundSpikeSource>(m_graph.get_vertex_property(
-			        m_background_spike_source_vertices.at(descriptor).at(hemisphere)));
+			        m_graph_translation.background_spike_source_vertices.at(descriptor)
+			            .at(hemisphere)));
 			if (vertex.get_coordinate().toPADIBusOnDLS() !=
 			    PADIBusOnDLS(pop.coordinate.at(hemisphere), hemisphere.toPADIBusBlockOnDLS())) {
 				LOG4CXX_ERROR(
@@ -409,9 +359,10 @@ bool NetworkGraph::valid() const
 		for (auto const& [hemisphere, padi_bus] : pop.coordinate) {
 			auto const& vertex =
 			    std::get<signal_flow::vertex::BackgroundSpikeSource>(m_graph.get_vertex_property(
-			        m_background_spike_source_vertices.at(descriptor).at(hemisphere)));
+			        m_graph_translation.background_spike_source_vertices.at(descriptor)
+			            .at(hemisphere)));
 			for (size_t i = 0; i < pop.size; ++i) {
-				auto expected_label = m_spike_labels.at(descriptor)
+				auto expected_label = m_graph_translation.spike_labels.at(descriptor)
 				                          .at(i)
 				                          .at(CompartmentOnLogicalNeuron())
 				                          .at(label_entry);
@@ -459,7 +410,8 @@ bool NetworkGraph::valid() const
 			return false;
 		}
 		std::map<SynapseRowOnDLS, Receptor::Type> receptor_type_per_row;
-		for (auto const& [hemisphere, vertex_descriptor] : m_synapse_vertices.at(descriptor)) {
+		for (auto const& [hemisphere, vertex_descriptor] :
+		     m_graph_translation.synapse_vertices.at(descriptor)) {
 			// calculate synapse row receptor types
 			for (auto const in_edge : boost::make_iterator_range(
 			         boost::in_edges(vertex_descriptor, m_graph.get_graph()))) {
@@ -655,7 +607,8 @@ bool NetworkGraph::valid() const
 			continue;
 		}
 		for (auto const& descriptor : plasticity_rule.projections) {
-			for (auto const& [hemisphere, vertex_descriptor] : m_synapse_vertices.at(descriptor)) {
+			for (auto const& [hemisphere, vertex_descriptor] :
+			     m_graph_translation.synapse_vertices.at(descriptor)) {
 				auto const& synapse_array_view =
 				    std::get<signal_flow::vertex::SynapseArrayViewSparse>(
 				        m_graph.get_vertex_property(vertex_descriptor));

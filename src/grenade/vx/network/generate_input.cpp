@@ -7,11 +7,11 @@ namespace grenade::vx::network {
 InputGenerator::InputGenerator(NetworkGraph const& network_graph, size_t const batch_size) :
     m_data(), m_network_graph(network_graph)
 {
-	if (!m_network_graph.get_event_input_vertex()) {
+	if (!m_network_graph.get_graph_translation().event_input_vertex) {
 		throw std::runtime_error("Network graph does not feature an event input vertex.");
 	}
 	std::vector<signal_flow::TimedSpikeToChipSequence> spike_batch(batch_size);
-	m_data.data.insert({*m_network_graph.get_event_input_vertex(), spike_batch});
+	m_data.data.insert({*m_network_graph.get_graph_translation().event_input_vertex, spike_batch});
 }
 
 void InputGenerator::add(
@@ -27,7 +27,7 @@ void InputGenerator::add(
 		return;
 	}
 
-	auto const neurons = m_network_graph.get_spike_labels().at(population);
+	auto const neurons = m_network_graph.get_graph_translation().spike_labels.at(population);
 
 	signal_flow::TimedSpikeToChipSequence batch_entry;
 	batch_entry.reserve(times.size() * neurons.size());
@@ -44,7 +44,7 @@ void InputGenerator::add(
 		}
 	}
 	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
+	    m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
 		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
 	}
@@ -63,7 +63,7 @@ void InputGenerator::add(
 		return;
 	}
 
-	auto const neurons = m_network_graph.get_spike_labels().at(population);
+	auto const neurons = m_network_graph.get_graph_translation().spike_labels.at(population);
 
 	if (times.size() != neurons.size()) {
 		throw std::runtime_error(
@@ -115,7 +115,7 @@ void InputGenerator::add(
 		}
 	}
 	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
+	    m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex));
 	for (size_t b = 0; b < spike_batch.size(); ++b) {
 		spike_batch.at(b).insert(spike_batch.at(b).end(), batch_entry.begin(), batch_entry.end());
 	}
@@ -135,12 +135,13 @@ void InputGenerator::add(
 		return;
 	}
 
-	auto const neurons = m_network_graph.get_spike_labels().at(population);
+	auto const neurons = m_network_graph.get_graph_translation().spike_labels.at(population);
 
 	assert(
-	    times.size() == std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	                        m_data.data.at(*m_network_graph.get_event_input_vertex()))
-	                        .size());
+	    times.size() ==
+	    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
+	        m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex))
+	        .size());
 	for (size_t b = 0; b < times.size(); ++b) {
 		auto const& batch_times = times.at(b);
 
@@ -149,9 +150,10 @@ void InputGenerator::add(
 			    "Times number of neurons does not match expected number from spike labels.");
 		}
 
-		auto& data_spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-		                        m_data.data.at(*m_network_graph.get_event_input_vertex()))
-		                        .at(b);
+		auto& data_spikes =
+		    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
+		        m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex))
+		        .at(b);
 
 		size_t size = 0;
 		for (auto const& ts : batch_times) {
@@ -202,9 +204,9 @@ void InputGenerator::add(
 
 signal_flow::IODataMap InputGenerator::done()
 {
-	assert(m_network_graph.get_event_input_vertex());
+	assert(m_network_graph.get_graph_translation().event_input_vertex);
 	auto& spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-	    m_data.data.at(*m_network_graph.get_event_input_vertex()));
+	    m_data.data.at(*m_network_graph.get_graph_translation().event_input_vertex));
 	for (auto& batch : spikes) {
 		std::stable_sort(batch.begin(), batch.end(), [](auto const& a, auto const& b) {
 			return a.time < b.time;
@@ -212,8 +214,8 @@ signal_flow::IODataMap InputGenerator::done()
 	}
 	signal_flow::IODataMap ret;
 	std::vector<signal_flow::TimedSpikeToChipSequence> spike_batch(m_data.batch_size());
-	assert(m_network_graph.get_event_input_vertex());
-	ret.data.insert({*m_network_graph.get_event_input_vertex(), spike_batch});
+	assert(m_network_graph.get_graph_translation().event_input_vertex);
+	ret.data.insert({*m_network_graph.get_graph_translation().event_input_vertex, spike_batch});
 	std::swap(ret, m_data);
 	return ret;
 }

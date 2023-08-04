@@ -123,31 +123,31 @@ TEST(network_InputGenerator, General)
 		signal_flow::IODataMap const data = generator.done();
 
 		EXPECT_EQ(data.batch_size(), batch_size);
-		EXPECT_TRUE(network_graph.get_event_input_vertex());
-		EXPECT_TRUE(data.data.contains(*network_graph.get_event_input_vertex()));
+		EXPECT_TRUE(network_graph.get_graph_translation().event_input_vertex);
+		EXPECT_TRUE(data.data.contains(*network_graph.get_graph_translation().event_input_vertex));
 		EXPECT_TRUE(std::holds_alternative<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-		    data.data.at(*network_graph.get_event_input_vertex())));
+		    data.data.at(*network_graph.get_graph_translation().event_input_vertex)));
 		auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-		    data.data.at(*network_graph.get_event_input_vertex()));
+		    data.data.at(*network_graph.get_graph_translation().event_input_vertex));
 		EXPECT_EQ(spikes.size(), batch_size);
 
-		assert(network_graph.get_spike_labels()
-		           .at(PopulationDescriptor(0))
+		assert(network_graph.get_graph_translation()
+		           .spike_labels.at(PopulationDescriptor(0))
 		           .at(0)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
-		auto const spike_label_0 = *(network_graph.get_spike_labels()
-		                                 .at(PopulationDescriptor(0))
+		auto const spike_label_0 = *(network_graph.get_graph_translation()
+		                                 .spike_labels.at(PopulationDescriptor(0))
 		                                 .at(0)
 		                                 .at(CompartmentOnLogicalNeuron())
 		                                 .at(0));
-		assert(network_graph.get_spike_labels()
-		           .at(PopulationDescriptor(0))
+		assert(network_graph.get_graph_translation()
+		           .spike_labels.at(PopulationDescriptor(0))
 		           .at(1)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
-		auto const spike_label_1 = *(network_graph.get_spike_labels()
-		                                 .at(PopulationDescriptor(0))
+		auto const spike_label_1 = *(network_graph.get_graph_translation()
+		                                 .spike_labels.at(PopulationDescriptor(0))
 		                                 .at(1)
 		                                 .at(CompartmentOnLogicalNeuron())
 		                                 .at(0));

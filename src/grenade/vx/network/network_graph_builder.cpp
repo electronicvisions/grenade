@@ -114,22 +114,13 @@ NetworkGraph build_network_graph(
 	// add plasticity rules
 	builder.add_plasticity_rules(result.m_graph, resources, instance);
 
-	result.m_spike_labels = builder.get_spike_labels(routing_result);
-	result.m_event_input_vertex = resources.external_input;
-	result.m_event_output_vertex = resources.external_output;
-	result.m_madc_sample_output_vertex = resources.madc_output;
-	result.m_cadc_sample_output_vertex = resources.cadc_output;
+	builder.calculate_spike_labels(resources, routing_result);
 	for (auto const& [d, p] : resources.projections) {
-		result.m_synapse_vertices[d] = p.synapses;
+		resources.graph_translation.synapse_vertices[d] = p.synapses;
 	}
 	for (auto const& [d, p] : resources.populations) {
-		result.m_neuron_vertices[d] = p.neurons;
+		resources.graph_translation.neuron_vertices[d] = p.neurons;
 	}
-	for (auto const& [d, p] : resources.background_spike_sources) {
-		result.m_background_spike_source_vertices[d] = p;
-	}
-	result.m_plasticity_rule_vertices = resources.plasticity_rules;
-	result.m_plasticity_rule_output_vertices = resources.plasticity_rules_output;
 	result.m_graph_translation = resources.graph_translation;
 
 	LOG4CXX_TRACE(
@@ -178,7 +169,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		    signal_flow::Graph::vertex_descriptor,
 		    signal_flow::vertex::SynapseArrayViewSparse::Synapses>
 		    synapses;
-		auto const synapse_vertices = network_graph.get_synapse_vertices();
+		auto const synapse_vertices = network_graph.get_graph_translation().synapse_vertices;
 		for (auto const [_, vertex_descriptor] : synapse_vertices.at(descriptor)) {
 			auto const& old_synapse_array_view =
 			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(
@@ -237,15 +228,16 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		}
 		// TODO (Issue #3991): merge impl. from here and add_plasticity_rule below, requires rework
 		// of resources in order to align interface to NetworkGraph.
-		auto const vertex_descriptor = network_graph.get_plasticity_rule_vertices().at(descriptor);
+		auto const vertex_descriptor =
+		    network_graph.get_graph_translation().plasticity_rule_vertices.at(descriptor);
 		std::vector<signal_flow::Input> inputs;
-		auto const synapse_vertices = network_graph.get_synapse_vertices();
+		auto const synapse_vertices = network_graph.get_graph_translation().synapse_vertices;
 		for (auto const& d : new_rule.projections) {
 			for (auto const& [_, p] : synapse_vertices.at(d)) {
 				inputs.push_back({p});
 			}
 		}
-		auto const neuron_vertices = network_graph.get_neuron_vertices();
+		auto const neuron_vertices = network_graph.get_graph_translation().neuron_vertices;
 		for (auto const& d : new_rule.populations) {
 			for (auto const& [_, p] : neuron_vertices.at(d.descriptor)) {
 				inputs.push_back({p});
@@ -334,7 +326,7 @@ void NetworkGraphBuilder::add_external_input(
 	signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
 	auto const crossbar_l2_input_vertex =
 	    graph.add(crossbar_l2_input, instance, {data_input_vertex});
-	resources.external_input = event_input_vertex;
+	resources.graph_translation.event_input_vertex = event_input_vertex;
 	resources.crossbar_l2_input = crossbar_l2_input_vertex;
 	LOG4CXX_TRACE(
 	    m_logger, "add_external_input(): Added external input in " << timer.print() << ".");
@@ -393,7 +385,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 			                bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size));
 			auto const background_spike_source_vertex =
 			    graph.add(background_spike_source, instance, {});
-			resources.background_spike_sources[descriptor][hemisphere] =
+			resources.graph_translation.background_spike_source_vertices[descriptor][hemisphere] =
 			    background_spike_source_vertex;
 		}
 	}
@@ -596,7 +588,7 @@ void NetworkGraphBuilder::add_crossbar_node(
 		    *(coordinate.toCrossbarInputOnDLS().toNeuronEventOutputOnDLS());
 		inputs.push_back(resources.neuron_event_outputs.at(neuron_event_output));
 	} else { // other (currently only background sources)
-		for (auto const& [dd, d] : resources.background_spike_sources) {
+		for (auto const& [dd, d] : resources.graph_translation.background_spike_source_vertices) {
 			for (auto const& [hemisphere, bus] :
 			     std::get<BackgroundSourcePopulation>(m_network.populations.at(dd)).coordinate) {
 				BackgroundSpikeSourceOnDLS source(
@@ -1236,7 +1228,7 @@ void NetworkGraphBuilder::add_external_output(
 	// add crossbar l2 output
 	auto const crossbar_l2_output =
 	    graph.add(signal_flow::vertex::CrossbarL2Output(), instance, crossbar_l2_output_inputs);
-	resources.external_output = graph.add(
+	resources.graph_translation.event_output_vertex = graph.add(
 	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1),
 	    instance, {crossbar_l2_output});
 	LOG4CXX_TRACE(
@@ -1307,9 +1299,10 @@ void NetworkGraphBuilder::add_plasticity_rules(
 		    plasticity_rule.recording);
 		auto const output = vertex.output();
 		auto const plasticity_rule_descriptor = graph.add(std::move(vertex), instance, inputs);
-		resources.plasticity_rules[descriptor] = plasticity_rule_descriptor;
+		resources.graph_translation.plasticity_rule_vertices[descriptor] =
+		    plasticity_rule_descriptor;
 		if (plasticity_rule.recording) {
-			resources.plasticity_rules_output[descriptor] = graph.add(
+			resources.graph_translation.plasticity_rule_output_vertices[descriptor] = graph.add(
 			    signal_flow::vertex::DataOutput(output.type, output.size), instance,
 			    {plasticity_rule_descriptor});
 		}
@@ -1318,11 +1311,11 @@ void NetworkGraphBuilder::add_plasticity_rules(
 	    m_logger, "add_plasticity_rules(): Added plasticity rules in " << timer.print() << ".");
 }
 
-NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
-    RoutingResult const& connection_result)
+void NetworkGraphBuilder::calculate_spike_labels(
+    Resources& resources, RoutingResult const& connection_result) const
 {
 	hate::Timer timer;
-	NetworkGraph::SpikeLabels spike_labels;
+	auto& spike_labels = resources.graph_translation.spike_labels;
 	for (auto const& [descriptor, labels] : connection_result.external_spike_labels) {
 		auto& local = spike_labels[descriptor];
 		size_t i = 0;
@@ -1431,7 +1424,6 @@ NetworkGraph::SpikeLabels NetworkGraphBuilder::get_spike_labels(
 	}
 	LOG4CXX_TRACE(
 	    m_logger, "get_spike_labels(): Calculated spike labels in " << timer.print() << ".");
-	return spike_labels;
 }
 
 void NetworkGraphBuilder::add_madc_recording(
@@ -1498,7 +1490,7 @@ void NetworkGraphBuilder::add_madc_recording(
 	signal_flow::vertex::MADCReadoutView madc_readout(
 	    first_source, second_source, source_selection);
 	auto const madc_vertex = graph.add(madc_readout, instance, inputs);
-	resources.madc_output = graph.add(
+	resources.graph_translation.madc_sample_output_vertex = graph.add(
 	    signal_flow::vertex::DataOutput(
 	        signal_flow::ConnectionType::TimedMADCSampleFromChipSequence, 1),
 	    instance, {madc_vertex});
@@ -1562,7 +1554,8 @@ void NetworkGraphBuilder::add_cadc_recording(
 		signal_flow::vertex::DataOutput data_output(
 		    signal_flow::ConnectionType::Int8, vertex.output().size);
 		auto const cv = graph.add(std::move(vertex), instance, inputs);
-		resources.cadc_output.push_back(graph.add(data_output, instance, {cv}));
+		resources.graph_translation.cadc_sample_output_vertex.push_back(
+		    graph.add(data_output, instance, {cv}));
 	}
 	LOG4CXX_TRACE(
 	    m_logger, "add_cadc_recording(): Added CADC recording in " << timer.print() << ".");

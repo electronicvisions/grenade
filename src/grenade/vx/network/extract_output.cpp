@@ -20,7 +20,7 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
 	    std::vector<common::Time>>>
 	    logical_neuron_events(data.batch_size());
 
-	if (network_graph.get_event_output_vertex()) {
+	if (network_graph.get_graph_translation().event_output_vertex) {
 		// generate reverse lookup table from spike label to neuron coordinate
 		std::map<
 		    halco::hicann_dls::vx::v3::SpikeLabel,
@@ -38,8 +38,8 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
 				for (auto const& [compartment_on_neuron, compartment] : neuron.compartments) {
 					if (compartment.spike_master &&
 					    compartment.spike_master->enable_record_spikes) {
-						auto const compartment_labels = network_graph.get_spike_labels()
-						                                    .at(descriptor)
+						auto const compartment_labels = network_graph.get_graph_translation()
+						                                    .spike_labels.at(descriptor)
 						                                    .at(i)
 						                                    .at(compartment_on_neuron);
 						// internal neurons only have one label assigned
@@ -60,7 +60,7 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
 
 		// convert spikes
 		auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
-		    data.data.at(*network_graph.get_event_output_vertex()));
+		    data.data.at(*network_graph.get_graph_translation().event_output_vertex));
 		assert(!spikes.size() || spikes.size() == data.batch_size());
 
 		for (size_t batch = 0; batch < spikes.size(); ++batch) {
@@ -87,10 +87,10 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 	std::vector<std::vector<
 	    std::tuple<common::Time, AtomicNeuronOnNetwork, haldls::vx::v3::MADCSampleFromChip::Value>>>
 	    ret(data.batch_size());
-	if (network_graph.get_madc_sample_output_vertex()) {
+	if (network_graph.get_graph_translation().madc_sample_output_vertex) {
 		// convert samples
 		auto const& samples = std::get<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(
-		    data.data.at(*network_graph.get_madc_sample_output_vertex()));
+		    data.data.at(*network_graph.get_graph_translation().madc_sample_output_vertex));
 		assert(!samples.size() || samples.size() == ret.size());
 		for (size_t b = 0; b < samples.size(); ++b) {
 			auto& local_ret = ret.at(b);
@@ -120,7 +120,8 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 	std::vector<std::vector<
 	    std::tuple<common::Time, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, signal_flow::Int8>>>
 	    hardware_samples(data.batch_size());
-	for (auto const cadc_output_vertex : network_graph.get_cadc_sample_output_vertex()) {
+	for (auto const cadc_output_vertex :
+	     network_graph.get_graph_translation().cadc_sample_output_vertex) {
 		auto const& samples =
 		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
 		        data.data.at(cadc_output_vertex));
@@ -305,11 +306,12 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 	if (!network_graph.get_network()->plasticity_rules.contains(descriptor)) {
 		throw std::runtime_error("Requested plasticity rule not part of network graph.");
 	}
-	if (!network_graph.get_plasticity_rule_output_vertices().contains(descriptor)) {
+	if (!network_graph.get_graph_translation().plasticity_rule_output_vertices.contains(
+	        descriptor)) {
 		throw std::runtime_error("Requested plasticity rule isn't recording data.");
 	}
 	signal_flow::Graph::vertex_descriptor const output_vertex =
-	    network_graph.get_plasticity_rule_output_vertices().at(descriptor);
+	    network_graph.get_graph_translation().plasticity_rule_output_vertices.at(descriptor);
 	if (!data.data.contains(output_vertex)) {
 		throw std::runtime_error(
 		    "Provided signal_flow::IODataMap doesn't contain data of recording plasticity rule.");
@@ -389,7 +391,7 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 		for (size_t p = 0; auto const& population : plasticity_rule.populations) {
 			std::vector<common::TimedDataSequence<std::vector<ElementType>>> local_record;
 			size_t neuron_view_offset = 0;
-			auto const neuron_vertices = network_graph.get_neuron_vertices();
+			auto const neuron_vertices = network_graph.get_graph_translation().neuron_vertices;
 			for ([[maybe_unused]] auto const& _ : neuron_vertices.at(population.descriptor)) {
 				auto const& local_result =
 				    std::get<std::vector<common::TimedDataSequence<std::vector<ElementType>>>>(

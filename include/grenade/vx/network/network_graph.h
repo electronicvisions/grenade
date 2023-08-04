@@ -27,73 +27,62 @@ struct GENPYBIND(visible) NetworkGraph
 	GENPYBIND(getter_for(graph))
 	signal_flow::Graph const& get_graph() const SYMBOL_VISIBLE;
 
-	/** Vertex descriptor at which to insert external spike data. */
-	GENPYBIND(getter_for(event_input_vertex))
-	std::optional<signal_flow::Graph::vertex_descriptor> const& get_event_input_vertex() const
-	    SYMBOL_VISIBLE;
-
-	/** Vertex descriptor from which to extract recorded spike data. */
-	GENPYBIND(getter_for(event_output_vertex))
-	std::optional<signal_flow::Graph::vertex_descriptor> const& get_event_output_vertex() const
-	    SYMBOL_VISIBLE;
-
-	/** Vertex descriptor from which to extract recorded madc sample data. */
-	GENPYBIND(getter_for(madc_sample_output_vertex))
-	std::optional<signal_flow::Graph::vertex_descriptor> const& get_madc_sample_output_vertex()
-	    const SYMBOL_VISIBLE;
-
-	/** Vertex descriptor from which to extract recorded cadc sample data. */
-	GENPYBIND(getter_for(cadc_sample_output_vertex))
-	std::vector<signal_flow::Graph::vertex_descriptor> const& get_cadc_sample_output_vertex() const
-	    SYMBOL_VISIBLE;
-
-	/** Vertex descriptors of synapse views. */
-	GENPYBIND(getter_for(synapse_vertices))
-	std::map<
-	    ProjectionDescriptor,
-	    std::map<
-	        halco::hicann_dls::vx::HemisphereOnDLS,
-	        signal_flow::Graph::vertex_descriptor>> const&
-	get_synapse_vertices() const SYMBOL_VISIBLE;
-
-	/** Vertex descriptors of neuron views. */
-	GENPYBIND(getter_for(neuron_vertices))
-	std::map<
-	    PopulationDescriptor,
-	    std::map<
-	        halco::hicann_dls::vx::HemisphereOnDLS,
-	        signal_flow::Graph::vertex_descriptor>> const&
-	get_neuron_vertices() const SYMBOL_VISIBLE;
-
-	/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory. */
-	GENPYBIND(getter_for(plasticity_rule_output_vertices))
-	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
-	get_plasticity_rule_output_vertices() const SYMBOL_VISIBLE;
-
-	/** Vertex descriptor of plasticity rules. */
-	GENPYBIND(getter_for(plasticity_rule_vertices))
-	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> const&
-	get_plasticity_rule_vertices() const SYMBOL_VISIBLE;
-
-	/**
-	 * Spike labels corresponding to each neuron in a population.
-	 * For external populations these are the input spike labels, for internal population this is
-	 * only given for populations with enabled recording.
-	 */
-	typedef std::map<
-	    PopulationDescriptor,
-	    std::vector<std::map<
-	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-	        std::vector<std::optional<halco::hicann_dls::vx::v3::SpikeLabel>>>>>
-	    SpikeLabels;
-	GENPYBIND(getter_for(spike_labels))
-	SpikeLabels const& get_spike_labels() const SYMBOL_VISIBLE;
-
 	/**
 	 * Translation between unrouted and routed graph representation.
 	 */
 	struct GraphTranslation
 	{
+		/** Vertex descriptor at which to insert external spike data. */
+		std::optional<signal_flow::Graph::vertex_descriptor> event_input_vertex;
+
+		/** Vertex descriptor from which to extract recorded spike data. */
+		std::optional<signal_flow::Graph::vertex_descriptor> event_output_vertex;
+
+		/** Vertex descriptor from which to extract recorded madc sample data. */
+		std::optional<signal_flow::Graph::vertex_descriptor> madc_sample_output_vertex;
+
+		/** Vertex descriptor from which to extract recorded cadc sample data. */
+		std::vector<signal_flow::Graph::vertex_descriptor> cadc_sample_output_vertex;
+
+		/** Vertex descriptors of synapse views. */
+		std::map<
+		    ProjectionDescriptor,
+		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
+		    synapse_vertices;
+
+		/** Vertex descriptors of neuron views. */
+		std::map<
+		    PopulationDescriptor,
+		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
+		    neuron_vertices;
+
+		/** Vertex descriptors of background spike sources. */
+		std::map<
+		    PopulationDescriptor,
+		    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
+		    background_spike_source_vertices;
+
+		/** Vertex descriptor from which to extract recorded plasticity rule scratchpad memory. */
+		std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
+		    plasticity_rule_output_vertices;
+
+		/** Vertex descriptor of plasticity rules. */
+		std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
+		    plasticity_rule_vertices;
+
+		/**
+		 * Spike labels corresponding to each neuron in a population.
+		 * For external populations these are the input spike labels, for internal population this
+		 * is only given for populations with enabled recording.
+		 */
+		typedef std::map<
+		    PopulationDescriptor,
+		    std::vector<std::map<
+		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
+		        std::vector<std::optional<halco::hicann_dls::vx::v3::SpikeLabel>>>>>
+		    SpikeLabels;
+		SpikeLabels spike_labels;
+
 		/**
 		 * Translation of Projection::Connection to synapses in signal-flow graph.
 		 * For each projection (descriptor) a vector with equal ordering to the connections of the
@@ -158,28 +147,6 @@ private:
 	std::shared_ptr<Network> m_network;
 
 	signal_flow::Graph m_graph;
-	std::optional<signal_flow::Graph::vertex_descriptor> m_event_input_vertex;
-	std::optional<signal_flow::Graph::vertex_descriptor> m_event_output_vertex;
-	std::optional<signal_flow::Graph::vertex_descriptor> m_madc_sample_output_vertex;
-	std::vector<signal_flow::Graph::vertex_descriptor> m_cadc_sample_output_vertex;
-	std::map<
-	    ProjectionDescriptor,
-	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
-	    m_synapse_vertices;
-	std::map<
-	    PopulationDescriptor,
-	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
-	    m_neuron_vertices;
-	std::map<
-	    PopulationDescriptor,
-	    std::map<halco::hicann_dls::vx::HemisphereOnDLS, signal_flow::Graph::vertex_descriptor>>
-	    m_background_spike_source_vertices;
-	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
-	    m_plasticity_rule_vertices;
-	std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
-	    m_plasticity_rule_output_vertices;
-	SpikeLabels m_spike_labels;
-
 	GraphTranslation m_graph_translation;
 
 	std::chrono::microseconds m_construction_duration;

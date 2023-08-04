@@ -73,13 +73,6 @@ public:
 			    synapses;
 		};
 
-		std::optional<signal_flow::Graph::vertex_descriptor> external_input;
-		std::map<
-		    PopulationDescriptor,
-		    std::map<
-		        halco::hicann_dls::vx::v3::HemisphereOnDLS,
-		        signal_flow::Graph::vertex_descriptor>>
-		    background_spike_sources;
 		std::optional<signal_flow::Graph::vertex_descriptor> crossbar_l2_input;
 		std::
 		    map<halco::hicann_dls::vx::v3::CrossbarNodeOnDLS, signal_flow::Graph::vertex_descriptor>
@@ -96,12 +89,6 @@ public:
 		    neuron_event_outputs;
 		std::map<PopulationDescriptor, PlacedPopulation> populations;
 		std::map<ProjectionDescriptor, PlacedProjection> projections;
-		std::optional<signal_flow::Graph::vertex_descriptor> external_output;
-		std::optional<signal_flow::Graph::vertex_descriptor> madc_output;
-		std::vector<signal_flow::Graph::vertex_descriptor> cadc_output;
-		std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor> plasticity_rules;
-		std::map<PlasticityRuleDescriptor, signal_flow::Graph::vertex_descriptor>
-		    plasticity_rules_output;
 
 		NetworkGraph::GraphTranslation graph_translation;
 	};
@@ -220,7 +207,7 @@ public:
 	    Resources& resources,
 	    common::ExecutionInstanceID const& instance) const;
 
-	NetworkGraph::SpikeLabels get_spike_labels(RoutingResult const& connection_result);
+	void calculate_spike_labels(Resources& resources, RoutingResult const& connection_result) const;
 
 private:
 	Network const& m_network;

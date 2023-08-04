@@ -54,7 +54,7 @@ class SwTestPygrenadeVx(unittest.TestCase):
 
         network_graph = grenade.build_network_graph(network, routing_result)
 
-        self.assertEqual(network_graph.event_input_vertex, 0)
+        self.assertEqual(network_graph.graph_translation.event_input_vertex, 0)
 
 
 if __name__ == "__main__":

@@ -364,8 +364,8 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 		                                     .toNeuronEventOutputOnDLS();
 		if (spl1_address) { // crossbar node from L2
 			for (auto const& external_population_descriptor : external_population_descriptors) {
-				auto const& spike_labels =
-				    network_graph.get_spike_labels().at(external_population_descriptor);
+				auto const& spike_labels = network_graph.get_graph_translation().spike_labels.at(
+				    external_population_descriptor);
 				for (size_t index_pre = 0; index_pre < spike_labels.size(); ++index_pre) {
 					for (auto const& spike_label :
 					     spike_labels.at(index_pre).at(CompartmentOnLogicalNeuron())) {
@@ -388,8 +388,8 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				continue;
 			}
 			for (auto const& internal_population_descriptor : internal_population_descriptors) {
-				auto const& spike_labels =
-				    network_graph.get_spike_labels().at(internal_population_descriptor);
+				auto const& spike_labels = network_graph.get_graph_translation().spike_labels.at(
+				    internal_population_descriptor);
 				for (size_t index_pre = 0; index_pre < spike_labels.size(); ++index_pre) {
 					for (auto const& [compartment, labels] : spike_labels.at(index_pre)) {
 						auto const& spike_master =
@@ -435,7 +435,8 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				for (auto const& background_population_descriptor :
 				     background_population_descriptors) {
 					auto const& spike_labels =
-					    network_graph.get_spike_labels().at(background_population_descriptor);
+					    network_graph.get_graph_translation().spike_labels.at(
+					        background_population_descriptor);
 					size_t i = 0;
 					for (auto const [hemisphere, padi_bus] :
 					     std::get<BackgroundSourcePopulation>(
