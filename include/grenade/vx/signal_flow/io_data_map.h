@@ -14,7 +14,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <unordered_map>
 #include <variant>
 
 namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
@@ -54,7 +53,7 @@ struct GENPYBIND(visible) IODataMap
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::vector<std::unordered_map<common::ExecutionInstanceID, common::Time>> runtime;
+	std::vector<std::map<common::ExecutionInstanceID, common::Time>> runtime;
 
 	/**
 	 * Optional time information of performed execution to be filled by executor.
@@ -128,7 +127,7 @@ struct ConstantReferenceIODataMap
 	std::map<signal_flow::detail::vertex_descriptor, Entry const&> data;
 
 	/** Runtime data. */
-	std::vector<std::unordered_map<common::ExecutionInstanceID, common::Time>> runtime;
+	std::vector<std::map<common::ExecutionInstanceID, common::Time>> runtime;
 
 	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
 

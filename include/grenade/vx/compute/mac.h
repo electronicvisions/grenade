@@ -130,7 +130,7 @@ private:
 
 	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS m_madc_recording_neuron;
 	std::string m_madc_recording_path;
-	std::unordered_map<common::ExecutionInstanceID, signal_flow::Graph::vertex_descriptor>
+	std::map<common::ExecutionInstanceID, signal_flow::Graph::vertex_descriptor>
 	    m_madc_recording_vertices;
 
 	friend struct cereal::access;

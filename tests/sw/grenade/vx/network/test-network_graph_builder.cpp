@@ -313,8 +313,7 @@ TEST(build_network_graph, ExecutionInstance)
 
 	auto const routing_result = routing::PortfolioRouter()(network);
 
-	grenade::vx::common::ExecutionInstanceID execution_instance(
-	    grenade::vx::common::ExecutionIndex(1), DLSGlobal());
+	grenade::vx::common::ExecutionInstanceID execution_instance(1);
 	auto network_graph = build_network_graph(network, routing_result, execution_instance);
 
 	for (auto const vertex :

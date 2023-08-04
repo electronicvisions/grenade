@@ -61,6 +61,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     signal_flow::IODataMap const& input_data_map,
     signal_flow::Graph const& graph,
     common::ExecutionInstanceID const& execution_instance,
+    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
     lola::vx::v3::Chip const& initial_config,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,
@@ -69,6 +70,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     input_data_map(input_data_map),
     graph(graph),
     execution_instance(execution_instance),
+    dls_global(dls_global),
     initial_config(initial_config),
     connection(connection),
     connection_state_storage(connection_state_storage),
@@ -411,8 +413,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// add execution duration per hardware to result data map
 	assert(result_data_map.execution_time_info);
-	result_data_map.execution_time_info
-	    ->execution_duration_per_hardware[execution_instance.toDLSGlobal()] =
+	result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
 	    connection_execution_duration_after - connection_execution_duration_before;
 
 	// merge local data map into global data map

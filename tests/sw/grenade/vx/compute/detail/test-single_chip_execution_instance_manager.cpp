@@ -17,30 +17,22 @@ TEST(SingleChipExecutionInstanceManager, General)
 	}
 	{
 		auto const ei = manager.next();
-		EXPECT_EQ(
-		    ei, grenade::vx::common::ExecutionInstanceID(
-		            grenade::vx::common::ExecutionIndex(1), DLSGlobal()));
+		EXPECT_EQ(ei, grenade::vx::common::ExecutionInstanceID(1));
 		EXPECT_EQ(manager.get_current_hemisphere(), HemisphereOnDLS(0));
 	}
 	{
 		auto const ei = manager.next();
-		EXPECT_EQ(
-		    ei, grenade::vx::common::ExecutionInstanceID(
-		            grenade::vx::common::ExecutionIndex(1), DLSGlobal()));
+		EXPECT_EQ(ei, grenade::vx::common::ExecutionInstanceID(1));
 		EXPECT_EQ(manager.get_current_hemisphere(), HemisphereOnDLS(1));
 	}
 	{
 		auto const ei = manager.next_index();
-		EXPECT_EQ(
-		    ei, grenade::vx::common::ExecutionInstanceID(
-		            grenade::vx::common::ExecutionIndex(2), DLSGlobal()));
+		EXPECT_EQ(ei, grenade::vx::common::ExecutionInstanceID(2));
 		EXPECT_EQ(manager.get_current_hemisphere(), HemisphereOnDLS(0));
 	}
 	{
 		auto const ei = manager.next_index();
-		EXPECT_EQ(
-		    ei, grenade::vx::common::ExecutionInstanceID(
-		            grenade::vx::common::ExecutionIndex(3), DLSGlobal()));
+		EXPECT_EQ(ei, grenade::vx::common::ExecutionInstanceID(3));
 		EXPECT_EQ(manager.get_current_hemisphere(), HemisphereOnDLS(0));
 	}
 }

@@ -27,7 +27,7 @@ TEST(IODataMap, General)
 	map.runtime.at(0)[ExecutionInstanceID()] = common::Time(0);
 	EXPECT_FALSE(map.valid());
 	EXPECT_THROW(map.batch_size(), std::runtime_error);
-	std::vector<std::unordered_map<ExecutionInstanceID, common::Time>> runtime{
+	std::vector<std::map<ExecutionInstanceID, common::Time>> runtime{
 	    {{ExecutionInstanceID(), common::Time(0)}}, {{ExecutionInstanceID(), common::Time(1)}}};
 	map.runtime = runtime;
 	EXPECT_TRUE(map.valid());
@@ -54,7 +54,7 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.data.contains(1));
 	EXPECT_EQ(map.data.at(1), data_1);
 	EXPECT_EQ(map.runtime, runtime);
-	std::vector<std::unordered_map<ExecutionInstanceID, common::Time>> runtime_2{
+	std::vector<std::map<ExecutionInstanceID, common::Time>> runtime_2{
 	    {{ExecutionInstanceID(), common::Time(0)}}, {{ExecutionInstanceID(), common::Time(1)}}};
 	map_2.runtime = runtime_2;
 	map.merge(map_2);

@@ -6,7 +6,6 @@
 #include <chrono>
 #include <iosfwd>
 #include <map>
-#include <unordered_map>
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include <pybind11/chrono.h>
@@ -31,7 +30,7 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	 * each batch entry. It is equivalent to the accumulated duration of the intervals during which
 	 * event recording is enabled for each batch entry.
 	 */
-	std::unordered_map<common::ExecutionInstanceID, std::chrono::nanoseconds>
+	std::map<common::ExecutionInstanceID, std::chrono::nanoseconds>
 	    realtime_duration_per_execution_instance{};
 
 	/**

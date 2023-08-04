@@ -1,6 +1,7 @@
 #include "grenade/vx/signal_flow/graph.h"
 
 #include "grenade/cerealization.h"
+#include <cereal/types/halco/common/geometry.h>
 #include <cereal/types/map.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/optional.hpp>

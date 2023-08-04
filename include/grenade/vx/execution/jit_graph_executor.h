@@ -1,6 +1,5 @@
 #pragma once
 #include <map>
-#include <unordered_map>
 
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
@@ -38,11 +37,10 @@ public:
 
 	static constexpr char name[] = "JITGraphExecutor";
 
-	typedef std::unordered_map<common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
+	typedef std::map<common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
 
-	typedef std::
-	    unordered_map<common::ExecutionInstanceID, signal_flow::ExecutionInstancePlaybackHooks>
-	        PlaybackHooks;
+	typedef std::map<common::ExecutionInstanceID, signal_flow::ExecutionInstancePlaybackHooks>
+	    PlaybackHooks;
 
 	/**
 	 * Construct executor with active connections from environment.

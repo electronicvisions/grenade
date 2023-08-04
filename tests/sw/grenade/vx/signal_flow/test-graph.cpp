@@ -93,16 +93,14 @@ TEST(Graph, check_execution_instances)
 	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
 
 	// ExternalInput -> DataInput not allowed over different execution instances
-	EXPECT_THROW(
-	    graph.add(vertex2, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v0}),
-	    std::runtime_error);
+	EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(1), {v0}), std::runtime_error);
 
 	// Graph:: v0 -> v1 -> v2
 	DataOutput vertex4(ConnectionType::Int8, 123);
 	auto const v2 = graph.add(vertex4, ExecutionInstanceID(), {v1});
 
 	// DataOutput -> DataInput allowed over differrent execution instances
-	EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v2}));
+	EXPECT_NO_THROW(graph.add(vertex2, ExecutionInstanceID(1), {v2}));
 
 	// DataOutput -> DataInput only allowed over differrent execution instances
 	EXPECT_THROW(graph.add(vertex2, ExecutionInstanceID(), {v2}), std::runtime_error);
@@ -125,10 +123,10 @@ void test_check_acyclicity(bool enable_check)
 	auto const v2 = graph.add(vertex4, ExecutionInstanceID(), {v1});
 
 	// Graph: v0 -> v1 -> v2 ==> v3
-	auto const v3 = graph.add(vertex2, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v2});
+	auto const v3 = graph.add(vertex2, ExecutionInstanceID(1), {v2});
 
 	// Graph: v0 -> v1 -> v2 ==> v3 -> v4
-	auto const v4 = graph.add(vertex4, ExecutionInstanceID(ExecutionIndex(1), DLSGlobal()), {v3});
+	auto const v4 = graph.add(vertex4, ExecutionInstanceID(1), {v3});
 
 	// DataOutput -> DataInput back to ExecutionIndex(0) leads to cyclicity
 	if (enable_check) {

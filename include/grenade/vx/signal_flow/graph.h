@@ -10,12 +10,10 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <unordered_map>
 #include <vector>
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
 #include <boost/bimap/set_of.hpp>
-#include <boost/bimap/unordered_set_of.hpp>
 
 namespace cereal {
 struct access;
@@ -57,13 +55,11 @@ public:
 	typedef detail::edge_descriptor edge_descriptor;
 
 	/** Edge properties indexed by edge descriptor. */
-	typedef std::unordered_map<edge_descriptor, std::optional<PortRestriction>>
-	    edge_property_map_type;
+	typedef std::map<edge_descriptor, std::optional<PortRestriction>> edge_property_map_type;
 
 	/** Map between execution instance graph vertex descriptor and execution instance. */
-	typedef boost::
-	    bimap<vertex_descriptor, boost::bimaps::unordered_set_of<common::ExecutionInstanceID>>
-	        execution_instance_map_type;
+	typedef boost::bimap<vertex_descriptor, boost::bimaps::set_of<common::ExecutionInstanceID>>
+	    execution_instance_map_type;
 
 	/**
 	 * Map between descriptors of vertices and descriptor of execution instance graph vertex.
@@ -251,9 +247,6 @@ private:
 	    InputVertex const& input_vertex,
 	    common::ExecutionInstanceID const& vertex_execution_instance,
 	    common::ExecutionInstanceID const& input_vertex_execution_instance);
-
-	void check_execution_instance(
-	    Vertex const& vertex, common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
 	void check_inputs(
 	    Vertex const& vertex,

@@ -15,12 +15,8 @@ Graph::vertex_descriptor Graph::add(
 	hate::Timer const timer;
 	// check validity of inputs with regard to vertex to be added
 	if constexpr (std::is_same_v<std::decay_t<VertexT>, vertex_descriptor>) {
-		// check match of chip coordinate in execution instance
-		check_execution_instance(get_vertex_property(vertex), execution_instance);
 		check_inputs(get_vertex_property(vertex), execution_instance, inputs);
 	} else {
-		// check match of chip coordinate in execution instance
-		check_execution_instance(vertex, execution_instance);
 		check_inputs(vertex, execution_instance, inputs);
 	}
 

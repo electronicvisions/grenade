@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
-#include <unordered_map>
 
 namespace grenade::vx::compute {
 
@@ -196,7 +195,7 @@ auto get_placed_ranges(
         hemispheres)
 {
 	typedef std::pair<detail::RangeSplit::SubRange, detail::RangeSplit::SubRange> XYSubRange;
-	std::unordered_map<
+	std::map<
 	    common::ExecutionInstanceID,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, XYSubRange>>
 	    placed_ranges;
@@ -267,7 +266,7 @@ void MAC::build_graph()
 	auto const external_instance = execution_instance_manager.next_index();
 	m_input_vertex = m_graph.add(external_input, external_instance, {});
 
-	std::unordered_map<common::ExecutionInstanceID, std::map<HemisphereOnDLS, signal_flow::Input>>
+	std::map<common::ExecutionInstanceID, std::map<HemisphereOnDLS, signal_flow::Input>>
 	    hemisphere_outputs;
 	for (auto const& [instance, hs] : placed_ranges) {
 		halco::common::typed_array<size_t, HemisphereOnDLS> sizes;
@@ -507,8 +506,8 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 			for (size_t b = 0; b < output_activation_map.batch_size(); ++b) {
 				auto const& local_madc_data = madc_data.at(b);
 				for (auto const& sample : local_madc_data) {
-					file << instance.toExecutionIndex().value() << "\t" << b << "\t"
-					     << sample.time.value() << "\t" << sample.data.value.value() << "\n";
+					file << instance.value() << "\t" << b << "\t" << sample.time.value() << "\t"
+					     << sample.data.value.value() << "\n";
 				}
 			}
 		}

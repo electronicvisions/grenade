@@ -506,22 +506,6 @@ void Graph::check_execution_instances(
 	}
 }
 
-void Graph::check_execution_instance(
-    Vertex const& vertex, common::ExecutionInstanceID const& execution_instance)
-{
-	auto const checker = [execution_instance](auto const& v) {
-		if constexpr (std::is_base_of_v<vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
-			if (execution_instance.toDLSGlobal() != v.get_coordinate_chip()) {
-				std::stringstream ss;
-				ss << "Vertex chip coordinate doesn't match execution instance chip coordinate";
-				throw std::runtime_error(ss.str());
-			}
-		}
-	};
-
-	std::visit(checker, vertex);
-}
-
 void Graph::check_inputs(
     Vertex const& vertex,
     common::ExecutionInstanceID const& execution_instance,

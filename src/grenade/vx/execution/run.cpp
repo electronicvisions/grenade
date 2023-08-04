@@ -43,6 +43,7 @@ signal_flow::IODataMap run(
 
 	auto const& execution_instance_graph = graph.get_execution_instance_graph();
 	auto const& execution_instance_map = graph.get_execution_instance_map();
+	auto const& vertex_descriptor_map = graph.get_vertex_descriptor_map();
 
 	// execution graph
 	tbb::flow::graph execution_graph;
@@ -50,7 +51,7 @@ signal_flow::IODataMap run(
 	tbb::flow::broadcast_node<tbb::flow::continue_msg> start(execution_graph);
 
 	// execution nodes
-	std::unordered_map<
+	std::map<
 	    signal_flow::Graph::vertex_descriptor, tbb::flow::continue_node<tbb::flow::continue_msg>>
 	    nodes;
 
@@ -61,9 +62,34 @@ signal_flow::IODataMap run(
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
 		auto const execution_instance = execution_instance_map.left.at(vertex);
-		auto const dls_global = execution_instance.toDLSGlobal();
+		// collect all chips used by execution instance
+		std::set<DLSGlobal> dls_globals;
+		for (auto const& [_, vertex_descriptor] :
+		     boost::make_iterator_range(vertex_descriptor_map.right.equal_range(vertex))) {
+			auto const& vertex_property = graph.get_vertex_property(vertex_descriptor);
+			std::visit(
+			    [&dls_globals](auto const& vp) {
+				    if constexpr (std::is_base_of_v<
+				                      signal_flow::vertex::EntityOnChip,
+				                      std::decay_t<decltype(vp)>>) {
+					    dls_globals.insert(vp.get_coordinate_chip());
+				    }
+			    },
+			    vertex_property);
+		}
+		// TODO: support execution instances without hardware usage
+		if (dls_globals.empty()) {
+			assert(executor.m_connection_state_storages.size() > 0);
+			dls_globals.insert(executor.m_connection_state_storages.begin()->first);
+		}
+		if (dls_globals.size() > 1) {
+			throw std::runtime_error(
+			    "Execution instance using multiple chips not supported (yet).");
+		}
+		assert(dls_globals.size() == 1);
+		auto const dls_global = *dls_globals.begin();
 		detail::ExecutionInstanceNode node_body(
-		    output_activation_map, input, graph, execution_instance,
+		    output_activation_map, input, graph, execution_instance, dls_global,
 		    initial_config.at(execution_instance), executor.m_connections.at(dls_global),
 		    executor.m_connection_state_storages.at(dls_global),
 		    playback_hooks[execution_instance]);

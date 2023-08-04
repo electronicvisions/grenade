@@ -34,6 +34,7 @@ struct ExecutionInstanceNode
 	    signal_flow::IODataMap const& input_data_map,
 	    signal_flow::Graph const& graph,
 	    common::ExecutionInstanceID const& execution_instance,
+	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
 	    lola::vx::v3::Chip const& initial_config,
 	    backend::Connection& connection,
 	    ConnectionStateStorage& connection_state_storage,
@@ -46,6 +47,7 @@ private:
 	signal_flow::IODataMap const& input_data_map;
 	signal_flow::Graph const& graph;
 	common::ExecutionInstanceID execution_instance;
+	halco::hicann_dls::vx::v3::DLSGlobal dls_global;
 	lola::vx::v3::Chip const& initial_config;
 	backend::Connection& connection;
 	ConnectionStateStorage& connection_state_storage;

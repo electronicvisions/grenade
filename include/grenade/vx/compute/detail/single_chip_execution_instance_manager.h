@@ -31,7 +31,7 @@ public:
 
 private:
 	halco::hicann_dls::vx::v3::HemisphereOnDLS m_current_hemisphere;
-	common::ExecutionIndex m_current_index;
+	common::ExecutionInstanceID m_current_instance;
 };
 
 } // namespace grenade::vx::compute::detail

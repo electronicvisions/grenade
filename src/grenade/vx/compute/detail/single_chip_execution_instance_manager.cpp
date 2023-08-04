@@ -6,10 +6,10 @@ common::ExecutionInstanceID SingleChipExecutionInstanceManager::next()
 {
 	using namespace halco::hicann_dls::vx::v3;
 	if (m_current_hemisphere) {
-		m_current_index = common::ExecutionIndex(m_current_index + 1);
+		m_current_instance = common::ExecutionInstanceID(m_current_instance + 1);
 	}
 	m_current_hemisphere = HemisphereOnDLS((m_current_hemisphere + 1) % HemisphereOnDLS::size);
-	return common::ExecutionInstanceID(m_current_index, DLSGlobal());
+	return m_current_instance;
 }
 
 halco::hicann_dls::vx::v3::HemisphereOnDLS
