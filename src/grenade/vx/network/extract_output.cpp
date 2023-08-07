@@ -105,13 +105,7 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 }
 
 
-std::vector<std::vector<std::tuple<
-    common::Time,
-    PopulationOnNetwork,
-    size_t,
-    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-    size_t,
-    signal_flow::Int8>>>
+std::vector<std::vector<std::tuple<common::Time, AtomicNeuronOnNetwork, signal_flow::Int8>>>
 extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
@@ -154,32 +148,23 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 		std::sort(batch.begin(), batch.end());
 	}
 
-	std::vector<std::vector<std::tuple<
-	    common::Time, PopulationOnNetwork, size_t,
-	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t, signal_flow::Int8>>>
+	std::vector<std::vector<std::tuple<common::Time, AtomicNeuronOnNetwork, signal_flow::Int8>>>
 	    ret(hardware_samples.size());
 
-	std::map<
-	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
-	    std::tuple<
-	        PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-	        size_t>>
-	    location_lookup;
+	std::map<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, AtomicNeuronOnNetwork> location_lookup;
 
 	assert(network_graph.get_network());
 	if (!network_graph.get_network()->cadc_recording) {
 		return ret;
 	}
 	for (auto const& neuron : network_graph.get_network()->cadc_recording->neurons) {
-		auto const atomic_neuron =
-		    std::get<Population>(network_graph.get_network()->populations.at(neuron.population))
-		        .neurons.at(neuron.neuron_on_population)
-		        .coordinate.get_placed_compartments()
-		        .at(neuron.compartment_on_neuron)
-		        .at(neuron.atomic_neuron_on_compartment);
-		location_lookup[atomic_neuron] = std::tuple{
-		    neuron.population, neuron.neuron_on_population, neuron.compartment_on_neuron,
-		    neuron.atomic_neuron_on_compartment};
+		auto const atomic_neuron = std::get<Population>(network_graph.get_network()->populations.at(
+		                                                    neuron.coordinate.population))
+		                               .neurons.at(neuron.coordinate.neuron_on_population)
+		                               .coordinate.get_placed_compartments()
+		                               .at(neuron.coordinate.compartment_on_neuron)
+		                               .at(neuron.coordinate.atomic_neuron_on_compartment);
+		location_lookup[atomic_neuron] = neuron.coordinate;
 	}
 
 	for (size_t b = 0; b < hardware_samples.size(); ++b) {
@@ -187,11 +172,10 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
 		auto& local_ret = ret.at(b);
 
 		for (auto const& hardware_sample : local_hardware_samples) {
-			auto const& [population, neuron_on_population, compartment_on_neuron, atomic_neuron_on_compartment] =
-			    location_lookup.at(std::get<1>(hardware_sample));
+			auto const& atomic_neuron_on_network = location_lookup.at(std::get<1>(hardware_sample));
 			local_ret.push_back(std::tuple{
-			    std::get<0>(hardware_sample), population, neuron_on_population,
-			    compartment_on_neuron, atomic_neuron_on_compartment, std::get<2>(hardware_sample)});
+			    std::get<0>(hardware_sample), atomic_neuron_on_network,
+			    std::get<2>(hardware_sample)});
 		}
 	}
 	LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");

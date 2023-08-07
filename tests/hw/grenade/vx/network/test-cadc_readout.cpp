@@ -65,16 +65,16 @@ TEST(CADCRecording, General)
 
 	CADCRecording cadc_recording;
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0,
+	    AtomicNeuronOnNetwork(population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0,
+	    AtomicNeuronOnNetwork(population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0,
+	    AtomicNeuronOnNetwork(population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0,
+	    AtomicNeuronOnNetwork(population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0),
 	    CADCRecording::Neuron::Source::membrane});
 	network_builder.add(cadc_recording);
 
@@ -99,13 +99,11 @@ TEST(CADCRecording, General)
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	std::set<grenade::vx::signal_flow::Int8> unique_values;
 	for (size_t i = 0; i < result.size(); ++i) {
-		std::map<
-		    std::tuple<PopulationOnNetwork, size_t, CompartmentOnLogicalNeuron, size_t>, size_t>
-		    samples_per_neuron;
+		std::map<AtomicNeuronOnNetwork, size_t> samples_per_neuron;
 		auto const& samples = result.at(i);
 		for (auto const& sample : samples) {
-			auto const& [_, d, n, c, an, v] = sample;
-			samples_per_neuron[std::tuple{d, n, c, an}] += 1;
+			auto const& [_, an_on_network, v] = sample;
+			samples_per_neuron[an_on_network] += 1;
 			unique_values.insert(v);
 		}
 		EXPECT_EQ(samples_per_neuron.size(), cadc_recording.neurons.size());

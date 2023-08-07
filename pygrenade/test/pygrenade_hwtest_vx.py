@@ -154,8 +154,10 @@ class HwTestPygrenadeVx(unittest.TestCase):
         for nrn_id in range(int_pop_size):
             recorded_neurons.append(
                 grenade.network.CADCRecording.Neuron(
-                    int_pop_descr, nrn_id, halco.CompartmentOnLogicalNeuron(),
-                    0, lola.AtomicNeuron.Readout.Source.membrane))
+                    grenade.network.AtomicNeuronOnNetwork(
+                        int_pop_descr, nrn_id,
+                        halco.CompartmentOnLogicalNeuron(), 0),
+                    lola.AtomicNeuron.Readout.Source.membrane))
         cadc_recording.neurons = recorded_neurons
         network_builder.add(cadc_recording)
 

@@ -48,13 +48,7 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
  * @return Time-series CADC sample data per batch entry. Samples are sorted by their ChipTime per
  * batch-entry and contain their corresponding location alongside the ADC value.
  */
-std::vector<std::vector<std::tuple<
-    common::Time,
-    PopulationOnNetwork,
-    size_t,
-    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
-    size_t,
-    signal_flow::Int8>>>
+std::vector<std::vector<std::tuple<common::Time, AtomicNeuronOnNetwork, signal_flow::Int8>>>
 extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
     SYMBOL_VISIBLE;
 
@@ -104,12 +98,7 @@ GENPYBIND_MANUAL({
 		    LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		    return ret;
 	    };
-	auto const extract_madc_samples = [convert_ms](
-	                                      grenade::vx::signal_flow::IODataMap const& data,
-	                                      grenade::vx::network::NetworkGraph const& network_graph) {
-		hate::Timer timer;
-		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
-		auto const samples = grenade::vx::network::extract_madc_samples(data, network_graph);
+	auto const extract_neuron_samples = [convert_ms](auto const& samples) {
 		std::vector<std::tuple<
 		    pybind11::array_t<float>, pybind11::array_t<int>, pybind11::array_t<int>,
 		    pybind11::array_t<int>, pybind11::array_t<int>, pybind11::array_t<int>>>
@@ -141,46 +130,25 @@ GENPYBIND_MANUAL({
 			ret.at(b) =
 			    std::make_tuple(times, descriptor, nrn_on_pop, comp_on_nrn, an_on_comp, values);
 		}
+		return ret;
+	};
+	auto const extract_madc_samples = [extract_neuron_samples](
+	                                      grenade::vx::signal_flow::IODataMap const& data,
+	                                      grenade::vx::network::NetworkGraph const& network_graph) {
+		hate::Timer timer;
+		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
+		auto const ret =
+		    extract_neuron_samples(grenade::vx::network::extract_madc_samples(data, network_graph));
 		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;
 	};
-	auto const extract_cadc_samples = [convert_ms](
+	auto const extract_cadc_samples = [extract_neuron_samples](
 	                                      grenade::vx::signal_flow::IODataMap const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		hate::Timer timer;
 		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_cadc_samples");
-		auto const samples = grenade::vx::network::extract_cadc_samples(data, network_graph);
-		std::vector<std::tuple<
-		    pybind11::array_t<float>, pybind11::array_t<int>, pybind11::array_t<int>,
-		    pybind11::array_t<int>, pybind11::array_t<int>, pybind11::array_t<int>>>
-		    ret(samples.size());
-		for (size_t b = 0; b < samples.size(); ++b) {
-			auto const cadc_samples = samples.at(b);
-			if (cadc_samples.empty()) {
-				ret.at(b) = std::make_tuple(
-				    pybind11::array_t<float>(0), pybind11::array_t<int>(0),
-				    pybind11::array_t<int>(0), pybind11::array_t<int>(0), pybind11::array_t<int>(0),
-				    pybind11::array_t<int>(0));
-				continue;
-			}
-			pybind11::array_t<float> times(static_cast<pybind11::ssize_t>(cadc_samples.size()));
-			pybind11::array_t<int> descriptor(static_cast<pybind11::ssize_t>(cadc_samples.size()));
-			pybind11::array_t<int> nrn_on_pop(static_cast<pybind11::ssize_t>(cadc_samples.size()));
-			pybind11::array_t<int> comp_on_nrn(static_cast<pybind11::ssize_t>(cadc_samples.size()));
-			pybind11::array_t<int> an_on_comp(static_cast<pybind11::ssize_t>(cadc_samples.size()));
-			pybind11::array_t<int> values(static_cast<pybind11::ssize_t>(cadc_samples.size()));
-			for (size_t i = 0; i < cadc_samples.size(); ++i) {
-				auto const& sample = cadc_samples.at(i);
-				times.mutable_at(i) = convert_ms(std::get<0>(sample));
-				descriptor.mutable_at(i) = std::get<1>(sample).value();
-				nrn_on_pop.mutable_at(i) = std::get<2>(sample);
-				comp_on_nrn.mutable_at(i) = std::get<3>(sample).value();
-				an_on_comp.mutable_at(i) = std::get<4>(sample);
-				values.mutable_at(i) = std::get<5>(sample).value();
-			}
-			ret.at(b) =
-			    std::make_tuple(times, descriptor, nrn_on_pop, comp_on_nrn, an_on_comp, values);
-		}
+		auto const ret =
+		    extract_neuron_samples(grenade::vx::network::extract_cadc_samples(data, network_graph));
 		LOG4CXX_TRACE(logger, "Execution duration: " << timer.print() << ".");
 		return ret;
 	};

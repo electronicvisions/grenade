@@ -246,11 +246,7 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 		}
 		if (m_cadc_recording) {
 			for (auto const& cadc_neuron : m_cadc_recording->neurons) {
-				if (neuron.coordinate.population == cadc_neuron.population &&
-				    neuron.coordinate.neuron_on_population == cadc_neuron.neuron_on_population &&
-				    neuron.coordinate.compartment_on_neuron == cadc_neuron.compartment_on_neuron &&
-				    neuron.coordinate.atomic_neuron_on_compartment ==
-				        cadc_neuron.atomic_neuron_on_compartment &&
+				if (neuron.coordinate == cadc_neuron.coordinate &&
 				    neuron.source != cadc_neuron.source) {
 					throw std::runtime_error(
 					    "MADC recording source conflicts with CADC recording's source.");
@@ -317,37 +313,29 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 	if (m_cadc_recording) {
 		throw std::runtime_error("Only one CADC recording per network possible.");
 	}
-	std::set<std::tuple<
-	    PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, size_t>>
-	    unique;
+	std::set<AtomicNeuronOnNetwork> unique;
 	for (auto const& neuron : cadc_recording.neurons) {
-		if (!m_populations.contains(neuron.population)) {
+		if (!m_populations.contains(neuron.coordinate.population)) {
 			throw std::runtime_error("CADC recording references unknown population.");
 		}
-		if (!std::holds_alternative<Population>(m_populations.at(neuron.population))) {
+		if (!std::holds_alternative<Population>(m_populations.at(neuron.coordinate.population))) {
 			throw std::runtime_error("CADC recording does not reference internal population.");
 		}
-		if (neuron.neuron_on_population >=
-		    std::get<Population>(m_populations.at(neuron.population)).neurons.size()) {
+		if (neuron.coordinate.neuron_on_population >=
+		    std::get<Population>(m_populations.at(neuron.coordinate.population)).neurons.size()) {
 			throw std::runtime_error(
 			    "CADC recording references neuron index out of range of population.");
 		}
 		if (m_madc_recording) {
 			for (auto const& madc_neuron : m_madc_recording->neurons) {
-				if (neuron.population == madc_neuron.coordinate.population &&
-				    neuron.neuron_on_population == madc_neuron.coordinate.neuron_on_population &&
-				    neuron.compartment_on_neuron == madc_neuron.coordinate.compartment_on_neuron &&
-				    neuron.atomic_neuron_on_compartment ==
-				        madc_neuron.coordinate.atomic_neuron_on_compartment &&
+				if (neuron.coordinate == madc_neuron.coordinate &&
 				    neuron.source != madc_neuron.source) {
 					throw std::runtime_error(
 					    "CADC recording source conflicts with MADC recording's source.");
 				}
 			}
 		}
-		unique.insert(
-		    {neuron.population, neuron.neuron_on_population, neuron.compartment_on_neuron,
-		     neuron.atomic_neuron_on_compartment});
+		unique.insert(neuron.coordinate);
 	}
 	if (unique.size() != cadc_recording.neurons.size()) {
 		throw std::runtime_error("CADC recording neurons are not unique.");

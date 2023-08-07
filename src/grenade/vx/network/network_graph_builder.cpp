@@ -1511,11 +1511,12 @@ void NetworkGraphBuilder::add_cadc_recording(
 	    NeuronRowOnDLS>
 	    neurons;
 	for (auto const& neuron : cadc_recording.neurons) {
-		auto const& population = std::get<Population>(m_network.populations.at(neuron.population));
-		auto const an = population.neurons.at(neuron.neuron_on_population)
+		auto const& population =
+		    std::get<Population>(m_network.populations.at(neuron.coordinate.population));
+		auto const an = population.neurons.at(neuron.coordinate.neuron_on_population)
 		                    .coordinate.get_placed_compartments()
-		                    .at(neuron.compartment_on_neuron)
-		                    .at(neuron.atomic_neuron_on_compartment);
+		                    .at(neuron.coordinate.compartment_on_neuron)
+		                    .at(neuron.coordinate.atomic_neuron_on_compartment);
 		std::vector<AtomicNeuronOnDLS> sorted_neurons;
 		for (auto const& nrn : population.neurons) {
 			for (auto const& other_an : nrn.coordinate.get_atomic_neurons()) {
@@ -1530,7 +1531,7 @@ void NetworkGraphBuilder::add_cadc_recording(
 		assert(sorted_index < sorted_neurons.size());
 		signal_flow::PortRestriction const port_restriction(sorted_index, sorted_index);
 		signal_flow::Input const input(
-		    resources.populations.at(neuron.population)
+		    resources.populations.at(neuron.coordinate.population)
 		        .neurons.at(an.toNeuronRowOnDLS().toHemisphereOnDLS()),
 		    port_restriction);
 		neurons[an.toNeuronRowOnDLS()].push_back({an.toNeuronColumnOnDLS(), input, neuron.source});
