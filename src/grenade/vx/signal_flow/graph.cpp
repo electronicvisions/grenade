@@ -10,6 +10,7 @@
 
 #include <log4cxx/logger.h>
 
+#include "grenade/vx/common/detail/null_output_iterator.h"
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/supports_input_from.h"
@@ -242,41 +243,12 @@ Graph::vertex_descriptor_map_type const& Graph::get_vertex_descriptor_map() cons
 	return m_vertex_descriptor_map;
 }
 
-namespace detail {
-
-/**
- * Output iterator dropping all mutable operations.
- */
-template <typename T>
-class NullOutputIterator : public std::iterator<std::output_iterator_tag, void, void, void, void>
-{
-public:
-	NullOutputIterator& operator=(T const&)
-	{
-		return *this;
-	}
-	NullOutputIterator& operator*()
-	{
-		return *this;
-	}
-	NullOutputIterator& operator++()
-	{
-		return *this;
-	}
-	NullOutputIterator operator++(int)
-	{
-		return *this;
-	}
-};
-
-} // namespace detail
-
 bool Graph::is_acyclic_execution_instance_graph() const
 {
 	assert(m_execution_instance_graph);
 	try {
 		boost::topological_sort(
-		    *m_execution_instance_graph, detail::NullOutputIterator<vertex_descriptor>{});
+		    *m_execution_instance_graph, common::detail::NullOutputIterator<vertex_descriptor>{});
 	} catch (boost::not_a_dag const&) {
 		return false;
 	}

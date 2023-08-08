@@ -1,6 +1,8 @@
 #pragma once
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/cadc_recording.h"
+#include "grenade/vx/network/inter_execution_instance_projection.h"
+#include "grenade/vx/network/inter_execution_instance_projection_on_network.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/pad_recording.h"
@@ -12,6 +14,7 @@
 #include "grenade/vx/network/projection_on_network.h"
 #include "hate/visibility.h"
 #include <memory>
+#include <boost/graph/adjacency_list.hpp>
 
 namespace log4cxx {
 class Logger;
@@ -108,14 +111,35 @@ public:
 	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
 	    SYMBOL_VISIBLE;
 
+	/**
+	 * Add inter-execution-instance projection between already added populations.
+	 * The projection is expected to be connecting different execution instances.
+	 * @param projection Projection to add
+	 */
+	InterExecutionInstanceProjectionOnNetwork add(
+	    InterExecutionInstanceProjection const& projection) SYMBOL_VISIBLE;
+
 	NetworkBuilder() SYMBOL_VISIBLE;
 
 	std::shared_ptr<Network> done() SYMBOL_VISIBLE;
 
 private:
 	std::map<common::ExecutionInstanceID, Network::ExecutionInstance> m_execution_instances;
+	std::map<InterExecutionInstanceProjectionOnNetwork, InterExecutionInstanceProjection>
+	    m_inter_execution_instance_projections;
 	std::chrono::microseconds m_duration;
 	log4cxx::LoggerPtr m_logger;
+
+	typedef boost::adjacency_list<
+	    boost::vecS,
+	    boost::vecS,
+	    boost::bidirectionalS,
+	    boost::no_property,
+	    boost::no_property>
+	    ExecutionInstanceGraph;
+	ExecutionInstanceGraph m_execution_instance_graph;
+	std::map<common::ExecutionInstanceID, ExecutionInstanceGraph::vertex_descriptor>
+	    m_execution_instance_vertices;
 };
 
 } // namespace grenade::vx::network

@@ -59,6 +59,8 @@ TEST(network_InputGenerator, General)
 	          std::nullopt,
 	          std::nullopt,
 	          {}}}},
+	    {},
+	    {common::ExecutionInstanceID()},
 	    {}});
 
 	auto const routing = routing::PortfolioRouter()(network);

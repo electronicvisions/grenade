@@ -363,3 +363,183 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		}
 	}
 }
+
+/**
+ * Feed-forward network across two execution instances.
+ * The first instance gets external user input and projects onto on-chip neurons.
+ * Their output is then forwarded to the second instance via the host computer but without user
+ * interaction. There, another projection onto on-chip neurons is performed, their output is read
+ * back and compared to the expectation.
+ */
+TEST(NetworkGraphBuilder, ExecutionInstanceChain)
+{
+	// Construct connection to HW
+	auto chip_configs = get_chip_configs_bypass_excitatory();
+	chip_configs[grenade::vx::common::ExecutionInstanceID(1)] =
+	    chip_configs.at(grenade::vx::common::ExecutionInstanceID(0));
+
+	grenade::vx::execution::JITGraphExecutor executor;
+
+	// build network
+	NetworkBuilder network_builder;
+
+	ExternalSourcePopulation population_0{1};
+	auto const population_0_descriptor =
+	    network_builder.add(population_0, grenade::vx::common::ExecutionInstanceID(0));
+
+	Population::Neurons neurons_1{Population::Neuron(
+	    LogicalNeuronOnDLS(
+	        LogicalNeuronCompartments(
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	        AtomicNeuronOnDLS()),
+	    Population::Neuron::Compartments{
+	        {CompartmentOnLogicalNeuron(),
+	         Population::Neuron::Compartment{
+	             Population::Neuron::Compartment::SpikeMaster(0, true),
+	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+	Population population_1{std::move(neurons_1)};
+	auto const population_1_descriptor = network_builder.add(population_1);
+
+	{
+		Projection::Connections projection_connections;
+		for (size_t i = 0; i < population_0.size; ++i) {
+			projection_connections.push_back(
+			    {{i, CompartmentOnLogicalNeuron()},
+			     {i, CompartmentOnLogicalNeuron()},
+			     Projection::Connection::Weight(63)});
+		}
+		Projection projection{
+		    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+		    population_0_descriptor.toPopulationOnExecutionInstance(),
+		    population_1_descriptor.toPopulationOnExecutionInstance()};
+		network_builder.add(projection);
+	}
+
+	ExternalSourcePopulation population_2{2};
+	auto const population_2_descriptor =
+	    network_builder.add(population_2, grenade::vx::common::ExecutionInstanceID(1));
+
+	{
+		InterExecutionInstanceProjection::Connections projection_connections;
+		for (size_t i = 0; i < population_0.size; ++i) {
+			projection_connections.push_back(
+			    {{i, CompartmentOnLogicalNeuron()}, {i, CompartmentOnLogicalNeuron()}});
+		}
+		InterExecutionInstanceProjection projection{
+		    std::move(projection_connections), population_1_descriptor, population_2_descriptor};
+		network_builder.add(projection);
+	}
+
+	Population::Neurons neurons_3{
+	    Population::Neuron(
+	        LogicalNeuronOnDLS(
+	            LogicalNeuronCompartments(
+	                {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	            AtomicNeuronOnDLS()),
+	        Population::Neuron::Compartments{
+	            {CompartmentOnLogicalNeuron(),
+	             Population::Neuron::Compartment{
+	                 Population::Neuron::Compartment::SpikeMaster(0, true),
+	                 {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}),
+	    Population::Neuron(
+	        LogicalNeuronOnDLS(
+	            LogicalNeuronCompartments(
+	                {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+	            AtomicNeuronOnDLS(Enum(1))),
+	        Population::Neuron::Compartments{
+	            {CompartmentOnLogicalNeuron(),
+	             Population::Neuron::Compartment{
+	                 Population::Neuron::Compartment::SpikeMaster(0, true),
+	                 {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
+	Population population_3{std::move(neurons_3)};
+	auto const population_3_descriptor =
+	    network_builder.add(population_3, grenade::vx::common::ExecutionInstanceID(1));
+
+	{
+		Projection::Connections projection_connections;
+		for (size_t i = 0; i < population_2.size; ++i) {
+			projection_connections.push_back(
+			    {{i, CompartmentOnLogicalNeuron()},
+			     {i, CompartmentOnLogicalNeuron()},
+			     Projection::Connection::Weight(63)});
+		}
+		Projection projection{
+		    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
+		    population_2_descriptor.toPopulationOnExecutionInstance(),
+		    population_3_descriptor.toPopulationOnExecutionInstance()};
+		network_builder.add(projection, grenade::vx::common::ExecutionInstanceID(1));
+	}
+
+	// build network graph
+	auto const network = network_builder.done();
+	auto const routing_result = routing::PortfolioRouter()(network);
+	auto const network_graph = build_network_graph(network, routing_result);
+
+	// generate input
+	constexpr size_t num = 100;
+	constexpr size_t isi = 1000;
+	InputGenerator input_generator(network_graph, 1);
+
+	{
+		std::vector<std::vector<std::vector<grenade::vx::common::Time>>> spike_times_0(
+		    population_0.size);
+		for (size_t i = 0; i < population_0.size; ++i) {
+			spike_times_0.at(i).resize(population_0.size);
+			for (size_t j = 0; j < num; ++j) {
+				spike_times_0.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
+			}
+		}
+		input_generator.add(spike_times_0, population_0_descriptor);
+	}
+	{
+		std::vector<std::vector<std::vector<grenade::vx::common::Time>>> spike_times_2(
+		    population_0.size);
+		for (size_t i = 0; i < population_0.size; ++i) {
+			spike_times_2.at(i).resize(population_2.size);
+			for (size_t j = 0; j < num; ++j) {
+				spike_times_2.at(i).at(i).push_back(grenade::vx::common::Time(j * isi + (isi / 2)));
+			}
+		}
+		input_generator.add(spike_times_2, population_2_descriptor);
+	}
+	auto inputs = input_generator.done();
+	inputs.runtime.resize(
+	    inputs.batch_size(),
+	    {{grenade::vx::common::ExecutionInstanceID(0), grenade::vx::common::Time(num * isi)},
+	     {grenade::vx::common::ExecutionInstanceID(1), grenade::vx::common::Time(num * isi)}});
+
+	// run graph with given inputs and return results
+	auto const result_map =
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+
+	auto const result = extract_neuron_spikes(result_map, network_graph);
+
+	EXPECT_EQ(result.size(), inputs.batch_size());
+	for (size_t i = 0; i < population_3.neurons.size(); ++i) {
+		for (size_t j = 0; j < result.size(); ++j) {
+			if (i == j) {
+				EXPECT_TRUE(result.at(j).contains(std::tuple{
+				    population_3_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
+				if (result.at(j).contains(std::tuple{
+				        population_3_descriptor, static_cast<size_t>(i),
+				        CompartmentOnLogicalNeuron()})) {
+					auto const& spikes = result.at(i).at(std::tuple{
+					    population_3_descriptor, static_cast<size_t>(i),
+					    CompartmentOnLogicalNeuron()});
+					if (i == 0) {
+						EXPECT_GE(spikes.size(), num * 0.8 * 2);
+						EXPECT_LE(spikes.size(), num * 1.2 * 2);
+					} else {
+						EXPECT_GE(spikes.size(), num * 0.8);
+						EXPECT_LE(spikes.size(), num * 1.2);
+					}
+				}
+			} else {
+				EXPECT_FALSE(result.at(j).contains(std::tuple{
+				    population_3_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
+			}
+		}
+	}
+}

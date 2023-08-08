@@ -4,6 +4,7 @@
 #include "grenade/vx/network/build_connection_weight_split.h"
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/requires_routing.h"
+#include "grenade/vx/network/vertex/transformation/external_source_merger.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
@@ -31,11 +32,20 @@ NetworkGraph build_network_graph(
 
 	NetworkGraphBuilder builder(*network);
 
-	for (auto const& [instance, _] : network->execution_instances) {
+	for (auto const& instance : network->topologically_sorted_execution_instance_ids) {
 		resources.execution_instances.emplace(
 		    instance, NetworkGraphBuilder::Resources::ExecutionInstance{});
+	}
 
+	// spike labels needed for constructions on inter-execution-instance projections below
+	for (auto const& instance : network->topologically_sorted_execution_instance_ids) {
+		builder.calculate_spike_labels(resources, routing_result, instance);
+	}
+
+	for (auto const& instance : network->topologically_sorted_execution_instance_ids) {
 		// add external populations input
+		// For inter-execution-instance sources we use the above-calculated spike-labels
+		// to construct the translation here.
 		builder.add_external_input(result.m_graph, resources, instance);
 
 		// add background spike sources
@@ -144,9 +154,8 @@ NetworkGraph build_network_graph(
 			resources.execution_instances.at(instance).graph_translation.neuron_vertices[d] =
 			    p.neurons;
 		}
-		builder.calculate_spike_labels(resources, routing_result, instance);
 	}
-	for (auto const& [instance, _] : network->execution_instances) {
+	for (auto const& instance : network->topologically_sorted_execution_instance_ids) {
 		result.m_graph_translation.execution_instances[instance] =
 		    resources.execution_instances.at(instance).graph_translation;
 	}
@@ -367,10 +376,79 @@ void NetworkGraphBuilder::add_external_input(
 	    signal_flow::ConnectionType::TimedSpikeToChipSequence, 1);
 	auto const data_input_vertex = graph.add(data_input, instance, {event_input_vertex});
 
+	// extract inter-execution-instance projection spike label translations
+	// [pre, translation]
+	std::map<
+	    common::ExecutionInstanceID,
+	    vertex::transformation::ExternalSourceMerger::InterExecutionInstanceInput>
+	    inter_execution_instance_translations;
+	for (auto const& [_, projection] : m_network.inter_execution_instance_projections) {
+		if (projection.population_post.toExecutionInstanceID() != instance) {
+			continue;
+		}
+		auto& local_translations =
+		    inter_execution_instance_translations[projection.population_pre
+		                                              .toExecutionInstanceID()];
+		for (auto const& connection : projection.connections) {
+			auto const& spike_labels_pre =
+			    resources.execution_instances.at(projection.population_pre.toExecutionInstanceID())
+			        .graph_translation.spike_labels
+			        .at(projection.population_pre.toPopulationOnExecutionInstance())
+			        .at(connection.index_pre.first)
+			        .at(connection.index_pre.second);
+			assert(spike_labels_pre.size() == 1);
+			auto const& spike_label_pre = spike_labels_pre.at(0);
+			assert(spike_label_pre);
+
+			auto const& maybe_spike_labels_post =
+			    resources.execution_instances.at(instance)
+			        .graph_translation.spike_labels
+			        .at(projection.population_post.toPopulationOnExecutionInstance())
+			        .at(connection.index_post.first)
+			        .at(connection.index_post.second);
+			std::vector<halco::hicann_dls::vx::v3::SpikeLabel> spike_labels_post;
+			for (auto const& maybe_spike_label_post : maybe_spike_labels_post) {
+				assert(maybe_spike_label_post);
+				spike_labels_post.push_back(*maybe_spike_label_post);
+			}
+
+			local_translations.translation[*spike_label_pre] = spike_labels_post;
+		}
+	}
+
+	// add inter-execution-instance data input(s) for spikes
+	std::vector<signal_flow::Input> external_source_merger_inputs;
+	external_source_merger_inputs.push_back(data_input_vertex);
+	for (auto const& [execution_instance_pre, _] : inter_execution_instance_translations) {
+		auto const& data_vertex_pre = resources.execution_instances.at(execution_instance_pre)
+		                                  .graph_translation.event_output_vertex;
+		assert(data_vertex_pre);
+		signal_flow::vertex::DataInput data_input(
+		    signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
+		external_source_merger_inputs.push_back(
+		    graph.add(data_input, instance, {*data_vertex_pre}));
+	}
+
+	// add external source merger
+	std::vector<vertex::transformation::ExternalSourceMerger::Input>
+	    external_source_merger_translations;
+	external_source_merger_translations.push_back(
+	    vertex::transformation::ExternalSourceMerger::ExternalInput{});
+	for (auto const& [execution_instance_pre, local_translations] :
+	     inter_execution_instance_translations) {
+		external_source_merger_translations.push_back(local_translations);
+	}
+	auto external_source_merger = std::make_unique<vertex::transformation::ExternalSourceMerger>(
+	    external_source_merger_translations);
+	signal_flow::Vertex external_source_merger_transformation(
+	    std::move(signal_flow::vertex::Transformation(std::move(external_source_merger))));
+	auto const external_source_merger_vertex = graph.add(
+	    std::move(external_source_merger_transformation), instance, external_source_merger_inputs);
+
 	// add crossbar l2 input from spike data
 	signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
 	auto const crossbar_l2_input_vertex =
-	    graph.add(crossbar_l2_input, instance, {data_input_vertex});
+	    graph.add(crossbar_l2_input, instance, {external_source_merger_vertex});
 	resources.execution_instances.at(instance).graph_translation.event_input_vertex =
 	    event_input_vertex;
 	resources.execution_instances.at(instance).crossbar_l2_input = crossbar_l2_input_vertex;

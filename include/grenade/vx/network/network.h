@@ -4,6 +4,8 @@
 #include "grenade/vx/network/background_source_population.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/external_source_population.h"
+#include "grenade/vx/network/inter_execution_instance_projection.h"
+#include "grenade/vx/network/inter_execution_instance_projection_on_network.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/pad_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
@@ -54,6 +56,11 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 	};
 
 	std::map<common::ExecutionInstanceID, ExecutionInstance> const execution_instances;
+
+	std::map<InterExecutionInstanceProjectionOnNetwork, InterExecutionInstanceProjection> const
+	    inter_execution_instance_projections;
+
+	std::vector<common::ExecutionInstanceID> const topologically_sorted_execution_instance_ids;
 
 	/**
 	 * Duration spent during construction of network.

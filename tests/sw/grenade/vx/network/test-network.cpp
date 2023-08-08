@@ -29,6 +29,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       PadRecording{},
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	Network network_b{
@@ -45,6 +47,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       PadRecording{},
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	Network network_c{
@@ -61,6 +65,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       PadRecording{},
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	Network network_d{
@@ -77,6 +83,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       PadRecording{},
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	Network network_e{
@@ -93,6 +101,8 @@ TEST(network_Network, General)
 	       std::nullopt,
 	       PadRecording{},
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	PlasticityRule rule;
@@ -111,6 +121,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       PadRecording{},
 	       {{PlasticityRuleOnExecutionInstance(), rule}}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	Network network_g{
@@ -127,6 +139,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       PadRecording{},
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID()},
 	    {}};
 
 	Network network_h{
@@ -143,6 +157,8 @@ TEST(network_Network, General)
 	       CADCRecording{},
 	       std::nullopt,
 	       {}}}},
+	    {},
+	    {ExecutionInstanceID(1)},
 	    {}};
 
 	Network network_copy(network_a);

@@ -56,7 +56,10 @@ std::ostream& operator<<(std::ostream& os, Network::ExecutionInstance const& exe
 
 bool Network::operator==(Network const& other) const
 {
-	return execution_instances == other.execution_instances;
+	return execution_instances == other.execution_instances &&
+	       inter_execution_instance_projections == other.inter_execution_instance_projections &&
+	       topologically_sorted_execution_instance_ids ==
+	           other.topologically_sorted_execution_instance_ids;
 }
 
 bool Network::operator!=(Network const& other) const
@@ -71,6 +74,12 @@ std::ostream& operator<<(std::ostream& os, Network const& network)
 		os << "\t" << id << ":\n";
 		std::stringstream ss;
 		ss << execution_instance;
+		os << hate::indent(ss.str(), "\t") << "\n";
+	}
+	for (auto const& [id, projection] : network.inter_execution_instance_projections) {
+		os << "\t" << id << ":\n";
+		std::stringstream ss;
+		ss << projection;
 		os << hate::indent(ss.str(), "\t") << "\n";
 	}
 	os << ")";

@@ -1,9 +1,11 @@
 #include "grenade/vx/network/network_builder.h"
 
+#include "grenade/vx/common/detail/null_output_iterator.h"
 #include "hate/algorithm.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
 #include <set>
+#include <boost/graph/topological_sort.hpp>
 #include <log4cxx/logger.h>
 #include <sys/socket.h>
 
@@ -11,8 +13,11 @@ namespace grenade::vx::network {
 
 NetworkBuilder::NetworkBuilder() :
     m_execution_instances(),
+    m_inter_execution_instance_projections(),
     m_duration(0),
-    m_logger(log4cxx::Logger::getLogger("grenade.network.NetworkBuilder"))
+    m_logger(log4cxx::Logger::getLogger("grenade.network.NetworkBuilder")),
+    m_execution_instance_graph(),
+    m_execution_instance_vertices()
 {}
 
 PopulationOnNetwork NetworkBuilder::add(
@@ -47,6 +52,10 @@ PopulationOnNetwork NetworkBuilder::add(
 	    execution_instance);
 	m_execution_instances[execution_instance].populations.insert(
 	    {descriptor.toPopulationOnExecutionInstance(), population});
+	if (!m_execution_instance_vertices.contains(execution_instance)) {
+		m_execution_instance_vertices[execution_instance] =
+		    boost::add_vertex(m_execution_instance_graph);
+	}
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added population(" << descriptor << ") in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
@@ -63,6 +72,10 @@ PopulationOnNetwork NetworkBuilder::add(
 	    execution_instance);
 	m_execution_instances[execution_instance].populations.insert(
 	    {descriptor.toPopulationOnExecutionInstance(), population});
+	if (!m_execution_instance_vertices.contains(execution_instance)) {
+		m_execution_instance_vertices[execution_instance] =
+		    boost::add_vertex(m_execution_instance_graph);
+	}
 	LOG4CXX_TRACE(
 	    m_logger,
 	    "add(): Added external population(" << descriptor << ") in " << timer.print() << ".");
@@ -112,6 +125,10 @@ PopulationOnNetwork NetworkBuilder::add(
 	    execution_instance);
 	m_execution_instances[execution_instance].populations.insert(
 	    {descriptor.toPopulationOnExecutionInstance(), population});
+	if (!m_execution_instance_vertices.contains(execution_instance)) {
+		m_execution_instance_vertices[execution_instance] =
+		    boost::add_vertex(m_execution_instance_graph);
+	}
 	LOG4CXX_TRACE(
 	    m_logger, "add(): Added background spike source population(" << descriptor << ") in "
 	                                                                 << timer.print() << ".");
@@ -692,11 +709,140 @@ PlasticityRuleOnNetwork NetworkBuilder::add(
 	return descriptor;
 }
 
+InterExecutionInstanceProjectionOnNetwork NetworkBuilder::add(
+    InterExecutionInstanceProjection const& projection)
+{
+	hate::Timer timer;
+	if (projection.population_pre.toExecutionInstanceID() ==
+	    projection.population_post.toExecutionInstanceID()) {
+		throw std::runtime_error("InterExecutionInstanceProjection can't connect between "
+		                         "populations of the same execution instance.");
+	}
+
+	if (!m_execution_instances.contains(projection.population_pre.toExecutionInstanceID())) {
+		throw std::runtime_error(
+		    "InterExecutionInstanceProjection can't connect from non-existing execution instance.");
+	}
+	if (!m_execution_instances.contains(projection.population_post.toExecutionInstanceID())) {
+		throw std::runtime_error(
+		    "InterExecutionInstanceProjection can't connect to non-existing execution instance.");
+	}
+
+	if (!m_execution_instances.at(projection.population_pre.toExecutionInstanceID())
+	         .populations.contains(projection.population_pre.toPopulationOnExecutionInstance())) {
+		throw std::runtime_error(
+		    "InterExecutionInstanceProjection can't connect from non-existing population.");
+	}
+	if (!m_execution_instances.at(projection.population_post.toExecutionInstanceID())
+	         .populations.contains(projection.population_post.toPopulationOnExecutionInstance())) {
+		throw std::runtime_error(
+		    "InterExecutionInstanceProjection can't connect to non-existing population.");
+	}
+
+	// check that target population is external
+	if (!std::holds_alternative<ExternalSourcePopulation>(
+	        m_execution_instances.at(projection.population_post.toExecutionInstanceID())
+	            .populations.at(projection.population_post.toPopulationOnExecutionInstance()))) {
+		throw std::runtime_error("Only inter-execution-instance projections onto external source "
+		                         "population are supported.");
+	}
+
+	auto const& population_pre =
+	    m_execution_instances.at(projection.population_pre.toExecutionInstanceID())
+	        .populations.at(projection.population_pre.toPopulationOnExecutionInstance());
+
+	auto const& population_post = std::get<ExternalSourcePopulation>(
+	    m_execution_instances.at(projection.population_post.toExecutionInstanceID())
+	        .populations.at(projection.population_post.toPopulationOnExecutionInstance()));
+
+	// check that no single connection index is out of range of its population
+	auto const get_size = hate::overloaded(
+	    [](Population const& p) { return p.neurons.size(); }, [](auto const& p) { return p.size; });
+	auto const size_pre = std::visit(get_size, population_pre);
+	auto const size_post = get_size(population_post);
+
+	auto const contains =
+	    [](Population const& population,
+	       std::pair<size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron> index) {
+		    return population.neurons.at(index.first)
+		        .coordinate.get_placed_compartments()
+		        .contains(index.second);
+	    };
+
+	for (auto const& connection : projection.connections) {
+		if ((connection.index_pre.first >= size_pre) ||
+		    (connection.index_post.first >= size_post)) {
+			throw std::runtime_error("Connection index out of range of population(s).");
+		}
+		if (std::holds_alternative<Population>(population_pre)) {
+			auto const& population = std::get<Population>(population_pre);
+			if (!contains(population, connection.index_pre)) {
+				throw std::runtime_error("Connection index compartment out of range of neuron.");
+			}
+		} else {
+			if (connection.index_pre.second !=
+			    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(0)) {
+				throw std::runtime_error(
+				    "Only on-chip population supports multiple compartments per neuron.");
+			}
+		}
+		if (connection.index_post.second !=
+		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(0)) {
+			throw std::runtime_error(
+			    "Only on-chip population supports multiple compartments per neuron.");
+		}
+	}
+
+	// add edge to execution instance graph
+	boost::add_edge(
+	    m_execution_instance_vertices.at(projection.population_pre.toExecutionInstanceID()),
+	    m_execution_instance_vertices.at(projection.population_post.toExecutionInstanceID()),
+	    m_execution_instance_graph);
+	// check that insertion of projection doesn't yield a cyclic execution instance graph
+	try {
+		boost::topological_sort(
+		    m_execution_instance_graph,
+		    common::detail::NullOutputIterator<ExecutionInstanceGraph::vertex_descriptor>{});
+	} catch (boost::not_a_dag const&) {
+		throw std::runtime_error("Execution instance graph is cyclic.");
+	}
+
+	InterExecutionInstanceProjectionOnNetwork descriptor(
+	    m_inter_execution_instance_projections.size());
+	m_inter_execution_instance_projections.insert({descriptor, projection});
+	LOG4CXX_TRACE(
+	    m_logger, "add(): Added inter-execution-instance projection("
+	                  << descriptor << ", " << projection.population_pre << " -> "
+	                  << projection.population_post << ") in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
+	return descriptor;
+}
+
 std::shared_ptr<Network> NetworkBuilder::done()
 {
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
-	auto const ret = std::make_shared<Network>(std::move(m_execution_instances), m_duration);
+
+	std::vector<ExecutionInstanceGraph::vertex_descriptor>
+	    topologically_reverse_sorted_execution_instance_vertices;
+	boost::topological_sort(
+	    m_execution_instance_graph,
+	    std::back_inserter(topologically_reverse_sorted_execution_instance_vertices));
+	std::vector<common::ExecutionInstanceID> topologically_sorted_execution_instance_ids;
+	for (auto it = topologically_reverse_sorted_execution_instance_vertices.rbegin();
+	     it != topologically_reverse_sorted_execution_instance_vertices.rend(); ++it) {
+		auto const ei_it = std::find_if(
+		    m_execution_instance_vertices.begin(), m_execution_instance_vertices.end(),
+		    [it](auto const& p) { return p.second == *it; });
+		assert(ei_it != m_execution_instance_vertices.end());
+		topologically_sorted_execution_instance_ids.push_back(ei_it->first);
+	}
+
+	auto const ret = std::make_shared<Network>(
+	    std::move(m_execution_instances), std::move(m_inter_execution_instance_projections),
+	    std::move(topologically_sorted_execution_instance_ids), m_duration);
 	m_duration = std::chrono::microseconds(0);
+	m_execution_instance_graph = ExecutionInstanceGraph();
+	m_execution_instance_vertices.clear();
 	assert(ret);
 	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);
 	return ret;
