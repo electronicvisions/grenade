@@ -20,8 +20,7 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
 	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env();
 	for (size_t i = 0; i < hxcomm_connections.size(); ++i) {
 		halco::hicann_dls::vx::v3::DLSGlobal identifier(i);
-		m_connections.emplace(
-		    identifier, std::move(backend::Connection(std::move(hxcomm_connections.at(i)))));
+		m_connections.emplace(identifier, backend::Connection(std::move(hxcomm_connections.at(i))));
 		m_connection_state_storages.emplace(
 		    std::piecewise_construct, std::forward_as_tuple(identifier),
 		    std::forward_as_tuple(m_enable_differential_config, m_connections.at(identifier)));

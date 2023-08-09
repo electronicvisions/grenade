@@ -143,7 +143,7 @@ MAC::insert_synram(
 	    columns.size(),
 	    signal_flow::vertex::CADCMembraneReadoutView::Sources::value_type::value_type::membrane);
 	signal_flow::vertex::CADCMembraneReadoutView readout(
-	    std::move(signal_flow::vertex::CADCMembraneReadoutView::Columns({std::move(columns)})),
+	    signal_flow::vertex::CADCMembraneReadoutView::Columns({std::move(columns)}),
 	    hemisphere.toSynramOnDLS(), signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen,
 	    std::move(sources));
 	auto const v2 = graph.add(readout, instance, {v1});
@@ -297,7 +297,7 @@ void MAC::build_graph()
 		    std::make_unique<signal_flow::vertex::transformation::MACSpikeTrainGenerator>(
 		        sizes, m_num_sends, m_wait_between_events);
 		signal_flow::Vertex transformation(
-		    std::move(signal_flow::vertex::Transformation(std::move(spiketrain_generator))));
+		    signal_flow::vertex::Transformation(std::move(spiketrain_generator)));
 		auto const data_input_vertex =
 		    m_graph.add(std::move(transformation), instance, uint5_inputs);
 		signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
@@ -390,7 +390,7 @@ void MAC::build_graph()
 	auto concatenation = std::make_unique<signal_flow::vertex::transformation::Concatenation>(
 	    signal_flow::ConnectionType::Int8, x_split_sizes);
 	grenade::vx::signal_flow::Vertex transformation(
-	    std::move(signal_flow::vertex::Transformation(std::move(concatenation))));
+	    signal_flow::vertex::Transformation(std::move(concatenation)));
 	auto const vc = m_graph.add(std::move(transformation), instance, local_inputs);
 	signal_flow::vertex::DataOutput data_output(signal_flow::ConnectionType::Int8, output_size());
 	m_output_vertex = m_graph.add(data_output, instance, {vc});
