@@ -328,7 +328,9 @@ Compiler::Compiler() {}
 Compiler::Program Compiler::compile(std::vector<std::string> sources)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
-	TemporaryDirectory temporary("grenade-compiler-XXXXXX");
+	auto tmpdir = std::filesystem::temp_directory_path();
+	tmpdir /= "grenade-compiler-XXXXXX";
+	TemporaryDirectory temporary(tmpdir.string());
 
 	// save sources to files for compiler subprocess to use
 	std::vector<std::string> source_paths;
