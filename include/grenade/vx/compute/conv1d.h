@@ -55,7 +55,7 @@ public:
 	    size_t input_size,
 	    size_t stride,
 	    size_t num_sends = 1,
-	    common::Time wait_between_events = haldls::vx::v3::Timer::Value(25),
+	    common::Time wait_between_events = common::Time(25),
 	    bool enable_loopback = false);
 
 	/**
