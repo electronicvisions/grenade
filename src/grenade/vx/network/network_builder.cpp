@@ -134,7 +134,8 @@ ProjectionDescriptor NetworkBuilder::add(Projection const& projection)
 	    };
 
 	for (auto const& connection : projection.connections) {
-		if ((connection.index_pre.first > size_pre) || (connection.index_post.first > size_post)) {
+		if ((connection.index_pre.first >= size_pre) ||
+		    (connection.index_post.first >= size_post)) {
 			throw std::runtime_error("Connection index out of range of population(s).");
 		}
 		if (std::holds_alternative<Population>(population_pre)) {
