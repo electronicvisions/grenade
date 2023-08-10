@@ -21,7 +21,6 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  * Spikes which don't correspond to a neuron in the network are ignored.
  * @param data Data containing spike labels
  * @param network_graph Network graph to use for matching of logical to hardware neurons
- * @param hardware_network_graph Network graph to use for matching of spike labels to neurons
  * @return Time-series neuron spike data per batch entry
  */
 std::vector<std::map<
@@ -34,8 +33,6 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
  * Extract MADC samples to be recorded for a network.
  * @param data Data containing MADC samples
  * @param network_graph Network graph to use for matching of logical to hardware neurons
- * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the MADC
- * samples
  * @return Time-series MADC sample data per batch entry. Samples are sorted by their ChipTime per
  * batch-entry and contain their corresponding location alongside the ADC value.
  */
@@ -48,8 +45,6 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
  * Extract CADC samples to be recorded for a network.
  * @param data Data containing CADC samples
  * @param network_graph Network graph to use for matching of logical to hardware neurons
- * @param hardware_network_graph Network graph to use for vertex descriptor lookup of the CADC
- * samples
  * @return Time-series CADC sample data per batch entry. Samples are sorted by their ChipTime per
  * batch-entry and contain their corresponding location alongside the ADC value.
  */
