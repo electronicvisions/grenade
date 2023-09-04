@@ -47,6 +47,10 @@ MADCReadoutView::MADCReadoutView(
 			    "MADCReadoutView sources can't both be located in even or odd neuron columns.");
 		}
 	}
+	if (source_selection.period > SourceSelection::Period(1)) {
+		throw std::runtime_error(
+		    "MADCReadoutView source switch period > 1 not supported due to Issue #3998.");
+	}
 	m_first_source = first_source;
 	m_second_source = second_source;
 	m_source_selection = source_selection;

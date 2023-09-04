@@ -502,7 +502,8 @@ void ExecutionInstanceBuilder::filter_events(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::MADCReadoutView const&)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::MADCReadoutView const& data)
 {
 	if (!m_postprocessing) {
 		if (m_madc_readout_vertex) {
@@ -529,10 +530,14 @@ void ExecutionInstanceBuilder::process(
 			auto const& local_madc_samples = madc_samples.at(i);
 			local_transformed_madc_samples.reserve(local_madc_samples.size());
 			for (auto const& local_madc_sample : local_madc_samples) {
+				// Inverting channel fro 2ch recording due to Issue #3998
 				local_transformed_madc_samples.push_back(signal_flow::TimedMADCSampleFromChip(
 				    common::Time(local_madc_sample.chip_time.value()),
 				    signal_flow::MADCSampleFromChip(
-				        local_madc_sample.value, local_madc_sample.channel)));
+				        local_madc_sample.value, static_cast<bool>(data.get_second_source())
+				                                     ? signal_flow::MADCSampleFromChip::Channel(
+				                                           1 - local_madc_sample.channel)
+				                                     : local_madc_sample.channel)));
 			}
 		}
 		m_local_data.data[vertex] = std::move(transformed_madc_samples);
