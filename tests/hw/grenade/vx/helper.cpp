@@ -55,7 +55,6 @@ grenade::vx::execution::JITGraphExecutor::ChipConfigs get_chip_configs_bypass_ex
 		for (auto const block : iter_all<SynapseBlockOnDLS>()) {
 			chip.synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
 		}
-		return {{ExecutionInstanceID(), chip}};
 	}
 	return {{ExecutionInstanceID(), chip}};
 }
