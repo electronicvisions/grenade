@@ -39,7 +39,6 @@ def build(bld):
         genpybind_tags='grenade_vx_common',
         features='genpybind cxx cxxshlib pyext',
         use=['grenade_vx', 'pyhaldls_vx_v3'],
-        install_path='${PREFIX}/lib',
     )
 
     bld(
@@ -49,7 +48,6 @@ def build(bld):
         features='genpybind cxx cxxshlib pyext',
         use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
              'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_common'],
-        install_path='${PREFIX}/lib',
     )
 
     bld(
@@ -59,7 +57,6 @@ def build(bld):
         features='genpybind cxx cxxshlib pyext',
         use=['grenade_vx', 'pyhalco_hicann_dls_vx_v3', 'pyhxcomm_vx',
              'pystadls_vx_v3', '_pygrenade_vx_signal_flow'],
-        install_path='${PREFIX}/lib',
     )
 
     bld(
@@ -70,7 +67,6 @@ def build(bld):
         use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
              'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_execution',
              '_pygrenade_vx_signal_flow'],
-        install_path='${PREFIX}/lib',
     )
 
     bld(
@@ -81,7 +77,6 @@ def build(bld):
         use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
              'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_execution',
              '_pygrenade_vx_signal_flow', '_pygrenade_vx_network'],
-        install_path='${PREFIX}/lib',
     )
 
     bld(
@@ -95,7 +90,6 @@ def build(bld):
              'pylogging'],
         relative_trick=True,
         source=bld.path.ant_glob('pygrenade_vx/**/*.py'),
-        install_path = '${PREFIX}/lib',
         pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")
     )
