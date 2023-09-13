@@ -537,14 +537,11 @@ bool NetworkGraph::valid() const
 
 	// check that connectum of hardware network matches expected connectum of abstract network
 	try {
-		auto const connectum_from_abstract_network =
-		    generate_connectum_from_abstract_network(*this);
-		auto const connectum_from_hardware_network =
-		    generate_connectum_from_hardware_network(*this);
-		if ((connectum_from_abstract_network.size() != connectum_from_hardware_network.size()) ||
-		    !std::is_permutation(
-		        connectum_from_abstract_network.begin(), connectum_from_abstract_network.end(),
-		        connectum_from_hardware_network.begin())) {
+		auto connectum_from_abstract_network = generate_connectum_from_abstract_network(*this);
+		std::sort(connectum_from_abstract_network.begin(), connectum_from_abstract_network.end());
+		auto connectum_from_hardware_network = generate_connectum_from_hardware_network(*this);
+		std::sort(connectum_from_hardware_network.begin(), connectum_from_hardware_network.end());
+		if (connectum_from_abstract_network != connectum_from_hardware_network) {
 			std::vector<ConnectumConnection> missing_in_hardware_network;
 			for (auto const& connection : connectum_from_abstract_network) {
 				if (std::find(
