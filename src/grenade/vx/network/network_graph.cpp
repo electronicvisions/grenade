@@ -543,54 +543,39 @@ bool NetworkGraph::valid() const
 		std::sort(connectum_from_hardware_network.begin(), connectum_from_hardware_network.end());
 		if (connectum_from_abstract_network != connectum_from_hardware_network) {
 			std::vector<ConnectumConnection> missing_in_hardware_network;
-			for (auto const& connection : connectum_from_abstract_network) {
-				if (std::find(
-				        connectum_from_hardware_network.begin(),
-				        connectum_from_hardware_network.end(),
-				        connection) == connectum_from_hardware_network.end()) {
-					missing_in_hardware_network.push_back(connection);
-				}
-			}
+			std::set_difference(
+			    connectum_from_hardware_network.begin(), connectum_from_hardware_network.end(),
+			    connectum_from_abstract_network.begin(), connectum_from_abstract_network.end(),
+			    std::back_inserter(missing_in_hardware_network));
+
 			std::vector<ConnectumConnection> missing_in_abstract_network;
-			for (auto const& connection : connectum_from_hardware_network) {
-				if (std::find(
-				        connectum_from_abstract_network.begin(),
-				        connectum_from_abstract_network.end(),
-				        connection) == connectum_from_abstract_network.end()) {
-					missing_in_abstract_network.push_back(connection);
-				}
+			std::set_difference(
+			    connectum_from_abstract_network.begin(), connectum_from_abstract_network.end(),
+			    connectum_from_hardware_network.begin(), connectum_from_hardware_network.end(),
+			    std::back_inserter(missing_in_abstract_network));
+
+			if (missing_in_hardware_network.empty() && missing_in_abstract_network.empty()) {
+				throw std::logic_error("Size difference in abstract and hardware connectum but no "
+				                       "element difference found.");
 			}
-			LOG4CXX_ERROR(
-			    logger, "Abstract network connectum missing in hardware network:\n"
-			                << hate::indent(
-			                       hate::join_string(
-			                           missing_in_hardware_network.begin(),
-			                           missing_in_hardware_network.end(), "\n"),
-			                       "\t\t"));
-			LOG4CXX_ERROR(
-			    logger, "Hardware network connectum missing in abstract network:\n"
-			                << hate::indent(
-			                       hate::join_string(
-			                           missing_in_abstract_network.begin(),
-			                           missing_in_abstract_network.end(), "\n"),
-			                       "\t\t"));
-			LOG4CXX_ERROR(
-			    logger, "Abstract network connectum (size: "
-			                << connectum_from_abstract_network.size()
-			                << ") does not match hardware network connectum (size: "
-			                << connectum_from_hardware_network.size()
-			                << "):\n\tabstract network:\n "
-			                << hate::indent(
-			                       hate::join_string(
-			                           connectum_from_abstract_network.begin(),
-			                           connectum_from_abstract_network.end(), "\n"),
-			                       "\t\t")
-			                << "\n\thardware network:\n"
-			                << hate::indent(
-			                       hate::join_string(
-			                           connectum_from_hardware_network.begin(),
-			                           connectum_from_hardware_network.end(), "\n"),
-			                       "\t\t"));
+			if (!missing_in_hardware_network.empty()) {
+				LOG4CXX_ERROR(
+				    logger, "Abstract network connectum missing in hardware network:\n"
+				                << hate::indent(
+				                       hate::join_string(
+				                           missing_in_hardware_network.begin(),
+				                           missing_in_hardware_network.end(), "\n"),
+				                       "\t\t"));
+			}
+			if (!missing_in_abstract_network.empty()) {
+				LOG4CXX_ERROR(
+				    logger, "Hardware network connectum missing in abstract network:\n"
+				                << hate::indent(
+				                       hate::join_string(
+				                           missing_in_abstract_network.begin(),
+				                           missing_in_abstract_network.end(), "\n"),
+				                       "\t\t"));
+			}
 			return false;
 		}
 	} catch (InvalidNetworkGraph const& error) {
