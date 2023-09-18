@@ -137,7 +137,7 @@ def build(bld):
                 "PROJECT_NAME": "\"GRENADE\"",
                 "INPUT": "%s/grenade/include/grenade" % get_toplevel_path(),
                 "OUTPUT_DIRECTORY": "%s/build/grenade/doc" % get_toplevel_path(),
-                "PREDEFINED": "GENPYBIND()= GENPYBIND_MANUAL()= GENPYBIND_TAG_GRENADE_VX=",
+                "PREDEFINED": "GENPYBIND(...)= GENPYBIND_MANUAL(...)= SYMBOL_VISIBLE=",
                 "WARN_LOGFILE": join(get_toplevel_path(), "build/grenade/grenade_doxygen_warnings.log"),
                 "INCLUDE_PATH": join(get_toplevel_path(), "grenade", "include")
             },
