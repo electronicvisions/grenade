@@ -81,15 +81,22 @@ SynapseArrayViewSparse::Synram const& SynapseArrayViewSparse::get_synram() const
 
 ppu::SynapseArrayViewHandle SynapseArrayViewSparse::toSynapseArrayViewHandle() const
 {
-	if (m_synapses.size() != m_rows.size() * m_columns.size()) {
+	std::set<halco::hicann_dls::vx::v3::SynapseRowOnSynram> used_rows;
+	std::set<halco::hicann_dls::vx::v3::SynapseOnSynapseRow> used_columns;
+	for (auto const& synapse : m_synapses) {
+		used_rows.insert(m_rows.at(synapse.index_row));
+		used_columns.insert(m_columns.at(synapse.index_column));
+	}
+
+	if (m_synapses.size() != used_rows.size() * used_columns.size()) {
 		throw std::runtime_error(
 		    "Conversion to SynapseArrayViewHandle only supported for dense connectivity.");
 	}
 	ppu::SynapseArrayViewHandle result;
-	for (auto const& column : m_columns) {
+	for (auto const& column : used_columns) {
 		result.columns.set(column.value());
 	}
-	for (auto const& row : m_rows) {
+	for (auto const& row : used_rows) {
 		result.rows.set(row.value());
 	}
 	return result;
