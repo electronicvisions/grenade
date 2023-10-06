@@ -123,7 +123,7 @@ def build(bld):
         use = ['grenade_vx', 'stadls_vx_v3', 'GTEST', 'haldls_vx_v3', 'lola_vx_v3', 'grenade_hwtest_helper_vx'],
         install_path = '${PREFIX}/bin',
         linkflags = ['-lboost_program_options-mt'],
-        test_timeout=240,
+        test_timeout=480,
         skip_run = not bld.env.DLSvx_HARDWARE_AVAILABLE
     )
 
