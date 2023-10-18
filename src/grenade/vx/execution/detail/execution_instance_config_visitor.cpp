@@ -175,9 +175,6 @@ void ExecutionInstanceConfigVisitor::process(
 
 	// Configure analog parameters
 	// TODO: should come from calibration
-	for (auto const smux : halco::common::iter_all<SourceMultiplexerOnReadoutSourceSelection>()) {
-		m_config.readout_chain.buffer_to_pad[smux].amp_i_bias = CapMemCell::Value(0);
-	}
 	m_config.readout_chain.dynamic_mux.i_bias = CapMemCell::Value(500);
 	m_config.readout_chain.madc.in_500na = CapMemCell::Value(500);
 	m_config.readout_chain.madc_preamp.i_bias = CapMemCell::Value(500);
