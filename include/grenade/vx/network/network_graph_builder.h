@@ -202,6 +202,12 @@ public:
 	    CADCRecording const& cadc_recording,
 	    common::ExecutionInstanceID const& instance) const;
 
+	void add_pad_recording(
+	    signal_flow::Graph& graph,
+	    Resources const& resources,
+	    PadRecording const& cadc_recording,
+	    common::ExecutionInstanceID const& instance) const;
+
 	void add_plasticity_rules(
 	    signal_flow::Graph& graph,
 	    Resources& resources,

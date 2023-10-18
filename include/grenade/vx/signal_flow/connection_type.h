@@ -29,7 +29,8 @@ enum class ConnectionType
 	DataUInt32,                          // Index data output
 	CrossbarInputLabel,                  // 14Bit label into crossbar
 	CrossbarOutputLabel,                 // 14Bit label out of crossbar
-	SynapseDriverInputLabel
+	SynapseDriverInputLabel,             // 11Bit label to synapse driver(s)
+	ExternalAnalogSignal                 // Analog signal external to system, e.g. from/to pads
 };
 
 std::ostream& operator<<(std::ostream& os, ConnectionType const& type) SYMBOL_VISIBLE;

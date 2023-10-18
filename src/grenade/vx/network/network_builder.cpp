@@ -253,6 +253,16 @@ void NetworkBuilder::add(MADCRecording const& madc_recording)
 				}
 			}
 		}
+		if (m_pad_recording) {
+			for (auto const& [_, pad_source] : m_pad_recording->recordings) {
+				auto const& pad_neuron = pad_source.neuron;
+				if (neuron.coordinate == pad_neuron.coordinate &&
+				    neuron.source != pad_neuron.source) {
+					throw std::runtime_error(
+					    "MADC recording source conflicts with pad recording's source.");
+				}
+			}
+		}
 		unique_parity.insert(
 		    std::get<Population>(m_populations.at(neuron.coordinate.population))
 		        .neurons.at(neuron.coordinate.neuron_on_population)
@@ -335,6 +345,16 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 				}
 			}
 		}
+		if (m_pad_recording) {
+			for (auto const& [_, pad_source] : m_pad_recording->recordings) {
+				auto const& pad_neuron = pad_source.neuron;
+				if (neuron.coordinate == pad_neuron.coordinate &&
+				    neuron.source != pad_neuron.source) {
+					throw std::runtime_error(
+					    "CADC recording source conflicts with pad recording's source.");
+				}
+			}
+		}
 		unique.insert(neuron.coordinate);
 	}
 	if (unique.size() != cadc_recording.neurons.size()) {
@@ -342,6 +362,86 @@ void NetworkBuilder::add(CADCRecording const& cadc_recording)
 	}
 	m_cadc_recording = cadc_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added CADC recording in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
+}
+
+void NetworkBuilder::add(PadRecording const& pad_recording)
+{
+	hate::Timer timer;
+	if (m_pad_recording) {
+		throw std::runtime_error("Only one pad recording per network possible.");
+	}
+	std::set<AtomicNeuronOnNetwork> unique;
+	for (auto const& [_, source] : pad_recording.recordings) {
+		auto const& neuron = source.neuron;
+		if (!m_populations.contains(neuron.coordinate.population)) {
+			throw std::runtime_error("Pad recording references unknown population.");
+		}
+		if (!std::holds_alternative<Population>(m_populations.at(neuron.coordinate.population))) {
+			throw std::runtime_error("Pad recording does not reference internal population.");
+		}
+		if (neuron.coordinate.neuron_on_population >=
+		    std::get<Population>(m_populations.at(neuron.coordinate.population)).neurons.size()) {
+			throw std::runtime_error(
+			    "Pad recording references neuron index out of range of population.");
+		}
+		if (m_madc_recording) {
+			for (auto const& madc_neuron : m_madc_recording->neurons) {
+				if (neuron.coordinate == madc_neuron.coordinate &&
+				    neuron.source != madc_neuron.source) {
+					throw std::runtime_error(
+					    "Pad recording source conflicts with MADC recording's source.");
+				}
+			}
+		}
+		if (m_cadc_recording) {
+			for (auto const& cadc_neuron : m_cadc_recording->neurons) {
+				if (neuron.coordinate == cadc_neuron.coordinate &&
+				    neuron.source != cadc_neuron.source) {
+					throw std::runtime_error(
+					    "Pad recording source conflicts with CADC recording's source.");
+				}
+			}
+		}
+		unique.insert(neuron.coordinate);
+	}
+	if (unique.size() != pad_recording.recordings.size()) {
+		throw std::runtime_error("Pad recording neurons are not unique.");
+	}
+	// check that plasticity rule target population readout settings don't contradict pad recording
+	for (auto const& [_, plasticity_rule] : m_plasticity_rules) {
+		for (auto const& target_population : plasticity_rule.populations) {
+			auto const& population_neurons =
+			    std::get<Population>(m_populations.at(target_population.descriptor)).neurons;
+			for (auto const& [_, source] : pad_recording.recordings) {
+				auto const& neuron = source.neuron;
+				if (target_population.descriptor != neuron.coordinate.population) {
+					continue;
+				}
+				for (size_t j = 0; j < population_neurons.size(); ++j) {
+					if (j != neuron.coordinate.neuron_on_population) {
+						continue;
+					}
+					for (auto const& [compartment, denmems] :
+					     target_population.neuron_readout_sources.at(j)) {
+						if (compartment != neuron.coordinate.compartment_on_neuron) {
+							continue;
+						}
+						for (size_t k = 0; k < denmems.size(); ++k) {
+							if (k == neuron.coordinate.atomic_neuron_on_compartment &&
+							    denmems.at(k) && *denmems.at(k) != neuron.source) {
+								throw std::runtime_error(
+								    "PlasticityRule neuron readout source doesn't match "
+								    "pad recording source for same neuron.");
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	m_pad_recording = pad_recording;
+	LOG4CXX_TRACE(m_logger, "add(): Added pad recording in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
 }
 
@@ -490,9 +590,11 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	LOG4CXX_TRACE(m_logger, "done(): Finished building network.");
 	auto const ret = std::make_shared<Network>(
 	    std::move(m_populations), std::move(m_projections), std::move(m_madc_recording),
-	    std::move(m_cadc_recording), std::move(m_plasticity_rules), m_duration);
+	    std::move(m_cadc_recording), std::move(m_pad_recording), std::move(m_plasticity_rules),
+	    m_duration);
 	m_madc_recording.reset();
 	m_cadc_recording.reset();
+	m_pad_recording.reset();
 	m_duration = std::chrono::microseconds(0);
 	assert(ret);
 	LOG4CXX_DEBUG(m_logger, "done(): " << *ret);

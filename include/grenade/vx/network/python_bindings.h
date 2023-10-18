@@ -20,6 +20,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/network_graph_statistics.h"
+#include "grenade/vx/network/pad_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/plasticity_rule_generator.h"
 #include "grenade/vx/network/plasticity_rule_on_network.h"

@@ -52,6 +52,11 @@ NetworkGraph build_network_graph(
 		builder.add_cadc_recording(result.m_graph, resources, *(network->cadc_recording), instance);
 	}
 
+	// add pad recording
+	if (network->pad_recording) {
+		builder.add_pad_recording(result.m_graph, resources, *(network->pad_recording), instance);
+	}
+
 	// add neuron event outputs
 	builder.add_neuron_event_outputs(result.m_graph, resources, instance);
 
@@ -1562,5 +1567,43 @@ void NetworkGraphBuilder::add_cadc_recording(
 	    m_logger, "add_cadc_recording(): Added CADC recording in " << timer.print() << ".");
 }
 
+void NetworkGraphBuilder::add_pad_recording(
+    signal_flow::Graph& graph,
+    Resources const& resources,
+    PadRecording const& pad_recording,
+    common::ExecutionInstanceID const& instance) const
+{
+	hate::Timer timer;
+	for (auto const& [pad, pad_recording_source] : pad_recording.recordings) {
+		auto const& pad_recording_neuron = pad_recording_source.neuron;
+		auto const& population = std::get<Population>(
+		    m_network.populations.at(pad_recording_neuron.coordinate.population));
+		auto const& neuron =
+		    population.neurons.at(pad_recording_neuron.coordinate.neuron_on_population);
+		auto const atomic_neuron =
+		    neuron.coordinate.get_placed_compartments()
+		        .at(pad_recording_neuron.coordinate.compartment_on_neuron)
+		        .at(pad_recording_neuron.coordinate.atomic_neuron_on_compartment);
+		signal_flow::vertex::PadReadoutView::Source vertex_source{
+		    atomic_neuron, pad_recording_neuron.source, pad_recording_source.enable_buffered};
+
+		auto const neuron_vertex_descriptor =
+		    resources.populations.at(pad_recording_neuron.coordinate.population)
+		        .neurons.at(atomic_neuron.toNeuronRowOnDLS().toHemisphereOnDLS());
+		auto const neuron_vertex = std::get<signal_flow::vertex::NeuronView>(
+		    graph.get_vertex_property(neuron_vertex_descriptor));
+		auto const& columns = neuron_vertex.get_columns();
+		auto const in_view_location = static_cast<size_t>(std::distance(
+		    columns.begin(),
+		    std::find(columns.begin(), columns.end(), atomic_neuron.toNeuronColumnOnDLS())));
+		assert(in_view_location < columns.size());
+		signal_flow::Input const input(
+		    signal_flow::Input(neuron_vertex_descriptor, {in_view_location, in_view_location}));
+
+		signal_flow::vertex::PadReadoutView pad_readout(vertex_source, pad);
+		graph.add(pad_readout, instance, {input});
+	}
+	LOG4CXX_TRACE(m_logger, "add_pad_recording(): Added pad recording in " << timer.print() << ".");
+}
 
 } // namespace grenade::vx::network

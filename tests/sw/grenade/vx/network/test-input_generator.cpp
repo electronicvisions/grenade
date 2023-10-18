@@ -55,6 +55,7 @@ TEST(network_InputGenerator, General)
 	          PopulationOnNetwork(0), PopulationOnNetwork(1))}},
 	    std::nullopt,
 	    std::nullopt,
+	    std::nullopt,
 	    {},
 	    {}});
 

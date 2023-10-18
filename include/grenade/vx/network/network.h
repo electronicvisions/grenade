@@ -4,6 +4,7 @@
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/madc_recording.h"
+#include "grenade/vx/network/pad_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/plasticity_rule_on_network.h"
 #include "grenade/vx/network/population.h"
@@ -35,6 +36,7 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 	std::map<ProjectionOnNetwork, Projection> const projections;
 	std::optional<MADCRecording> const madc_recording;
 	std::optional<CADCRecording> const cadc_recording;
+	std::optional<PadRecording> const pad_recording;
 	std::map<PlasticityRuleOnNetwork, PlasticityRule> const plasticity_rules;
 
 	/**

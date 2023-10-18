@@ -3,6 +3,7 @@
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
+#include "grenade/vx/network/pad_recording.h"
 #include "grenade/vx/network/plasticity_rule.h"
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
@@ -68,6 +69,15 @@ public:
 	 */
 	void add(CADCRecording const& cadc_recording) SYMBOL_VISIBLE;
 
+	/**
+	 * Add pad recording of a collection of neurons.
+	 * Only one pad recording per network is allowed.
+	 * If another recording is present at a recorded neuron, their source specification is required
+	 * to match.
+	 * @param pad_recording pad recording to add
+	 */
+	void add(PadRecording const& pad_recording) SYMBOL_VISIBLE;
+
 	/*
 	 * Add plasticity rule on already added projections.
 	 * @param plasticity_rule PlasticityRule to add
@@ -86,6 +96,7 @@ private:
 	std::map<ProjectionOnNetwork, Projection> m_projections{};
 	std::optional<MADCRecording> m_madc_recording{std::nullopt};
 	std::optional<CADCRecording> m_cadc_recording{std::nullopt};
+	std::optional<PadRecording> m_pad_recording{std::nullopt};
 	std::map<PlasticityRuleOnNetwork, PlasticityRule> m_plasticity_rules{};
 	std::chrono::microseconds m_duration;
 	log4cxx::LoggerPtr m_logger;

@@ -24,6 +24,7 @@ TEST(network_Network, General)
 	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    PadRecording{},
 	    {},
 	    {}};
 
@@ -38,6 +39,7 @@ TEST(network_Network, General)
 	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    PadRecording{},
 	    {},
 	    {}};
 
@@ -52,6 +54,7 @@ TEST(network_Network, General)
 	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    PadRecording{},
 	    {},
 	    {}};
 
@@ -66,6 +69,7 @@ TEST(network_Network, General)
 	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    std::nullopt,
 	    CADCRecording{},
+	    PadRecording{},
 	    {},
 	    {}};
 
@@ -80,6 +84,7 @@ TEST(network_Network, General)
 	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    std::nullopt,
+	    PadRecording{},
 	    {},
 	    {}};
 
@@ -96,7 +101,23 @@ TEST(network_Network, General)
 	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
 	    MADCRecording{},
 	    CADCRecording{},
+	    PadRecording{},
 	    {{PlasticityRuleOnNetwork(), rule}},
+	    {}};
+
+	Network network_g{
+	    {{PopulationOnNetwork(1), ExternalSourcePopulation(2)}},
+	    {{ProjectionOnNetwork(3),
+	      Projection(
+	          Receptor(Receptor::ID(), Receptor::Type::excitatory),
+	          {Projection::Connection(
+	              {4, CompartmentOnLogicalNeuron()}, {5, CompartmentOnLogicalNeuron()},
+	              Projection::Connection::Weight(6))},
+	          PopulationOnNetwork(1), PopulationOnNetwork(1))}},
+	    MADCRecording{},
+	    CADCRecording{},
+	    std::nullopt,
+	    {},
 	    {}};
 
 	Network network_copy(network_a);
@@ -106,4 +127,5 @@ TEST(network_Network, General)
 	EXPECT_NE(network_d, network_copy);
 	EXPECT_NE(network_e, network_copy);
 	EXPECT_NE(network_f, network_copy);
+	EXPECT_NE(network_g, network_copy);
 }

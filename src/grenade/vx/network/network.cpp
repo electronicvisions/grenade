@@ -11,7 +11,7 @@ bool Network::operator==(Network const& other) const
 {
 	return populations == other.populations && projections == other.projections &&
 	       madc_recording == other.madc_recording && cadc_recording == other.cadc_recording &&
-	       plasticity_rules == other.plasticity_rules;
+	       pad_recording == other.pad_recording && plasticity_rules == other.plasticity_rules;
 }
 
 bool Network::operator!=(Network const& other) const

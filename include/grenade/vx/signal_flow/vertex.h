@@ -11,6 +11,7 @@
 #include "grenade/vx/signal_flow/vertex/madc_readout.h"
 #include "grenade/vx/signal_flow/vertex/neuron_event_output_view.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
+#include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "grenade/vx/signal_flow/vertex/padi_bus.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
@@ -39,6 +40,7 @@ typedef std::variant<
     vertex::NeuronView,
     vertex::NeuronEventOutputView,
     vertex::MADCReadoutView,
+    vertex::PadReadoutView,
     vertex::CADCMembraneReadoutView>
     Vertex;
 

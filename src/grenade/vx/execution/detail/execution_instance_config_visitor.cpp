@@ -4,8 +4,11 @@
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/vertex/pad_readout.h"
+#include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
+#include "haldls/vx/v3/readout.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
@@ -185,6 +188,56 @@ void ExecutionInstanceConfigVisitor::process(
 	m_config.readout_chain.source_measure_unit.test_voltage = CapMemCell::Value(400);
 
 	m_used_madc = true;
+}
+
+template <>
+void ExecutionInstanceConfigVisitor::process(
+    [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::PadReadoutView const& data)
+{
+	using namespace halco::hicann_dls::vx::v3;
+	using namespace haldls::vx::v3;
+
+	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+
+	auto const& source = data.get_source();
+
+	m_config.neuron_block.atomic_neurons[source.coord].readout.source = source.type;
+
+	if (data.get_source().enable_buffered) {
+		// Determine readout chain configuration
+		auto& smux =
+		    m_config.readout_chain
+		        .input_mux[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())];
+		bool const is_odd = source.coord.toNeuronColumnOnDLS() % 2;
+		auto neuron_even = smux.get_neuron_even();
+		neuron_even[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+		smux.set_neuron_even(neuron_even);
+		auto neuron_odd = smux.get_neuron_odd();
+		neuron_odd[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+		smux.set_neuron_odd(neuron_odd);
+		m_config.readout_chain
+		    .buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())]
+		    .enable = true;
+		PadMultiplexerConfig::buffer_type buffers;
+		buffers.fill(false);
+		buffers[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())] = true;
+		m_config.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())]
+		    .set_buffer_to_pad(buffers);
+		// Configure neuron
+		m_config.neuron_block.atomic_neurons[source.coord].readout.enable_amplifier = true;
+		m_config.neuron_block.atomic_neurons[source.coord].readout.enable_buffered_access = true;
+	} else {
+		// enable unbuffered access to pad
+		auto& pad_mux =
+		    m_config.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())];
+		pad_mux.set_neuron_i_stim_mux_to_pad(true);
+	}
+
+	// Configure analog parameters
+	for (auto const smux : halco::common::iter_all<SourceMultiplexerOnReadoutSourceSelection>()) {
+		m_config.readout_chain.buffer_to_pad[smux].amp_i_bias = CapMemCell::Value(1022);
+	}
 }
 
 template <>
