@@ -231,6 +231,10 @@ void ExecutionInstanceConfigVisitor::process(
 		// enable unbuffered access to pad
 		auto& pad_mux =
 		    m_config.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())];
+		auto neuron_i_stim_mux = pad_mux.get_neuron_i_stim_mux();
+		neuron_i_stim_mux.fill(false);
+		neuron_i_stim_mux[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = true;
+		pad_mux.set_neuron_i_stim_mux(neuron_i_stim_mux);
 		pad_mux.set_neuron_i_stim_mux_to_pad(true);
 	}
 

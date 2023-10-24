@@ -372,6 +372,10 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 		throw std::runtime_error("Only one pad recording per network possible.");
 	}
 	std::set<AtomicNeuronOnNetwork> unique;
+	std::set<halco::hicann_dls::vx::v3::HemisphereOnDLS> unique_hemisphere;
+	std::set<std::pair<halco::hicann_dls::vx::v3::HemisphereOnDLS, int>> unique_parity;
+	size_t num_buffered = 0;
+	size_t num_unbuffered = 0;
 	for (auto const& [_, source] : pad_recording.recordings) {
 		auto const& neuron = source.neuron;
 		if (!m_populations.contains(neuron.coordinate.population)) {
@@ -404,9 +408,31 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 			}
 		}
 		unique.insert(neuron.coordinate);
+		auto const an = std::get<Population>(m_populations.at(neuron.coordinate.population))
+		                    .neurons.at(neuron.coordinate.neuron_on_population)
+		                    .coordinate.get_placed_compartments()
+		                    .at(neuron.coordinate.compartment_on_neuron)
+		                    .at(neuron.coordinate.atomic_neuron_on_compartment);
+
+		if (source.enable_buffered) {
+			unique_parity.insert(std::pair{
+			    an.toNeuronRowOnDLS().toHemisphereOnDLS(), an.toNeuronColumnOnDLS().value() % 2});
+			num_buffered++;
+		} else {
+			unique_hemisphere.insert(an.toNeuronRowOnDLS().toHemisphereOnDLS());
+			num_unbuffered++;
+		}
 	}
 	if (unique.size() != pad_recording.recordings.size()) {
 		throw std::runtime_error("Pad recording neurons are not unique.");
+	}
+	if (unique_hemisphere.size() != num_unbuffered) {
+		throw std::runtime_error("Pad recording neurons to be read-out unbuffered don't reside on "
+		                         "exclusive hemispheres.");
+	}
+	if (unique_parity.size() != num_buffered) {
+		throw std::runtime_error("Pad recording neurons to be read-out buffered don't reside on "
+		                         "exclusive {hemisphere, parity}s.");
 	}
 	// check that plasticity rule target population readout settings don't contradict pad recording
 	for (auto const& [_, plasticity_rule] : m_plasticity_rules) {
@@ -440,6 +466,7 @@ void NetworkBuilder::add(PadRecording const& pad_recording)
 			}
 		}
 	}
+
 	m_pad_recording = pad_recording;
 	LOG4CXX_TRACE(m_logger, "add(): Added pad recording in " << timer.print() << ".");
 	m_duration += std::chrono::microseconds(timer.get_us());
