@@ -337,7 +337,9 @@ void ExecutionInstanceBuilder::process(
 				if (num_samples > local_block_size_expectation) {
 					auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 					LOG4CXX_WARN(
-					    logger, "Less CADC samples read-out than recorded during execution.");
+					    logger, "Less CADC samples read-out (" << local_block_size_expectation
+					                                           << ") than recorded (" << num_samples
+					                                           << ") during execution.");
 				}
 				num_samples = std::min(num_samples, local_block_size_expectation);
 
