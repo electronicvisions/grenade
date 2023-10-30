@@ -11,6 +11,7 @@
 #include "haldls/vx/v3/ppu.h"
 #include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
+#include "lola/vx/v3/chip.h"
 #include "lola/vx/v3/ppu.h"
 #include <map>
 #include <memory>
@@ -76,6 +77,13 @@ struct GENPYBIND(visible) IODataMap
 	 * Read PPU symbols corresponding to requested symbols in ExecutionInstancePlaybackHooks.
 	 */
 	ReadPPUSymbols read_ppu_symbols;
+
+	typedef std::map<common::ExecutionInstanceID, lola::vx::v3::Chip> Chips;
+
+	/**
+	 * Pre-execution chip configuration including execution instance's static configuration.
+	 */
+	Chips pre_execution_chips;
 
 	IODataMap() SYMBOL_VISIBLE;
 

@@ -9,6 +9,7 @@ IODataMap::IODataMap() :
     runtime(),
     execution_time_info(),
     read_ppu_symbols(),
+    pre_execution_chips(),
     mutex(std::make_unique<std::mutex>())
 {}
 
@@ -17,6 +18,7 @@ IODataMap::IODataMap(IODataMap&& other) :
     runtime(std::move(other.runtime)),
     execution_time_info(std::move(other.execution_time_info)),
     read_ppu_symbols(std::move(other.read_ppu_symbols)),
+    pre_execution_chips(std::move(other.pre_execution_chips)),
     mutex(std::move(other.mutex))
 {
 	other.mutex = std::make_unique<std::mutex>();
@@ -28,6 +30,7 @@ IODataMap& IODataMap::operator=(IODataMap&& other)
 	runtime = std::move(other.runtime);
 	execution_time_info = std::move(other.execution_time_info);
 	read_ppu_symbols = std::move(other.read_ppu_symbols);
+	pre_execution_chips = std::move(other.pre_execution_chips);
 	mutex = std::move(other.mutex);
 	other.mutex = std::make_unique<std::mutex>();
 	return *this;
@@ -69,6 +72,7 @@ void IODataMap::merge(IODataMap&& other)
 			}
 		}
 	}
+	pre_execution_chips.merge(other.pre_execution_chips);
 	if (execution_time_info && other.execution_time_info) {
 		execution_time_info->merge(*(other.execution_time_info));
 	} else {
@@ -89,11 +93,13 @@ void IODataMap::clear()
 	runtime.clear();
 	execution_time_info.reset();
 	read_ppu_symbols.clear();
+	pre_execution_chips.clear();
 }
 
 bool IODataMap::empty() const
 {
-	return data.empty() && runtime.empty() && read_ppu_symbols.empty();
+	return data.empty() && runtime.empty() && read_ppu_symbols.empty() &&
+	       pre_execution_chips.empty();
 }
 
 namespace {

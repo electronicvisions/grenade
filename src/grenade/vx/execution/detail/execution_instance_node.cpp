@@ -444,6 +444,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
 	    connection_execution_duration_after - connection_execution_duration_before;
 
+	// add pre-execution config to result data map
+	result_data_map.pre_execution_chips[execution_instance] = config;
+
 	// merge local data map into global data map
 	data_map.merge(result_data_map);
 }
