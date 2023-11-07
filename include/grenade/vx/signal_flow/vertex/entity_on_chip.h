@@ -1,7 +1,7 @@
 #pragma once
+#include "grenade/vx/common/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
-#include <iosfwd>
 #include <optional>
 
 namespace cereal {
@@ -17,16 +17,9 @@ namespace vertex {
 /**
  * Entity on chip mixin carrying chip id information.
  */
-struct EntityOnChip
+struct EntityOnChip : public common::EntityOnChip
 {
-	typedef halco::hicann_dls::vx::v3::DLSGlobal ChipCoordinate;
-
 	explicit EntityOnChip(ChipCoordinate const& coordinate_chip = ChipCoordinate()) SYMBOL_VISIBLE;
-
-	ChipCoordinate get_coordinate_chip() const SYMBOL_VISIBLE;
-
-	bool operator==(EntityOnChip const& other) const SYMBOL_VISIBLE;
-	bool operator!=(EntityOnChip const& other) const SYMBOL_VISIBLE;
 
 	/**
 	 * Whether entity on chip supports input from given vertex.
@@ -38,14 +31,10 @@ struct EntityOnChip
 	bool supports_input_from(
 	    InputVertex const& input, std::optional<PortRestriction> const& port_restriction) const;
 
-	friend std::ostream& operator<<(std::ostream& os, EntityOnChip const& entity) SYMBOL_VISIBLE;
-
 private:
 	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
-
-	ChipCoordinate m_coordinate_chip;
 };
 
 } // namespace vertex

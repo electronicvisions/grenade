@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/entity_on_chip.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/atomic_neuron_on_execution_instance.h"
 #include "hate/visibility.h"
@@ -9,7 +10,7 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 /**
  * Neuron recording base class for MADC and CADC recording.
  */
-struct GENPYBIND(visible) NeuronRecording
+struct GENPYBIND(visible) NeuronRecording : public common::EntityOnChip
 {
 	struct Neuron
 	{
@@ -26,7 +27,10 @@ struct GENPYBIND(visible) NeuronRecording
 	std::vector<Neuron> neurons{};
 
 	NeuronRecording() = default;
-	NeuronRecording(std::vector<Neuron> const& neurons) SYMBOL_VISIBLE;
+	NeuronRecording(
+	    std::vector<Neuron> const& neurons,
+	    common::EntityOnChip::ChipCoordinate chip_coordinate =
+	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 
 	bool operator==(NeuronRecording const& other) const SYMBOL_VISIBLE;
 	bool operator!=(NeuronRecording const& other) const SYMBOL_VISIBLE;

@@ -17,11 +17,16 @@ bool NeuronRecording::Neuron::operator!=(Neuron const& other) const
 }
 
 
-NeuronRecording::NeuronRecording(std::vector<Neuron> const& neurons) : neurons(neurons) {}
+NeuronRecording::NeuronRecording(
+    std::vector<Neuron> const& neurons,
+    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
+    common::EntityOnChip(chip_coordinate), neurons(neurons)
+{}
 
 bool NeuronRecording::operator==(NeuronRecording const& other) const
 {
-	return neurons == other.neurons;
+	return neurons == other.neurons && (static_cast<common::EntityOnChip const&>(*this) ==
+	                                    static_cast<common::EntityOnChip const&>(other));
 }
 
 bool NeuronRecording::operator!=(NeuronRecording const& other) const

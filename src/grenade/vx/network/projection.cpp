@@ -37,7 +37,9 @@ Projection::Projection(
     Receptor const& receptor,
     Connections const& connections,
     PopulationOnExecutionInstance const population_pre,
-    PopulationOnExecutionInstance const population_post) :
+    PopulationOnExecutionInstance const population_post,
+    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
+    common::EntityOnChip(chip_coordinate),
     receptor(receptor),
     connections(connections),
     population_pre(population_pre),
@@ -48,7 +50,9 @@ Projection::Projection(
     Receptor const& receptor,
     Connections&& connections,
     PopulationOnExecutionInstance const population_pre,
-    PopulationOnExecutionInstance const population_post) :
+    PopulationOnExecutionInstance const population_post,
+    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
+    common::EntityOnChip(chip_coordinate),
     receptor(receptor),
     connections(std::move(connections)),
     population_pre(population_pre),
@@ -58,7 +62,9 @@ Projection::Projection(
 bool Projection::operator==(Projection const& other) const
 {
 	return receptor == other.receptor && connections == other.connections &&
-	       population_pre == other.population_pre && population_post == other.population_post;
+	       population_pre == other.population_pre && population_post == other.population_post &&
+	       static_cast<common::EntityOnChip const&>(*this) ==
+	           static_cast<common::EntityOnChip const&>(other);
 }
 
 bool Projection::operator!=(Projection const& other) const
@@ -69,6 +75,7 @@ bool Projection::operator!=(Projection const& other) const
 std::ostream& operator<<(std::ostream& os, Projection const& projection)
 {
 	os << "Projection(\n";
+	os << "\t" << static_cast<common::EntityOnChip const&>(projection) << "\n";
 	os << "\treceptor: " << projection.receptor << "\n";
 	os << "\tpopulation_pre: " << projection.population_pre << "\n";
 	os << "\tpopulation_post: " << projection.population_post << "\n";

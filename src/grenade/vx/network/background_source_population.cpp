@@ -5,8 +5,11 @@
 namespace grenade::vx::network {
 
 BackgroundSourcePopulation::BackgroundSourcePopulation(
-    size_t const size, Coordinate const& coordinate, Config const& config) :
-    size(size), coordinate(coordinate), config(config)
+    size_t const size,
+    Coordinate const& coordinate,
+    Config const& config,
+    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
+    common::EntityOnChip(chip_coordinate), size(size), coordinate(coordinate), config(config)
 {}
 
 bool BackgroundSourcePopulation::Config::operator==(
@@ -24,7 +27,9 @@ bool BackgroundSourcePopulation::Config::operator!=(
 
 bool BackgroundSourcePopulation::operator==(BackgroundSourcePopulation const& other) const
 {
-	return size == other.size && coordinate == other.coordinate && config == other.config;
+	return size == other.size && coordinate == other.coordinate && config == other.config &&
+	       static_cast<common::EntityOnChip const&>(*this) ==
+	           static_cast<common::EntityOnChip const&>(other);
 }
 
 bool BackgroundSourcePopulation::operator!=(BackgroundSourcePopulation const& other) const
@@ -42,6 +47,7 @@ std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation::Config co
 std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation const& population)
 {
 	os << "BackgroundSourcePopulation(\n";
+	os << "\t: " << static_cast<common::EntityOnChip const&>(population) << "\n";
 	os << "\tsize: " << population.size << "\n";
 	os << "\tcoordinate:\n";
 	for (auto const& [hemisphere, padi_bus] : population.coordinate) {

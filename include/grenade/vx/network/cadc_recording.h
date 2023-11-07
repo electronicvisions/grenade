@@ -11,7 +11,10 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 struct GENPYBIND(visible) CADCRecording : public NeuronRecording
 {
 	CADCRecording() = default;
-	CADCRecording(std::vector<Neuron> const& neurons) SYMBOL_VISIBLE;
+	CADCRecording(
+	    std::vector<Neuron> const& neurons,
+	    common::EntityOnChip::ChipCoordinate chip_coordinate =
+	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx::network

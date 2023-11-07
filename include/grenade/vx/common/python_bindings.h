@@ -6,5 +6,6 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("pyhaldls_vx_v3");
 })
 
+#include "grenade/vx/common/entity_on_chip.h"
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/common/time.h"

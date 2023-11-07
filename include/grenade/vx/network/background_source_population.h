@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/entity_on_chip.h"
 #include "grenade/vx/genpybind.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
@@ -10,7 +11,7 @@
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Background source population. */
-struct GENPYBIND(visible) BackgroundSourcePopulation
+struct GENPYBIND(visible) BackgroundSourcePopulation : common::EntityOnChip
 {
 	/** Number of individual sources. */
 	size_t size{0};
@@ -38,8 +39,12 @@ struct GENPYBIND(visible) BackgroundSourcePopulation
 	} config;
 
 	BackgroundSourcePopulation() = default;
-	BackgroundSourcePopulation(size_t size, Coordinate const& coordinate, Config const& config)
-	    SYMBOL_VISIBLE;
+	BackgroundSourcePopulation(
+	    size_t size,
+	    Coordinate const& coordinate,
+	    Config const& config,
+	    common::EntityOnChip::ChipCoordinate chip_coordinate =
+	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 
 	bool operator==(BackgroundSourcePopulation const& other) const SYMBOL_VISIBLE;
 	bool operator!=(BackgroundSourcePopulation const& other) const SYMBOL_VISIBLE;

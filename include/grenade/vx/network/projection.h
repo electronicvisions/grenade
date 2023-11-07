@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/entity_on_chip.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/receptor.h"
@@ -15,7 +16,7 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 /**
  * Projection between populations.
  */
-struct GENPYBIND(visible) Projection
+struct GENPYBIND(visible) Projection : public common::EntityOnChip
 {
 	/** Receptor type. */
 	Receptor receptor;
@@ -62,12 +63,16 @@ struct GENPYBIND(visible) Projection
 	    Receptor const& receptor,
 	    Connections const& connections,
 	    PopulationOnExecutionInstance population_pre,
-	    PopulationOnExecutionInstance population_post) SYMBOL_VISIBLE;
+	    PopulationOnExecutionInstance population_post,
+	    common::EntityOnChip::ChipCoordinate chip_coordinate =
+	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 	Projection(
 	    Receptor const& receptor,
 	    Connections&& connections,
 	    PopulationOnExecutionInstance population_pre,
-	    PopulationOnExecutionInstance population_post) SYMBOL_VISIBLE;
+	    PopulationOnExecutionInstance population_post,
+	    common::EntityOnChip::ChipCoordinate chip_coordinate =
+	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		using namespace grenade::vx::network;
@@ -75,7 +80,10 @@ struct GENPYBIND(visible) Projection
 		auto const from_numpy = [](GENPYBIND_PARENT_TYPE& self, Receptor const& receptor,
 		                           pybind11::array_t<size_t> const& pyconnections,
 		                           PopulationOnExecutionInstance const population_pre,
-		                           PopulationOnExecutionInstance const population_post) {
+		                           PopulationOnExecutionInstance const population_post,
+		                           grenade::vx::common::EntityOnChip::ChipCoordinate
+		                               chip_coordinate =
+		                                   grenade::vx::common::EntityOnChip::ChipCoordinate()) {
 			if (pyconnections.ndim() != 2) {
 				throw std::runtime_error("Expected connections array to be of dimension 2.");
 			}
@@ -101,9 +109,14 @@ struct GENPYBIND(visible) Projection
 			self.receptor = receptor;
 			self.population_pre = population_pre;
 			self.population_post = population_post;
+			self.chip_coordinate = chip_coordinate;
 		};
 
-		parent.def("from_numpy", from_numpy);
+		parent.def(
+		    "from_numpy", from_numpy, parent->py::arg("receptor"), parent->py::arg("connections"),
+		    parent->py::arg("population_pre"), parent->py::arg("population_post"),
+		    parent->py::arg("chip_coordinate") =
+		        grenade::vx::common::EntityOnChip::ChipCoordinate());
 	})
 
 	bool operator==(Projection const& other) const SYMBOL_VISIBLE;

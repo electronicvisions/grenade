@@ -17,11 +17,15 @@ bool PadRecording::Source::operator!=(Source const& other) const
 }
 
 
-PadRecording::PadRecording(Recordings const& recordings) : recordings(recordings) {}
+PadRecording::PadRecording(
+    Recordings const& recordings, common::EntityOnChip::ChipCoordinate const chip_coordinate) :
+    common::EntityOnChip(chip_coordinate), recordings(recordings)
+{}
 
 bool PadRecording::operator==(PadRecording const& other) const
 {
-	return recordings == other.recordings;
+	return recordings == other.recordings && static_cast<common::EntityOnChip const&>(*this) ==
+	                                             static_cast<common::EntityOnChip const&>(other);
 }
 
 bool PadRecording::operator!=(PadRecording const& other) const

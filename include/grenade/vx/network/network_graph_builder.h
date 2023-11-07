@@ -223,6 +223,9 @@ public:
 	    RoutingResult const& connection_result,
 	    common::ExecutionInstanceID const& instance) const;
 
+	common::EntityOnChip::ChipCoordinate get_chip_coordinate(
+	    common::ExecutionInstanceID const& instance) const;
+
 private:
 	Network const& m_network;
 	log4cxx::LoggerPtr m_logger;

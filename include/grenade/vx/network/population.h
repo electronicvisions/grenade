@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/entity_on_chip.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/geometry.h"
@@ -16,7 +17,7 @@
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Population of on-chip neurons. */
-struct GENPYBIND(visible) Population
+struct GENPYBIND(visible) Population : public common::EntityOnChip
 {
 	/** On-chip neuron. */
 	struct Neuron
@@ -90,7 +91,10 @@ struct GENPYBIND(visible) Population
 	Neurons neurons{};
 
 	Population() = default;
-	Population(Neurons const& neurons) SYMBOL_VISIBLE;
+	Population(
+	    Neurons const& neurons,
+	    common::EntityOnChip::ChipCoordinate chip_coordinate =
+	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 
 	bool operator==(Population const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Population const& other) const SYMBOL_VISIBLE;

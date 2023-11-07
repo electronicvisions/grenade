@@ -119,11 +119,15 @@ std::ostream& operator<<(std::ostream& os, Population::Neuron const& config)
 }
 
 
-Population::Population(Neurons const& neurons) : neurons(neurons) {}
+Population::Population(
+    Neurons const& neurons, common::EntityOnChip::ChipCoordinate const chip_coordinate) :
+    common::EntityOnChip(chip_coordinate), neurons(neurons)
+{}
 
 bool Population::operator==(Population const& other) const
 {
-	return neurons == other.neurons;
+	return neurons == other.neurons && static_cast<common::EntityOnChip const&>(*this) ==
+	                                       static_cast<common::EntityOnChip const&>(other);
 }
 
 bool Population::operator!=(Population const& other) const
@@ -137,6 +141,7 @@ std::ostream& operator<<(std::ostream& os, Population const& population)
 		throw std::runtime_error("Population not valid.");
 	}
 	os << "Population(\n";
+	os << "\t" << static_cast<common::EntityOnChip const&>(population) << "\n";
 	os << "\tsize: " << population.neurons.size() << "\n";
 	std::stringstream ss;
 	for (size_t i = 0; i < population.neurons.size(); ++i) {

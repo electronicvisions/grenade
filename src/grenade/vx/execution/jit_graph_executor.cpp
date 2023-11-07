@@ -107,7 +107,7 @@ bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 		                  signal_flow::vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
 			return std::find(
 			           connection_dls_globals.begin(), connection_dls_globals.end(),
-			           v.get_coordinate_chip()) != connection_dls_globals.end();
+			           v.chip_coordinate) != connection_dls_globals.end();
 		}
 		return true;
 	};

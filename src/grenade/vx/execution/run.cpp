@@ -72,7 +72,7 @@ signal_flow::IODataMap run(
 				    if constexpr (std::is_base_of_v<
 				                      signal_flow::vertex::EntityOnChip,
 				                      std::decay_t<decltype(vp)>>) {
-					    dls_globals.insert(vp.get_coordinate_chip());
+					    dls_globals.insert(vp.chip_coordinate);
 				    }
 			    },
 			    vertex_property);

@@ -9,7 +9,7 @@ bool EntityOnChip::supports_input_from(
     InputVertex const& input, std::optional<PortRestriction> const&) const
 {
 	if constexpr (std::is_base_of_v<EntityOnChip, std::decay_t<InputVertex>>) {
-		return input.get_coordinate_chip() == m_coordinate_chip;
+		return input.chip_coordinate == chip_coordinate;
 	} else {
 		return true;
 	}

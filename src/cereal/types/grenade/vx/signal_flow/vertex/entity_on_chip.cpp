@@ -8,7 +8,7 @@ namespace grenade::vx::signal_flow::vertex {
 template <typename Archive>
 void EntityOnChip::serialize(Archive& ar, std::uint32_t const)
 {
-	ar(CEREAL_NVP(m_coordinate_chip));
+	ar(cereal::base_class<common::EntityOnChip>(this));
 }
 
 } // namespace grenade::vx::signal_flow::vertex
