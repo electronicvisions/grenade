@@ -959,14 +959,16 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	haldls::vx::v3::PPUMemoryBlock expectation(halco::hicann_dls::vx::v3::PPUMemoryBlockSize(1));
 	expectation.at(0) =
 	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
-	hooks[common::ExecutionInstanceID()].write_ppu_symbols["test"] =
+	hooks[common::ExecutionInstanceID()] =
+	    std::make_shared<signal_flow::ExecutionInstancePlaybackHooks>();
+	hooks[common::ExecutionInstanceID()]->write_ppu_symbols["test"] =
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::top, expectation},
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom, expectation},
 	    };
-	hooks[common::ExecutionInstanceID()].read_ppu_symbols.insert("test");
+	hooks[common::ExecutionInstanceID()]->read_ppu_symbols.insert("test");
 
-	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID()).write_ppu_symbols;
+	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID())->write_ppu_symbols;
 
 	auto const result =
 	    execution::run(executor, network_graph.get_graph(), inputs, chip_configs, hooks);

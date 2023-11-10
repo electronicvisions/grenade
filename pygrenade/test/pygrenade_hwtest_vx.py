@@ -76,7 +76,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
         network_graph = grenade.network.build_network_graph(
             network, routing_result)
 
-        config = lola.Chip()
+        config = {grenade.common.ExecutionInstanceID(): lola.Chip()}
 
         inputs = grenade.network.InputGenerator(
             network_graph).done()
@@ -108,7 +108,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
             sta.run(connection, init.done())
             grenade.network.run(
                 connection,
-                lola.Chip(),
+                {grenade.common.ExecutionInstanceID(): lola.Chip()},
                 network_graph,
                 inputs)
 
@@ -187,7 +187,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
         network_graph = grenade.network.build_network_graph(
             network, routing_result)
 
-        config = lola.Chip()
+        config = {grenade.common.ExecutionInstanceID(): lola.Chip()}
 
         input_generator = grenade.network.InputGenerator(
             network_graph, batch_size)

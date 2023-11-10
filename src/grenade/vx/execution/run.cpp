@@ -11,6 +11,7 @@
 #include "hate/timer.h"
 #include <chrono>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <boost/range/adaptor/map.hpp>
@@ -88,11 +89,18 @@ signal_flow::IODataMap run(
 		}
 		assert(dls_globals.size() == 1);
 		auto const dls_global = *dls_globals.begin();
+		if (!playback_hooks.contains(execution_instance)) {
+			playback_hooks[execution_instance] =
+			    std::make_shared<signal_flow::ExecutionInstancePlaybackHooks>();
+		}
+		if (!playback_hooks.at(execution_instance)) {
+			throw std::runtime_error("Expected playback hooks not present.");
+		}
 		detail::ExecutionInstanceNode node_body(
 		    output_activation_map, input, graph, execution_instance, dls_global,
 		    initial_config.at(execution_instance), executor.m_connections.at(dls_global),
 		    executor.m_connection_state_storages.at(dls_global),
-		    playback_hooks[execution_instance]);
+		    *(playback_hooks[execution_instance]));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}

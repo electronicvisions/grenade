@@ -14,7 +14,10 @@ namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 /**
  * Playback program hooks for an execution instance.
  */
-struct GENPYBIND(visible) ExecutionInstancePlaybackHooks
+struct GENPYBIND(
+    visible,
+    holder_type("std::shared_ptr<grenade::vx::signal_flow::ExecutionInstancePlaybackHooks>"))
+    ExecutionInstancePlaybackHooks
 {
 	typedef std::map<
 	    std::string,

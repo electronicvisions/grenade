@@ -1,6 +1,4 @@
 #pragma once
-#include <map>
-
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/detail/connection_state_storage.h"
@@ -8,6 +6,7 @@
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
+#include <memory>
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include "pyhxcomm/common/managed_connection.h"
@@ -39,7 +38,9 @@ public:
 
 	typedef std::map<common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
 
-	typedef std::map<common::ExecutionInstanceID, signal_flow::ExecutionInstancePlaybackHooks>
+	typedef std::map<
+	    common::ExecutionInstanceID,
+	    std::shared_ptr<signal_flow::ExecutionInstancePlaybackHooks>>
 	    PlaybackHooks;
 
 	/**

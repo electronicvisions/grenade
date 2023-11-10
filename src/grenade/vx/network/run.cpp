@@ -12,65 +12,51 @@ using namespace halco::hicann_dls::vx::v3;
 
 signal_flow::IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
-    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
     signal_flow::IODataMap const& inputs)
 {
-	signal_flow::ExecutionInstancePlaybackHooks empty;
+	execution::JITGraphExecutor::PlaybackHooks empty;
 	return run(connection, config, network_graph, inputs, empty);
 }
 
 signal_flow::IODataMap run(
     grenade::vx::execution::backend::Connection& connection,
-    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
     signal_flow::IODataMap const& inputs)
 {
-	signal_flow::ExecutionInstancePlaybackHooks empty;
+	execution::JITGraphExecutor::PlaybackHooks empty;
 	return run(connection, config, network_graph, inputs, empty);
 }
 
 signal_flow::IODataMap run(
     grenade::vx::execution::JITGraphExecutor& executor,
-    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
     signal_flow::IODataMap const& inputs)
 {
-	signal_flow::ExecutionInstancePlaybackHooks empty;
+	execution::JITGraphExecutor::PlaybackHooks empty;
 	return run(executor, config, network_graph, inputs, empty);
 }
 
 signal_flow::IODataMap run(
     grenade::vx::execution::JITGraphExecutor& executor,
-    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
     signal_flow::IODataMap const& inputs,
-    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
+    execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs configs;
-	assert(network_graph.get_network());
-	for (auto const& [execution_instance, _] : network_graph.get_network()->execution_instances) {
-		configs.insert(
-		    std::pair<common::ExecutionInstanceID, lola::vx::v3::Chip>(execution_instance, config));
-	}
-
-	grenade::vx::execution::JITGraphExecutor::PlaybackHooks playback_hooks_map;
-	playback_hooks_map.insert(
-	    std::pair<common::ExecutionInstanceID, signal_flow::ExecutionInstancePlaybackHooks>(
-	        common::ExecutionInstanceID(), std::move(playback_hooks)));
-
-	auto ret = grenade::vx::execution::run(
-	    executor, network_graph.get_graph(), inputs, configs, playback_hooks_map);
-
-	return ret;
+	return grenade::vx::execution::run(
+	    executor, network_graph.get_graph(), inputs, config, playback_hooks);
 }
 
 signal_flow::IODataMap run(
     grenade::vx::execution::backend::Connection& connection,
-    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
     signal_flow::IODataMap const& inputs,
-    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
+    execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
 	connections.emplace(DLSGlobal(), std::move(connection));
@@ -84,10 +70,10 @@ signal_flow::IODataMap run(
 
 signal_flow::IODataMap run(
     hxcomm::vx::ConnectionVariant& connection,
-    lola::vx::v3::Chip const& config,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
     signal_flow::IODataMap const& inputs,
-    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks)
+    execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	grenade::vx::execution::backend::Connection backend_connection(std::move(connection));
 
