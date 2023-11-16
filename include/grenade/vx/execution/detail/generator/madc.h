@@ -1,7 +1,8 @@
 #pragma once
-#include "hate/nil.h"
+#include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
-#include "stadls/vx/v3/playback_generator.h"
+#include "stadls/vx/playback_generator.h"
+#include "stadls/vx/v3/absolute_time_playback_program_builder.h"
 
 namespace grenade::vx::execution::detail::generator {
 
@@ -10,11 +11,11 @@ namespace grenade::vx::execution::detail::generator {
  */
 struct MADCArm
 {
-	typedef hate::Nil Result;
-	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+	typedef haldls::vx::v3::Timer::Value Result;
+	typedef stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCArm>(MADCArm const&);
 };
@@ -25,11 +26,11 @@ protected:
  */
 struct MADCStart
 {
-	typedef hate::Nil Result;
-	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+	typedef haldls::vx::v3::Timer::Value Result;
+	typedef stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder Builder;
 
 protected:
-	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCStart>(MADCStart const&);
 };
@@ -40,13 +41,13 @@ protected:
  */
 struct MADCStop
 {
-	typedef hate::Nil Result;
-	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+	typedef haldls::vx::v3::Timer::Value Result;
+	typedef stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder Builder;
 
 	bool enable_power_down_after_sampling{false};
 
 protected:
-	stadls::vx::v3::PlaybackGeneratorReturn<Result> generate() const SYMBOL_VISIBLE;
+	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
 
 	friend auto stadls::vx::generate<MADCStop>(MADCStop const&);
 };

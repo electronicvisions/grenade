@@ -1,7 +1,6 @@
 #include "grenade/vx/execution/detail/generator/timed_spike_to_chip_sequence.h"
 
 #include "halco/hicann-dls/vx/v3/timing.h"
-#include "haldls/vx/v3/timer.h"
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail::generator {
@@ -11,6 +10,7 @@ stadls::vx::
     TimedSpikeToChipSequence::generate() const
 {
 	Builder builder;
+	Result current_time = Result(0);
 
 	for (auto const& event : m_values) {
 		std::visit(
@@ -20,9 +20,10 @@ stadls::vx::
 			        event.time.toTimerOnFPGAValue(), typename container_type::coordinate_type(), p);
 		    },
 		    event.data);
+		current_time = event.time.toTimerOnFPGAValue() + haldls::vx::v3::Timer::Value(1);
 	}
 
-	return {std::move(builder), hate::Nil{}};
+	return {std::move(builder), current_time};
 }
 
 } // namespace grenade::vx::execution::detail::generator
