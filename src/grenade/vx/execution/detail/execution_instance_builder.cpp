@@ -882,6 +882,7 @@ ExecutionInstanceBuilder::PlaybackPrograms ExecutionInstanceBuilder::generate()
 		builder.merge_back(m_playback_hooks.pre_static_config);
 		builder.merge_back(m_playback_hooks.pre_realtime);
 		builder.merge_back(m_playback_hooks.inside_realtime_begin);
+		builder.merge_back(m_playback_hooks.inside_realtime.done());
 		builder.merge_back(m_playback_hooks.inside_realtime_end);
 		builder.merge_back(m_playback_hooks.post_realtime);
 		m_chunked_program = {builder.done()};
