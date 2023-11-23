@@ -496,7 +496,7 @@ RoutingConstraints::get_num_background_sources_on_padi_bus() const
 		}
 		auto const& population = std::get<BackgroundSourcePopulation>(pop);
 		for (auto const& [hemisphere, bus] : population.coordinate) {
-			ret[PADIBusOnDLS(bus, hemisphere.toPADIBusBlockOnDLS())] = population.size;
+			ret[PADIBusOnDLS(bus, hemisphere.toPADIBusBlockOnDLS())] = population.neurons.size();
 		}
 	}
 

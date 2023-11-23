@@ -2,6 +2,7 @@
 
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/network/cadc_recording.h"
+#include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/madc_recording.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/population.h"
@@ -17,7 +18,9 @@ TEST(network_Network, General)
 {
 	Network network_a{
 	    {{ExecutionInstanceID(),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -35,7 +38,10 @@ TEST(network_Network, General)
 
 	Network network_b{
 	    {{ExecutionInstanceID(),
-	      {{{PopulationOnExecutionInstance(2), ExternalSourcePopulation(3)}},
+	      {{{PopulationOnExecutionInstance(2),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron(),
+	              ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -53,7 +59,9 @@ TEST(network_Network, General)
 
 	Network network_c{
 	    {{ExecutionInstanceID(),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(4),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -71,7 +79,9 @@ TEST(network_Network, General)
 
 	Network network_d{
 	    {{ExecutionInstanceID(),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -89,7 +99,9 @@ TEST(network_Network, General)
 
 	Network network_e{
 	    {{ExecutionInstanceID(),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -109,7 +121,9 @@ TEST(network_Network, General)
 	rule.kernel = "abc";
 	Network network_f{
 	    {{ExecutionInstanceID(),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -127,7 +141,9 @@ TEST(network_Network, General)
 
 	Network network_g{
 	    {{ExecutionInstanceID(1),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),
@@ -145,7 +161,9 @@ TEST(network_Network, General)
 
 	Network network_h{
 	    {{ExecutionInstanceID(1),
-	      {{{PopulationOnExecutionInstance(1), ExternalSourcePopulation(2)}},
+	      {{{PopulationOnExecutionInstance(1),
+	         ExternalSourcePopulation(
+	             {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()})}},
 	       {{ProjectionOnExecutionInstance(3),
 	         Projection(
 	             Receptor(Receptor::ID(), Receptor::Type::excitatory),

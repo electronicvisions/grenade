@@ -2,6 +2,7 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/generate_input.h"
 #include "grenade/vx/network/network.h"
@@ -35,6 +36,74 @@ using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 using namespace grenade::vx::network;
 
+TEST(NetworkGraphBuilder, ExternalSourcePopulationRecord)
+{
+	// Construct connection to HW
+	auto chip_configs = get_chip_configs_bypass_excitatory();
+	grenade::vx::execution::JITGraphExecutor executor;
+
+	grenade::vx::common::ExecutionInstanceID instance;
+
+	// build network
+	NetworkBuilder network_builder;
+
+	ExternalSourcePopulation population_external;
+	population_external.neurons.resize(256, true);
+	auto const population_external_descriptor = network_builder.add(population_external);
+
+	// build network graph
+	auto const network = network_builder.done();
+	auto const routing_result = routing::PortfolioRouter()(network);
+	auto const network_graph = build_network_graph(network, routing_result);
+
+	// generate input
+	constexpr size_t num = 100;
+	constexpr size_t isi = 1000;
+	std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(
+	    population_external.neurons.size());
+	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
+		input_spike_times.at(i).resize(population_external.neurons.size());
+		for (size_t j = 0; j < num; ++j) {
+			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
+		}
+	}
+	InputGenerator input_generator(network_graph, input_spike_times.size());
+	input_generator.add(input_spike_times, population_external_descriptor);
+	auto inputs = input_generator.done();
+	inputs.runtime.resize(inputs.batch_size(), {{instance, grenade::vx::common::Time(num * isi)}});
+
+	// run graph with given inputs and return results
+	auto const result_map = run(executor, network_graph, chip_configs, inputs);
+
+	auto const result = extract_neuron_spikes(result_map, network_graph);
+
+	EXPECT_EQ(result.size(), inputs.batch_size());
+	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
+		for (size_t j = 0; j < result.size(); ++j) {
+			if (i == j) {
+				EXPECT_TRUE(result.at(j).contains(std::tuple{
+				    population_external_descriptor, static_cast<size_t>(i),
+				    CompartmentOnLogicalNeuron()}));
+				if (result.at(j).contains(std::tuple{
+				        population_external_descriptor, static_cast<size_t>(i),
+				        CompartmentOnLogicalNeuron()})) {
+					auto const& spikes = result.at(i).at(std::tuple{
+					    population_external_descriptor, static_cast<size_t>(i),
+					    CompartmentOnLogicalNeuron()});
+					EXPECT_GE(spikes.size(), num * 0.8);
+					EXPECT_LE(spikes.size(), num * 1.2);
+				}
+			} else {
+				EXPECT_TRUE(result.at(j)
+				                .at(std::tuple{
+				                    population_external_descriptor, static_cast<size_t>(i),
+				                    CompartmentOnLogicalNeuron()})
+				                .empty());
+			}
+		}
+	}
+}
+
 TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 {
 	// Construct connection to HW
@@ -46,7 +115,8 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	// build network
 	NetworkBuilder network_builder;
 
-	ExternalSourcePopulation population_external{256};
+	ExternalSourcePopulation population_external;
+	population_external.neurons.resize(256);
 	auto const population_external_descriptor = network_builder.add(population_external);
 
 	Population::Neurons neurons;
@@ -68,7 +138,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	Projection::Connections projection_connections;
-	for (size_t i = 0; i < population_external.size; ++i) {
+	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
 		projection_connections.push_back(
 		    {{i, CompartmentOnLogicalNeuron()},
 		     {i, CompartmentOnLogicalNeuron()},
@@ -88,9 +158,9 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	constexpr size_t num = 100;
 	constexpr size_t isi = 1000;
 	std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(
-	    population_external.size);
-	for (size_t i = 0; i < population_external.size; ++i) {
-		input_spike_times.at(i).resize(population_external.size);
+	    population_external.neurons.size());
+	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
+		input_spike_times.at(i).resize(population_external.neurons.size());
 		for (size_t j = 0; j < num; ++j) {
 			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 		}
@@ -147,7 +217,8 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	// build network
 	NetworkBuilder network_builder;
 
-	ExternalSourcePopulation population_external{256};
+	ExternalSourcePopulation population_external;
+	population_external.neurons.resize(256);
 	auto const population_external_descriptor = network_builder.add(population_external);
 
 	Population::Neurons neurons;
@@ -169,7 +240,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	Projection::Connections projection_connections;
-	for (size_t i = 0; i < population_external.size; ++i) {
+	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
 		for (size_t j = 0; j < population_internal.neurons.size(); ++j) {
 			// only set diagonal to ensure no spike drops
 			// while this effectively is a very inefficient on-to-one connectivity, the algorithm
@@ -195,9 +266,9 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	constexpr size_t num = 100;
 	constexpr size_t isi = 1000;
 	std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(
-	    population_external.size);
-	for (size_t i = 0; i < population_external.size; ++i) {
-		input_spike_times.at(i).resize(population_external.size);
+	    population_external.neurons.size());
+	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
+		input_spike_times.at(i).resize(population_external.neurons.size());
 		for (size_t j = 0; j < num; ++j) {
 			input_spike_times.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 		}
@@ -215,7 +286,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto const result = extract_neuron_spikes(result_map, network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
-	for (size_t j = 0; j < population_external.size; ++j) {
+	for (size_t j = 0; j < population_external.neurons.size(); ++j) {
 		for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
 			if (i == j) {
 				EXPECT_TRUE(result.at(j).contains(std::tuple{
@@ -286,7 +357,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	for (auto const& length : lengths) {
 		NetworkBuilder network_builder;
 
-		ExternalSourcePopulation population_external{1};
+		ExternalSourcePopulation population_external({ExternalSourcePopulation::Neuron()});
 		auto const population_external_descriptor = network_builder.add(population_external);
 
 		std::vector<PopulationOnNetwork> population_internal_descriptors;
@@ -331,7 +402,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		constexpr size_t num = 100;
 		constexpr size_t isi = 12500;
 		std::vector<std::vector<std::vector<grenade::vx::common::Time>>> input_spike_times(1);
-		input_spike_times.at(0).resize(population_external.size);
+		input_spike_times.at(0).resize(population_external.neurons.size());
 		for (size_t j = 0; j < num; ++j) {
 			input_spike_times.at(0).at(0).push_back(grenade::vx::common::Time(j * isi));
 		}
@@ -384,7 +455,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	// build network
 	NetworkBuilder network_builder;
 
-	ExternalSourcePopulation population_0{1};
+	ExternalSourcePopulation population_0({ExternalSourcePopulation::Neuron()});
 	auto const population_0_descriptor =
 	    network_builder.add(population_0, grenade::vx::common::ExecutionInstanceID(0));
 
@@ -403,7 +474,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 
 	{
 		Projection::Connections projection_connections;
-		for (size_t i = 0; i < population_0.size; ++i) {
+		for (size_t i = 0; i < population_0.neurons.size(); ++i) {
 			projection_connections.push_back(
 			    {{i, CompartmentOnLogicalNeuron()},
 			     {i, CompartmentOnLogicalNeuron()},
@@ -416,14 +487,15 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 		network_builder.add(projection);
 	}
 
-	ExternalSourcePopulation population_2{2};
+	ExternalSourcePopulation population_2(
+	    {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()});
 	auto const population_2_descriptor =
 	    network_builder.add(population_2, grenade::vx::common::ExecutionInstanceID(1));
 
 	grenade::vx::common::Time delay(100000);
 	{
 		InterExecutionInstanceProjection::Connections projection_connections;
-		for (size_t i = 0; i < population_0.size; ++i) {
+		for (size_t i = 0; i < population_0.neurons.size(); ++i) {
 			projection_connections.push_back(
 			    {{i, CompartmentOnLogicalNeuron()}, {i, CompartmentOnLogicalNeuron()}, delay});
 		}
@@ -459,7 +531,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 
 	{
 		Projection::Connections projection_connections;
-		for (size_t i = 0; i < population_2.size; ++i) {
+		for (size_t i = 0; i < population_2.neurons.size(); ++i) {
 			projection_connections.push_back(
 			    {{i, CompartmentOnLogicalNeuron()},
 			     {i, CompartmentOnLogicalNeuron()},
@@ -484,9 +556,9 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 
 	{
 		std::vector<std::vector<std::vector<grenade::vx::common::Time>>> spike_times_0(
-		    population_0.size);
-		for (size_t i = 0; i < population_0.size; ++i) {
-			spike_times_0.at(i).resize(population_0.size);
+		    population_0.neurons.size());
+		for (size_t i = 0; i < population_0.neurons.size(); ++i) {
+			spike_times_0.at(i).resize(population_0.neurons.size());
 			for (size_t j = 0; j < num; ++j) {
 				spike_times_0.at(i).at(i).push_back(grenade::vx::common::Time(j * isi));
 			}
@@ -495,9 +567,9 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	}
 	{
 		std::vector<std::vector<std::vector<grenade::vx::common::Time>>> spike_times_2(
-		    population_0.size);
-		for (size_t i = 0; i < population_0.size; ++i) {
-			spike_times_2.at(i).resize(population_2.size);
+		    population_0.neurons.size());
+		for (size_t i = 0; i < population_0.neurons.size(); ++i) {
+			spike_times_2.at(i).resize(population_2.neurons.size());
 			for (size_t j = 0; j < num; ++j) {
 				spike_times_2.at(i).at(i).push_back(grenade::vx::common::Time(j * isi + (isi / 2)));
 			}

@@ -19,7 +19,10 @@ TEST(network_InputGenerator, General)
 	auto const network = std::make_shared<Network>(Network{
 	    {{common::ExecutionInstanceID(),
 	      Network::ExecutionInstance{
-	          {{PopulationOnExecutionInstance(0), ExternalSourcePopulation(3)},
+	          {{PopulationOnExecutionInstance(0),
+	            ExternalSourcePopulation(
+	                {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron(true),
+	                 ExternalSourcePopulation::Neuron()})},
 	           {PopulationOnExecutionInstance(1),
 	            Population(
 	                {Population::Neuron(
@@ -48,11 +51,11 @@ TEST(network_InputGenerator, General)
 	                {
 	                    Projection::Connection(
 	                        {0, CompartmentOnLogicalNeuron()}, {0, CompartmentOnLogicalNeuron()},
-	                        Projection::Connection::Weight(63)),
-	                    Projection::Connection(
-	                        {1, CompartmentOnLogicalNeuron()}, {1, CompartmentOnLogicalNeuron()},
-	                        Projection::Connection::Weight(63)) // third source not connected -> we
-	                                                            // expect events to be filtered
+	                        Projection::Connection::Weight(63))
+	                    // second source not connected, but recorded -> we
+	                    // expect events to be present
+	                    // third source not connected and not recorded -> we
+	                    // expect events to be filtered
 	                },
 	                PopulationOnExecutionInstance(0), PopulationOnExecutionInstance(1))}},
 	          std::nullopt,

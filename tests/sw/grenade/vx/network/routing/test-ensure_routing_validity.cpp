@@ -124,14 +124,18 @@ struct RandomNetworkGenerator
 			    0, num_unassigned_sources - (num_populations - pop));
 			auto const size = d(m_rng) + 1;
 			num_unassigned_sources -= size;
-			populations.push_back(ExternalSourcePopulation(size));
+			ExternalSourcePopulation external_source_population;
+			external_source_population.neurons.resize(size);
+			populations.push_back(external_source_population);
 		}
-		populations.push_back(ExternalSourcePopulation(num_unassigned_sources));
+		ExternalSourcePopulation external_source_population;
+		external_source_population.neurons.resize(num_unassigned_sources);
+		populations.push_back(external_source_population);
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		assert(
 		    std::accumulate(
 		        populations.begin(), populations.end(), static_cast<size_t>(0),
-		        [](size_t const p, auto const& q) { return p + q.size; }) == num_sources);
+		        [](size_t const p, auto const& q) { return p + q.neurons.size(); }) == num_sources);
 		return populations;
 	}
 
@@ -336,7 +340,8 @@ struct RandomNetworkGenerator
 				std::uniform_int_distribution<size_t> d_size(0, 8);
 				size = hate::math::pow(2, d_size(m_rng));
 			}
-			populations.push_back(BackgroundSourcePopulation(size, location, config));
+			std::vector<BackgroundSourcePopulation::Neuron> neurons(size, false);
+			populations.push_back(BackgroundSourcePopulation(std::move(neurons), location, config));
 		}
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		return populations;
@@ -522,13 +527,13 @@ struct RandomNetworkGenerator
 	{
 		std::map<PopulationOnExecutionInstance, size_t> population_sizes;
 		for (auto const& [index, descriptor] : external_population_descriptors) {
-			population_sizes[descriptor] = external_populations.at(index).size;
+			population_sizes[descriptor] = external_populations.at(index).neurons.size();
 		}
 		for (auto const& [index, descriptor] : internal_population_descriptors) {
 			population_sizes[descriptor] = internal_populations.at(index).neurons.size();
 		}
 		for (auto const& [index, descriptor] : background_population_descriptors) {
-			population_sizes[descriptor] = background_populations.at(index).size;
+			population_sizes[descriptor] = background_populations.at(index).neurons.size();
 		}
 		return population_sizes;
 	}

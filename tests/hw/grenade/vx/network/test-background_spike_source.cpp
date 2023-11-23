@@ -4,6 +4,7 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/network/background_source_population.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -16,6 +17,7 @@
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
+#include "haldls/vx/v3/background.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/systime.h"
 #include "haldls/vx/v3/timer.h"
@@ -42,7 +44,8 @@ void test_background_spike_source_regular(
     grenade::vx::common::Time running_period,
     size_t spike_count_deviation,
     grenade::vx::execution::JITGraphExecutor& executor,
-    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs)
+    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs,
+    bool record_directly)
 {
 	size_t expected_count =
 	    running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ / period;
@@ -55,7 +58,7 @@ void test_background_spike_source_regular(
 	NetworkBuilder network_builder;
 
 	BackgroundSourcePopulation population_background_spike_source{
-	    1,
+	    {{record_directly}},
 	    {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
 	    BackgroundSourcePopulation::Config{
 	        BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(),
@@ -71,13 +74,13 @@ void test_background_spike_source_regular(
 	    Population::Neuron::Compartments{
 	        {CompartmentOnLogicalNeuron(),
 	         Population::Neuron::Compartment{
-	             Population::Neuron::Compartment::SpikeMaster(0, true),
+	             Population::Neuron::Compartment::SpikeMaster(0, !record_directly),
 	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
 	Population population_internal{std::move(neurons)};
 	auto const population_internal_descriptor = network_builder.add(population_internal);
 
 	Projection::Connections projection_connections;
-	for (size_t i = 0; i < population_background_spike_source.size; ++i) {
+	for (size_t i = 0; i < population_background_spike_source.neurons.size(); ++i) {
 		projection_connections.push_back(
 		    {{i, CompartmentOnLogicalNeuron()},
 		     {i, CompartmentOnLogicalNeuron()},
@@ -104,12 +107,25 @@ void test_background_spike_source_regular(
 	auto const spikes = extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
 
-	size_t expected_label_count =
-	    spikes.at(0).contains({population_internal_descriptor, 0, CompartmentOnLogicalNeuron()})
-	        ? spikes.at(0)
-	              .at({population_internal_descriptor, 0, CompartmentOnLogicalNeuron()})
-	              .size()
-	        : 0;
+	size_t expected_label_count = 0;
+	if (record_directly) {
+		expected_label_count =
+		    spikes.at(0).contains(
+		        {population_background_spike_source_descriptor, 0, CompartmentOnLogicalNeuron()})
+		        ? spikes.at(0)
+		              .at(
+		                  {population_background_spike_source_descriptor, 0,
+		                   CompartmentOnLogicalNeuron()})
+		              .size()
+		        : 0;
+	} else {
+		expected_label_count =
+		    spikes.at(0).contains({population_internal_descriptor, 0, CompartmentOnLogicalNeuron()})
+		        ? spikes.at(0)
+		              .at({population_internal_descriptor, 0, CompartmentOnLogicalNeuron()})
+		              .size()
+		        : 0;
+	}
 
 	// check approx. equality in number of spikes expected
 	EXPECT_TRUE(
@@ -130,10 +146,16 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourceRegular)
 	// 5% allowed deviation in spike count
 	test_background_spike_source_regular(
 	    BackgroundSpikeSource::Period(1000), grenade::vx::common::Time(1000000), 100, executor,
-	    chip_configs);
+	    chip_configs, false);
 	test_background_spike_source_regular(
 	    BackgroundSpikeSource::Period(10000), grenade::vx::common::Time(10000000), 100, executor,
-	    chip_configs);
+	    chip_configs, false);
+	test_background_spike_source_regular(
+	    BackgroundSpikeSource::Period(1000), grenade::vx::common::Time(1000000), 100, executor,
+	    chip_configs, true);
+	test_background_spike_source_regular(
+	    BackgroundSpikeSource::Period(10000), grenade::vx::common::Time(10000000), 100, executor,
+	    chip_configs, true);
 }
 
 void test_background_spike_source_poisson(
@@ -142,7 +164,8 @@ void test_background_spike_source_poisson(
     grenade::vx::common::Time running_period,
     intmax_t spike_count_deviation,
     grenade::vx::execution::JITGraphExecutor& executor,
-    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs)
+    grenade::vx::execution::JITGraphExecutor::ChipConfigs const& chip_configs,
+    bool record_directly)
 {
 	intmax_t expected_count = running_period * 2 /* f(FPGA) = 0.5 * f(BackgroundSpikeSource) */ /
 	                          period / 64 /* population size */;
@@ -151,15 +174,16 @@ void test_background_spike_source_poisson(
 
 	grenade::vx::common::ExecutionInstanceID instance;
 
+	std::vector<BackgroundSourcePopulation::Neuron> background_neurons(64, record_directly);
 	BackgroundSourcePopulation population_background_spike_source{
-	    64,
+	    std::move(background_neurons),
 	    {{HemisphereOnDLS(0), PADIBusOnPADIBusBlock(0)}},
 	    BackgroundSourcePopulation::Config{
 	        BackgroundSpikeSource::Period(period), BackgroundSpikeSource::Rate(rate),
 	        BackgroundSpikeSource::Seed(1234), true}};
 
 	Population::Neurons neurons;
-	for (size_t i = 0; i < population_background_spike_source.size; ++i) {
+	for (size_t i = 0; i < population_background_spike_source.neurons.size(); ++i) {
 		neurons.push_back(Population::Neuron(
 		    LogicalNeuronOnDLS(
 		        LogicalNeuronCompartments(
@@ -168,12 +192,12 @@ void test_background_spike_source_poisson(
 		    Population::Neuron::Compartments{
 		        {CompartmentOnLogicalNeuron(),
 		         Population::Neuron::Compartment{
-		             Population::Neuron::Compartment::SpikeMaster(0, true),
+		             Population::Neuron::Compartment::SpikeMaster(0, !record_directly),
 		             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
 	}
 	Population population_internal{std::move(neurons)};
 
-	for (size_t i = 0; i < population_background_spike_source.size; ++i) {
+	for (size_t i = 0; i < population_background_spike_source.neurons.size(); ++i) {
 		// build network
 		NetworkBuilder network_builder;
 
@@ -213,17 +237,24 @@ void test_background_spike_source_poisson(
 		expected_label_counts.fill(0);
 		for (auto [nrn, spike] : spikes.at(0)) {
 			auto const& [descriptor, neuron_on_population, compartment_on_neuron] = nrn;
-			auto const& neuron =
-			    std::get<Population>(
-			        network->execution_instances.at(grenade::vx::common::ExecutionInstanceID())
-			            .populations.at(descriptor))
-			        .neurons.at(neuron_on_population);
-			auto const an = neuron.coordinate.get_placed_compartments()
-			                    .at(compartment_on_neuron)
-			                    .at(neuron.compartments.at(compartment_on_neuron)
-			                            .spike_master->neuron_on_compartment);
-			if (an.toNeuronRowOnDLS() == NeuronRowOnDLS()) {
-				expected_label_counts.at(an.toNeuronColumnOnDLS().value()) += spike.size();
+			if (record_directly) {
+				if (descriptor == population_background_spike_source_descriptor &&
+				    compartment_on_neuron == CompartmentOnLogicalNeuron()) {
+					expected_label_counts.at(neuron_on_population) += spike.size();
+				}
+			} else {
+				auto const& neuron =
+				    std::get<Population>(
+				        network->execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+				            .populations.at(descriptor))
+				        .neurons.at(neuron_on_population);
+				auto const an = neuron.coordinate.get_placed_compartments()
+				                    .at(compartment_on_neuron)
+				                    .at(neuron.compartments.at(compartment_on_neuron)
+				                            .spike_master->neuron_on_compartment);
+				if (an.toNeuronRowOnDLS() == NeuronRowOnDLS()) {
+					expected_label_counts.at(an.toNeuronColumnOnDLS().value()) += spike.size();
+				}
 			}
 		}
 
@@ -260,8 +291,14 @@ TEST(NetworkGraphBuilder, BackgroundSpikeSourcePoisson)
 	// 5% allowed deviation in spike count
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(1000), BackgroundSpikeSource::Rate(255),
-	    grenade::vx::common::Time(1000000), 100, executor, chip_configs);
+	    grenade::vx::common::Time(1000000), 100, executor, chip_configs, false);
 	test_background_spike_source_poisson(
 	    BackgroundSpikeSource::Period(10000), BackgroundSpikeSource::Rate(255),
-	    grenade::vx::common::Time(10000000), 100, executor, chip_configs);
+	    grenade::vx::common::Time(10000000), 100, executor, chip_configs, false);
+	test_background_spike_source_poisson(
+	    BackgroundSpikeSource::Period(1000), BackgroundSpikeSource::Rate(255),
+	    grenade::vx::common::Time(1000000), 100, executor, chip_configs, true);
+	test_background_spike_source_poisson(
+	    BackgroundSpikeSource::Period(10000), BackgroundSpikeSource::Rate(255),
+	    grenade::vx::common::Time(10000000), 100, executor, chip_configs, true);
 }

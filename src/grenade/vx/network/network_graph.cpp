@@ -55,10 +55,7 @@ bool NetworkGraph::valid() const
 				    logger, "No spike-labels for population(" << descriptor << ") present.");
 				return false;
 			}
-			auto const get_size = hate::overloaded(
-			    [](Population const& p) { return p.neurons.size(); },
-			    [](ExternalSourcePopulation const& p) { return p.size; },
-			    [](BackgroundSourcePopulation const& p) { return p.size; });
+			auto const get_size = [](auto const& p) { return p.neurons.size(); };
 			auto const size =
 			    graph_translation_execution_instance.spike_labels.at(descriptor).size();
 			auto const expected_size = std::visit(get_size, population);
@@ -89,7 +86,7 @@ bool NetworkGraph::valid() const
 				    return true;
 			    },
 			    [&](ExternalSourcePopulation const& p) {
-				    for (size_t n = 0; n < p.size; ++n) {
+				    for (size_t n = 0; n < p.neurons.size(); ++n) {
 					    if (!graph_translation_execution_instance.spike_labels.at(descriptor)
 					             .at(n)
 					             .contains(CompartmentOnLogicalNeuron())) {
@@ -103,7 +100,7 @@ bool NetworkGraph::valid() const
 				    return true;
 			    },
 			    [&](BackgroundSourcePopulation const& p) {
-				    for (size_t n = 0; n < p.size; ++n) {
+				    for (size_t n = 0; n < p.neurons.size(); ++n) {
 					    if (!graph_translation_execution_instance.spike_labels.at(descriptor)
 					             .at(n)
 					             .contains(CompartmentOnLogicalNeuron())) {
@@ -352,12 +349,12 @@ bool NetworkGraph::valid() const
 				}
 				if (pop.config.enable_random) {
 					if (hate::math::pow(2, std::popcount(vertex.get_config().get_mask().value())) !=
-					    pop.size) {
+					    pop.neurons.size()) {
 						LOG4CXX_ERROR(
 						    logger,
 						    "On-chip background spike source size does not match between "
 						    "abstract network ("
-						        << pop.size << " and hardware network ("
+						        << pop.neurons.size() << " and hardware network ("
 						        << hate::math::pow(
 						               2, std::popcount(vertex.get_config().get_mask().value()))
 						        << ").");
@@ -396,7 +393,7 @@ bool NetworkGraph::valid() const
 				        graph_translation_execution_instance.background_spike_source_vertices
 				            .at(descriptor)
 				            .at(hemisphere)));
-				for (size_t i = 0; i < pop.size; ++i) {
+				for (size_t i = 0; i < pop.neurons.size(); ++i) {
 					auto expected_label =
 					    graph_translation_execution_instance.spike_labels.at(descriptor)
 					        .at(i)
@@ -414,6 +411,8 @@ bool NetworkGraph::valid() const
 					SpikeLabel actual_label;
 					actual_label.set_neuron_label(NeuronLabel(
 					    vertex.get_config().get_neuron_label() & ~vertex.get_config().get_mask()));
+					actual_label.set_spl1_address(SPL1Address(
+					    vertex.get_coordinate().toPADIBusOnDLS().toPADIBusOnPADIBusBlock()));
 					if (actual_label != *expected_label) {
 						LOG4CXX_ERROR(
 						    logger, "Abstract network on-chip background source("

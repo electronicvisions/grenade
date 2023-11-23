@@ -4,18 +4,31 @@
 #include "hate/visibility.h"
 #include <cstddef>
 #include <iosfwd>
+#include <vector>
 
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** External source population. */
 struct GENPYBIND(visible) ExternalSourcePopulation : public common::EntityOnChip
 {
-	/** Number of individual sources. */
-	size_t size{0};
+	struct Neuron
+	{
+		bool enable_record_spikes;
+
+		Neuron(bool enable_record_spikes = false) SYMBOL_VISIBLE;
+
+		bool operator==(Neuron const& other) const = default;
+		bool operator!=(Neuron const& other) const = default;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, Neuron const& value) SYMBOL_VISIBLE;
+	};
+
+	std::vector<Neuron> neurons{};
 
 	ExternalSourcePopulation() = default;
 	ExternalSourcePopulation(
-	    size_t size,
+	    std::vector<Neuron> neurons,
 	    common::EntityOnChip::ChipCoordinate chip_coordinate =
 	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
 

@@ -33,33 +33,81 @@ extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& n
 			assert(network_graph.get_network());
 			for (auto const& [descriptor, population] :
 			     network_graph.get_network()->execution_instances.at(id).populations) {
-				if (!std::holds_alternative<Population>(population)) {
-					continue;
-				}
-				size_t i = 0;
-				for (auto const& neuron : std::get<Population>(population).neurons) {
-					for (auto const& [compartment_on_neuron, compartment] : neuron.compartments) {
-						if (compartment.spike_master &&
-						    compartment.spike_master->enable_record_spikes) {
-							auto const compartment_labels =
-							    execution_instance.spike_labels.at(descriptor)
-							        .at(i)
-							        .at(compartment_on_neuron);
-							// internal neurons only have one label assigned
-							assert(
-							    compartment_labels.size() ==
-							    neuron.coordinate.get_placed_compartments()
-							        .at(compartment_on_neuron)
-							        .size());
-							assert(compartment_labels.at(
-							    compartment.spike_master->neuron_on_compartment));
-							label_lookup[*compartment_labels.at(
-							    compartment.spike_master->neuron_on_compartment)] =
-							    std::tuple{descriptor, i, compartment_on_neuron};
+				auto const extract_population = [&](Population const& population) {
+					size_t i = 0;
+					for (auto const& neuron : population.neurons) {
+						for (auto const& [compartment_on_neuron, compartment] :
+						     neuron.compartments) {
+							if (compartment.spike_master &&
+							    compartment.spike_master->enable_record_spikes) {
+								auto const compartment_labels =
+								    execution_instance.spike_labels.at(descriptor)
+								        .at(i)
+								        .at(compartment_on_neuron);
+								// internal neurons only have one label assigned
+								assert(
+								    compartment_labels.size() ==
+								    neuron.coordinate.get_placed_compartments()
+								        .at(compartment_on_neuron)
+								        .size());
+								assert(compartment_labels.at(
+								    compartment.spike_master->neuron_on_compartment));
+								auto const [_, success] = label_lookup.emplace(
+								    *compartment_labels.at(
+								        compartment.spike_master->neuron_on_compartment),
+								    std::tuple{descriptor, i, compartment_on_neuron});
+								static_cast<void>(success);
+								assert(success);
+							}
+							i++;
 						}
 					}
-					i++;
-				}
+				};
+				auto const extract_external_source_population = [&](ExternalSourcePopulation const&
+				                                                        population) {
+					for (size_t i = 0; i < population.neurons.size(); ++i) {
+						if (!population.neurons.at(i).enable_record_spikes) {
+							continue;
+						}
+						halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron;
+						auto const compartment_labels =
+						    execution_instance.spike_labels.at(descriptor)
+						        .at(i)
+						        .at(compartment_on_neuron);
+						for (auto const& label : compartment_labels) {
+							assert(label);
+							auto const [_, success] = label_lookup.emplace(
+							    *label, std::tuple{descriptor, i, compartment_on_neuron});
+							static_cast<void>(success);
+							assert(success);
+						}
+					}
+				};
+				auto const extract_bg_source_population = [&](BackgroundSourcePopulation const&
+				                                                  population) {
+					for (size_t i = 0; i < population.neurons.size(); ++i) {
+						if (!population.neurons.at(i).enable_record_spikes) {
+							continue;
+						}
+						halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron;
+						auto const compartment_labels =
+						    execution_instance.spike_labels.at(descriptor)
+						        .at(i)
+						        .at(compartment_on_neuron);
+						for (auto const& label : compartment_labels) {
+							assert(label);
+							auto const [_, success] = label_lookup.emplace(
+							    *label, std::tuple{descriptor, i, compartment_on_neuron});
+							static_cast<void>(success);
+							assert(success);
+						}
+					}
+				};
+				std::visit(
+				    hate::overloaded{
+				        extract_population, extract_external_source_population,
+				        extract_bg_source_population},
+				    population);
 			}
 
 			// add entry for each recorded neuron compartment

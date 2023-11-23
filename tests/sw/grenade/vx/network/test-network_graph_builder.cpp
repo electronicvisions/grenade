@@ -265,7 +265,8 @@ TEST(build_network_graph, GranularitySweep)
 		std::vector<PopulationOnNetwork> input_pops;
 		std::vector<PopulationOnNetwork> hw_pops;
 		for (size_t i = 0; i < num_pops; ++i) {
-			ExternalSourcePopulation population_external{neuron_per_pop};
+			ExternalSourcePopulation population_external;
+			population_external.neurons.resize(neuron_per_pop);
 			input_pops.push_back(builder.add(population_external));
 			Population population_internal;
 			for (size_t n = i * neuron_per_pop; n < (i + 1) * neuron_per_pop; ++n) {
@@ -319,7 +320,7 @@ TEST(build_network_graph, ExecutionInstance)
 
 	NetworkBuilder builder;
 
-	ExternalSourcePopulation population_external{1};
+	ExternalSourcePopulation population_external({ExternalSourcePopulation::Neuron()});
 	auto const population_descriptor_input = builder.add(population_external, execution_instance);
 
 	Population population_internal;

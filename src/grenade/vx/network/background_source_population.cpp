@@ -1,15 +1,30 @@
 #include "grenade/vx/network/background_source_population.h"
 
+#include "hate/indent.h"
+#include "hate/join.h"
 #include <ostream>
+#include <sstream>
 
 namespace grenade::vx::network {
 
+BackgroundSourcePopulation::Neuron::Neuron(bool enable_record_spikes) :
+    enable_record_spikes(enable_record_spikes)
+{}
+
+std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation::Neuron const& value)
+{
+	return os << "Neuron(" << value.enable_record_spikes << ")";
+}
+
 BackgroundSourcePopulation::BackgroundSourcePopulation(
-    size_t const size,
+    std::vector<Neuron> neurons,
     Coordinate const& coordinate,
     Config const& config,
     common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate), size(size), coordinate(coordinate), config(config)
+    common::EntityOnChip(chip_coordinate),
+    neurons(std::move(neurons)),
+    coordinate(coordinate),
+    config(config)
 {}
 
 bool BackgroundSourcePopulation::Config::operator==(
@@ -27,7 +42,7 @@ bool BackgroundSourcePopulation::Config::operator!=(
 
 bool BackgroundSourcePopulation::operator==(BackgroundSourcePopulation const& other) const
 {
-	return size == other.size && coordinate == other.coordinate && config == other.config &&
+	return neurons == other.neurons && coordinate == other.coordinate && config == other.config &&
 	       static_cast<common::EntityOnChip const&>(*this) ==
 	           static_cast<common::EntityOnChip const&>(other);
 }
@@ -46,16 +61,21 @@ std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation::Config co
 
 std::ostream& operator<<(std::ostream& os, BackgroundSourcePopulation const& population)
 {
-	os << "BackgroundSourcePopulation(\n";
-	os << "\t: " << static_cast<common::EntityOnChip const&>(population) << "\n";
-	os << "\tsize: " << population.size << "\n";
-	os << "\tcoordinate:\n";
+	hate::IndentingOstream ios(os);
+	ios << "BackgroundSourcePopulation(\n";
+	ios << hate::Indentation("\t");
+	ios << static_cast<common::EntityOnChip const&>(population) << "\n";
+	ios << hate::join(population.neurons, "\n") << "\n";
+	ios << "coordinate:\n";
+	ios << hate::Indentation("\t\t");
 	for (auto const& [hemisphere, padi_bus] : population.coordinate) {
-		os << "\t\t"
-		   << halco::hicann_dls::vx::v3::PADIBusOnDLS(padi_bus, hemisphere.toPADIBusBlockOnDLS())
-		   << "\n";
+		ios << halco::hicann_dls::vx::v3::PADIBusOnDLS(padi_bus, hemisphere.toPADIBusBlockOnDLS())
+		    << "\n";
 	}
-	os << "\t" << population.config << "\n)";
+	ios << hate::Indentation("\t");
+	ios << population.config << "\n";
+	ios << hate::Indentation();
+	ios << ")";
 	return os;
 }
 

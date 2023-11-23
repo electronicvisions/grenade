@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/network/exception.h"
+#include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/network_builder.h"
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
@@ -30,7 +31,8 @@ TEST(NetworkGraph_valid, synapse_exchange)
 
 	grenade::vx::common::ExecutionInstanceID instance;
 
-	auto pre_descriptor = builder.add(ExternalSourcePopulation(2));
+	auto pre_descriptor = builder.add(ExternalSourcePopulation(
+	    {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()}));
 
 	Population population({
 	    Population::Neuron(
@@ -80,7 +82,8 @@ TEST(NetworkGraph_valid, synapse_count)
 
 	grenade::vx::common::ExecutionInstanceID instance;
 
-	auto pre_descriptor = builder.add(ExternalSourcePopulation(1));
+	auto pre_descriptor =
+	    builder.add(ExternalSourcePopulation({ExternalSourcePopulation::Neuron()}));
 
 	Population population({
 	    Population::Neuron(

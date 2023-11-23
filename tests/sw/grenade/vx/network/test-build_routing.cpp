@@ -32,7 +32,8 @@ TEST(build_routing, ProjectionOverlap)
 	             Population::Neuron::Compartment{
 	                 Population::Neuron::Compartment::SpikeMaster(0, true),
 	                 {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})}};
-	ExternalSourcePopulation external_population(2);
+	ExternalSourcePopulation external_population(
+	    {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()});
 
 	// no overlap
 	auto descriptor = builder.add(population);
@@ -251,7 +252,8 @@ TEST(build_routing, I100H64O3)
 {
 	NetworkBuilder builder;
 
-	ExternalSourcePopulation population_input(100);
+	ExternalSourcePopulation population_input;
+	population_input.neurons.resize(100);
 	auto const population_input_descriptor = builder.add(population_input);
 
 	Population population_hidden;
@@ -312,7 +314,7 @@ TEST(build_routing, I100H64O3)
 	Projection projection_inhibitory_ih(
 	    Receptor(Receptor::ID(), Receptor::Type::inhibitory), {}, population_input_descriptor,
 	    population_hidden_descriptor);
-	for (size_t i = 0; i < population_input.size; ++i) {
+	for (size_t i = 0; i < population_input.neurons.size(); ++i) {
 		for (size_t h = 0; h < population_hidden.neurons.size(); ++h) {
 			projection_excitatory_ih.connections.push_back(Projection::Connection{
 			    {i, CompartmentOnLogicalNeuron()},

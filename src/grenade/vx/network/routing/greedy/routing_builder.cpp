@@ -229,8 +229,8 @@ RoutingBuilder::get_external_sources(
     Network::ExecutionInstance const& network) const
 {
 	// All external sources act as sources.
-	// External sources which don't act as sources to any connection are ignored, since they can't
-	// be recorded currently.
+	// External sources which don't act as sources to any connection and are not recorded are
+	// ignored.
 	std::vector<SourceOnPADIBusManager::ExternalSource> external_sources;
 	auto const external_connections = constraints.get_external_connections();
 	std::set<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
@@ -242,6 +242,19 @@ RoutingBuilder::get_external_sources(
 		                              .index_pre.first;
 		external_source_descriptors.insert(
 		    std::tuple{source_pop, source_index, CompartmentOnLogicalNeuron()});
+	}
+	// add recorded sources
+	for (auto const& [descriptor, pop] : network.populations) {
+		if (!std::holds_alternative<ExternalSourcePopulation>(pop)) {
+			continue;
+		}
+		auto const& population = std::get<ExternalSourcePopulation>(pop);
+		for (size_t i = 0; i < population.neurons.size(); ++i) {
+			if (population.neurons.at(i).enable_record_spikes) {
+				external_source_descriptors.insert(
+				    std::tuple{descriptor, i, CompartmentOnLogicalNeuron()});
+			}
+		}
 	}
 	external_sources.resize(external_source_descriptors.size());
 	for (auto const& connection : external_connections) {
@@ -310,7 +323,8 @@ RoutingBuilder::get_background_labels(
         descriptors,
     std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
     SourceOnPADIBusManager::Partition const& partition,
-    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const
+    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations,
+    Network::ExecutionInstance const& network) const
 {
 	// The label consists of the label found by the routing and the synapse label.
 	// The latter is assigned linearly here, since its assignment does not have any influence on the
@@ -331,9 +345,28 @@ RoutingBuilder::get_background_labels(
 			assert(
 			    !labels.contains(local_descriptor) ||
 			    !labels.at(local_descriptor).contains(hemisphere));
+			auto const& [population_on_network, neuron_on_population, _] = local_descriptor;
+			auto const& population =
+			    std::get<BackgroundSourcePopulation>(network.populations.at(population_on_network));
+			bool const enable_record_spikes =
+			    population.neurons.at(neuron_on_population).enable_record_spikes &&
+			    (population.coordinate.size() ==
+			         1 || // only record top hemisphere if population resides on both
+			     background_sources.at(local_index)
+			             .padi_bus.toPADIBusBlockOnDLS()
+			             .toHemisphereOnDLS() == HemisphereOnDLS::top);
 			halco::hicann_dls::vx::v3::SpikeLabel label;
+			label.set_neuron_label(NeuronLabel(
+			    (enable_record_spikes ? 1 << 11 // used for recording background sources
+			                          : 0) +
+			    (background_sources.at(local_index).padi_bus.toPADIBusBlockOnDLS() ==
+			             PADIBusBlockOnDLS::top
+			         ? 1 << 13 // used for distinguishing hemispheres
+			         : 0)));
 			label.set_row_select_address(haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
 			label.set_synapse_label(halco::hicann_dls::vx::SynapseLabel(k));
+			label.set_spl1_address(SPL1Address(
+			    background_sources.at(local_index).padi_bus.toPADIBusOnPADIBusBlock().value()));
 			labels[local_descriptor][hemisphere] = label;
 		}
 	}
@@ -348,7 +381,8 @@ RoutingBuilder::get_external_labels(
         std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>> const&
         descriptors,
     SourceOnPADIBusManager::Partition const& partition,
-    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const
+    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations,
+    Network::ExecutionInstance const& network) const
 {
 	// The label consists of the label found by the routing, the synapse label and the static label
 	// part used for filtering in the crossbar. The synapse label is assigned linearly here, since
@@ -368,9 +402,17 @@ RoutingBuilder::get_external_labels(
 		for (size_t k = 0; k < local_sources.size(); ++k) {
 			auto const local_index = local_sources.at(k);
 			auto const& local_descriptor = descriptors.at(local_index);
+			auto const& [population_on_network, neuron_on_population, _] = local_descriptor;
 			for (auto const& [padi_bus, _] : targets) {
 				halco::hicann_dls::vx::v3::SpikeLabel label;
-				label.set_neuron_label(NeuronLabel(padi_bus.toPADIBusBlockOnDLS().value() << 13));
+				label.set_neuron_label(NeuronLabel(
+				    (padi_bus.toPADIBusBlockOnDLS().value() << 13) |
+				    (std::get<ExternalSourcePopulation>(
+				         network.populations.at(population_on_network))
+				             .neurons.at(neuron_on_population)
+				             .enable_record_spikes
+				         ? 1 << 12 // used for recording external sources
+				         : 0)));
 				label.set_row_select_address(
 				    haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
 				label.set_synapse_label(halco::hicann_dls::vx::SynapseLabel(k));
@@ -447,14 +489,10 @@ void RoutingBuilder::apply_source_labels(
 			}
 		} else if (std::holds_alternative<ExternalSourcePopulation>(population)) {
 			auto& local_labels = result.external_spike_labels[descriptor];
-			local_labels.resize(std::get<ExternalSourcePopulation>(population).size);
+			local_labels.resize(std::get<ExternalSourcePopulation>(population).neurons.size());
 			for (size_t i = 0; i < local_labels.size(); ++i) {
 				if (!external.contains(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
 					// TODO: This might happen and in principle is not an error.
-					// However when we want to support recording external sources, they can't be
-					// just ignored anymore when they don't serve as source. Then they would require
-					// assignment of unambiguous labels which aren't forwarded to the PADI-busses,
-					// which can be done by filtering in the crossbar, e.g. using bit 12.
 				} else {
 					for (auto const& [_, l] :
 					     external.at(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
@@ -463,7 +501,7 @@ void RoutingBuilder::apply_source_labels(
 				}
 			}
 		} else if (std::holds_alternative<BackgroundSourcePopulation>(population)) {
-			auto const size = std::get<BackgroundSourcePopulation>(population).size;
+			auto const size = std::get<BackgroundSourcePopulation>(population).neurons.size();
 			for (size_t i = 0; i < size; ++i) {
 				if (!background.contains(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
 					// This shall never happen, since all neurons in a background population are
@@ -863,6 +901,20 @@ void RoutingBuilder::apply_crossbar_nodes_from_background(Result& result) const
 	}
 }
 
+void RoutingBuilder::apply_crossbar_nodes_from_background_to_l2(Result& result) const
+{
+	// Event filtering is performed on the host computer.
+
+	// enable L2 output for events which have bit 11 set and shall be recorded
+	for (auto const cinput : iter_all<BackgroundSpikeSourceOnDLS>()) {
+		CrossbarNodeOnDLS const coord(
+		    cinput.toCrossbarL2OutputOnDLS().toCrossbarOutputOnDLS(),
+		    cinput.toCrossbarInputOnDLS());
+		result.crossbar_nodes[coord].set_target(NeuronLabel(1 << 11));
+		result.crossbar_nodes[coord].set_mask(NeuronLabel(1 << 11));
+	}
+}
+
 void RoutingBuilder::apply_crossbar_nodes_internal(Result& result) const
 {
 	// Beforehand, nodes which shall filter all events were disabled in route_internal_crossbar().
@@ -897,6 +949,19 @@ void RoutingBuilder::apply_crossbar_nodes_from_internal_to_l2(Result& result) co
 		    CrossbarOutputOnDLS(PADIBusOnDLS::size + (cinput % PADIBusOnPADIBusBlock::size)),
 		    cinput.toCrossbarInputOnDLS());
 		result.crossbar_nodes[coord] = haldls::vx::v3::CrossbarNode();
+	}
+}
+
+void RoutingBuilder::apply_crossbar_nodes_from_l2_to_l2(Result& result) const
+{
+	// Event filtering is performed on the host computer.
+
+	// enable L2 output for events which have bit 12 set and shall be recorded
+	for (auto const cinput : iter_all<SPL1Address>()) {
+		CrossbarNodeOnDLS const coord(
+		    CrossbarOutputOnDLS(PADIBusOnDLS::size + cinput), cinput.toCrossbarInputOnDLS());
+		result.crossbar_nodes[coord].set_target(NeuronLabel(1 << 12));
+		result.crossbar_nodes[coord].set_mask(NeuronLabel(1 << 12));
 	}
 }
 
@@ -970,9 +1035,10 @@ RoutingBuilder::Result RoutingBuilder::route(
 	auto const internal_labels =
 	    get_internal_labels(internal_descriptors, source_partition, *synapse_driver_allocations);
 	auto const background_labels = get_background_labels(
-	    background_descriptors, background_sources, source_partition, *synapse_driver_allocations);
-	auto const external_labels =
-	    get_external_labels(external_descriptors, source_partition, *synapse_driver_allocations);
+	    background_descriptors, background_sources, source_partition, *synapse_driver_allocations,
+	    network);
+	auto const external_labels = get_external_labels(
+	    external_descriptors, source_partition, *synapse_driver_allocations, network);
 
 	// add source labels to result
 	apply_source_labels(
@@ -991,8 +1057,10 @@ RoutingBuilder::Result RoutingBuilder::route(
 	// calculate (remaining) crossbar node config
 	apply_crossbar_nodes_internal(result);
 	apply_crossbar_nodes_from_internal_to_l2(result);
+	apply_crossbar_nodes_from_l2_to_l2(result);
 	apply_crossbar_nodes_from_l2(result);
 	apply_crossbar_nodes_from_background(result);
+	apply_crossbar_nodes_from_background_to_l2(result);
 
 	LOG4CXX_DEBUG(m_logger, "route(): Got result: " << result);
 	LOG4CXX_TRACE(m_logger, "route(): Finished routing in " << timer.print());

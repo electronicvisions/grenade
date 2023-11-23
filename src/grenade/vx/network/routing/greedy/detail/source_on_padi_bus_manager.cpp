@@ -2,6 +2,7 @@
 
 #include "grenade/vx/network/routing/greedy/detail/source_on_padi_bus_manager.tcc"
 #include "halco/common/iter_all.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/math.h"
 #include "hate/multidim_iterator.h"
 #include "lola/vx/v3/synapse.h"
@@ -142,7 +143,14 @@ SourceOnPADIBusManager::distribute_external_sources_linear(
 					    .push_back(filter);
 					filter.clear();
 				}
-				if (get_num_synapse_drivers(sources, {i})[padi_bus_block] > 0) {
+				// If the source is not used as target to an internal neuron but is recorded, we
+				// place it onto the top hemisphere with zero used synapse drivers. Not placing it
+				// but inputting it into the crossbar is not supported by the choice of the crossbar
+				// routing used in this greedy router.
+				if (get_num_synapse_drivers(sources, {i})[padi_bus_block] > 0 ||
+				    (((get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::top] == 0) &&
+				      (get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::bottom] == 0)) &&
+				     padi_bus_block == PADIBusBlockOnDLS::top)) {
 					filter.push_back(i);
 				}
 				i++;

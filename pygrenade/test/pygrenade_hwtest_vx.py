@@ -12,7 +12,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
     def run_network_graph(self, enable_spikes=True, enable_v=False):
         network_builder = grenade.network.NetworkBuilder()
 
-        ext_pop = grenade.network.ExternalSourcePopulation(256)
+        ext_pop = grenade.network.ExternalSourcePopulation(
+            [grenade.network.ExternalSourcePopulation.Neuron()] * 256)
 
         # create all single-atomic-neuron neurons on top row
         # with enabled spike recording and excitatory synaptic input
@@ -120,7 +121,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
         network_builder = grenade.network.NetworkBuilder()
 
         ext_pop = grenade.network.ExternalSourcePopulation(
-            ext_pop_size)
+            [grenade.network.ExternalSourcePopulation.Neuron(False)]
+            * ext_pop_size)
 
         # create all single-atomic-neuron neurons on top row
         # with selected spike recording and excitatory synaptic input

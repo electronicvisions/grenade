@@ -13,8 +13,20 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 /** Background source population. */
 struct GENPYBIND(visible) BackgroundSourcePopulation : common::EntityOnChip
 {
-	/** Number of individual sources. */
-	size_t size{0};
+	struct Neuron
+	{
+		bool enable_record_spikes;
+
+		Neuron(bool enable_record_spikes = false) SYMBOL_VISIBLE;
+
+		bool operator==(Neuron const& other) const = default;
+		bool operator!=(Neuron const& other) const = default;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, Neuron const& value) SYMBOL_VISIBLE;
+	};
+
+	std::vector<Neuron> neurons{};
 
 	/** Placement of the source. */
 	typedef std::map<
@@ -40,7 +52,7 @@ struct GENPYBIND(visible) BackgroundSourcePopulation : common::EntityOnChip
 
 	BackgroundSourcePopulation() = default;
 	BackgroundSourcePopulation(
-	    size_t size,
+	    std::vector<Neuron> neurons,
 	    Coordinate const& coordinate,
 	    Config const& config,
 	    common::EntityOnChip::ChipCoordinate chip_coordinate =

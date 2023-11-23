@@ -17,24 +17,52 @@ InputGenerator::InputGenerator(NetworkGraph const& network_graph, size_t const b
 	}
 }
 
+namespace {
+
+auto const neuron_is_used_by_projection = [](PopulationOnNetwork const& population,
+                                             size_t i,
+                                             auto const& projection) {
+	if (projection.second.population_pre != population.toPopulationOnExecutionInstance()) {
+		return false;
+	}
+	// Check if neuron is part of any connection
+	for (auto const& c : projection.second.connections) {
+		assert(c.index_pre.second == halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron());
+		if (c.index_pre == std::pair{i, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron()}) {
+			return true;
+		}
+	}
+	return false;
+};
+
+auto const neuron_is_recorded = [](ExternalSourcePopulation const& pop, size_t i) {
+	return pop.neurons.at(i).enable_record_spikes;
+};
+
+auto const neuron_is_used =
+    [](NetworkGraph const& network_graph, PopulationOnNetwork const& population, size_t i) {
+	    if (std::any_of(
+	            network_graph.get_network()
+	                ->execution_instances.at(population.toExecutionInstanceID())
+	                .projections.begin(),
+	            network_graph.get_network()
+	                ->execution_instances.at(population.toExecutionInstanceID())
+	                .projections.end(),
+	            std::bind(neuron_is_used_by_projection, population, i, std::placeholders::_1))) {
+		    return true;
+	    }
+	    auto const& pop = std::get<ExternalSourcePopulation>(
+	        network_graph.get_network()
+	            ->execution_instances.at(population.toExecutionInstanceID())
+	            .populations.at(population.toPopulationOnExecutionInstance()));
+	    return neuron_is_recorded(pop, i);
+    };
+
+} // namespace
+
 void InputGenerator::add(
     std::vector<common::Time> const& times, PopulationOnNetwork const population)
 {
-	// Exit early if population is not connected to any other population
-	auto const has_population = [population](auto const& projection) {
-		return (projection.second.population_pre == population.toPopulationOnExecutionInstance());
-	};
-	if (std::none_of(
-	        m_network_graph.get_network()
-	            ->execution_instances.at(population.toExecutionInstanceID())
-	            .projections.begin(),
-	        m_network_graph.get_network()
-	            ->execution_instances.at(population.toExecutionInstanceID())
-	            .projections.end(),
-	        has_population)) {
-		return;
-	}
-
 	auto const neurons = m_network_graph.get_graph_translation()
 	                         .execution_instances.at(population.toExecutionInstanceID())
 	                         .spike_labels.at(population.toPopulationOnExecutionInstance());
@@ -42,7 +70,10 @@ void InputGenerator::add(
 	signal_flow::TimedSpikeToChipSequence batch_entry;
 	batch_entry.reserve(times.size() * neurons.size());
 	for (auto const time : times) {
-		for (auto const& neuron : neurons) {
+		for (size_t i = 0; auto const& neuron : neurons) {
+			if (!neuron_is_used(m_network_graph, population, i)) {
+				continue;
+			}
 			assert(neuron.size() == 1);
 			for (auto const& label :
 			     neuron.at(halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron())) {
@@ -51,6 +82,7 @@ void InputGenerator::add(
 				    time, haldls::vx::v3::SpikePack1ToChip(
 				              haldls::vx::v3::SpikePack1ToChip::labels_type{*label})});
 			}
+			i++;
 		}
 	}
 	auto& spike_batch = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
@@ -65,21 +97,6 @@ void InputGenerator::add(
 void InputGenerator::add(
     std::vector<std::vector<common::Time>> const& times, PopulationOnNetwork const population)
 {
-	// Exit early if population is not connected to any other population
-	auto const has_population = [population](auto const& projection) {
-		return (projection.second.population_pre == population.toPopulationOnExecutionInstance());
-	};
-	if (std::none_of(
-	        m_network_graph.get_network()
-	            ->execution_instances.at(population.toExecutionInstanceID())
-	            .projections.begin(),
-	        m_network_graph.get_network()
-	            ->execution_instances.at(population.toExecutionInstanceID())
-	            .projections.end(),
-	        has_population)) {
-		return;
-	}
-
 	auto const neurons = m_network_graph.get_graph_translation()
 	                         .execution_instances.at(population.toExecutionInstanceID())
 	                         .spike_labels.at(population.toPopulationOnExecutionInstance());
@@ -97,35 +114,9 @@ void InputGenerator::add(
 	signal_flow::TimedSpikeToChipSequence batch_entry;
 	batch_entry.reserve(size);
 	for (size_t i = 0; i < times.size(); ++i) {
-		// Exit early if neuron is not connected to any other neuron
-		auto const has_neuron = [population, i](auto const& projection) {
-			if (projection.second.population_pre != population.toPopulationOnExecutionInstance()) {
-				return false;
-			}
-
-			// Check if neuron is part of any connection
-			for (auto const& c : projection.second.connections) {
-				assert(
-				    c.index_pre.second == halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron());
-				if (c.index_pre ==
-				    std::pair{i, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron()}) {
-					return true;
-				}
-			}
-			return false;
-		};
-
-		if (std::none_of(
-		        m_network_graph.get_network()
-		            ->execution_instances.at(population.toExecutionInstanceID())
-		            .projections.begin(),
-		        m_network_graph.get_network()
-		            ->execution_instances.at(population.toExecutionInstanceID())
-		            .projections.end(),
-		        has_neuron)) {
+		if (!neuron_is_used(m_network_graph, population, i)) {
 			continue;
 		}
-
 		auto const neuron = neurons.at(i);
 		assert(neuron.size() == 1);
 		auto const labels = neuron.at(halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron());
@@ -151,21 +142,6 @@ void InputGenerator::add(
     std::vector<std::vector<std::vector<common::Time>>> const& times,
     PopulationOnNetwork const population)
 {
-	// Exit early if population is not connected to any other population
-	auto const has_population = [population](auto const& projection) {
-		return (projection.second.population_pre == population.toPopulationOnExecutionInstance());
-	};
-	if (std::none_of(
-	        m_network_graph.get_network()
-	            ->execution_instances.at(population.toExecutionInstanceID())
-	            .projections.begin(),
-	        m_network_graph.get_network()
-	            ->execution_instances.at(population.toExecutionInstanceID())
-	            .projections.end(),
-	        has_population)) {
-		return;
-	}
-
 	auto const neurons = m_network_graph.get_graph_translation()
 	                         .execution_instances.at(population.toExecutionInstanceID())
 	                         .spike_labels.at(population);
@@ -199,37 +175,9 @@ void InputGenerator::add(
 
 		data_spikes.reserve(size);
 		for (size_t i = 0; i < batch_times.size(); ++i) {
-			// Exit early if neuron is not connected to any other neuron
-			auto const has_neuron = [population, i](auto const& projection) {
-				if (projection.second.population_pre !=
-				    population.toPopulationOnExecutionInstance()) {
-					return false;
-				}
-
-				// Check if neuron is part of any connection
-				for (auto const& c : projection.second.connections) {
-					assert(
-					    c.index_pre.second ==
-					    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron());
-					if (c.index_pre ==
-					    std::pair{i, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron()}) {
-						return true;
-					}
-				}
-				return false;
-			};
-
-			if (std::none_of(
-			        m_network_graph.get_network()
-			            ->execution_instances.at(population.toExecutionInstanceID())
-			            .projections.begin(),
-			        m_network_graph.get_network()
-			            ->execution_instances.at(population.toExecutionInstanceID())
-			            .projections.end(),
-			        has_neuron)) {
+			if (!neuron_is_used(m_network_graph, population, i)) {
 				continue;
 			}
-
 			auto const neuron = neurons.at(i);
 			assert(neuron.size() == 1);
 			auto const labels = neuron.at(halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron());

@@ -106,16 +106,17 @@ PopulationOnNetwork NetworkBuilder::add(
 	}
 	if (population.config.enable_random) {
 		// only power of two size supported
-		if (population.size && (population.size & (population.size - 1))) {
+		if (population.neurons.size() &&
+		    (population.neurons.size() & (population.neurons.size() - 1))) {
 			throw std::runtime_error(
-			    "Population size " + std::to_string(population.size) +
+			    "Population size " + std::to_string(population.neurons.size()) +
 			    " of background spike source needs to be power of two.");
 		}
 	} else {
 		// only size one supported
-		if (population.size != 1) {
+		if (population.neurons.size() != 1) {
 			throw std::runtime_error(
-			    "Population size " + std::to_string(population.size) +
+			    "Population size " + std::to_string(population.neurons.size()) +
 			    " of background spike source needs to be one for regular spike train.");
 		}
 	}
@@ -157,8 +158,7 @@ ProjectionOnNetwork NetworkBuilder::add(
 	    m_execution_instances.at(execution_instance).populations.at(projection.population_post));
 
 	// check that no single connection index is out of range of its population
-	auto const get_size = hate::overloaded(
-	    [](Population const& p) { return p.neurons.size(); }, [](auto const& p) { return p.size; });
+	auto const get_size = [](auto const& p) { return p.neurons.size(); };
 	auto const size_pre = std::visit(get_size, population_pre);
 	auto const size_post = get_size(population_post);
 
@@ -756,8 +756,7 @@ InterExecutionInstanceProjectionOnNetwork NetworkBuilder::add(
 	        .populations.at(projection.population_post.toPopulationOnExecutionInstance()));
 
 	// check that no single connection index is out of range of its population
-	auto const get_size = hate::overloaded(
-	    [](Population const& p) { return p.neurons.size(); }, [](auto const& p) { return p.size; });
+	auto const get_size = [](auto const& p) { return p.neurons.size(); };
 	auto const size_pre = std::visit(get_size, population_pre);
 	auto const size_post = get_size(population_post);
 

@@ -5,6 +5,8 @@
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/requires_routing.h"
 #include "grenade/vx/network/vertex/transformation/external_source_merger.h"
+#include "halco/hicann-dls/vx/v3/event.h"
+#include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
@@ -480,7 +482,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 		    routing_result.execution_instances.at(instance).background_spike_source_labels.at(
 		        descriptor);
 		if (pop.config.enable_random) {
-			assert(!(pop.size == 0) && !(pop.size & (pop.size - 1)));
+			assert(!(pop.neurons.size() == 0) && !(pop.neurons.size() & (pop.neurons.size() - 1)));
 			if (!routing_result.execution_instances.at(instance)
 			         .background_spike_source_masks.contains(descriptor)) {
 				throw std::runtime_error(
@@ -488,7 +490,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 				    std::to_string(descriptor) + ").");
 			}
 		} else {
-			assert(pop.size == 1);
+			assert(pop.neurons.size() == 1);
 		}
 		haldls::vx::v3::BackgroundSpikeSource config;
 		config.set_period(pop.config.period);
@@ -497,7 +499,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 		config.set_enable(true);
 		config.set_enable_random(pop.config.enable_random);
 		for (auto const& [hemisphere, bus] : pop.coordinate) {
-			if (label.at(hemisphere).size() != pop.size) {
+			if (label.at(hemisphere).size() != pop.neurons.size()) {
 				throw std::runtime_error(
 				    "Connection builder result does not contain as many spike labels as are "
 				    "neurons in the population(" +
@@ -1390,9 +1392,6 @@ void NetworkGraphBuilder::add_external_output(
 			}
 		}
 	}
-	if (neuron_event_outputs.empty()) {
-		return;
-	}
 	// add crossbar nodes from neuron event outputs
 	std::vector<signal_flow::Input> crossbar_l2_output_inputs;
 	for (auto const& neuron_event_output : neuron_event_outputs) {
@@ -1403,6 +1402,62 @@ void NetworkGraphBuilder::add_external_output(
 		add_crossbar_node(graph, resources, coord, connection_result, instance);
 		crossbar_l2_output_inputs.push_back(
 		    resources.execution_instances.at(instance).crossbar_nodes.at(coord));
+	}
+	// get set of l2 inputs from to be recorded populations
+	std::set<SPL1Address> l2_inputs;
+	for (auto const& [descriptor, pop] : m_network.execution_instances.at(instance).populations) {
+		if (!std::holds_alternative<ExternalSourcePopulation>(pop)) {
+			continue;
+		}
+		auto const& population = std::get<ExternalSourcePopulation>(pop);
+		for (size_t i = 0; i < population.neurons.size(); ++i) {
+			if (!population.neurons.at(i).enable_record_spikes) {
+				continue;
+			}
+			auto const& spike_labels = connection_result.execution_instances.at(instance)
+			                               .external_spike_labels.at(descriptor)
+			                               .at(i);
+			for (auto const& spike_label : spike_labels) {
+				l2_inputs.insert(spike_label.get_spl1_address());
+			}
+		}
+	}
+	// get set of background source inputs from to be recorded populations
+	std::set<BackgroundSpikeSourceOnDLS> background_inputs;
+	for (auto const& [descriptor, pop] : m_network.execution_instances.at(instance).populations) {
+		if (!std::holds_alternative<BackgroundSourcePopulation>(pop)) {
+			continue;
+		}
+		auto const& population = std::get<BackgroundSourcePopulation>(pop);
+		if (std::any_of(
+		        population.neurons.begin(), population.neurons.end(),
+		        [](auto const& neuron) { return neuron.enable_record_spikes; })) {
+			for (auto const& [hemisphere, padi_bus] : population.coordinate) {
+				background_inputs.insert(BackgroundSpikeSourceOnDLS(
+				    hemisphere * PADIBusOnPADIBusBlock::size + padi_bus.value()));
+			}
+		}
+	}
+	// add crossbar nodes from l2 inputs
+	for (auto const& l2_input : l2_inputs) {
+		CrossbarL2OutputOnDLS crossbar_l2_output(l2_input.value());
+		CrossbarNodeOnDLS coord(
+		    crossbar_l2_output.toCrossbarOutputOnDLS(), l2_input.toCrossbarInputOnDLS());
+		add_crossbar_node(graph, resources, coord, connection_result, instance);
+		crossbar_l2_output_inputs.push_back(
+		    resources.execution_instances.at(instance).crossbar_nodes.at(coord));
+	}
+	// add crossbar nodes from background inputs
+	for (auto const& background_input : background_inputs) {
+		CrossbarL2OutputOnDLS crossbar_l2_output(background_input.toCrossbarL2OutputOnDLS());
+		CrossbarNodeOnDLS coord(
+		    crossbar_l2_output.toCrossbarOutputOnDLS(), background_input.toCrossbarInputOnDLS());
+		add_crossbar_node(graph, resources, coord, connection_result, instance);
+		crossbar_l2_output_inputs.push_back(
+		    resources.execution_instances.at(instance).crossbar_nodes.at(coord));
+	}
+	if (crossbar_l2_output_inputs.empty()) {
+		return;
 	}
 	// add crossbar l2 output
 	auto const crossbar_l2_output = graph.add(
@@ -1594,16 +1649,16 @@ void NetworkGraphBuilder::calculate_spike_labels(
 			}
 			auto const& local_labels = connection_result.execution_instances.at(instance)
 			                               .background_spike_source_labels.at(descriptor);
-			local_spike_labels.resize(population.size);
+			local_spike_labels.resize(population.neurons.size());
 			for (auto const& [hemisphere, base_label] : local_labels) {
-				if (local_labels.at(hemisphere).size() != population.size) {
+				if (local_labels.at(hemisphere).size() != population.neurons.size()) {
 					throw std::runtime_error(
 					    "Connection builder result does not contain as many spike labels as "
 					    "are "
 					    "neurons in the population(" +
 					    std::to_string(descriptor) + ").");
 				}
-				for (size_t k = 0; k < population.size; ++k) {
+				for (size_t k = 0; k < population.neurons.size(); ++k) {
 					local_spike_labels.at(k)[CompartmentOnLogicalNeuron()].push_back(
 					    local_labels.at(hemisphere).at(k));
 				}

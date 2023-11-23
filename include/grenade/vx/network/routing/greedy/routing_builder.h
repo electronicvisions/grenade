@@ -121,7 +121,8 @@ private:
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& descriptors,
 	    std::vector<SourceOnPADIBusManager::BackgroundSource> const& background_sources,
 	    SourceOnPADIBusManager::Partition const& partition,
-	    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const;
+	    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations,
+	    Network::ExecutionInstance const& network) const;
 
 	std::map<
 	    std::tuple<
@@ -135,7 +136,8 @@ private:
 	        size_t,
 	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>> const& descriptors,
 	    SourceOnPADIBusManager::Partition const& partition,
-	    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations) const;
+	    std::vector<SynapseDriverOnDLSManager::Allocation> const& allocations,
+	    Network::ExecutionInstance const& network) const;
 
 	void apply_source_labels(
 	    RoutingConstraints const& constraints,
@@ -257,8 +259,10 @@ private:
 
 	void apply_crossbar_nodes_from_l2(Result& result) const;
 	void apply_crossbar_nodes_from_background(Result& result) const;
+	void apply_crossbar_nodes_from_background_to_l2(Result& result) const;
 	void apply_crossbar_nodes_internal(Result& result) const;
 	void apply_crossbar_nodes_from_internal_to_l2(Result& result) const;
+	void apply_crossbar_nodes_from_l2_to_l2(Result& result) const;
 
 	log4cxx::LoggerPtr m_logger;
 };
