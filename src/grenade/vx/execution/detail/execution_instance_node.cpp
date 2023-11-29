@@ -13,7 +13,10 @@
 #include "hate/timer.h"
 #include "hate/variant.h"
 #include "stadls/visitors.h"
+#include "stadls/vx/constants.h"
 #include "stadls/vx/v3/container_ticket.h"
+
+#include <utility>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
@@ -58,21 +61,21 @@ bool contains_capmem(std::vector<halco::hicann_dls::vx::OmnibusAddress> const& a
 } // namespace
 
 ExecutionInstanceNode::ExecutionInstanceNode(
-    signal_flow::IODataMap& data_map,
-    signal_flow::IODataMap const& input_data_map,
-    signal_flow::Graph const& graph,
+    std::vector<signal_flow::IODataMap>& data_maps,
+    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& input_data_maps,
+    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     common::ExecutionInstanceID const& execution_instance,
     halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
-    lola::vx::v3::Chip const& initial_config,
+    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,
     signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) :
-    data_map(data_map),
-    input_data_map(input_data_map),
-    graph(graph),
+    data_maps(data_maps),
+    input_data_maps(input_data_maps),
+    graphs(graphs),
     execution_instance(execution_instance),
     dls_global(dls_global),
-    initial_config(initial_config),
+    configs(configs),
     connection(connection),
     connection_state_storage(connection_state_storage),
     playback_hooks(playback_hooks),
@@ -87,56 +90,169 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	hate::Timer const build_timer;
 
-	hate::Timer const initial_config_timer;
-	auto config = initial_config;
-	auto const ppu_symbols =
-	    std::get<1>(ExecutionInstanceConfigVisitor(graph, execution_instance, config)());
+	bool const has_hook_around_realtime =
+	    !playback_hooks.pre_realtime.empty() || !playback_hooks.inside_realtime_begin.empty() ||
+	    !playback_hooks.inside_realtime_end.empty() || !playback_hooks.post_realtime.empty();
 
-	// inject playback-hook PPU symbols to be overwritten
-	for (auto const& [name, memory_config] : playback_hooks.write_ppu_symbols) {
-		if (!ppu_symbols) {
-			throw std::runtime_error("Provided PPU symbols but no PPU program is present.");
+	std::optional<lola::vx::v3::PPUElfFile::symbols_type> ppu_symbols;
+	if (configs.size() != 1) {
+		// check, that no playback hooks are used when having multiple realtime columns
+		if (!playback_hooks.pre_static_config.empty() || !playback_hooks.pre_realtime.empty() ||
+		    !playback_hooks.inside_realtime_begin.empty() ||
+		    !playback_hooks.inside_realtime.empty() ||
+		    !playback_hooks.inside_realtime_end.empty() || !playback_hooks.post_realtime.empty() ||
+		    !playback_hooks.write_ppu_symbols.empty() || !playback_hooks.read_ppu_symbols.empty()) {
+			throw std::logic_error("playback hooks cannot be used in multi-config-experiments");
 		}
-		if (!ppu_symbols->contains(name)) {
-			throw std::runtime_error(
-			    "Provided unknown symbol name via ExecutionInstancePlaybackHooks.");
-		}
-		std::visit(
-		    hate::overloaded{
-		        [&](PPUMemoryBlockOnPPU const& coordinate) {
-			        for (auto const& [hemisphere, memory] :
-			             std::get<std::map<HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>>(
-			                 memory_config)) {
-				        config.ppu_memory[hemisphere.toPPUMemoryOnDLS()].set_block(
-				            coordinate, memory);
-			        }
-		        },
-		        [&](ExternalPPUMemoryBlockOnFPGA const& coordinate) {
-			        config.external_ppu_memory.set_subblock(
-			            coordinate.toMin().value(),
-			            std::get<lola::vx::v3::ExternalPPUMemoryBlock>(memory_config));
-		        }},
-		    ppu_symbols->at(name).coordinate);
 	}
-	LOG4CXX_TRACE(
-	    logger,
-	    "operator(): Constructed initial configuration in " << initial_config_timer.print() << ".");
 
-	ExecutionInstanceBuilder builder(
-	    graph, execution_instance, input_data_map, data_map, ppu_symbols, playback_hooks);
+	// vector for storing all execution_instance_builders
+	std::vector<ExecutionInstanceBuilder> builders;
+	std::vector<lola::vx::v3::Chip> configs_visited;
+	PlaybackProgramBuilder arm_madc;
+	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
+	for (size_t i = 0; i < configs.size(); i++) {
+		hate::Timer const initial_config_timer;
+		lola::vx::v3::Chip config = configs[i];
+		ppu_symbols =
+		    std::get<1>(ExecutionInstanceConfigVisitor(graphs[i], execution_instance, config)());
+		// check, that no realtime_snippet uses the ppu at all when having multiple realtime columns
+		if (configs.size() > 1) {
+			if (ppu_symbols) {
+				throw std::runtime_error("PPU cannot be used in multi-config-experiments");
+			}
+		}
+		// inject playback-hook PPU symbols to be overwritten
+		for (auto const& [name, memory_config] : playback_hooks.write_ppu_symbols) {
+			if (!ppu_symbols) {
+				throw std::runtime_error("Provided PPU symbols but no PPU program is present.");
+			}
+			if (!ppu_symbols->contains(name)) {
+				throw std::runtime_error(
+				    "Provided unknown symbol name via ExecutionInstancePlaybackHooks.");
+			}
+			std::visit(
+			    hate::overloaded{
+			        [&](PPUMemoryBlockOnPPU const& coordinate) {
+				        for (auto const& [hemisphere, memory] :
+				             std::get<std::map<HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>>(
+				                 memory_config)) {
+					        config.ppu_memory[hemisphere.toPPUMemoryOnDLS()].set_block(
+					            coordinate, memory);
+				        }
+			        },
+			        [&](ExternalPPUMemoryBlockOnFPGA const& coordinate) {
+				        config.external_ppu_memory.set_subblock(
+				            coordinate.toMin().value(),
+				            std::get<lola::vx::v3::ExternalPPUMemoryBlock>(memory_config));
+			        }},
+			    ppu_symbols->at(name).coordinate);
+		}
+		LOG4CXX_TRACE(
+		    logger, "operator(): Constructed initial configuration in "
+		                << initial_config_timer.print() << ".");
 
-	hate::Timer const realtime_preprocess_timer;
-	builder.pre_process();
-	LOG4CXX_TRACE(
-	    logger, "operator(): Preprocessed local vertices for realtime section in "
-	                << realtime_preprocess_timer.print() << ".");
+		ExecutionInstanceBuilder builder(
+		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols,
+		    playback_hooks);
+		builders.push_back(std::move(builder));
 
-	// build realtime programs
-	hate::Timer const realtime_generate_timer;
-	auto program = builder.generate();
-	LOG4CXX_TRACE(
-	    logger, "operator(): Generated playback programs for realtime section in "
-	                << realtime_generate_timer.print() << ".");
+		hate::Timer const realtime_preprocess_timer;
+		builders[i].pre_process();
+		LOG4CXX_TRACE(
+		    logger, "operator(): Preprocessed local vertices for realtime section in "
+		                << realtime_preprocess_timer.print() << ".");
+
+		// build realtime programs
+		hate::Timer const realtime_generate_timer;
+		auto realtime_column = builders[i].generate();
+		realtime_columns.push_back(std::move(realtime_column));
+		// check, if madc is used at all in the entire program and catch arm_madc, if so
+		if (!realtime_columns[i].arm_madc.empty()) {
+			arm_madc = std::move(realtime_columns[i].arm_madc);
+		}
+		configs_visited.push_back(config);
+		LOG4CXX_TRACE(
+		    logger, "operator(): Generated playback programs for realtime section in "
+		                << realtime_generate_timer.print() << ".");
+	}
+
+	std::vector<PlaybackProgram> programs;
+	PlaybackProgramBuilder final_builder;
+	for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
+		AbsoluteTimePlaybackProgramBuilder program_builder;
+		haldls::vx::v3::Timer::Value config_time(0);
+		for (size_t j = 0; j < realtime_columns.size(); j++) {
+			if (j > 0) {
+				config_time +=
+				    (realtime_columns[j - 1].realtimes[i].pre_realtime_duration +
+				     realtime_columns[j - 1].realtimes[i].realtime_duration -
+				     realtime_columns[j].realtimes[i].pre_realtime_duration);
+				program_builder.write(
+				    config_time, ChipOnDLS(), configs_visited[j], configs_visited[j - 1]);
+			}
+			realtime_columns[j].realtimes[i].builder += config_time;
+			program_builder.merge(realtime_columns[j].realtimes[i].builder);
+		}
+		// reset config to initial config at end of each realtime_row
+		config_time +=
+		    (realtime_columns[realtime_columns.size() - 1].realtimes[i].pre_realtime_duration +
+		     realtime_columns[realtime_columns.size() - 1].realtimes[i].realtime_duration);
+		// program_builder.write(config_time, ChipOnDLS(), configs_visited[0],
+		// configs_visited[configs_visited.size() - 1]);
+
+		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
+		// stop_ppu and the playback hooks
+		PlaybackProgramBuilder assemble_builder;
+		if (realtime_columns.size() > 1) {
+			assemble_builder.merge_back(arm_madc);
+			assemble_builder.merge_back(std::move(program_builder.done()));
+			assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			programs.push_back(std::move(assemble_builder.done()));
+		} else {
+			// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
+			if (i == 0) {
+				assemble_builder.merge_back(arm_madc);
+				assemble_builder.merge_back(playback_hooks.pre_realtime);
+			}
+			// append inside_realtime_begin hook
+			if (i < realtime_columns[0].realtimes.size() - 1) {
+				assemble_builder.copy_back(playback_hooks.inside_realtime_begin);
+			} else {
+				assemble_builder.merge_back(playback_hooks.inside_realtime_begin);
+			}
+			// append realtime section
+			assemble_builder.merge_back(std::move(program_builder.done()));
+			// append inside_realtime_end hook
+			if (i < realtime_columns[0].realtimes.size() - 1) {
+				assemble_builder.copy_back(playback_hooks.inside_realtime_end);
+			} else {
+				assemble_builder.merge_back(playback_hooks.inside_realtime_end);
+			}
+			// append ppu_finish_builder
+			assemble_builder.merge_back(realtime_columns[0].realtimes[i].ppu_finish_builder);
+			// wait for response data
+			assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			// for the last batch entry, append post_realtime hook and stop_ppu
+			if (i == realtime_columns[0].realtimes.size() - 1) {
+				assemble_builder.merge_back(playback_hooks.post_realtime);
+				assemble_builder.merge_back(realtime_columns[0].stop_ppu);
+			}
+		}
+		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga()) >
+		    stadls::vx::playback_memory_size_to_fpga) {
+			programs.push_back(std::move(final_builder.done()));
+		}
+		final_builder.merge_back(assemble_builder);
+	}
+	if (!final_builder.empty()) {
+		programs.push_back(std::move(final_builder.done()));
+	}
+
+	PlaybackPrograms program = PlaybackPrograms{
+	    .realtime = programs,
+	    .has_hook_around_realtime = has_hook_around_realtime,
+	    .has_plasticity = ppu_symbols.has_value()};
 
 	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
 	    program.has_hook_around_realtime) {
@@ -232,37 +348,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		return capmem_settling_wait_builder.done();
 	};
 
-	// bring PPUs in running state
-	hate::Timer const trigger_timer;
-	PlaybackProgramBuilder trigger_builder;
-	if (ppu_symbols) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			haldls::vx::v3::PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(true);
-			trigger_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-		}
-		auto const ppu_status_coord =
-		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate).toMin();
-		// wait for PPUs to be ready
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			using namespace haldls::vx::v3;
-			PollingOmnibusBlockConfig config;
-			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
-			                       .at(0));
-			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
-			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
-			trigger_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
-			trigger_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			trigger_builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-		}
-	}
-	auto trigger_program = trigger_builder.done();
-	LOG4CXX_TRACE(
-	    logger, "operator(): Generated playback program for PPU startup trigger in "
-	                << trigger_timer.print() << ".");
-
 	std::unique_lock<std::mutex> connection_lock(connection_state_storage.mutex, std::defer_lock);
 	// exclusive access to connection_state_storage and connection required from here in
 	// differential mode
@@ -278,12 +363,12 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool has_capmem_changes = false;
 	if (!connection_state_storage.enable_differential_config) {
 		// generate static configuration
-		base_builder.write(ChipOnDLS(), config);
+		base_builder.write(ChipOnDLS(), configs_visited[0]);
 		has_capmem_changes = true;
 	} else if (connection_state_storage.current_config_words.empty() /* first invocation */) {
 		typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
 		haldls::vx::visit_preorder(
-		    config, ChipOnDLS(),
+		    configs_visited[0], ChipOnDLS(),
 		    stadls::EncodeVisitor<words_type>{connection_state_storage.current_config_words});
 		fisch::vx::PlaybackProgramBuilder fisch_base_builder;
 		std::vector<fisch::vx::Omnibus> base_data;
@@ -297,7 +382,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	} else {
 		enforce_base = false;
 
-		if (config != connection_state_storage.current_config) {
+		if (configs_visited[0] != connection_state_storage.current_config) {
 			typedef std::vector<OmnibusAddress> addresses_type;
 			typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
 
@@ -306,7 +391,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			ChipOnDLS coord;
 			words_type data_initial;
 			haldls::vx::visit_preorder(
-			    config, coord, stadls::EncodeVisitor<words_type>{data_initial});
+			    configs_visited[0], coord, stadls::EncodeVisitor<words_type>{data_initial});
 			words_type& data_current = connection_state_storage.current_config_words;
 			assert(data_current.size() == chip_addresses.size());
 
@@ -343,6 +428,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	                << initial_config_program_timer.print() << ".");
 
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
+
+	auto const trigger_program = realtime_columns[0].start_ppu.done();
 
 	// execute
 	hate::Timer const exec_timer;
@@ -403,7 +490,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// update connection state
 	hate::Timer const update_state_timer;
 	if (connection_state_storage.enable_differential_config) {
-		connection_state_storage.current_config = config;
+		connection_state_storage.current_config = configs_visited[0];
 		if (ppu_symbols) {
 			for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
 				assert(read_ticket_ppu_memory[ppu]);
@@ -430,25 +517,29 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// unlock execution section for differential config mode
 	if (connection_state_storage.enable_differential_config) {
-		connection_execution_duration_after = connection.get_time_info().execution_duration;
+		if (!program.realtime.empty() || !base_program.empty()) {
+			connection_execution_duration_after = connection.get_time_info().execution_duration;
+		}
 		connection_lock.unlock();
 	}
 
-	// extract output data map
-	hate::Timer const post_timer;
-	auto result_data_map = builder.post_process();
-	LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
+	for (size_t i = 0; i < configs.size(); i++) {
+		// extract output data map
+		hate::Timer const post_timer;
+		auto result_data_map = builders[i].post_process(program.realtime);
+		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
 
-	// add execution duration per hardware to result data map
-	assert(result_data_map.execution_time_info);
-	result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
-	    connection_execution_duration_after - connection_execution_duration_before;
+		// add execution duration per hardware to result data map
+		assert(result_data_map.execution_time_info);
+		result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
+		    connection_execution_duration_after - connection_execution_duration_before;
 
-	// add pre-execution config to result data map
-	result_data_map.pre_execution_chips[execution_instance] = config;
+		// add pre-execution config to result data map
+		result_data_map.pre_execution_chips[execution_instance] = configs_visited[i];
 
-	// merge local data map into global data map
-	data_map.merge(result_data_map);
+		// merge local data map into global data map
+		data_maps[i].merge(result_data_map);
+	}
 }
 
 } // namespace grenade::vx::execution::detail

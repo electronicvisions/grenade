@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <vector>
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/execution/detail/connection_state_storage.h"
@@ -30,12 +31,12 @@ namespace grenade::vx::execution::detail {
 struct ExecutionInstanceNode
 {
 	ExecutionInstanceNode(
-	    signal_flow::IODataMap& data_map,
-	    signal_flow::IODataMap const& input_data_map,
-	    signal_flow::Graph const& graph,
+	    std::vector<signal_flow::IODataMap>& data_maps,
+	    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& input_data_maps,
+	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
 	    common::ExecutionInstanceID const& execution_instance,
 	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
-	    lola::vx::v3::Chip const& initial_config,
+	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
 	    backend::Connection& connection,
 	    ConnectionStateStorage& connection_state_storage,
 	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
@@ -43,16 +44,23 @@ struct ExecutionInstanceNode
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
 private:
-	signal_flow::IODataMap& data_map;
-	signal_flow::IODataMap const& input_data_map;
-	signal_flow::Graph const& graph;
+	std::vector<signal_flow::IODataMap>& data_maps;
+	std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& input_data_maps;
+	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs;
 	common::ExecutionInstanceID execution_instance;
 	halco::hicann_dls::vx::v3::DLSGlobal dls_global;
-	lola::vx::v3::Chip const& initial_config;
+	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> configs;
 	backend::Connection& connection;
 	ConnectionStateStorage& connection_state_storage;
 	signal_flow::ExecutionInstancePlaybackHooks& playback_hooks;
 	log4cxx::LoggerPtr logger;
+
+	struct PlaybackPrograms
+	{
+		std::vector<stadls::vx::v3::PlaybackProgram> realtime;
+		bool has_hook_around_realtime;
+		bool has_plasticity;
+	};
 };
 
 } // namespace grenade::vx::execution::detail

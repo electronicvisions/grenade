@@ -105,11 +105,11 @@ private:
 	 */
 	void check(signal_flow::Graph const& graph);
 
-	friend signal_flow::IODataMap run(
+	friend std::vector<signal_flow::IODataMap> run(
 	    JITGraphExecutor& executor,
-	    signal_flow::Graph const& graph,
-	    signal_flow::IODataMap const& input,
-	    ChipConfigs const& initial_config,
+	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
+	    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& inputs,
+	    std::vector<std::reference_wrapper<ChipConfigs const>> const& configs,
 	    PlaybackHooks& playback_hooks);
 };
 

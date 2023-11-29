@@ -92,6 +92,7 @@ struct GENPYBIND(visible) IODataMap
 	IODataMap(IODataMap&& other) SYMBOL_VISIBLE;
 
 	IODataMap& operator=(IODataMap&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
+	IODataMap& operator=(IODataMap const& other) = delete;
 
 	/**
 	 * Merge other map content into this one's.

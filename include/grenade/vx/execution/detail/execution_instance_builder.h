@@ -56,25 +56,35 @@ public:
 	 */
 	void pre_process() SYMBOL_VISIBLE;
 
-	struct PlaybackPrograms
+	struct RealtimeSnippet
 	{
-		std::vector<stadls::vx::v3::PlaybackProgram> realtime;
-		bool has_hook_around_realtime;
-		bool has_plasticity;
+		stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder builder;
+		stadls::vx::v3::PlaybackProgramBuilder ppu_finish_builder;
+		haldls::vx::v3::Timer::Value pre_realtime_duration;
+		haldls::vx::v3::Timer::Value realtime_duration;
+	};
+
+	struct Ret
+	{
+		stadls::vx::v3::PlaybackProgramBuilder start_ppu;
+		stadls::vx::v3::PlaybackProgramBuilder arm_madc;
+		std::vector<RealtimeSnippet> realtimes;
+		stadls::vx::v3::PlaybackProgramBuilder stop_ppu;
 	};
 
 	/**
 	 * Generate playback sequence.
 	 * @return PlaybackPrograms generated via local graph traversal
 	 */
-	PlaybackPrograms generate() SYMBOL_VISIBLE;
+	Ret generate() SYMBOL_VISIBLE;
 
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
 	 * This resets the internal state of the builder to be ready for the next time step.
 	 * @return signal_flow::IODataMap of locally computed results
 	 */
-	signal_flow::IODataMap post_process() SYMBOL_VISIBLE;
+	signal_flow::IODataMap post_process(
+	    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime) SYMBOL_VISIBLE;
 	void post_process(signal_flow::Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
 	/**
