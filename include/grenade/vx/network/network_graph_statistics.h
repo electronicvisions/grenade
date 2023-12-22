@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstddef>
 #include <iosfwd>
+#include <map>
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include <pybind11/chrono.h>
