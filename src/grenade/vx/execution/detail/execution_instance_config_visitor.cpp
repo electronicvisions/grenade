@@ -236,6 +236,8 @@ void ExecutionInstanceConfigVisitor::process(
 		neuron_i_stim_mux[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = true;
 		pad_mux.set_neuron_i_stim_mux(neuron_i_stim_mux);
 		pad_mux.set_neuron_i_stim_mux_to_pad(true);
+		// Configure neuron
+		m_config.neuron_block.atomic_neurons[source.coord].readout.enable_unbuffered_access = true;
 	}
 
 	// Configure analog parameters
