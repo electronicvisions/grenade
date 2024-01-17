@@ -51,10 +51,16 @@ public:
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
 	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
+	struct Usages
+	{
+		bool madc_recording;
+		bool event_recording;
+	};
+
 	/**
 	 * Preprocess by single visit of all local vertices.
 	 */
-	void pre_process() SYMBOL_VISIBLE;
+	Usages pre_process() SYMBOL_VISIBLE;
 
 	struct RealtimeSnippet
 	{
@@ -76,7 +82,7 @@ public:
 	 * Generate playback sequence.
 	 * @return PlaybackPrograms generated via local graph traversal
 	 */
-	Ret generate() SYMBOL_VISIBLE;
+	Ret generate(Usages before, Usages after) SYMBOL_VISIBLE;
 
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.

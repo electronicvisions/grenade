@@ -111,6 +111,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::vector<lola::vx::v3::Chip> configs_visited;
 	PlaybackProgramBuilder arm_madc;
 	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
+
+	// vectors for storing the information on what chip components are used in the realtime snippets before and after the current one (the according index)
+	// Example: usages_before[0] holds the usages needed before the first realtime snippet etc...
+	std::vector<ExecutionInstanceBuilder::Usages> usages_before(configs.size());
+	std::vector<ExecutionInstanceBuilder::Usages> usages_after(configs.size());
+	usages_before[0] = ExecutionInstanceBuilder::Usages{.madc_recording = false, .event_recording = false};
+	usages_after[usages_after.size()-1] = ExecutionInstanceBuilder::Usages{.madc_recording = false, .event_recording = false};
+
 	for (size_t i = 0; i < configs.size(); i++) {
 		hate::Timer const initial_config_timer;
 		lola::vx::v3::Chip config = configs[i];
@@ -158,20 +166,30 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
-		builders[i].pre_process();
+		ExecutionInstanceBuilder::Usages usages = builders[i].pre_process();
+		if(i < usages_before.size() - 1){
+			usages_before[i + 1] = usages;
+		}
+		if(i > 0){
+			usages_after[i - 1] = usages;
+		}
+
+		configs_visited.push_back(config);
+
 		LOG4CXX_TRACE(
 		    logger, "operator(): Preprocessed local vertices for realtime section in "
 		                << realtime_preprocess_timer.print() << ".");
+	}
 
+	for(size_t i = 0; i < configs.size(); i++){
 		// build realtime programs
 		hate::Timer const realtime_generate_timer;
-		auto realtime_column = builders[i].generate();
+		auto realtime_column = builders[i].generate(usages_before[i], usages_after[i]);
 		realtime_columns.push_back(std::move(realtime_column));
 		// check, if madc is used at all in the entire program and catch arm_madc, if so
 		if (!realtime_columns[i].arm_madc.empty()) {
 			arm_madc = std::move(realtime_columns[i].arm_madc);
 		}
-		configs_visited.push_back(config);
 		LOG4CXX_TRACE(
 		    logger, "operator(): Generated playback programs for realtime section in "
 		                << realtime_generate_timer.print() << ".");

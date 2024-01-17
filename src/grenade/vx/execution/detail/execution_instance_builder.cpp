@@ -709,7 +709,7 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
-void ExecutionInstanceBuilder::pre_process()
+ExecutionInstanceBuilder::Usages ExecutionInstanceBuilder::pre_process()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 	auto const execution_instance_vertex =
@@ -735,6 +735,7 @@ void ExecutionInstanceBuilder::pre_process()
 			m_post_vertices.push_back(vertex);
 		}
 	}
+	return ExecutionInstanceBuilder::Usages{.madc_recording = m_madc_readout_vertex.has_value(), .event_recording = m_event_output_vertex.has_value() || m_madc_readout_vertex.has_value()};
 }
 
 signal_flow::IODataMap ExecutionInstanceBuilder::post_process(
@@ -864,7 +865,7 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process(
 	return std::move(m_local_data_output);
 }
 
-ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate()
+ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstanceBuilder::Usages before, ExecutionInstanceBuilder::Usages after)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
@@ -1053,7 +1054,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate()
 		PlaybackProgramBuilder ppu_finish_builder;
 		auto& batch_entry = m_batch_entries.at(b);
 		// enable event recording
-		if (m_event_output_vertex || m_madc_readout_vertex) {
+		if ((m_event_output_vertex || m_madc_readout_vertex) && !before.event_recording) {
 			EventRecordingConfig config;
 			config.set_enable_event_recording(true);
 			builder.write(current_time, EventRecordingConfigOnFPGA(), config);
@@ -1076,7 +1077,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate()
 			current_time += Timer::Value(2);
 		}
 		// start MADC
-		if (m_madc_readout_vertex) {
+		if (m_madc_readout_vertex && !before.madc_recording) {
 			stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
 			    madc_start = stadls::vx::generate(generator::MADCStart());
 			madc_start.builder += current_time;
@@ -1194,16 +1195,15 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate()
 			}
 		}
 		// stop MADC (and power-down in last batch entry)
-		if (m_madc_readout_vertex) {
+		if (m_madc_readout_vertex && !after.madc_recording) {
 			stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-			    madc_stop = stadls::vx::generate(generator::MADCStop{
-			        .enable_power_down_after_sampling = (b == m_batch_entries.size() - 1)});
+			    madc_stop = stadls::vx::generate(generator::MADCStop{});
 			madc_stop.builder += current_time;
 			builder.merge(madc_stop.builder);
 			current_time += madc_stop.result;
 		}
 		// disable event recording
-		if (m_event_output_vertex || m_madc_readout_vertex) {
+		if ((m_event_output_vertex || m_madc_readout_vertex) && !after.event_recording) {
 			EventRecordingConfig config;
 			config.set_enable_event_recording(false);
 			builder.write(current_time, EventRecordingConfigOnFPGA(), config);
