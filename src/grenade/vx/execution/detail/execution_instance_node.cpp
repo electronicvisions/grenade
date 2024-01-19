@@ -212,12 +212,18 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			realtime_columns[j].realtimes[i].builder += config_time;
 			program_builder.merge(realtime_columns[j].realtimes[i].builder);
 		}
-		// reset config to initial config at end of each realtime_row
-		config_time +=
-		    (realtime_columns[realtime_columns.size() - 1].realtimes[i].pre_realtime_duration +
-		     realtime_columns[realtime_columns.size() - 1].realtimes[i].realtime_duration);
-		// program_builder.write(config_time, ChipOnDLS(), configs_visited[0],
-		// configs_visited[configs_visited.size() - 1]);
+		// reset config to initial config at end of each realtime_row if experiment has multiple
+		// configs
+		if (realtime_columns.size() > 1) {
+			config_time +=
+			    (realtime_columns[realtime_columns.size() - 1].realtimes[i].pre_realtime_duration +
+			     realtime_columns[realtime_columns.size() - 1].realtimes[i].realtime_duration);
+			if (i < realtime_columns[0].realtimes.size() - 1) {
+				program_builder.write(
+				    config_time, ChipOnDLS(), configs_visited[0],
+				    configs_visited[configs_visited.size() - 1]);
+			}
+		}
 
 		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
 		// stop_ppu and the playback hooks
@@ -508,7 +514,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// update connection state
 	hate::Timer const update_state_timer;
 	if (connection_state_storage.enable_differential_config) {
-		connection_state_storage.current_config = configs_visited[0];
+		connection_state_storage.current_config = configs_visited[configs_visited.size() - 1];
 		if (ppu_symbols) {
 			for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
 				assert(read_ticket_ppu_memory[ppu]);
