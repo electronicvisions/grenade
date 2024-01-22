@@ -199,25 +199,24 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	PlaybackProgramBuilder final_builder;
 	for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
 		AbsoluteTimePlaybackProgramBuilder program_builder;
-		haldls::vx::v3::Timer::Value config_time(0);
+		haldls::vx::v3::Timer::Value config_time =
+		    realtime_columns[0].realtimes[i].pre_realtime_duration;
 		for (size_t j = 0; j < realtime_columns.size(); j++) {
 			if (j > 0) {
-				config_time +=
-				    (realtime_columns[j - 1].realtimes[i].pre_realtime_duration +
-				     realtime_columns[j - 1].realtimes[i].realtime_duration -
-				     realtime_columns[j].realtimes[i].pre_realtime_duration);
+				config_time += realtime_columns[j - 1].realtimes[i].realtime_duration;
 				program_builder.write(
 				    config_time, ChipOnDLS(), configs_visited[j], configs_visited[j - 1]);
 			}
-			realtime_columns[j].realtimes[i].builder += config_time;
+			realtime_columns[j].realtimes[i].builder +=
+			    (config_time - realtime_columns[j].realtimes[i].pre_realtime_duration);
 			program_builder.merge(realtime_columns[j].realtimes[i].builder);
 		}
+
 		// reset config to initial config at end of each realtime_row if experiment has multiple
 		// configs
 		if (realtime_columns.size() > 1) {
 			config_time +=
-			    (realtime_columns[realtime_columns.size() - 1].realtimes[i].pre_realtime_duration +
-			     realtime_columns[realtime_columns.size() - 1].realtimes[i].realtime_duration);
+			    realtime_columns[realtime_columns.size() - 1].realtimes[i].realtime_duration;
 			if (i < realtime_columns[0].realtimes.size() - 1) {
 				program_builder.write(
 				    config_time, ChipOnDLS(), configs_visited[0],

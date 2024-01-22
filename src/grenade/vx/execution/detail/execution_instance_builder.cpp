@@ -1151,6 +1151,9 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			    m_input_list.runtime.at(b).at(m_execution_instance).toTimerOnFPGAValue());
 		}
 		current_time += inside_realtime_duration;
+
+		Timer::Value realtime_duration = current_time - pre_realtime_duration;
+
 		if (m_event_output_vertex || m_madc_readout_vertex) {
 			batch_entry.m_ticket_events_end =
 			    builder.read(current_time, NullPayloadReadableOnFPGA());
@@ -1339,7 +1342,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		    .builder = std::move(builder),
 		    .ppu_finish_builder = std::move(ppu_finish_builder),
 		    .pre_realtime_duration = pre_realtime_duration,
-		    .realtime_duration = current_time - pre_realtime_duration});
+		    .realtime_duration = realtime_duration});
 	}
 
 	// stop PPUs
