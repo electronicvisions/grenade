@@ -159,12 +159,15 @@ struct GENPYBIND(visible) NetworkGraph
 	PlacedConnections get_placed_connections(ProjectionOnNetwork descriptor) const SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
-		parent.def("__copy__",  [](GENPYBIND_PARENT_TYPE const& self) {
-				            return grenade::vx::network::NetworkGraph(self);
-					        });
-		parent.def("__deepcopy__", [](GENPYBIND_PARENT_TYPE const& self, pybind11::dict) {
-					        return grenade::vx::network::NetworkGraph(self);
-						    }, pybind11::arg("memo"));
+		parent.def("__copy__", [](GENPYBIND_PARENT_TYPE const& self) {
+			return grenade::vx::network::NetworkGraph(self);
+		});
+		parent.def(
+		    "__deepcopy__",
+		    [](GENPYBIND_PARENT_TYPE const& self, pybind11::dict) {
+			    return grenade::vx::network::NetworkGraph(self);
+		    },
+		    pybind11::arg("memo"));
 	})
 
 private:
