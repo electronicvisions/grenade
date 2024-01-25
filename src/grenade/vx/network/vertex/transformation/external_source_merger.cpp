@@ -95,4 +95,9 @@ bool ExternalSourceMerger::equal(signal_flow::vertex::Transformation::Function c
 	return m_inputs == o->m_inputs;
 }
 
+std::unique_ptr<signal_flow::vertex::Transformation::Function> ExternalSourceMerger::clone() const
+{
+	return std::make_unique<ExternalSourceMerger>(*this);
+}
+
 } // namespace grenade::vx::network::vertex::transformation

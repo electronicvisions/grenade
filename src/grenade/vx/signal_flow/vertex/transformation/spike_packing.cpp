@@ -63,4 +63,9 @@ bool SpikePacking::equal(vertex::Transformation::Function const& other) const
 	return true;
 }
 
+std::unique_ptr<Transformation::Function> SpikePacking::clone() const
+{
+	return std::make_unique<SpikePacking>(*this);
+}
+
 } // namespace grenade::vx::signal_flow::vertex::transformation

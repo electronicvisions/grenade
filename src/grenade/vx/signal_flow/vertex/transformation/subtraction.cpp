@@ -73,4 +73,9 @@ bool Subtraction::equal(Transformation::Function const& other) const
 	return false;
 }
 
+std::unique_ptr<Transformation::Function> Subtraction::clone() const
+{
+	return std::make_unique<Subtraction>(*this);
+}
+
 } // namespace grenade::vx::signal_flow::vertex::transformation

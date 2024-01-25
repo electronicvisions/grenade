@@ -159,4 +159,9 @@ bool MACSpikeTrainGenerator::equal(Transformation::Function const& other) const
 	       (m_wait_between_events == o->m_wait_between_events);
 }
 
+std::unique_ptr<Transformation::Function> MACSpikeTrainGenerator::clone() const
+{
+	return std::make_unique<MACSpikeTrainGenerator>(*this);
+}
+
 } // namespace grenade::vx::signal_flow::vertex::transformation

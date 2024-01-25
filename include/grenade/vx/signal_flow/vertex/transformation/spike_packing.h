@@ -24,6 +24,8 @@ struct SYMBOL_VISIBLE SpikePacking : public signal_flow::vertex::Transformation:
 
 	Value apply(std::vector<Value> const& value) const SYMBOL_VISIBLE;
 
+	std::unique_ptr<Transformation::Function> clone() const;
+
 private:
 	friend struct cereal::access;
 	template <typename Archive>

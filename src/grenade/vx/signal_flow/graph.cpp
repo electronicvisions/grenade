@@ -58,6 +58,31 @@ Graph::edge_property_map_type copy_edge_property_map(
 	return ret;
 }
 
+/**
+ * Copy vertex property map.
+ * @param other Other property map to copy
+ */
+Graph::vertex_property_map_type copy_vertex_property_map(
+    Graph::vertex_property_map_type const& other)
+{
+	Graph::vertex_property_map_type ret;
+	// copied vertex property per original shared instance, used to populate resulting map
+	std::map<std::shared_ptr<Vertex>, std::shared_ptr<Vertex>> copies;
+	// first for each shared property a copy is created
+	for (auto const& value : other) {
+		assert(value);
+		if (copies.contains(value)) {
+			continue;
+		}
+		copies.insert({value, std::make_shared<Vertex>(*value)});
+	}
+	// then for each map entry a map entry is added to the return value by using the copies
+	for (auto const& value : other) {
+		ret.push_back(copies.at(value));
+	}
+	return ret;
+}
+
 } // namespace
 
 Graph::Graph(Graph const& other) :
@@ -71,7 +96,7 @@ Graph::Graph(Graph const& other) :
         (m_graph && other.m_graph)
             ? copy_edge_property_map(other.m_edge_property_map, *m_graph, *other.m_graph)
             : other.m_edge_property_map),
-    m_vertex_property_map(other.m_vertex_property_map),
+    m_vertex_property_map(copy_vertex_property_map(other.m_vertex_property_map)),
     m_vertex_descriptor_map(other.m_vertex_descriptor_map),
     m_execution_instance_map(other.m_execution_instance_map),
     m_logger(log4cxx::Logger::getLogger("grenade.Graph"))
@@ -103,7 +128,7 @@ Graph& Graph::operator=(Graph const& other)
 	    (m_graph && other.m_graph)
 	        ? copy_edge_property_map(other.m_edge_property_map, *m_graph, *other.m_graph)
 	        : other.m_edge_property_map;
-	m_vertex_property_map = other.m_vertex_property_map;
+	m_vertex_property_map = copy_vertex_property_map(other.m_vertex_property_map);
 	m_vertex_descriptor_map = other.m_vertex_descriptor_map;
 	m_execution_instance_map = other.m_execution_instance_map;
 	return *this;

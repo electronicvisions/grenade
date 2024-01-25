@@ -476,3 +476,45 @@ TEST(Graph, update_and_relocate)
 	        v4, PADIBus(PADIBus::Coordinate()), {other_v3_different_padi_bus}),
 	    std::runtime_error);
 }
+
+TEST(Graph, copy)
+{
+	Graph graph;
+
+	// Graph: v0
+	ExternalInput vertex(ConnectionType::DataTimedSpikeToChipSequence, 1);
+	auto const v0 = graph.add(vertex, ExecutionInstanceID(), {});
+
+	// Graph: v0 -> v1
+	DataInput vertex2(ConnectionType::TimedSpikeToChipSequence, 1);
+	auto const v1 = graph.add(vertex2, ExecutionInstanceID(), {v0});
+
+	// Graph: v1 -> v2
+	CrossbarL2Input vertex3;
+	auto const v2 = graph.add(vertex3, ExecutionInstanceID(), {v1});
+
+	CrossbarNode crossbar_in(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)),
+	    haldls::vx::v3::CrossbarNode());
+	auto const v3 = graph.add(crossbar_in, ExecutionInstanceID(), {v2});
+
+	Graph graph_copy_construct(graph);
+	Graph graph_copy_assign = graph;
+
+	haldls::vx::v3::CrossbarNode config_up;
+	config_up.set_mask(haldls::vx::v3::CrossbarNode::neuron_label_type(1));
+	CrossbarNode crossbar_up(
+	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8), CrossbarOutputOnDLS(0)), config_up);
+	EXPECT_NE(crossbar_in, crossbar_up);
+	graph.update(v3, crossbar_up);
+
+	EXPECT_NE(graph.get_vertex_property(v3), graph_copy_construct.get_vertex_property(v3));
+	EXPECT_NE(graph.get_vertex_property(v3), graph_copy_assign.get_vertex_property(v3));
+	EXPECT_NE(graph, graph_copy_construct);
+	EXPECT_NE(graph, graph_copy_assign);
+
+	EXPECT_EQ(graph_copy_assign, graph_copy_construct);
+	graph_copy_construct.update(v3, crossbar_up);
+	EXPECT_NE(graph_copy_assign, graph_copy_construct);
+	EXPECT_EQ(graph, graph_copy_construct);
+}

@@ -51,9 +51,16 @@ struct Transformation
 		virtual Value apply(std::vector<Value> const& value) const = 0;
 
 		virtual bool equal(Function const& other) const = 0;
+
+		virtual std::unique_ptr<Function> clone() const = 0;
 	};
 
 	Transformation() = default;
+
+	Transformation(Transformation const& other) SYMBOL_VISIBLE;
+	Transformation(Transformation&& other) SYMBOL_VISIBLE;
+	Transformation& operator=(Transformation const& other) SYMBOL_VISIBLE;
+	Transformation& operator=(Transformation&& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Construct Transformation with specified function.

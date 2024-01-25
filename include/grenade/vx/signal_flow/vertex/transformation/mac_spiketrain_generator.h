@@ -46,6 +46,8 @@ struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public Transformation::Function
 
 	Value apply(std::vector<Value> const& value) const SYMBOL_VISIBLE;
 
+	std::unique_ptr<Transformation::Function> clone() const;
+
 private:
 	FRIEND_TEST(::MACSpikeTrainGenerator, get_spike_label);
 

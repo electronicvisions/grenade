@@ -67,6 +67,8 @@ struct SYMBOL_VISIBLE ExternalSourceMerger : public signal_flow::vertex::Transfo
 
 	Value apply(std::vector<Value> const& value) const SYMBOL_VISIBLE;
 
+	std::unique_ptr<signal_flow::vertex::Transformation::Function> clone() const;
+
 private:
 	std::vector<Input> m_inputs;
 

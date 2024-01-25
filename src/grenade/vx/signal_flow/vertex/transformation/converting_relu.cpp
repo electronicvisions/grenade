@@ -53,4 +53,9 @@ bool ConvertingReLU::equal(Transformation::Function const& other) const
 	return false;
 }
 
+std::unique_ptr<Transformation::Function> ConvertingReLU::clone() const
+{
+	return std::make_unique<ConvertingReLU>(*this);
+}
+
 } // namespace grenade::vx::signal_flow::vertex::transformation

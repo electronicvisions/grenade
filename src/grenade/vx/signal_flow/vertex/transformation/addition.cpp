@@ -63,4 +63,9 @@ bool Addition::equal(Transformation::Function const& other) const
 	return false;
 }
 
+std::unique_ptr<Transformation::Function> Addition::clone() const
+{
+	return std::make_unique<Addition>(*this);
+}
+
 } // namespace grenade::vx::signal_flow::vertex::transformation

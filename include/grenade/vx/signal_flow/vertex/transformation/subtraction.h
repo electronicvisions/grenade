@@ -31,6 +31,8 @@ struct SYMBOL_VISIBLE Subtraction : public Transformation::Function
 
 	Value apply(std::vector<Value> const& value) const;
 
+	std::unique_ptr<Transformation::Function> clone() const;
+
 private:
 	size_t m_num_inputs{};
 	size_t m_size{};

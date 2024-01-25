@@ -52,6 +52,11 @@ struct ZerosLike : public vertex::Transformation::Function
 		return ret;
 	}
 
+	std::unique_ptr<vertex::Transformation::Function> clone() const
+	{
+		return std::make_unique<ZerosLike>(*this);
+	}
+
 private:
 	size_t m_size{};
 };

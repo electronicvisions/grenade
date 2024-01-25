@@ -9,6 +9,26 @@ Transformation::Function::~Function() {}
 Transformation::Transformation(std::unique_ptr<Function> function) : m_function(std::move(function))
 {}
 
+Transformation::Transformation(Transformation const& other) :
+    m_function(other.m_function ? other.m_function->clone() : nullptr)
+{}
+
+Transformation::Transformation(Transformation&& other) :
+    m_function(std::move(other.m_function->clone()))
+{}
+
+Transformation& Transformation::operator=(Transformation const& other)
+{
+	m_function = other.m_function ? other.m_function->clone() : nullptr;
+	return *this;
+}
+
+Transformation& Transformation::operator=(Transformation&& other)
+{
+	m_function = std::move(other.m_function);
+	return *this;
+}
+
 std::vector<Port> Transformation::inputs() const
 {
 	assert(m_function);

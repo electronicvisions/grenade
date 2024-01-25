@@ -91,4 +91,9 @@ bool Concatenation::equal(Transformation::Function const& other) const
 	return (m_type == o->m_type) && (m_sizes == o->m_sizes);
 }
 
+std::unique_ptr<Transformation::Function> Concatenation::clone() const
+{
+	return std::make_unique<Concatenation>(*this);
+}
+
 } // namespace grenade::vx::signal_flow::vertex::transformation
