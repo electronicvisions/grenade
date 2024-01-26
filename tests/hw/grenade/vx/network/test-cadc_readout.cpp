@@ -2,7 +2,6 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
@@ -12,6 +11,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
+#include "grenade/vx/network/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -96,8 +96,7 @@ TEST(CADCRecording, General)
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 150)}});
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 	auto const result = extract_cadc_samples(result_map, network_graph);
 

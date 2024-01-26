@@ -4,7 +4,6 @@
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -13,6 +12,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
+#include "grenade/vx/network/run.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -99,8 +99,7 @@ void test_background_spike_source_regular(
 	inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 	auto const spikes = extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
@@ -205,8 +204,7 @@ void test_background_spike_source_poisson(
 		inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
 
 		// run graph with given inputs and return results
-		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 		auto const spikes = extract_neuron_spikes(result_map, network_graph);
 		EXPECT_EQ(spikes.size(), 1);

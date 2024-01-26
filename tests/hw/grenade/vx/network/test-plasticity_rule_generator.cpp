@@ -1,7 +1,5 @@
 #include "grenade/vx/common/execution_instance_id.h"
-#include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -11,6 +9,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
+#include "grenade/vx/network/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -202,8 +201,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 	auto const recorded_data =
 	    std::get<PlasticityRule::TimedRecordingData>(extract_plasticity_rule_recording_data(

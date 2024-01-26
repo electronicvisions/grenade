@@ -1,7 +1,6 @@
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_builder.h"
@@ -11,6 +10,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
+#include "grenade/vx/network/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
@@ -103,8 +103,7 @@ TEST(PlasticityRule, RawRecording)
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	// run graph with given inputs and return results
-	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 	auto const result = std::get<PlasticityRule::RawRecordingData>(
 	                        extract_plasticity_rule_recording_data(
@@ -461,11 +460,9 @@ TEST(PlasticityRule, TimedRecording)
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
-		EXPECT_NO_THROW((grenade::vx::execution::run(
-		    executor, network_graph.get_graph(), chip_configs, inputs)));
+		EXPECT_NO_THROW((run(executor, network_graph, chip_configs, inputs)));
 
-		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 		auto const recording_data = extract_plasticity_rule_recording_data(
 		    result_map, network_graph, plasticity_rule_descriptor);
@@ -693,8 +690,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// run graph with given inputs and return results
-		auto const result_map =
-		    execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 		auto const result =
 		    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
@@ -790,7 +786,7 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	auto const routing_result = routing::PortfolioRouter{}(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+	run(executor, network_graph, chip_configs, inputs);
 }
 
 TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
@@ -884,7 +880,7 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	auto const routing_result = routing::PortfolioRouter{}(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
+	run(executor, network_graph, chip_configs, inputs);
 }
 
 TEST(PlasticityRule, WriteReadPPUSymbol)
@@ -971,8 +967,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 
 	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID())->write_ppu_symbols;
 
-	auto const result =
-	    execution::run(executor, network_graph.get_graph(), chip_configs, inputs, hooks);
+	auto const result = run(executor, network_graph, chip_configs, inputs, hooks);
 
 	EXPECT_EQ(result.read_ppu_symbols.at(0).at(common::ExecutionInstanceID()), expectation_symbols);
 }
