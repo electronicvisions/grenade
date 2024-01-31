@@ -1126,23 +1126,24 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		// insert events of realtime section
 		Timer::Value inside_realtime_duration(0);
+		stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
+		    events;
 		if (m_event_input_vertex) {
 			generator::TimedSpikeToChipSequence event_generator(
 			    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
 			        m_local_data.data.at(*m_event_input_vertex))
 			        .at(b));
-			stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-			    events = stadls::vx::generate(event_generator);
-			// assume, that inside_realtime hook doesn't exceed TimedSpikeToChipSequence in time
-			if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
-				events.builder.merge(m_playback_hooks.inside_realtime);
-			} else {
-				events.builder.copy(m_playback_hooks.inside_realtime);
-			}
-			events.builder += current_time;
-			builder.merge(events.builder);
-			inside_realtime_duration = events.result;
+			events = stadls::vx::generate(event_generator);
 		}
+		// assume, that inside_realtime hook doesn't exceed TimedSpikeToChipSequence in time
+		if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
+			events.builder.merge(m_playback_hooks.inside_realtime);
+		} else {
+			events.builder.copy(m_playback_hooks.inside_realtime);
+		}
+		events.builder += current_time;
+		builder.merge(events.builder);
+		inside_realtime_duration = events.result;
 		// wait until runtime reached
 		if (!m_input_list.runtime.empty() &&
 		    m_input_list.runtime.at(b).contains(m_execution_instance)) {
