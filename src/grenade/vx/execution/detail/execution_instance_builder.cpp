@@ -708,8 +708,6 @@ ExecutionInstanceBuilder::Usages ExecutionInstanceBuilder::pre_process()
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
 	// Sequential preprocessing because vertices might depend on each other.
-	// This is only the case for DataInput -> SynapseArrayView with HAGEN-bug workaround enabled
-	// currently.
 	for (auto const p : boost::make_iterator_range(
 	         m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex))) {
 		auto const vertex = p.second;
