@@ -228,13 +228,4 @@ bool IODataMap::is_match(Entry const& entry, signal_flow::Port const& port)
 	return true;
 }
 
-
-ConstantReferenceIODataMap::ConstantReferenceIODataMap() : data(), runtime() {}
-
-void ConstantReferenceIODataMap::clear()
-{
-	data.clear();
-	runtime.clear();
-}
-
 } // namespace grenade::vx::signal_flow

@@ -56,7 +56,6 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     m_execution_instance(execution_instance),
     m_input_list(input_list),
     m_data_output(data_output),
-    m_local_external_data(),
     m_ppu_symbols(ppu_symbols),
     m_playback_hooks(playback_hooks),
     m_post_vertices(),
@@ -74,8 +73,6 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 	m_postprocessing = false;
 	size_t const batch_size = m_input_list.batch_size();
 	m_batch_entries.resize(batch_size);
-
-	m_local_external_data.runtime = m_input_list.runtime;
 }
 
 bool ExecutionInstanceBuilder::has_complete_input_list() const
@@ -232,7 +229,7 @@ void ExecutionInstanceBuilder::process(
 	auto const& input_values =
 	    ((std::holds_alternative<signal_flow::vertex::ExternalInput>(
 	         m_graph.get_vertex_property(in_vertex)))
-	         ? m_local_external_data.data.at(in_vertex)
+	         ? m_input_list.data.at(in_vertex)
 	         : m_data_output.data.at(in_vertex));
 
 	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::IODataMap::Entry {
@@ -396,12 +393,9 @@ void ExecutionInstanceBuilder::process(
 
 template <>
 void ExecutionInstanceBuilder::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::ExternalInput const& /* data */)
-{
-	auto const& input_values = m_input_list.data.at(vertex);
-	m_local_external_data.data.insert({vertex, input_values});
-}
+{}
 
 template <>
 void ExecutionInstanceBuilder::process(
@@ -470,11 +464,10 @@ void ExecutionInstanceBuilder::filter_events(
 		assert(e.m_ticket_events_end);
 		auto const interval_end_time = e.m_ticket_events_end->get_fpga_time().value();
 		uintmax_t end_time = 0;
-		if (!m_local_external_data.runtime.empty() &&
-		    m_local_external_data.runtime.at(i).contains(m_execution_instance)) {
+		if (!m_input_list.runtime.empty() &&
+		    m_input_list.runtime.at(i).contains(m_execution_instance)) {
 			auto const absolute_end_chip_time =
-			    m_local_external_data.runtime.at(i).at(m_execution_instance).value() +
-			    interval_begin_time;
+			    m_input_list.runtime.at(i).at(m_execution_instance).value() + interval_begin_time;
 			end_time = std::min(interval_end_time, absolute_end_chip_time);
 		} else {
 			end_time = interval_end_time;
@@ -566,7 +559,7 @@ void ExecutionInstanceBuilder::process(
 		auto const& input_values =
 		    ((std::holds_alternative<signal_flow::vertex::ExternalInput>(
 		         m_graph.get_vertex_property(in_vertex)))
-		         ? m_local_external_data.data.at(in_vertex)
+		         ? m_input_list.data.at(in_vertex)
 		         : m_local_data.data.at(in_vertex));
 		if (!signal_flow::IODataMap::is_match(input_values, port)) {
 			throw std::runtime_error("Data size does not match expectation.");
@@ -877,8 +870,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	auto const has_computation =
 	    m_event_input_vertex.has_value() ||
 	    std::any_of(
-	        m_local_external_data.runtime.begin(), m_local_external_data.runtime.end(),
-	        [this](auto const& r) {
+	        m_input_list.runtime.begin(), m_input_list.runtime.end(), [this](auto const& r) {
 		        return r.contains(m_execution_instance) && r.at(m_execution_instance) != 0;
 	        });
 	if (!has_computation) {
@@ -1062,13 +1054,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		// set runtime on PPU
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			if (!m_local_external_data.runtime.empty()) {
+			if (!m_input_list.runtime.empty()) {
 				// TODO (Issue #3993): Implement calculation of PPU clock freuqency vs. FPGA
 				// frequency
 				builder.write(
 				    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
 				    PPUMemoryWord(PPUMemoryWord::Value(
-				        m_local_external_data.runtime.at(b).at(m_execution_instance) * 2)));
+				        m_input_list.runtime.at(b).at(m_execution_instance) * 2)));
 			} else {
 				builder.write(
 				    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
@@ -1154,11 +1146,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			inside_realtime_duration = events.result;
 		}
 		// wait until runtime reached
-		if (!m_local_external_data.runtime.empty() &&
-		    m_local_external_data.runtime.at(b).contains(m_execution_instance)) {
+		if (!m_input_list.runtime.empty() &&
+		    m_input_list.runtime.at(b).contains(m_execution_instance)) {
 			inside_realtime_duration = std::max(
 			    inside_realtime_duration,
-			    m_local_external_data.runtime.at(b).at(m_execution_instance).toTimerOnFPGAValue());
+			    m_input_list.runtime.at(b).at(m_execution_instance).toTimerOnFPGAValue());
 		}
 		current_time += inside_realtime_duration;
 		if (m_event_output_vertex || m_madc_readout_vertex) {
@@ -1235,10 +1227,9 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 					size_t const approx_sample_duration =
 					    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
 					// get experiment duration either via runtime or via last spike time
-					if (!m_local_external_data.runtime.empty()) {
-						expected_size =
-						    m_local_external_data.runtime.at(b).at(m_execution_instance) /
-						    approx_sample_duration;
+					if (!m_input_list.runtime.empty()) {
+						expected_size = m_input_list.runtime.at(b).at(m_execution_instance) /
+						                approx_sample_duration;
 					} else if (m_event_input_vertex) {
 						auto const& spikes =
 						    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(

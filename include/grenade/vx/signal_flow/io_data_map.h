@@ -137,30 +137,4 @@ private:
 	std::unique_ptr<std::mutex> mutex;
 };
 
-
-/**
- * Data map of constant references to data used for external data input in graph execution.
- * For each type of data a separate member allows access.
- */
-struct ConstantReferenceIODataMap
-{
-	typedef IODataMap::Entry Entry;
-
-	/**
-	 * Data is connected to specified vertex descriptors.
-	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
-	 */
-	std::map<signal_flow::detail::vertex_descriptor, Entry const&> data;
-
-	/** Runtime data. */
-	std::vector<std::map<common::ExecutionInstanceID, common::Time>> runtime;
-
-	ConstantReferenceIODataMap() SYMBOL_VISIBLE;
-
-	/**
-	 * Clear content of map.
-	 */
-	void clear() SYMBOL_VISIBLE;
-};
-
 } // namespace grenade::vx::signal_flow

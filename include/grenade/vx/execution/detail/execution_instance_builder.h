@@ -105,8 +105,6 @@ private:
 	signal_flow::IODataMap const& m_input_list;
 	signal_flow::IODataMap const& m_data_output;
 
-	signal_flow::ConstantReferenceIODataMap m_local_external_data;
-
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
 	signal_flow::ExecutionInstancePlaybackHooks& m_playback_hooks;
