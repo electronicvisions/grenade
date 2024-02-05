@@ -103,12 +103,12 @@ std::vector<signal_flow::IODataMap> run(
 		        execution_instance_graph, graphs[i].get().get_execution_instance_graph())) {
 			throw std::runtime_error(
 			    "graph corresponding to configuration " + std::to_string(i) +
-			    " has differing exection_instance_graph from other graphs");
+			    " has differing execution_instance_graph from other graphs");
 		}
 		if (execution_instance_map != graphs[i].get().get_execution_instance_map()) {
 			throw std::runtime_error(
 			    "graph corresponding to configuration " + std::to_string(i) +
-			    " has differing exection_instance_map from other graphs");
+			    " has differing execution_instance_map from other graphs");
 		}
 	}
 	std::map<signal_flow::Graph::vertex_descriptor, std::set<DLSGlobal>> vps_per_execution_instance;
