@@ -6,7 +6,7 @@
 #include "grenade/vx/network/plasticity_rule_on_network.h"
 #include "grenade/vx/network/population_on_network.h"
 #include "grenade/vx/network/projection_on_network.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include <map>
 #include <tuple>
@@ -29,7 +29,7 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 std::vector<std::map<
     std::tuple<PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<common::Time>>>
-extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& network_graph)
     SYMBOL_VISIBLE;
 
 /**
@@ -41,7 +41,7 @@ extract_neuron_spikes(signal_flow::IODataMap const& data, NetworkGraph const& ne
  */
 std::vector<std::vector<
     std::tuple<common::Time, AtomicNeuronOnNetwork, haldls::vx::v3::MADCSampleFromChip::Value>>>
-extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+extract_madc_samples(signal_flow::OutputData const& data, NetworkGraph const& network_graph)
     SYMBOL_VISIBLE;
 
 /**
@@ -52,7 +52,7 @@ extract_madc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
  * batch-entry and contain their corresponding location alongside the ADC value.
  */
 std::vector<std::vector<std::tuple<common::Time, AtomicNeuronOnNetwork, signal_flow::Int8>>>
-extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& network_graph)
+extract_cadc_samples(signal_flow::OutputData const& data, NetworkGraph const& network_graph)
     SYMBOL_VISIBLE;
 
 /**
@@ -63,7 +63,7 @@ extract_cadc_samples(signal_flow::IODataMap const& data, NetworkGraph const& net
  * @return Observable data per batch entry
  */
 PlasticityRule::RecordingData GENPYBIND(visible) extract_plasticity_rule_recording_data(
-    signal_flow::IODataMap const& data,
+    signal_flow::OutputData const& data,
     NetworkGraph const& network_graph,
     PlasticityRuleOnNetwork descriptor) SYMBOL_VISIBLE;
 
@@ -80,7 +80,7 @@ GENPYBIND_MANUAL({
 	};
 	auto const extract_neuron_spikes =
 	    [convert_ms](
-	        grenade::vx::signal_flow::IODataMap const& data,
+	        grenade::vx::signal_flow::OutputData const& data,
 	        grenade::vx::network::NetworkGraph const& network_graph) {
 		    hate::Timer timer;
 		    auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_neuron_spikes");
@@ -136,7 +136,7 @@ GENPYBIND_MANUAL({
 		return ret;
 	};
 	auto const extract_madc_samples = [extract_neuron_samples](
-	                                      grenade::vx::signal_flow::IODataMap const& data,
+	                                      grenade::vx::signal_flow::OutputData const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		hate::Timer timer;
 		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_madc_samples");
@@ -146,7 +146,7 @@ GENPYBIND_MANUAL({
 		return ret;
 	};
 	auto const extract_cadc_samples = [extract_neuron_samples](
-	                                      grenade::vx::signal_flow::IODataMap const& data,
+	                                      grenade::vx::signal_flow::OutputData const& data,
 	                                      grenade::vx::network::NetworkGraph const& network_graph) {
 		hate::Timer timer;
 		auto logger = log4cxx::Logger::getLogger("pygrenade.network.extract_cadc_samples");

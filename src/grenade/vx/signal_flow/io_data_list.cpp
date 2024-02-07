@@ -1,11 +1,10 @@
 #include "grenade/vx/signal_flow/io_data_list.h"
 
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
 
 namespace grenade::vx::signal_flow {
 void IODataList::from_output_map(
-    IODataMap const& map, grenade::vx::signal_flow::Graph const& graph, bool only_unconnected)
+    OutputData const& map, grenade::vx::signal_flow::Graph const& graph, bool only_unconnected)
 {
 	data.clear();
 	for (auto const v : boost::make_iterator_range(boost::vertices(graph.get_graph()))) {
@@ -18,10 +17,10 @@ void IODataList::from_output_map(
 	}
 }
 
-IODataMap IODataList::to_output_map(
+OutputData IODataList::to_output_map(
     grenade::vx::signal_flow::Graph const& graph, bool only_unconnected) const
 {
-	IODataMap map;
+	OutputData map;
 	auto it = data.begin();
 	for (auto const v : boost::make_iterator_range(boost::vertices(graph.get_graph()))) {
 		if (auto const ptr = std::get_if<grenade::vx::signal_flow::vertex::DataOutput>(
@@ -41,7 +40,7 @@ IODataMap IODataList::to_output_map(
 	return map;
 }
 
-void IODataList::from_input_map(IODataMap const& map, grenade::vx::signal_flow::Graph const& graph)
+void IODataList::from_input_map(InputData const& map, grenade::vx::signal_flow::Graph const& graph)
 {
 	data.clear();
 	for (auto const v : boost::make_iterator_range(boost::vertices(graph.get_graph()))) {
@@ -53,9 +52,9 @@ void IODataList::from_input_map(IODataMap const& map, grenade::vx::signal_flow::
 	}
 }
 
-IODataMap IODataList::to_input_map(grenade::vx::signal_flow::Graph const& graph) const
+InputData IODataList::to_input_map(grenade::vx::signal_flow::Graph const& graph) const
 {
-	IODataMap map;
+	InputData map;
 	auto it = data.begin();
 	for (auto const v : boost::make_iterator_range(boost::vertices(graph.get_graph()))) {
 		if (auto const ptr = std::get_if<grenade::vx::signal_flow::vertex::ExternalInput>(

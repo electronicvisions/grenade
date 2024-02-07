@@ -1,21 +1,21 @@
 #include <gtest/gtest.h>
 
 #include "grenade/vx/signal_flow/connection_type.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/port.h"
 
 using namespace grenade::vx;
 using namespace grenade::vx::common;
 using namespace grenade::vx::signal_flow;
 
-TEST(IODataMap, General)
+TEST(InputData, General)
 {
-	IODataMap map;
+	InputData map;
 
 	EXPECT_TRUE(map.empty());
 	EXPECT_TRUE(map.valid());
 
-	auto const data = IODataMap::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
+	auto const data = InputData::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
 	    {{common::Time(), {Int8(1), Int8(2)}}}, {{common::Time(), {Int8(3), Int8(4)}}}});
 	map.data[0] = data;
 
@@ -33,22 +33,22 @@ TEST(IODataMap, General)
 	EXPECT_TRUE(map.valid());
 	EXPECT_EQ(map.batch_size(), 2);
 
-	IODataMap map_move(std::move(map));
+	InputData map_move(std::move(map));
 	EXPECT_EQ(data, map_move.data.at(0));
 	EXPECT_EQ(runtime, map_move.runtime);
 
-	IODataMap map_move_2 = std::move(map_move);
+	InputData map_move_2 = std::move(map_move);
 	EXPECT_EQ(data, map_move_2.data.at(0));
 	EXPECT_EQ(runtime, map_move_2.runtime);
 
 	map_move_2.clear();
 	EXPECT_TRUE(map_move_2.empty());
 
-	IODataMap map_2;
-	auto const data_1 = IODataMap::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
+	InputData map_2;
+	auto const data_1 = InputData::Entry(std::vector<TimedDataSequence<std::vector<Int8>>>{
 	    {{common::Time(), {Int8(5), Int8(6)}}}, {{common::Time(), {Int8(7), Int8(8)}}}});
 	map_2.data[1] = data_1;
-	map.runtime = runtime;
+	map_2.runtime = runtime;
 	map.merge(map_2);
 	EXPECT_TRUE(map_2.empty());
 	EXPECT_TRUE(map.data.contains(1));
@@ -64,24 +64,24 @@ TEST(IODataMap, General)
 	EXPECT_EQ(map.runtime, runtime_2);
 }
 
-TEST(IODataMap, is_match)
+TEST(InputData, is_match)
 {
 	auto const data = std::vector<TimedDataSequence<std::vector<Int8>>>{
 	    {{common::Time(), {Int8(5), Int8(6)}}}, {{common::Time(), {Int8(7), Int8(8)}}}};
 	{
 		Port port(2, ConnectionType::Int8);
-		EXPECT_TRUE(IODataMap::is_match(data, port));
+		EXPECT_TRUE(InputData::is_match(data, port));
 	}
 	{
 		Port port(3, ConnectionType::Int8);
-		EXPECT_FALSE(IODataMap::is_match(data, port));
+		EXPECT_FALSE(InputData::is_match(data, port));
 	}
 	{
 		Port port(2, ConnectionType::UInt5);
-		EXPECT_FALSE(IODataMap::is_match(data, port));
+		EXPECT_FALSE(InputData::is_match(data, port));
 	}
 	{
 		Port port(2, ConnectionType::DataInt8);
-		EXPECT_TRUE(IODataMap::is_match(data, port));
+		EXPECT_TRUE(InputData::is_match(data, port));
 	}
 }

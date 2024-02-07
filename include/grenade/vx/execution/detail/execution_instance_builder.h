@@ -6,9 +6,11 @@
 
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
+#include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
@@ -46,8 +48,8 @@ public:
 	ExecutionInstanceBuilder(
 	    signal_flow::Graph const& graph,
 	    common::ExecutionInstanceID const& execution_instance,
-	    signal_flow::IODataMap const& input_list,
-	    signal_flow::IODataMap const& data_output,
+	    signal_flow::InputData const& input_list,
+	    signal_flow::Data const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
 	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
@@ -87,9 +89,9 @@ public:
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
 	 * This resets the internal state of the builder to be ready for the next time step.
-	 * @return signal_flow::IODataMap of locally computed results
+	 * @return signal_flow::OutputData of locally computed results
 	 */
-	signal_flow::IODataMap post_process(
+	signal_flow::OutputData post_process(
 	    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime) SYMBOL_VISIBLE;
 	void post_process(signal_flow::Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
@@ -102,8 +104,8 @@ public:
 private:
 	signal_flow::Graph const& m_graph;
 	common::ExecutionInstanceID m_execution_instance;
-	signal_flow::IODataMap const& m_input_list;
-	signal_flow::IODataMap const& m_data_output;
+	signal_flow::InputData const& m_input_list;
+	signal_flow::Data const& m_data_output;
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
@@ -118,8 +120,8 @@ private:
 
 	bool m_postprocessing;
 
-	signal_flow::IODataMap m_local_data;
-	signal_flow::IODataMap m_local_data_output;
+	signal_flow::Data m_local_data;
+	signal_flow::OutputData m_local_data_output;
 
 	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ticket_request_type;

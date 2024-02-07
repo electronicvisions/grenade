@@ -6,7 +6,7 @@
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/event.h"
@@ -56,7 +56,7 @@ test_event_loopback_single_crossbar_node(
 	auto const v6 = g.add(data_output, instance, {v5});
 
 	// fill graph inputs
-	grenade::vx::signal_flow::IODataMap input_list;
+	grenade::vx::signal_flow::InputData input_list;
 	input_list.data[v1] = inputs;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;

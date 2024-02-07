@@ -6,7 +6,6 @@
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 

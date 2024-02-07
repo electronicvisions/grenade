@@ -13,7 +13,8 @@
 #endif
 
 namespace grenade::vx::signal_flow {
-struct IODataMap;
+struct InputData;
+struct OutputData;
 class IODataList;
 struct ExecutionInstancePlaybackHooks;
 class Graph;
@@ -105,10 +106,10 @@ private:
 	 */
 	void check(signal_flow::Graph const& graph);
 
-	friend std::vector<signal_flow::IODataMap> run(
+	friend std::vector<signal_flow::OutputData> run(
 	    JITGraphExecutor& executor,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& inputs,
+	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
 	    std::vector<std::reference_wrapper<ChipConfigs const>> const& configs,
 	    PlaybackHooks& playback_hooks);
 };

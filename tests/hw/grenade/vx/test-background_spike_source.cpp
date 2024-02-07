@@ -6,7 +6,7 @@
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/event.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -74,7 +74,7 @@ inline void test_background_spike_source_regular(
 	auto const v3 = g.add(crossbar_output, instance, crossbar_nodes);
 	auto const v4 = g.add(data_output, instance, {v3});
 
-	grenade::vx::signal_flow::IODataMap input_list;
+	grenade::vx::signal_flow::InputData input_list;
 	input_list.runtime.push_back({{instance, running_period}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;

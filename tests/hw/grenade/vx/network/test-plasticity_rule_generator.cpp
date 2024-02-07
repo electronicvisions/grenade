@@ -12,6 +12,7 @@
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include <gtest/gtest.h>
@@ -192,7 +193,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	auto const routing_result = routing::PortfolioRouter()(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	grenade::vx::signal_flow::IODataMap inputs;
+	grenade::vx::signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});

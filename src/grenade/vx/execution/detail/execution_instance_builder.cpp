@@ -8,7 +8,9 @@
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/data.h"
+#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
@@ -48,8 +50,8 @@ std::string name()
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::Graph const& graph,
     common::ExecutionInstanceID const& execution_instance,
-    signal_flow::IODataMap const& input_list,
-    signal_flow::IODataMap const& data_output,
+    signal_flow::InputData const& input_list,
+    signal_flow::Data const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
     signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) :
     m_graph(graph),
@@ -100,7 +102,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 			}
 			auto const& input_vertex =
 			    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
-			return !signal_flow::IODataMap::is_match(
+			return !signal_flow::Data::is_match(
 			    m_input_list.data.find(vertex)->second, input_vertex.output());
 		}
 		return false;
@@ -232,7 +234,7 @@ void ExecutionInstanceBuilder::process(
 	         ? m_input_list.data.at(in_vertex)
 	         : m_data_output.data.at(in_vertex));
 
-	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::IODataMap::Entry {
+	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::Data::Entry {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
@@ -407,7 +409,7 @@ void ExecutionInstanceBuilder::process(
 	auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 	auto const& local_data = m_local_data.data.at(boost::source(in_edge, m_graph.get_graph()));
 	// maybe apply port restriction
-	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::IODataMap::Entry {
+	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::Data::Entry {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
@@ -424,7 +426,7 @@ void ExecutionInstanceBuilder::process(
 	};
 	auto const maybe_restricted_local_data = std::visit(maybe_apply_restriction, local_data);
 	// check size match only for first because we know that the data map is valid
-	assert(signal_flow::IODataMap::is_match(maybe_restricted_local_data, data.output()));
+	assert(signal_flow::Data::is_match(maybe_restricted_local_data, data.output()));
 	m_local_data_output.data[vertex] = maybe_restricted_local_data;
 }
 
@@ -561,7 +563,7 @@ void ExecutionInstanceBuilder::process(
 		         m_graph.get_vertex_property(in_vertex)))
 		         ? m_input_list.data.at(in_vertex)
 		         : m_local_data.data.at(in_vertex));
-		if (!signal_flow::IODataMap::is_match(input_values, port)) {
+		if (!signal_flow::Data::is_match(input_values, port)) {
 			throw std::runtime_error("Data size does not match expectation.");
 		}
 		value_input.push_back(input_values);
@@ -570,7 +572,7 @@ void ExecutionInstanceBuilder::process(
 	// execute transformation
 	auto const value_output = data.apply(value_input);
 	// process output value
-	if (!signal_flow::IODataMap::is_match(value_output, data.output())) {
+	if (!signal_flow::Data::is_match(value_output, data.output())) {
 		throw std::runtime_error("Data size does not match expectation.");
 	}
 	m_local_data.data[vertex] = value_output;
@@ -718,7 +720,7 @@ ExecutionInstanceBuilder::Usages ExecutionInstanceBuilder::pre_process()
 	return ExecutionInstanceBuilder::Usages{.madc_recording = m_madc_readout_vertex.has_value(), .event_recording = m_event_output_vertex.has_value() || m_madc_readout_vertex.has_value()};
 }
 
-signal_flow::IODataMap ExecutionInstanceBuilder::post_process(
+signal_flow::OutputData ExecutionInstanceBuilder::post_process(
     std::vector<stadls::vx::v3::PlaybackProgram> const& realtime)
 {
 	m_chunked_program = realtime;

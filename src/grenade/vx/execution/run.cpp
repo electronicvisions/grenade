@@ -5,8 +5,9 @@
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/io_data_list.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
 #include <chrono>
@@ -20,30 +21,30 @@
 
 namespace grenade::vx::execution {
 
-signal_flow::IODataMap run(
+signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    signal_flow::IODataMap const& input,
+    signal_flow::InputData const& input,
     JITGraphExecutor::ChipConfigs const& initial_config)
 {
 	JITGraphExecutor::PlaybackHooks empty;
 	return run(executor, graph, input, initial_config, empty);
 }
 
-std::vector<signal_flow::IODataMap> run(
+std::vector<signal_flow::OutputData> run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& inputs,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs)
 {
 	JITGraphExecutor::PlaybackHooks empty;
 	return run(executor, graphs, inputs, configs, empty);
 }
 
-signal_flow::IODataMap run(
+signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    signal_flow::IODataMap const& input,
+    signal_flow::InputData const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -70,10 +71,10 @@ bool value_equal(signal_flow::Graph::graph_type const& a, signal_flow::Graph::gr
 
 } // namespace
 
-std::vector<signal_flow::IODataMap> run(
+std::vector<signal_flow::OutputData> run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& inputs,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
     JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -158,7 +159,7 @@ std::vector<signal_flow::IODataMap> run(
 	    nodes;
 
 	// global data maps (each for one realtime_column)
-	std::vector<signal_flow::IODataMap> output_activation_maps(graphs.size());
+	std::vector<signal_flow::OutputData> output_activation_maps(graphs.size());
 
 	// build execution nodes
 	for (auto const vertex :
@@ -221,8 +222,6 @@ std::vector<signal_flow::IODataMap> run(
 		} else {
 			output_activation_maps[i].execution_time_info = execution_time_info;
 		}
-
-		output_activation_maps[i].runtime = inputs[i].get().runtime;
 	}
 
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
@@ -292,8 +291,8 @@ std::vector<signal_flow::IODataList> run(
     JITGraphExecutor::PlaybackHooks& playback_hooks,
     bool only_unconnected_output)
 {
-	std::vector<signal_flow::IODataMap> input_maps(graphs.size());
-	std::vector<std::reference_wrapper<signal_flow::IODataMap const>> input_map_refs;
+	std::vector<signal_flow::InputData> input_maps(graphs.size());
+	std::vector<std::reference_wrapper<signal_flow::InputData const>> input_map_refs;
 	for (size_t i = 0; i < graphs.size(); i++) {
 		input_maps[i] = inputs[i].get().to_input_map(graphs[i]);
 		input_map_refs.push_back(input_maps[i]);

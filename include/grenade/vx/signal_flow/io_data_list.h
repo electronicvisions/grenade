@@ -1,6 +1,8 @@
 #pragma once
+#include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "hate/visibility.h"
 #include <list>
@@ -9,7 +11,6 @@
 namespace grenade::vx::signal_flow {
 
 class Graph;
-struct IODataMap;
 
 /**
  * Flat data list used for external data exchange in graph execution.
@@ -18,7 +19,7 @@ struct IODataMap;
  */
 struct IODataList
 {
-	typedef IODataMap::Entry Entry;
+	typedef Data::Entry Entry;
 
 	/** List of data entries. */
 	std::list<Entry> data{};
@@ -32,7 +33,7 @@ struct IODataList
 	 * @param only_unconnected Whether to convert only output vertices without out edges
 	 */
 	void from_output_map(
-	    IODataMap const& map,
+	    OutputData const& map,
 	    signal_flow::Graph const& graph,
 	    bool only_unconnected = true) SYMBOL_VISIBLE;
 
@@ -42,7 +43,7 @@ struct IODataList
 	 * @param only_unconnected Whether to convert only output vertices without out edges
 	 * @return Converted Map
 	 */
-	IODataMap to_output_map(signal_flow::Graph const& graph, bool only_unconnected = true) const
+	OutputData to_output_map(signal_flow::Graph const& graph, bool only_unconnected = true) const
 	    SYMBOL_VISIBLE;
 
 	/**
@@ -50,14 +51,14 @@ struct IODataList
 	 * @param map Map to convert
 	 * @param graph Graph to use as reference for vertices
 	 */
-	void from_input_map(IODataMap const& map, signal_flow::Graph const& graph) SYMBOL_VISIBLE;
+	void from_input_map(InputData const& map, signal_flow::Graph const& graph) SYMBOL_VISIBLE;
 
 	/**
 	 * Convert from data list to data map with regard to the input vertices of the graph.
 	 * @param graph Graph to use as reference for vertices
 	 * @return Converted Map
 	 */
-	IODataMap to_input_map(signal_flow::Graph const& graph) const SYMBOL_VISIBLE;
+	InputData to_input_map(signal_flow::Graph const& graph) const SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx::signal_flow

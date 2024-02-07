@@ -2,7 +2,6 @@
 
 #include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 
-#include "grenade/vx/signal_flow/io_data_map.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "haldls/vx/v3/event.h"

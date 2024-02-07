@@ -6,7 +6,7 @@
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex.h"
 #include "grenade/vx/signal_flow/vertex/transformation/subtraction.h"
@@ -53,7 +53,7 @@ TEST(Subtraction, Single)
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	// fill graph inputs
-	grenade::vx::signal_flow::IODataMap input_list;
+	grenade::vx::signal_flow::InputData input_list;
 	std::vector<grenade::vx::signal_flow::Int8> inputs(size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		inputs.at(i + 128) = grenade::vx::signal_flow::Int8(i);

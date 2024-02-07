@@ -5,7 +5,7 @@
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 
 namespace grenade::vx::compute {
@@ -77,7 +77,7 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 		throw std::runtime_error("Provided inputs size does not match Addition input size.");
 	}
 
-	signal_flow::IODataMap input_map;
+	signal_flow::InputData input_map;
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {

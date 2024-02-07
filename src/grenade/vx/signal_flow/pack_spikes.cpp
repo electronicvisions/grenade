@@ -3,7 +3,7 @@
 
 namespace grenade::vx::signal_flow {
 
-void pack_spikes(IODataMap& data)
+void pack_spikes(Data& data)
 {
 	vertex::transformation::SpikePacking transformation;
 	for (auto& [_, d] : data.data) {

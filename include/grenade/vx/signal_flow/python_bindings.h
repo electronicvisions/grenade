@@ -9,10 +9,12 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("_pygrenade_vx_common");
 })
 
+#include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "grenade/vx/signal_flow/pack_spikes.h"
 #include "grenade/vx/signal_flow/types.h"

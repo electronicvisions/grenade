@@ -5,7 +5,7 @@
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "haldls/vx/v3/event.h"
 
 using namespace grenade::vx;
@@ -125,7 +125,7 @@ TEST(network_InputGenerator, General)
 		for (auto const& i : range) {
 			add(i);
 		}
-		signal_flow::IODataMap const data = generator.done();
+		signal_flow::InputData const data = generator.done();
 
 		EXPECT_EQ(data.batch_size(), batch_size);
 		EXPECT_TRUE(network_graph.get_graph_translation()

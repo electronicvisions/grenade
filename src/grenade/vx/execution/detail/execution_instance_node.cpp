@@ -61,8 +61,8 @@ bool contains_capmem(std::vector<halco::hicann_dls::vx::OmnibusAddress> const& a
 } // namespace
 
 ExecutionInstanceNode::ExecutionInstanceNode(
-    std::vector<signal_flow::IODataMap>& data_maps,
-    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& input_data_maps,
+    std::vector<signal_flow::OutputData>& data_maps,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     common::ExecutionInstanceID const& execution_instance,
     halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,

@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "hate/visibility.h"
 #include <vector>
 
@@ -7,7 +8,7 @@
 namespace grenade::vx {
 
 namespace signal_flow {
-struct IODataMap;
+struct InputData;
 class IODataList;
 } // namespace signal_flow
 
@@ -28,10 +29,10 @@ namespace grenade::vx::execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
  * @param playback_hooks Map of playback sequence collections to be inserted at specified
  * execution instances
  */
-signal_flow::IODataMap run(
+signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    signal_flow::IODataMap const& input,
+    signal_flow::InputData const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
     JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
@@ -44,10 +45,10 @@ signal_flow::IODataMap run(
  * @param playback_hooks Map of playback sequence collections to be inserted at specified
  * execution instances
  */
-std::vector<signal_flow::IODataMap> run(
+std::vector<signal_flow::OutputData> run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& inputs,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
     JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
 
@@ -58,10 +59,10 @@ std::vector<signal_flow::IODataMap> run(
  * @param input List of input values to use
  * @param initial_config Map of initial configuration
  */
-signal_flow::IODataMap run(
+signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    signal_flow::IODataMap const& input,
+    signal_flow::InputData const& input,
     JITGraphExecutor::ChipConfigs const& initial_config) SYMBOL_VISIBLE;
 
 /**
@@ -71,10 +72,10 @@ signal_flow::IODataMap run(
  * @param input Lists of input values to use (one per realtime_column)
  * @param configs Maps of configurations (one per realtime_column)
  */
-std::vector<signal_flow::IODataMap> run(
+std::vector<signal_flow::OutputData> run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& inputs,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs)
     SYMBOL_VISIBLE;
 

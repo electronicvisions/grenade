@@ -7,7 +7,8 @@
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 
@@ -31,8 +32,8 @@ namespace grenade::vx::execution::detail {
 struct ExecutionInstanceNode
 {
 	ExecutionInstanceNode(
-	    std::vector<signal_flow::IODataMap>& data_maps,
-	    std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& input_data_maps,
+	    std::vector<signal_flow::OutputData>& data_maps,
+	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
 	    common::ExecutionInstanceID const& execution_instance,
 	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
@@ -44,8 +45,8 @@ struct ExecutionInstanceNode
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
 private:
-	std::vector<signal_flow::IODataMap>& data_maps;
-	std::vector<std::reference_wrapper<signal_flow::IODataMap const>> const& input_data_maps;
+	std::vector<signal_flow::OutputData>& data_maps;
+	std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps;
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs;
 	common::ExecutionInstanceID execution_instance;
 	halco::hicann_dls::vx::v3::DLSGlobal dls_global;

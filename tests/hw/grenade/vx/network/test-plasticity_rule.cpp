@@ -12,6 +12,7 @@
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/variant.h"
@@ -90,7 +91,7 @@ TEST(PlasticityRule, RawRecording)
 	auto const routing_result = routing::PortfolioRouter()(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	grenade::vx::signal_flow::IODataMap inputs;
+	grenade::vx::signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
@@ -128,7 +129,7 @@ TEST(PlasticityRule, TimedRecording)
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	grenade::vx::signal_flow::IODataMap inputs;
+	grenade::vx::signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
@@ -606,7 +607,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	signal_flow::IODataMap inputs;
+	signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
@@ -723,7 +724,7 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	signal_flow::IODataMap inputs;
+	signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
@@ -802,7 +803,7 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	signal_flow::IODataMap inputs;
+	signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
@@ -896,7 +897,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	signal_flow::IODataMap inputs;
+	signal_flow::InputData inputs;
 	inputs.runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});

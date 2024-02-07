@@ -7,8 +7,8 @@
 #include "grenade/vx/network/network_graph_builder.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/graph.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/io_data_list.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
 #include "hate/timer.h"
 #include "lola/vx/v3/chip.h"
 #include <future>
@@ -26,7 +26,7 @@ TEST(JITGraphExecutor, Empty)
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config;
 
-	grenade::vx::signal_flow::IODataMap input_map;
+	grenade::vx::signal_flow::InputData input_map;
 
 	auto const result_map = grenade::vx::execution::run(executor, g, input_map, initial_config);
 	EXPECT_TRUE(result_map.empty());
@@ -64,7 +64,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	grenade::vx::execution::JITGraphExecutor executor(true);
 
 	// a single batch entry with some runtime to ensure use of hardware
-	grenade::vx::signal_flow::IODataMap input_map;
+	grenade::vx::signal_flow::InputData input_map;
 	input_map.runtime.push_back(
 	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
@@ -132,7 +132,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	grenade::vx::execution::JITGraphExecutor executor(false);
 
 	// a single batch entry with some runtime to ensure use of hardware
-	grenade::vx::signal_flow::IODataMap input_map;
+	grenade::vx::signal_flow::InputData input_map;
 	input_map.runtime.push_back(
 	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
@@ -197,7 +197,7 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	grenade::vx::execution::JITGraphExecutor executor(true);
 
 	// a single batch entry with some runtime to ensure use of hardware
-	grenade::vx::signal_flow::IODataMap input_map;
+	grenade::vx::signal_flow::InputData input_map;
 	input_map.runtime.push_back(
 	    {{grenade::vx::common::ExecutionInstanceID(),
 	      grenade::vx::common::Time(10000 * grenade::vx::common::Time::fpga_clock_cycles_per_us)}});
@@ -205,10 +205,10 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
 	    {grenade::vx::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
 
-	std::vector<std::future<grenade::vx::signal_flow::IODataMap>> results;
+	std::vector<std::future<grenade::vx::signal_flow::OutputData>> results;
 	constexpr size_t num_concurrent = 100;
 
-	auto const run_func = [&]() -> grenade::vx::signal_flow::IODataMap {
+	auto const run_func = [&]() -> grenade::vx::signal_flow::OutputData {
 		return grenade::vx::execution::run(
 		    executor, network_graph.get_graph(), input_map, initial_config);
 	};

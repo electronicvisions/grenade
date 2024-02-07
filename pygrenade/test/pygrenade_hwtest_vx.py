@@ -102,7 +102,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         network_graph = grenade.network.build_network_graph(
             network, grenade.network.routing.PortfolioRouter()(network))
-        inputs = grenade.signal_flow.IODataMap()
+        inputs = grenade.signal_flow.InputData()
         with hxcomm.ManagedConnection() as connection:
             init, _ = sta.generate(sta.DigitalInit())
             sta.run(connection, init.done())

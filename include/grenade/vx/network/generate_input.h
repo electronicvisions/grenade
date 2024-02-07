@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network_graph.h"
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 
 namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
@@ -81,10 +81,10 @@ public:
 		    parent->py::arg("times"), parent->py::arg("population"));
 	})
 
-	signal_flow::IODataMap done() SYMBOL_VISIBLE;
+	signal_flow::InputData done() SYMBOL_VISIBLE;
 
 private:
-	signal_flow::IODataMap m_data{};
+	signal_flow::InputData m_data{};
 	NetworkGraph const& m_network_graph;
 };
 

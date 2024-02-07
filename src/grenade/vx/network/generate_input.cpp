@@ -245,9 +245,9 @@ void InputGenerator::add(
 	}
 }
 
-signal_flow::IODataMap InputGenerator::done()
+signal_flow::InputData InputGenerator::done()
 {
-	signal_flow::IODataMap ret;
+	signal_flow::InputData ret;
 	for (auto const& [id, execution_instance] :
 	     m_network_graph.get_graph_translation().execution_instances) {
 		if (!execution_instance.event_input_vertex) {

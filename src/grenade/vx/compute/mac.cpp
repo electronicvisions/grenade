@@ -8,7 +8,7 @@
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 #include "grenade/vx/signal_flow/vertex/transformation/concatenation.h"
 #include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
@@ -431,7 +431,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 	}
 
 	hate::Timer input_timer;
-	signal_flow::IODataMap input_list;
+	signal_flow::InputData input_list;
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {

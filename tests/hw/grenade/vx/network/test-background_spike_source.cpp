@@ -13,7 +13,7 @@
 #include "grenade/vx/network/population.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
-#include "grenade/vx/signal_flow/io_data_map.h"
+#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/neuron.h"
@@ -95,7 +95,7 @@ void test_background_spike_source_regular(
 	auto const network_graph = build_network_graph(network, routing_result);
 
 	// generate input
-	grenade::vx::signal_flow::IODataMap inputs;
+	grenade::vx::signal_flow::InputData inputs;
 	inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
 
 	// run graph with given inputs and return results
@@ -201,7 +201,7 @@ void test_background_spike_source_poisson(
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		// generate input
-		grenade::vx::signal_flow::IODataMap inputs;
+		grenade::vx::signal_flow::InputData inputs;
 		inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
 
 		// run graph with given inputs and return results
