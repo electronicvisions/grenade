@@ -61,6 +61,8 @@ struct GENPYBIND(visible) OutputData : public Data
 
 	OutputData(OutputData const&) = delete;
 
+	OutputData(Data&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
+
 	OutputData(OutputData&& other) SYMBOL_VISIBLE;
 
 	OutputData& operator=(OutputData&& other) SYMBOL_VISIBLE GENPYBIND(hidden);

@@ -57,36 +57,34 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     size_t realtime_column_index) :
     m_graph(graph),
     m_execution_instance(execution_instance),
-    m_input_list(input_list),
-    m_data_output(data_output),
+    m_data(input_list, data_output),
     m_ppu_symbols(ppu_symbols),
     m_realtime_column_index(realtime_column_index),
     m_post_vertices(),
-    m_local_data(),
-    m_local_data_output(),
     m_madc_readout_vertex()
 {
 	// check that input list provides all requested input for local graph
-	if (!has_complete_input_list()) {
+	if (!input_data_matches_graph(input_list)) {
 		throw std::runtime_error("Graph requests unprovided input.");
 	}
 
 	m_ticket_requests.fill(false);
 
 	m_postprocessing = false;
-	size_t const batch_size = m_input_list.batch_size();
+	size_t const batch_size = m_data.batch_size();
 	m_batch_entries.resize(batch_size);
 }
 
-bool ExecutionInstanceBuilder::has_complete_input_list() const
+bool ExecutionInstanceBuilder::input_data_matches_graph(
+    signal_flow::InputData const& input_data) const
 {
-	if (m_input_list.empty()) {
+	if (input_data.empty()) {
 		return true;
 	}
-	if (!m_input_list.valid()) {
+	if (!input_data.valid()) {
 		return false;
 	}
-	auto const batch_size = m_input_list.batch_size();
+	auto const batch_size = input_data.batch_size();
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
 	auto const vertices = boost::make_iterator_range(
@@ -95,7 +93,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 		auto const vertex = p.second;
 		if (std::holds_alternative<signal_flow::vertex::ExternalInput>(
 		        m_graph.get_vertex_property(vertex))) {
-			if (m_input_list.data.find(vertex) == m_input_list.data.end()) {
+			if (input_data.data.find(vertex) == input_data.data.end()) {
 				return true;
 			}
 			if (batch_size == 0) {
@@ -104,7 +102,7 @@ bool ExecutionInstanceBuilder::has_complete_input_list() const
 			auto const& input_vertex =
 			    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
 			return !signal_flow::Data::is_match(
-			    m_input_list.data.find(vertex)->second, input_vertex.output());
+			    input_data.data.find(vertex)->second, input_vertex.output());
 		}
 		return false;
 	});
@@ -152,7 +150,7 @@ void ExecutionInstanceBuilder::process(
 	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
 	auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
 
-	m_local_data.data[vertex] = m_local_data.data.at(in_vertex);
+	m_data.insert(vertex, in_vertex);
 	m_event_input_vertex = vertex;
 }
 
@@ -188,7 +186,7 @@ void ExecutionInstanceBuilder::process(
 				    common::Time(local_spike.chip_time.value()), local_spike.label));
 			}
 		}
-		m_local_data.data[vertex] = std::move(transformed_spikes);
+		m_data.insert(vertex, std::move(transformed_spikes));
 	}
 }
 
@@ -229,13 +227,9 @@ void ExecutionInstanceBuilder::process(
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
 	auto const in_vertex = boost::source(edge, m_graph.get_graph());
-	auto const& input_values =
-	    ((std::holds_alternative<signal_flow::vertex::ExternalInput>(
-	         m_graph.get_vertex_property(in_vertex)))
-	         ? m_input_list.data.at(in_vertex)
-	         : m_data_output.data.at(in_vertex));
+	auto const& input_values = m_data.at(in_vertex);
 
-	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::Data::Entry {
+	auto const insert_in_local_data = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
@@ -245,12 +239,12 @@ void ExecutionInstanceBuilder::process(
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			auto const port_restriction = m_graph.get_edge_property_map().at(edge);
 			if (port_restriction) {
-				return apply_restriction(d, *port_restriction);
+				m_data.insert(vertex, apply_restriction(d, *port_restriction));
 			}
 		}
-		return d;
+		m_data.insert(vertex, in_vertex);
 	};
-	m_local_data.data[vertex] = std::visit(maybe_apply_restriction, input_values);
+	std::visit(insert_in_local_data, input_values);
 }
 
 namespace {
@@ -406,7 +400,7 @@ void ExecutionInstanceBuilder::process(
 				}
 			}
 		}
-		m_local_data.data[vertex] = sample_batches;
+		m_data.insert(vertex, std::move(sample_batches));
 	}
 }
 
@@ -424,9 +418,10 @@ void ExecutionInstanceBuilder::process(
 	// get in edge
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
 	auto const in_edge = *(boost::in_edges(vertex, m_graph.get_graph()).first);
-	auto const& local_data = m_local_data.data.at(boost::source(in_edge, m_graph.get_graph()));
+	auto const in_vertex = boost::source(in_edge, m_graph.get_graph());
+	auto const& local_data = m_data.at(in_vertex);
 	// maybe apply port restriction
-	auto const maybe_apply_restriction = [&](auto const& d) -> signal_flow::Data::Entry {
+	auto const insert_in_local_data = [&](auto const& d) {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
@@ -436,15 +431,16 @@ void ExecutionInstanceBuilder::process(
 		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
 			auto const port_restriction = m_graph.get_edge_property_map().at(in_edge);
 			if (port_restriction) {
-				return apply_restriction(d, *port_restriction);
+				auto const restricted_local_data = apply_restriction(d, *port_restriction);
+				// check size match only for first because we know that the data map is valid
+				assert(signal_flow::Data::is_match(restricted_local_data, data.output()));
+				m_data.insert(vertex, restricted_local_data, true);
+				return;
 			}
 		}
-		return d;
+		m_data.insert(vertex, in_vertex, true);
 	};
-	auto const maybe_restricted_local_data = std::visit(maybe_apply_restriction, local_data);
-	// check size match only for first because we know that the data map is valid
-	assert(signal_flow::Data::is_match(maybe_restricted_local_data, data.output()));
-	m_local_data_output.data[vertex] = maybe_restricted_local_data;
+	std::visit(insert_in_local_data, local_data);
 }
 
 template <typename T>
@@ -483,10 +479,10 @@ void ExecutionInstanceBuilder::filter_events(
 		assert(e.m_ticket_events_end);
 		auto const interval_end_time = e.m_ticket_events_end->get_fpga_time().value();
 		uintmax_t end_time = 0;
-		if (!m_input_list.runtime.empty() &&
-		    m_input_list.runtime.at(i).contains(m_execution_instance)) {
+		if (!m_data.get_runtime().empty() &&
+		    m_data.get_runtime().at(i).contains(m_execution_instance)) {
 			auto const absolute_end_chip_time =
-			    m_input_list.runtime.at(i).at(m_execution_instance).value() + interval_begin_time;
+			    m_data.get_runtime().at(i).at(m_execution_instance).value() + interval_begin_time;
 			end_time = std::min(interval_end_time, absolute_end_chip_time);
 		} else {
 			end_time = interval_end_time;
@@ -557,7 +553,7 @@ void ExecutionInstanceBuilder::process(
 				                                     : local_madc_sample.channel)));
 			}
 		}
-		m_local_data.data[vertex] = std::move(transformed_madc_samples);
+		m_data.insert(vertex, std::move(transformed_madc_samples));
 	}
 }
 
@@ -575,11 +571,7 @@ void ExecutionInstanceBuilder::process(
 			throw std::logic_error("Edge with port restriction unsupported.");
 		}
 		auto const in_vertex = boost::source(*edge_it, m_graph.get_graph());
-		auto const& input_values =
-		    ((std::holds_alternative<signal_flow::vertex::ExternalInput>(
-		         m_graph.get_vertex_property(in_vertex)))
-		         ? m_input_list.data.at(in_vertex)
-		         : m_local_data.data.at(in_vertex));
+		auto const& input_values = m_data.at(in_vertex);
 		if (!signal_flow::Data::is_match(input_values, port)) {
 			throw std::runtime_error("Data size does not match expectation.");
 		}
@@ -587,12 +579,12 @@ void ExecutionInstanceBuilder::process(
 		edge_it++;
 	}
 	// execute transformation
-	auto const value_output = data.apply(value_input);
+	auto value_output = data.apply(value_input);
 	// process output value
 	if (!signal_flow::Data::is_match(value_output, data.output())) {
 		throw std::runtime_error("Data size does not match expectation.");
 	}
-	m_local_data.data[vertex] = value_output;
+	m_data.insert(vertex, std::move(value_output));
 }
 
 template <>
@@ -618,7 +610,7 @@ void ExecutionInstanceBuilder::process(
 			return;
 		}
 		std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> values(
-		    m_input_list.batch_size());
+		    m_data.batch_size());
 		for (size_t i = 0; i < values.size(); ++i) {
 			auto& local_values = values.at(i);
 			auto const& local_ticket =
@@ -694,7 +686,7 @@ void ExecutionInstanceBuilder::process(
 				throw std::logic_error("Recording type not supported.");
 			}
 		}
-		m_local_data.data[vertex] = values;
+		m_data.insert(vertex, std::move(values));
 	}
 }
 
@@ -828,7 +820,8 @@ signal_flow::OutputData ExecutionInstanceBuilder::post_process(
 	signal_flow::ExecutionTimeInfo execution_time_info;
 	execution_time_info.realtime_duration_per_execution_instance[m_execution_instance] =
 	    total_realtime_duration;
-	m_local_data_output.execution_time_info = execution_time_info;
+	signal_flow::OutputData local_data_output;
+	local_data_output.execution_time_info = execution_time_info;
 
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
@@ -845,7 +838,9 @@ signal_flow::OutputData ExecutionInstanceBuilder::post_process(
 	}
 	m_postprocessing = false;
 
-	return std::move(m_local_data_output);
+	local_data_output.merge(m_data.done());
+
+	return local_data_output;
 }
 
 ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstanceBuilder::Usages before, ExecutionInstanceBuilder::Usages after)
@@ -860,7 +855,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	auto const has_computation =
 	    m_event_input_vertex.has_value() ||
 	    std::any_of(
-	        m_input_list.runtime.begin(), m_input_list.runtime.end(), [this](auto const& r) {
+	        m_data.get_runtime().begin(), m_data.get_runtime().end(), [this](auto const& r) {
 		        return r.contains(m_execution_instance) && r.at(m_execution_instance) != 0;
 	        });
 	if (!has_computation) {
@@ -979,13 +974,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		// set runtime on PPU
 		if (enable_ppu && m_has_plasticity_rule) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				if (!m_input_list.runtime.empty()) {
+				if (!m_data.get_runtime().empty()) {
 					// TODO (Issue #3993): Implement calculation of PPU clock freuqency vs. FPGA
 					// frequency
 					builder.write(
 					    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
 					    PPUMemoryWord(PPUMemoryWord::Value(
-					        m_input_list.runtime.at(b).at(m_execution_instance) * 2)));
+					        m_data.get_runtime().at(b).at(m_execution_instance) * 2)));
 				} else {
 					builder.write(
 					    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
@@ -1067,7 +1062,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		if (m_event_input_vertex) {
 			generator::TimedSpikeToChipSequence event_generator(
 			    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-			        m_local_data.data.at(*m_event_input_vertex))
+			        m_data.at(*m_event_input_vertex))
 			        .at(b));
 			events = stadls::vx::generate(event_generator);
 		}
@@ -1075,11 +1070,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		builder.merge(events.builder);
 		inside_realtime_duration = events.result;
 		// wait until runtime reached
-		if (!m_input_list.runtime.empty() &&
-		    m_input_list.runtime.at(b).contains(m_execution_instance)) {
+		if (!m_data.get_runtime().empty() &&
+		    m_data.get_runtime().at(b).contains(m_execution_instance)) {
 			inside_realtime_duration = std::max(
 			    inside_realtime_duration,
-			    m_input_list.runtime.at(b).at(m_execution_instance).toTimerOnFPGAValue());
+			    m_data.get_runtime().at(b).at(m_execution_instance).toTimerOnFPGAValue());
 		}
 		current_time += inside_realtime_duration;
 

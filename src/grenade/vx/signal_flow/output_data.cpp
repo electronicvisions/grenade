@@ -13,6 +13,14 @@ OutputData::OutputData() :
     mutex(std::make_unique<std::mutex>())
 {}
 
+OutputData::OutputData(Data&& other) :
+    Data(static_cast<Data&&>(other)),
+    execution_time_info(),
+    read_ppu_symbols(),
+    pre_execution_chips(),
+    mutex()
+{}
+
 OutputData::OutputData(OutputData&& other) :
     Data(static_cast<Data&&>(other)),
     execution_time_info(std::move(other.execution_time_info)),
