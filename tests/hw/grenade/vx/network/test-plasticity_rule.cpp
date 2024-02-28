@@ -1,5 +1,4 @@
 #include "grenade/vx/common/execution_instance_id.h"
-#include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
@@ -136,10 +135,7 @@ TEST(PlasticityRule, TimedRecording)
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
 
-	grenade::vx::execution::backend::Connection connection;
-	std::map<DLSGlobal, grenade::vx::execution::backend::Connection> connections;
-	connections.emplace(DLSGlobal(), std::move(connection));
-	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+	grenade::vx::execution::JITGraphExecutor executor;
 
 	std::mt19937 rng(std::random_device{}());
 	constexpr size_t num = 10;
