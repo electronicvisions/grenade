@@ -9,6 +9,7 @@
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include "pyhxcomm/vx/connection_handle.h"
+#include <log4cxx/logger.h>
 #endif
 
 namespace lola::vx::v3 {
@@ -84,6 +85,13 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 			connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(t.get()));
 			executor =
 			    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(connections));
+
+			auto logger = log4cxx::Logger::getLogger("grenade.network.run");
+			LOG4CXX_WARN(
+			    logger, "Using run(hxcomm.Connection, ...) is deprecated, use the "
+			            "grenade.execution.JITGraphExecutor context manager and "
+			            "run(JITGraphExecutor, ...) instead. Since run(hxcomm.Connection) performs "
+			            "a hardware initialization, no state is carried-over anyways.");
 		}
 
 		~ConnectionAcquisor()
