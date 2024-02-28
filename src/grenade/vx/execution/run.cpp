@@ -6,7 +6,6 @@
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
-#include "grenade/vx/signal_flow/io_data_list.h"
 #include "grenade/vx/signal_flow/output_data.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
@@ -244,66 +243,6 @@ std::vector<signal_flow::OutputData> run(
 	}
 
 	return output_activation_maps;
-}
-
-signal_flow::IODataList run(
-    JITGraphExecutor& executor,
-    signal_flow::Graph const& graph,
-    signal_flow::IODataList const& input,
-    JITGraphExecutor::ChipConfigs const& initial_config,
-    bool only_unconnected_output)
-{
-	JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, graph, input, initial_config, empty, only_unconnected_output);
-}
-
-std::vector<signal_flow::IODataList> run(
-    JITGraphExecutor& executor,
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::IODataList const>> const& inputs,
-    std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
-    bool only_unconnected_output)
-{
-	JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, graphs, inputs, configs, empty, only_unconnected_output);
-}
-
-signal_flow::IODataList run(
-    JITGraphExecutor& executor,
-    signal_flow::Graph const& graph,
-    signal_flow::IODataList const& input,
-    JITGraphExecutor::ChipConfigs const& initial_config,
-    JITGraphExecutor::PlaybackHooks& playback_hooks,
-    bool only_unconnected_output)
-{
-	auto const output_map =
-	    run(executor, graph, input.to_input_map(graph), initial_config, playback_hooks);
-	signal_flow::IODataList output;
-	output.from_output_map(output_map, graph, only_unconnected_output);
-	return output;
-}
-
-std::vector<signal_flow::IODataList> run(
-    JITGraphExecutor& executor,
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::IODataList const>> const& inputs,
-    std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
-    JITGraphExecutor::PlaybackHooks& playback_hooks,
-    bool only_unconnected_output)
-{
-	std::vector<signal_flow::InputData> input_maps(graphs.size());
-	std::vector<std::reference_wrapper<signal_flow::InputData const>> input_map_refs;
-	for (size_t i = 0; i < graphs.size(); i++) {
-		input_maps[i] = inputs[i].get().to_input_map(graphs[i]);
-		input_map_refs.push_back(input_maps[i]);
-	}
-	auto const output_maps = run(executor, graphs, input_map_refs, configs, playback_hooks);
-
-	std::vector<signal_flow::IODataList> outputs(graphs.size());
-	for (size_t i = 0; i < graphs.size(); i++) {
-		outputs[i].from_output_map(output_maps[i], graphs[i], only_unconnected_output);
-	}
-	return outputs;
 }
 
 } // namespace grenade::vx::execution

@@ -15,7 +15,6 @@
 namespace grenade::vx::signal_flow {
 struct InputData;
 struct OutputData;
-class IODataList;
 struct ExecutionInstancePlaybackHooks;
 class Graph;
 } // namespace grenade::v::signal_flowx

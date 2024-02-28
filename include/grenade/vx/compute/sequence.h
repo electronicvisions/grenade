@@ -6,7 +6,6 @@
 #include "grenade/vx/compute/converting_relu.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/compute/relu.h"
-#include "grenade/vx/signal_flow/io_data_list.h"
 #include "hate/visibility.h"
 #include <list>
 #include <variant>

@@ -8,7 +8,6 @@
 #include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
-#include "grenade/vx/signal_flow/io_data_list.h"
 #include "hate/timer.h"
 #include "lola/vx/v3/chip.h"
 #include <future>
@@ -30,12 +29,6 @@ TEST(JITGraphExecutor, Empty)
 
 	auto const result_map = grenade::vx::execution::run(executor, g, input_map, initial_config);
 	EXPECT_TRUE(result_map.empty());
-
-	grenade::vx::signal_flow::IODataList input_list;
-	input_list.from_input_map(input_map, g);
-
-	auto const result_list = grenade::vx::execution::run(executor, g, input_list, initial_config);
-	EXPECT_TRUE(result_list.data.empty());
 }
 
 constexpr static long capmem_settling_time_ms = 100;
