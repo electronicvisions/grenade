@@ -25,11 +25,11 @@ signal_flow::OutputData run(
     signal_flow::Graph const& graph,
     JITGraphExecutor::ChipConfigs const& initial_config,
     signal_flow::InputData const& input,
-    JITGraphExecutor::PlaybackHooks&& playback_hooks)
+    JITGraphExecutor::Hooks&& hooks)
 {
 	return std::move(run(executor,
 	                     std::vector<std::reference_wrapper<signal_flow::Graph const>>{graph},
-	                     {initial_config}, {input}, std::move(playback_hooks))
+	                     {initial_config}, {input}, std::move(hooks))
 	                     .at(0));
 }
 
@@ -55,7 +55,7 @@ std::vector<signal_flow::OutputData> run(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    JITGraphExecutor::PlaybackHooks&& playback_hooks)
+    JITGraphExecutor::Hooks&& hooks)
 {
 	// assure, that all vectors, which contain one element per realtime column are of the same size
 	if (graphs.size() != inputs.size() || graphs.size() != configs.size()) {
@@ -163,15 +163,13 @@ std::vector<signal_flow::OutputData> run(
 		for (size_t i = 0; i < configs.size(); i++) {
 			execution_node_configs.push_back(configs[i].get().at(execution_instance));
 		}
-		if (!playback_hooks.contains(execution_instance)) {
-			playback_hooks[execution_instance] =
-			    std::make_shared<signal_flow::ExecutionInstancePlaybackHooks>();
+		if (!hooks.contains(execution_instance)) {
+			hooks[execution_instance] = std::make_shared<signal_flow::ExecutionInstanceHooks>();
 		}
 		detail::ExecutionInstanceNode node_body(
 		    output_activation_maps, inputs, graphs, execution_instance, dls_global,
 		    execution_node_configs, executor.m_connections.at(dls_global),
-		    executor.m_connection_state_storages.at(dls_global),
-		    *(playback_hooks[execution_instance]));
+		    executor.m_connection_state_storages.at(dls_global), *(hooks[execution_instance]));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}

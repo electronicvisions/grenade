@@ -2,7 +2,7 @@
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/detail/connection_state_storage.h"
-#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
@@ -15,7 +15,7 @@
 namespace grenade::vx::signal_flow {
 struct InputData;
 struct OutputData;
-struct ExecutionInstancePlaybackHooks;
+struct ExecutionInstanceHooks;
 class Graph;
 } // namespace grenade::v::signal_flowx
 
@@ -38,10 +38,9 @@ public:
 
 	typedef std::map<common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
 
-	typedef std::map<
-	    common::ExecutionInstanceID,
-	    std::shared_ptr<signal_flow::ExecutionInstancePlaybackHooks>>
-	    PlaybackHooks;
+	typedef std::
+	    map<common::ExecutionInstanceID, std::shared_ptr<signal_flow::ExecutionInstanceHooks>>
+	        Hooks;
 
 	/**
 	 * Construct executor with active connections from environment.
@@ -110,7 +109,7 @@ private:
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
 	    std::vector<std::reference_wrapper<ChipConfigs const>> const& configs,
 	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-	    PlaybackHooks&& playback_hooks);
+	    Hooks&& hooks);
 };
 
 GENPYBIND_MANUAL({

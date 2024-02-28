@@ -1,8 +1,8 @@
-#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/execution_instance_hooks.h"
 
 namespace grenade::vx::signal_flow {
 
-ExecutionInstancePlaybackHooks::ExecutionInstancePlaybackHooks(
+ExecutionInstanceHooks::ExecutionInstanceHooks(
     stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
     stadls::vx::v3::PlaybackProgramBuilder& pre_realtime,
     stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_begin,

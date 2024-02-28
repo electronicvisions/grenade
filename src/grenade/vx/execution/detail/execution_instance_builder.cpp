@@ -53,13 +53,13 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::InputData const& input_list,
     signal_flow::Data const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) :
+    signal_flow::ExecutionInstanceHooks& hooks) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_input_list(input_list),
     m_data_output(data_output),
     m_ppu_symbols(ppu_symbols),
-    m_playback_hooks(playback_hooks),
+    m_hooks(hooks),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output(),
@@ -864,12 +864,12 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	        });
 	if (!has_computation) {
 		PlaybackProgramBuilder builder;
-		builder.merge_back(m_playback_hooks.pre_static_config);
-		builder.merge_back(m_playback_hooks.pre_realtime);
-		builder.merge_back(m_playback_hooks.inside_realtime_begin);
-		builder.merge_back(m_playback_hooks.inside_realtime.done());
-		builder.merge_back(m_playback_hooks.inside_realtime_end);
-		builder.merge_back(m_playback_hooks.post_realtime);
+		builder.merge_back(m_hooks.pre_static_config);
+		builder.merge_back(m_hooks.pre_realtime);
+		builder.merge_back(m_hooks.inside_realtime_begin);
+		builder.merge_back(m_hooks.inside_realtime.done());
+		builder.merge_back(m_hooks.inside_realtime_end);
+		builder.merge_back(m_hooks.post_realtime);
 		PlaybackProgramBuilder empty_PPB;
 		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> empty_realtime_column;
 		return {
@@ -1121,9 +1121,9 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		// assume, that inside_realtime hook doesn't exceed TimedSpikeToChipSequence in time
 		if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
-			events.builder.merge(m_playback_hooks.inside_realtime);
+			events.builder.merge(m_hooks.inside_realtime);
 		} else {
-			events.builder.copy(m_playback_hooks.inside_realtime);
+			events.builder.copy(m_hooks.inside_realtime);
 		}
 		events.builder += current_time;
 		builder.merge(events.builder);
@@ -1289,13 +1289,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			}
 		}
 		// readout requested PPU symbols
-		for (auto const& name : m_playback_hooks.read_ppu_symbols) {
+		for (auto const& name : m_hooks.read_ppu_symbols) {
 			if (!m_ppu_symbols) {
 				throw std::runtime_error("Provided PPU symbols but not PPU program is present.");
 			}
 			if (!m_ppu_symbols->contains(name)) {
 				throw std::runtime_error(
-				    "Provided unknown symbol name via ExecutionInstancePlaybackHooks.");
+				    "Provided unknown symbol name via ExecutionInstanceHooks.");
 			}
 			std::visit(
 			    hate::overloaded{

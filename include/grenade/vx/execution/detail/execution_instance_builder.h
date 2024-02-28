@@ -7,7 +7,7 @@
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/signal_flow/data.h"
-#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/output_data.h"
@@ -43,7 +43,7 @@ public:
 	 * @param input_list Input list to use for input data lookup
 	 * @param data_output Data output from depended-on executions to use for data lookup
 	 * @param chip_config Chip configuration to use
-	 * @param playback_hooks Playback sequences to inject
+	 * @param hooks Playback sequences to inject
 	 */
 	ExecutionInstanceBuilder(
 	    signal_flow::Graph const& graph,
@@ -51,7 +51,7 @@ public:
 	    signal_flow::InputData const& input_list,
 	    signal_flow::Data const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
 	struct Usages
 	{
@@ -109,7 +109,7 @@ private:
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
-	signal_flow::ExecutionInstancePlaybackHooks& m_playback_hooks;
+	signal_flow::ExecutionInstanceHooks& m_hooks;
 
 	std::vector<signal_flow::Graph::vertex_descriptor> m_post_vertices;
 

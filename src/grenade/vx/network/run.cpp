@@ -14,10 +14,10 @@ signal_flow::OutputData run(
     NetworkGraph const& network_graph,
     execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input,
-    execution::JITGraphExecutor::PlaybackHooks&& playback_hooks)
+    execution::JITGraphExecutor::Hooks&& hooks)
 {
 	return grenade::vx::execution::run(
-	    executor, network_graph.get_graph(), config, input, std::move(playback_hooks));
+	    executor, network_graph.get_graph(), config, input, std::move(hooks));
 }
 
 std::vector<signal_flow::OutputData> run(
@@ -26,14 +26,13 @@ std::vector<signal_flow::OutputData> run(
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    execution::JITGraphExecutor::PlaybackHooks&& playback_hooks)
+    execution::JITGraphExecutor::Hooks&& hooks)
 {
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> graphs;
 	for (size_t i = 0; i < network_graphs.size(); i++) {
 		graphs.push_back(network_graphs[i].get().get_graph());
 	}
-	return grenade::vx::execution::run(
-	    executor, graphs, configs, inputs, std::move(playback_hooks));
+	return grenade::vx::execution::run(executor, graphs, configs, inputs, std::move(hooks));
 }
 
 } // namespace grenade::vx::network

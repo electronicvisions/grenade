@@ -948,12 +948,11 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	auto const routing_result = routing::PortfolioRouter{}(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	execution::JITGraphExecutor::PlaybackHooks hooks;
+	execution::JITGraphExecutor::Hooks hooks;
 	haldls::vx::v3::PPUMemoryBlock expectation(halco::hicann_dls::vx::v3::PPUMemoryBlockSize(1));
 	expectation.at(0) =
 	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
-	hooks[common::ExecutionInstanceID()] =
-	    std::make_shared<signal_flow::ExecutionInstancePlaybackHooks>();
+	hooks[common::ExecutionInstanceID()] = std::make_shared<signal_flow::ExecutionInstanceHooks>();
 	hooks[common::ExecutionInstanceID()]->write_ppu_symbols["test"] =
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::top, expectation},

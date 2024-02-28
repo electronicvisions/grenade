@@ -5,7 +5,7 @@
 
 #include "grenade/vx/execution/detail/connection_state_storage.h"
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
-#include "grenade/vx/signal_flow/execution_instance_playback_hooks.h"
+#include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/output_data.h"
@@ -40,7 +40,7 @@ struct ExecutionInstanceNode
 	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
 	    backend::Connection& connection,
 	    ConnectionStateStorage& connection_state_storage,
-	    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
@@ -53,7 +53,7 @@ private:
 	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> configs;
 	backend::Connection& connection;
 	ConnectionStateStorage& connection_state_storage;
-	signal_flow::ExecutionInstancePlaybackHooks& playback_hooks;
+	signal_flow::ExecutionInstanceHooks& hooks;
 	log4cxx::LoggerPtr logger;
 
 	struct PlaybackPrograms

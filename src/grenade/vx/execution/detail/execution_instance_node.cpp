@@ -69,7 +69,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
     backend::Connection& connection,
     ConnectionStateStorage& connection_state_storage,
-    signal_flow::ExecutionInstancePlaybackHooks& playback_hooks) :
+    signal_flow::ExecutionInstanceHooks& hooks) :
     data_maps(data_maps),
     input_data_maps(input_data_maps),
     graphs(graphs),
@@ -78,7 +78,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     configs(configs),
     connection(connection),
     connection_state_storage(connection_state_storage),
-    playback_hooks(playback_hooks),
+    hooks(hooks),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
 
@@ -91,17 +91,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	hate::Timer const build_timer;
 
 	bool const has_hook_around_realtime =
-	    !playback_hooks.pre_realtime.empty() || !playback_hooks.inside_realtime_begin.empty() ||
-	    !playback_hooks.inside_realtime_end.empty() || !playback_hooks.post_realtime.empty();
+	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
+	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> ppu_symbols;
 	if (configs.size() != 1) {
 		// check, that no playback hooks are used when having multiple realtime columns
-		if (!playback_hooks.pre_static_config.empty() || !playback_hooks.pre_realtime.empty() ||
-		    !playback_hooks.inside_realtime_begin.empty() ||
-		    !playback_hooks.inside_realtime.empty() ||
-		    !playback_hooks.inside_realtime_end.empty() || !playback_hooks.post_realtime.empty() ||
-		    !playback_hooks.write_ppu_symbols.empty() || !playback_hooks.read_ppu_symbols.empty()) {
+		if (!hooks.pre_static_config.empty() || !hooks.pre_realtime.empty() ||
+		    !hooks.inside_realtime_begin.empty() || !hooks.inside_realtime.empty() ||
+		    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty() ||
+		    !hooks.write_ppu_symbols.empty() || !hooks.read_ppu_symbols.empty()) {
 			throw std::logic_error("playback hooks cannot be used in multi-config-experiments");
 		}
 	}
@@ -131,13 +130,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			}
 		}
 		// inject playback-hook PPU symbols to be overwritten
-		for (auto const& [name, memory_config] : playback_hooks.write_ppu_symbols) {
+		for (auto const& [name, memory_config] : hooks.write_ppu_symbols) {
 			if (!ppu_symbols) {
 				throw std::runtime_error("Provided PPU symbols but no PPU program is present.");
 			}
 			if (!ppu_symbols->contains(name)) {
 				throw std::runtime_error(
-				    "Provided unknown symbol name via ExecutionInstancePlaybackHooks.");
+				    "Provided unknown symbol name via ExecutionInstanceHooks.");
 			}
 			std::visit(
 			    hate::overloaded{
@@ -161,8 +160,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		                << initial_config_timer.print() << ".");
 
 		ExecutionInstanceBuilder builder(
-		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols,
-		    playback_hooks);
+		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, hooks);
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
@@ -235,21 +233,21 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
 			if (i == 0) {
 				assemble_builder.merge_back(arm_madc);
-				assemble_builder.merge_back(playback_hooks.pre_realtime);
+				assemble_builder.merge_back(hooks.pre_realtime);
 			}
 			// append inside_realtime_begin hook
 			if (i < realtime_columns[0].realtimes.size() - 1) {
-				assemble_builder.copy_back(playback_hooks.inside_realtime_begin);
+				assemble_builder.copy_back(hooks.inside_realtime_begin);
 			} else {
-				assemble_builder.merge_back(playback_hooks.inside_realtime_begin);
+				assemble_builder.merge_back(hooks.inside_realtime_begin);
 			}
 			// append realtime section
 			assemble_builder.merge_back(std::move(program_builder.done()));
 			// append inside_realtime_end hook
 			if (i < realtime_columns[0].realtimes.size() - 1) {
-				assemble_builder.copy_back(playback_hooks.inside_realtime_end);
+				assemble_builder.copy_back(hooks.inside_realtime_end);
 			} else {
-				assemble_builder.merge_back(playback_hooks.inside_realtime_end);
+				assemble_builder.merge_back(hooks.inside_realtime_end);
 			}
 			// append ppu_finish_builder
 			assemble_builder.merge_back(realtime_columns[0].realtimes[i].ppu_finish_builder);
@@ -257,7 +255,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 			// for the last batch entry, append post_realtime hook and stop_ppu
 			if (i == realtime_columns[0].realtimes.size() - 1) {
-				assemble_builder.merge_back(playback_hooks.post_realtime);
+				assemble_builder.merge_back(hooks.post_realtime);
 				assemble_builder.merge_back(realtime_columns[0].stop_ppu);
 			}
 		}

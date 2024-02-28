@@ -12,12 +12,11 @@
 namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
- * Playback program hooks for an execution instance.
+ * Hooks for an execution instance for complementing the graph-based experiment notation.
  */
 struct GENPYBIND(
-    visible,
-    holder_type("std::shared_ptr<grenade::vx::signal_flow::ExecutionInstancePlaybackHooks>"))
-    ExecutionInstancePlaybackHooks
+    visible, holder_type("std::shared_ptr<grenade::vx::signal_flow::ExecutionInstanceHooks>"))
+    ExecutionInstanceHooks
 {
 	typedef std::map<
 	    std::string,
@@ -28,8 +27,8 @@ struct GENPYBIND(
 
 	typedef std::set<std::string> ReadPPUSymbols;
 
-	ExecutionInstancePlaybackHooks() = default;
-	ExecutionInstancePlaybackHooks(
+	ExecutionInstanceHooks() = default;
+	ExecutionInstanceHooks(
 	    stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
 	    stadls::vx::v3::PlaybackProgramBuilder& pre_realtime,
 	    stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_begin,
@@ -38,10 +37,10 @@ struct GENPYBIND(
 	    stadls::vx::v3::PlaybackProgramBuilder& post_realtime,
 	    WritePPUSymbols const& write_ppu_symbols = WritePPUSymbols(),
 	    ReadPPUSymbols const& read_ppu_symbols = ReadPPUSymbols()) SYMBOL_VISIBLE;
-	ExecutionInstancePlaybackHooks(ExecutionInstancePlaybackHooks const&) = delete;
-	ExecutionInstancePlaybackHooks(ExecutionInstancePlaybackHooks&&) = default;
-	ExecutionInstancePlaybackHooks& operator=(ExecutionInstancePlaybackHooks const&) = delete;
-	ExecutionInstancePlaybackHooks& operator=(ExecutionInstancePlaybackHooks&&) = default;
+	ExecutionInstanceHooks(ExecutionInstanceHooks const&) = delete;
+	ExecutionInstanceHooks(ExecutionInstanceHooks&&) = default;
+	ExecutionInstanceHooks& operator=(ExecutionInstanceHooks const&) = delete;
+	ExecutionInstanceHooks& operator=(ExecutionInstanceHooks&&) = default;
 
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) pre_static_config;
 	stadls::vx::v3::PlaybackProgramBuilder GENPYBIND(hidden) pre_realtime;

@@ -39,7 +39,7 @@ struct GENPYBIND(visible) OutputData : public Data
 	    ReadPPUSymbols;
 
 	/**
-	 * Read PPU symbols corresponding to requested symbols in ExecutionInstancePlaybackHooks.
+	 * Read PPU symbols corresponding to requested symbols in ExecutionInstanceHooks.
 	 */
 	ReadPPUSymbols read_ppu_symbols;
 
