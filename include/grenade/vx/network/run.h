@@ -1,4 +1,3 @@
-#include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network_graph.h"
@@ -336,78 +335,6 @@ GENPYBIND_MANUAL({
 	    helper(parent);
 
 	using namespace grenade::vx;
-	parent.def(
-	    "run",
-	    [](::pyhxcomm::Handle<execution::backend::Connection>& conn,
-	       execution::JITGraphExecutor::ChipConfigs const& config,
-	       network::NetworkGraph const& network_graph, signal_flow::InputData const& input,
-	       execution::JITGraphExecutor::PlaybackHooks& playback_hooks) -> signal_flow::OutputData {
-		    return network::run(conn.get(), config, network_graph, input, playback_hooks);
-	    },
-	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
-	    pybind11::arg("input"), pybind11::arg("playback_hooks"));
-	parent.def(
-	    "run",
-	    [](::pyhxcomm::Handle<execution::backend::Connection>& conn,
-	       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
-	       std::vector<network::NetworkGraph*> const& network_graphs,
-	       std::vector<signal_flow::InputData*> const& inputs,
-	       execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
-	        -> std::vector<signal_flow::OutputData> {
-		    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
-		        configs_ref;
-		    for (auto const& config : configs) {
-			    configs_ref.push_back(config);
-		    }
-		    std::vector<std::reference_wrapper<network::NetworkGraph const>> network_graphs_ref;
-		    for (auto const& network_graph : network_graphs) {
-			    network_graphs_ref.push_back(*network_graph);
-		    }
-		    std::vector<std::reference_wrapper<signal_flow::InputData const>> inputs_ref;
-		    for (auto const& input : inputs) {
-			    inputs_ref.push_back(*input);
-		    }
-
-		    return network::run(
-		        conn.get(), configs_ref, network_graphs_ref, inputs_ref, playback_hooks);
-	    },
-	    pybind11::arg("connection"), pybind11::arg("configs"), pybind11::arg("network_graphs"),
-	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
-	parent.def(
-	    "run",
-	    [](::pyhxcomm::Handle<execution::backend::Connection>& conn,
-	       execution::JITGraphExecutor::ChipConfigs const& config,
-	       network::NetworkGraph const& network_graph,
-	       signal_flow::InputData const& input) -> signal_flow::OutputData {
-		    return network::run(conn.get(), config, network_graph, input);
-	    },
-	    pybind11::arg("connection"), pybind11::arg("config"), pybind11::arg("network_graph"),
-	    pybind11::arg("input"));
-	parent.def(
-	    "run",
-	    [](::pyhxcomm::Handle<execution::backend::Connection>& conn,
-	       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
-	       std::vector<network::NetworkGraph*> const& network_graphs,
-	       std::vector<signal_flow::InputData*> const& inputs)
-	        -> std::vector<signal_flow::OutputData> {
-		    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
-		        configs_ref;
-		    for (auto const& config : configs) {
-			    configs_ref.push_back(config);
-		    }
-		    std::vector<std::reference_wrapper<network::NetworkGraph const>> network_graphs_ref;
-		    for (auto const& network_graph : network_graphs) {
-			    network_graphs_ref.push_back(*network_graph);
-		    }
-		    std::vector<std::reference_wrapper<signal_flow::InputData const>> inputs_ref;
-		    for (auto const& input : inputs) {
-			    inputs_ref.push_back(*input);
-		    }
-		    return network::run(conn.get(), configs_ref, network_graphs_ref, inputs_ref);
-	    },
-	    pybind11::arg("connection"), pybind11::arg("configs"), pybind11::arg("network_graphs"),
-	    pybind11::arg("inputs"));
-
 	parent.def(
 	    "run",
 	    [](::pyhxcomm::Handle<execution::JITGraphExecutor>& conn,

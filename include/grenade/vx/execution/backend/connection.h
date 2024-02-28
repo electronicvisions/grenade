@@ -11,12 +11,7 @@
 #include <string>
 #include <variant>
 
-#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
-#include "pyhxcomm/common/managed_connection.h"
-#endif
-
-namespace grenade::vx::execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
-namespace backend GENPYBIND_MODULE {
+namespace grenade::vx::execution::backend {
 
 struct Connection;
 stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
@@ -30,9 +25,6 @@ stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
  */
 struct Connection
 {
-	/** Name of connection used in Python wrapping. */
-	static constexpr char name[] = "Connection";
-
 	/** Accepted initialization generators. */
 	typedef std::variant<stadls::vx::v3::ExperimentInit, stadls::vx::v3::DigitalInit> Init;
 
@@ -118,13 +110,4 @@ private:
 	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
 };
 
-/**
- * Wrap connection to Python as context manager named `Connection`.
- */
-GENPYBIND_MANUAL({
-	pyhxcomm::ManagedPyBind11Helper<grenade::vx::execution::backend::Connection> helper(
-	    parent, BOOST_HANA_STRING("Connection"));
-})
-
-} // backend
-} // namespace grenade::vx::execution
+} // namespace grenade::vx::execution::backend
