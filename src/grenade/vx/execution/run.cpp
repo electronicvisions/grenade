@@ -24,32 +24,12 @@ signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
     JITGraphExecutor::ChipConfigs const& initial_config,
-    signal_flow::InputData const& input)
-{
-	JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, graph, initial_config, input, empty);
-}
-
-std::vector<signal_flow::OutputData> run(
-    JITGraphExecutor& executor,
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs)
-{
-	JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, graphs, configs, inputs, empty);
-}
-
-signal_flow::OutputData run(
-    JITGraphExecutor& executor,
-    signal_flow::Graph const& graph,
-    JITGraphExecutor::ChipConfigs const& initial_config,
     signal_flow::InputData const& input,
-    JITGraphExecutor::PlaybackHooks& playback_hooks)
+    JITGraphExecutor::PlaybackHooks&& playback_hooks)
 {
 	return std::move(run(executor,
 	                     std::vector<std::reference_wrapper<signal_flow::Graph const>>{graph},
-	                     {initial_config}, {input}, playback_hooks)
+	                     {initial_config}, {input}, std::move(playback_hooks))
 	                     .at(0));
 }
 
@@ -75,7 +55,7 @@ std::vector<signal_flow::OutputData> run(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    JITGraphExecutor::PlaybackHooks& playback_hooks)
+    JITGraphExecutor::PlaybackHooks&& playback_hooks)
 {
 	// assure, that all vectors, which contain one element per realtime column are of the same size
 	if (graphs.size() != inputs.size() || graphs.size() != configs.size()) {
