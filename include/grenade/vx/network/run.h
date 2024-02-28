@@ -51,68 +51,6 @@ std::vector<signal_flow::OutputData> run(
 /**
  * Execute the given network hardware graph and fetch results.
  *
- * @param connection Connection instance to be used for running the graph
- * @param network_graph Network hardware graph to run
- * @param config Static chip configuration to use
- * @param input Inputs to use
- * @return Run time information
- */
-signal_flow::OutputData run(
-    execution::backend::Connection& connection,
-    NetworkGraph const& network_graph,
-    execution::JITGraphExecutor::ChipConfigs const& config,
-    signal_flow::InputData const& input) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graphs and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graphs Network hardware graphs to run
- * @param configs Static chip configurations to use
- * @param inputs Inputs to use
- * @return Run time information
- */
-std::vector<signal_flow::OutputData> run(
-    execution::backend::Connection& connection,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
-    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
-        configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graph and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graph Network hardware graph to run
- * @param config Static chip configuration to use
- * @param input Inputs to use
- * @return Run time information
- */
-signal_flow::OutputData run(
-    hxcomm::vx::ConnectionVariant& connection,
-    NetworkGraph const& network_graph,
-    execution::JITGraphExecutor::ChipConfigs const& config,
-    signal_flow::InputData const& input) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graphs and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graphs Network hardware graphs to run
- * @param configs Static chip configurations to use
- * @param inputs Inputs to use
- * @return Run time information
- */
-std::vector<signal_flow::OutputData> run(
-    hxcomm::vx::ConnectionVariant& connection,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
-    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
-        configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graph and fetch results.
- *
  * @param executor Executor instance to be used for running the graph
  * @param network_graph Network hardware graph to run
  * @param config Static chip configuration to use
@@ -139,76 +77,6 @@ signal_flow::OutputData run(
  */
 std::vector<signal_flow::OutputData> run(
     execution::JITGraphExecutor& executor,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
-    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
-        configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    execution::JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graph and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graph Network hardware graph to run
- * @param config Static chip configuration to use
- * @param input Inputs to use
- * @param playback_hooks Optional playback sequences to inject
- * @return Run time information
- */
-signal_flow::OutputData run(
-    execution::backend::Connection& connection,
-    NetworkGraph const& network_graph,
-    execution::JITGraphExecutor::ChipConfigs const& config,
-    signal_flow::InputData const& input,
-    execution::JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graphs and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graphs Network hardware graphs to run
- * @param configs Static chip configurations to use
- * @param inputs Inputs to use
- * @param playback_hooks Optional playback sequences to inject
- * @return Run time information
- */
-std::vector<signal_flow::OutputData> run(
-    execution::backend::Connection& connection,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
-    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
-        configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    execution::JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graph and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graph Network hardware graph to run
- * @param config Static chip configuration to use
- * @param input Inputs to use
- * @param playback_hooks Optional playback sequences to inject
- * @return Run time information
- */
-signal_flow::OutputData run(
-    hxcomm::vx::ConnectionVariant& connection,
-    NetworkGraph const& network_graph,
-    execution::JITGraphExecutor::ChipConfigs const& config,
-    signal_flow::InputData const& input,
-    execution::JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graphs and fetch results.
- *
- * @param connection Connection instance to be used for running the graph
- * @param network_graphs Network hardware graphs to run
- * @param configs Static chip configurations to use
- * @param inputs Inputs to use
- * @param playback_hooks Optional playback sequences to inject
- * @return Run time information
- */
-std::vector<signal_flow::OutputData> run(
-    hxcomm::vx::ConnectionVariant& connection,
     std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
@@ -237,13 +105,25 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 	struct ConnectionAcquisor
 	{
 		T& handle;
-		hxcomm::vx::ConnectionVariant connection;
+		std::unique_ptr<grenade::vx::execution::JITGraphExecutor> executor;
 
-		ConnectionAcquisor(T& t) : handle(t), connection(std::move(t.get())) {}
+		ConnectionAcquisor(T& t) : handle(t), executor()
+		{
+			std::map<
+			    halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::execution::backend::Connection>
+			    connections;
+			connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(t.get()));
+			executor =
+			    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(connections));
+		}
 
 		~ConnectionAcquisor()
 		{
-			handle.get() = std::move(std::get<typename T::connection_type>(connection));
+			assert(executor);
+			handle.get() = std::move(std::get<typename T::connection_type>(
+			    executor->release_connections()
+			        .at(halco::hicann_dls::vx::v3::DLSGlobal())
+			        .release()));
 		}
 	};
 
@@ -257,7 +137,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		       execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 		        -> signal_flow::OutputData {
 			    ConnectionAcquisor acquisor(conn);
-			    return run(acquisor.connection, network_graph, config, input, playback_hooks);
+			    return run(*acquisor.executor, network_graph, config, input, playback_hooks);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graph"), pybind11::arg("config"),
 		    pybind11::arg("input"), pybind11::arg("playback_hooks"));
@@ -284,7 +164,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 			    }
 
 			    return run(
-			        acquisor.connection, network_graphs_ref, configs_ref, inputs_ref,
+			        *acquisor.executor, network_graphs_ref, configs_ref, inputs_ref,
 			        playback_hooks);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
@@ -295,7 +175,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		       execution::JITGraphExecutor::ChipConfigs const& config,
 		       signal_flow::InputData const& input) -> signal_flow::OutputData {
 			    ConnectionAcquisor acquisor(conn);
-			    return run(acquisor.connection, network_graph, config, input);
+			    return run(*acquisor.executor, network_graph, config, input);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graph"), pybind11::arg("config"),
 		    pybind11::arg("input"));
@@ -320,7 +200,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 			    }
 
 			    ConnectionAcquisor acquisor(conn);
-			    return run(acquisor.connection, network_graphs_ref, configs_ref, inputs_ref);
+			    return run(*acquisor.executor, network_graphs_ref, configs_ref, inputs_ref);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 		    pybind11::arg("inputs"));
