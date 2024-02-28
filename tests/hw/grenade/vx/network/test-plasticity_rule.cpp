@@ -963,7 +963,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 
 	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID())->write_ppu_symbols;
 
-	auto const result = run(executor, network_graph, chip_configs, inputs, hooks);
+	auto const result = run(executor, network_graph, chip_configs, inputs, std::move(hooks));
 
 	EXPECT_EQ(result.read_ppu_symbols.at(0).at(common::ExecutionInstanceID()), expectation_symbols);
 }

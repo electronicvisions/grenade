@@ -24,37 +24,6 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  * @param network_graph Network hardware graph to run
  * @param config Static chip configuration to use
  * @param input Inputs to use
- * @return Run time information
- */
-signal_flow::OutputData run(
-    execution::JITGraphExecutor& executor,
-    NetworkGraph const& network_graph,
-    execution::JITGraphExecutor::ChipConfigs const& config,
-    signal_flow::InputData const& input) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graphs and fetch results.
- *
- * @param executor Executor instance to be used for running the graph
- * @param network_graphs Network hardware graphs to run
- * @param configs Static chip configurations to use
- * @param inputs Inputs to use
- * @return Run time information
- */
-std::vector<signal_flow::OutputData> run(
-    execution::JITGraphExecutor& executor,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
-    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
-        configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs) SYMBOL_VISIBLE;
-
-/**
- * Execute the given network hardware graph and fetch results.
- *
- * @param executor Executor instance to be used for running the graph
- * @param network_graph Network hardware graph to run
- * @param config Static chip configuration to use
- * @param input Inputs to use
  * @param playback_hooks Optional playback sequences to inject
  * @return Run time information
  */
@@ -63,7 +32,7 @@ signal_flow::OutputData run(
     NetworkGraph const& network_graph,
     execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input,
-    execution::JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+    execution::JITGraphExecutor::PlaybackHooks&& playback_hooks = {}) SYMBOL_VISIBLE;
 
 /**
  * Execute the given network hardware graphs and fetch results.
@@ -81,7 +50,7 @@ std::vector<signal_flow::OutputData> run(
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    execution::JITGraphExecutor::PlaybackHooks& playback_hooks) SYMBOL_VISIBLE;
+    execution::JITGraphExecutor::PlaybackHooks&& playback_hooks = {}) SYMBOL_VISIBLE;
 
 
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
@@ -137,7 +106,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		       execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 		        -> signal_flow::OutputData {
 			    ConnectionAcquisor acquisor(conn);
-			    return run(*acquisor.executor, network_graph, config, input, playback_hooks);
+			    return run(*acquisor.executor, network_graph, config, input, std::move(playback_hooks));
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graph"), pybind11::arg("config"),
 		    pybind11::arg("input"), pybind11::arg("playback_hooks"));
@@ -165,7 +134,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 
 			    return run(
 			        *acquisor.executor, network_graphs_ref, configs_ref, inputs_ref,
-			        playback_hooks);
+			        std::move(playback_hooks));
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 		    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
@@ -223,7 +192,7 @@ GENPYBIND_MANUAL({
 	       execution::JITGraphExecutor::ChipConfigs const& config,
 	       signal_flow::InputData const& input,
 	       execution::JITGraphExecutor::PlaybackHooks& playback_hooks) -> signal_flow::OutputData {
-		    return network::run(conn.get(), network_graph, config, input, playback_hooks);
+		    return network::run(conn.get(), network_graph, config, input, std::move(playback_hooks));
 	    },
 	    pybind11::arg("connection"), pybind11::arg("network_graph"), pybind11::arg("config"),
 	    pybind11::arg("input"), pybind11::arg("playback_hooks"));
@@ -250,7 +219,7 @@ GENPYBIND_MANUAL({
 		    }
 
 		    return network::run(
-		        conn.get(), network_graphs_ref, configs_ref, inputs_ref, playback_hooks);
+		        conn.get(), network_graphs_ref, configs_ref, inputs_ref, std::move(playback_hooks));
 	    },
 	    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 	    pybind11::arg("inputs"), pybind11::arg("playback_hooks"));
