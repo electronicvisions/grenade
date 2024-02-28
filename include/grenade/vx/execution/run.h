@@ -14,7 +14,7 @@ class Graph;
 
 } // namespace grenade::vx
 
-namespace grenade::vx::execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
+namespace grenade::vx::execution {
 
 /**
  * Run the specified graph with specified inputs on the supplied executor.
