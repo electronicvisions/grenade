@@ -9,9 +9,6 @@ namespace grenade::vx {
 
 namespace signal_flow {
 struct InputData;
-} // namespace signal_flow
-
-namespace signal_flow {
 class Graph;
 } // namespace signal_flow
 
