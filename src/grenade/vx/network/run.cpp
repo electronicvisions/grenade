@@ -12,71 +12,71 @@ using namespace halco::hicann_dls::vx::v3;
 
 signal_flow::OutputData run(
     hxcomm::vx::ConnectionVariant& connection,
-    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input)
 {
 	execution::JITGraphExecutor::PlaybackHooks empty;
-	return run(connection, config, network_graph, input, empty);
+	return run(connection, network_graph, config, input, empty);
 }
 
 std::vector<signal_flow::OutputData> run(
     hxcomm::vx::ConnectionVariant& connection,
+    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs)
 {
 	execution::JITGraphExecutor::PlaybackHooks empty;
-	return run(connection, configs, network_graphs, inputs, empty);
+	return run(connection, network_graphs, configs, inputs, empty);
 }
 
 signal_flow::OutputData run(
     grenade::vx::execution::backend::Connection& connection,
-    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input)
 {
 	execution::JITGraphExecutor::PlaybackHooks empty;
-	return run(connection, config, network_graph, input, empty);
+	return run(connection, network_graph, config, input, empty);
 }
 
 std::vector<signal_flow::OutputData> run(
     grenade::vx::execution::backend::Connection& connection,
+    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs)
 {
 	execution::JITGraphExecutor::PlaybackHooks empty;
-	return run(connection, configs, network_graphs, inputs, empty);
+	return run(connection, network_graphs, configs, inputs, empty);
 }
 
 signal_flow::OutputData run(
     grenade::vx::execution::JITGraphExecutor& executor,
-    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input)
 {
 	execution::JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, config, network_graph, input, empty);
+	return run(executor, network_graph, config, input, empty);
 }
 
 std::vector<signal_flow::OutputData> run(
     grenade::vx::execution::JITGraphExecutor& executor,
+    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs)
 {
 	execution::JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, configs, network_graphs, inputs, empty);
+	return run(executor, network_graphs, configs, inputs, empty);
 }
 
 signal_flow::OutputData run(
     grenade::vx::execution::JITGraphExecutor& executor,
-    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input,
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -86,9 +86,9 @@ signal_flow::OutputData run(
 
 std::vector<signal_flow::OutputData> run(
     grenade::vx::execution::JITGraphExecutor& executor,
+    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -101,8 +101,8 @@ std::vector<signal_flow::OutputData> run(
 
 signal_flow::OutputData run(
     grenade::vx::execution::backend::Connection& connection,
-    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input,
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -110,7 +110,7 @@ signal_flow::OutputData run(
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
-	auto ret = run(executor, config, network_graph, input, playback_hooks);
+	auto ret = run(executor, network_graph, config, input, playback_hooks);
 
 	connection = std::move(executor.release_connections().at(DLSGlobal()));
 	return ret;
@@ -118,9 +118,9 @@ signal_flow::OutputData run(
 
 std::vector<signal_flow::OutputData> run(
     grenade::vx::execution::backend::Connection& connection,
+    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
@@ -128,7 +128,7 @@ std::vector<signal_flow::OutputData> run(
 	connections.emplace(DLSGlobal(), std::move(connection));
 	grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
 
-	auto ret = run(executor, configs, network_graphs, inputs, playback_hooks);
+	auto ret = run(executor, network_graphs, configs, inputs, playback_hooks);
 
 	connection = std::move(executor.release_connections().at(DLSGlobal()));
 	return ret;
@@ -136,29 +136,29 @@ std::vector<signal_flow::OutputData> run(
 
 signal_flow::OutputData run(
     hxcomm::vx::ConnectionVariant& connection,
-    execution::JITGraphExecutor::ChipConfigs const& config,
     NetworkGraph const& network_graph,
+    execution::JITGraphExecutor::ChipConfigs const& config,
     signal_flow::InputData const& input,
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	grenade::vx::execution::backend::Connection backend_connection(std::move(connection));
 
-	auto ret = run(backend_connection, config, network_graph, input, playback_hooks);
+	auto ret = run(backend_connection, network_graph, config, input, playback_hooks);
 	connection = backend_connection.release();
 	return ret;
 }
 
 std::vector<signal_flow::OutputData> run(
     hxcomm::vx::ConnectionVariant& connection,
+    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	grenade::vx::execution::backend::Connection backend_connection(std::move(connection));
 
-	auto ret = run(backend_connection, configs, network_graphs, inputs, playback_hooks);
+	auto ret = run(backend_connection, network_graphs, configs, inputs, playback_hooks);
 	connection = backend_connection.release();
 	return ret;
 }

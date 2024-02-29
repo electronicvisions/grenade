@@ -85,7 +85,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
             init, _ = sta.generate(sta.DigitalInit())
             sta.run(connection, init.done())
             outputs = grenade.network.run(
-                connection, config, network_graph, inputs)
+                connection, network_graph, config, inputs)
 
         if enable_spikes or enable_v:
             self.assertEqual(outputs.batch_size(), 1)
@@ -108,8 +108,8 @@ class HwTestPygrenadeVx(unittest.TestCase):
             sta.run(connection, init.done())
             grenade.network.run(
                 connection,
-                {grenade.common.ExecutionInstanceID(): lola.Chip()},
                 network_graph,
+                {grenade.common.ExecutionInstanceID(): lola.Chip()},
                 inputs)
 
     @staticmethod
@@ -204,7 +204,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
             init, _ = sta.generate(sta.ExperimentInit())
             sta.run(connection, init.done())
             result_map = grenade.network.run(
-                connection, config, network_graph, inputs)
+                connection, network_graph, config, inputs)
 
         hw_spike_times = grenade.network.extract_neuron_spikes(
             result_map, network_graph)
