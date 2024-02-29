@@ -23,33 +23,33 @@ namespace grenade::vx::execution {
 signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    signal_flow::InputData const& input,
-    JITGraphExecutor::ChipConfigs const& initial_config)
+    JITGraphExecutor::ChipConfigs const& initial_config,
+    signal_flow::InputData const& input)
 {
 	JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, graph, input, initial_config, empty);
+	return run(executor, graph, initial_config, input, empty);
 }
 
 std::vector<signal_flow::OutputData> run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
-    std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs)
+    std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs)
 {
 	JITGraphExecutor::PlaybackHooks empty;
-	return run(executor, graphs, inputs, configs, empty);
+	return run(executor, graphs, configs, inputs, empty);
 }
 
 signal_flow::OutputData run(
     JITGraphExecutor& executor,
     signal_flow::Graph const& graph,
-    signal_flow::InputData const& input,
     JITGraphExecutor::ChipConfigs const& initial_config,
+    signal_flow::InputData const& input,
     JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	return std::move(run(executor,
 	                     std::vector<std::reference_wrapper<signal_flow::Graph const>>{graph},
-	                     {input}, {initial_config}, playback_hooks)
+	                     {initial_config}, {input}, playback_hooks)
 	                     .at(0));
 }
 
@@ -73,8 +73,8 @@ bool value_equal(signal_flow::Graph::graph_type const& a, signal_flow::Graph::gr
 std::vector<signal_flow::OutputData> run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
+    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
     JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	// assure, that all vectors, which contain one element per realtime column are of the same size

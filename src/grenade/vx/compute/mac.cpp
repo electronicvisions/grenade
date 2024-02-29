@@ -448,7 +448,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 	}
 
 	// run Graph with given inputs and return results
-	auto const output_activation_map = execution::run(executor, m_graph, input_list, chip_configs);
+	auto const output_activation_map = execution::run(executor, m_graph, chip_configs, input_list);
 
 	hate::Timer output_timer;
 	auto const timed_outputs =

@@ -100,7 +100,7 @@ void test_background_spike_source_regular(
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const spikes = extract_neuron_spikes(result_map, network_graph);
 	EXPECT_EQ(spikes.size(), 1);
@@ -206,7 +206,7 @@ void test_background_spike_source_poisson(
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 		auto const spikes = extract_neuron_spikes(result_map, network_graph);
 		EXPECT_EQ(spikes.size(), 1);

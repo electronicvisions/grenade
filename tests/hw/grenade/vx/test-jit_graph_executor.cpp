@@ -27,7 +27,7 @@ TEST(JITGraphExecutor, Empty)
 
 	grenade::vx::signal_flow::InputData input_map;
 
-	auto const result_map = grenade::vx::execution::run(executor, g, input_map, initial_config);
+	auto const result_map = grenade::vx::execution::run(executor, g, initial_config, input_map);
 	EXPECT_TRUE(result_map.empty());
 }
 
@@ -68,7 +68,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.DifferentialConfig");
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// First run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -77,7 +77,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    lola::vx::v3::AtomicNeuron::AnalogValue(123);
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Second run: expect CapMem settling time due to single cell change
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -86,7 +86,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    !config.neuron_block.atomic_neurons.front().leak.enable_multiplication;
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Third run: expect no CapMem settling time due to non-CapMem change
 		EXPECT_LE(timer.get_ms(), capmem_settling_time_ms);
 		// Not too fast (may change)
@@ -94,7 +94,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	}
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Fourth run: expect no CapMem settling time due to non-CapMem change and even faster
 		// construction due to equality of config
 		EXPECT_LE(timer.get_ms(), 5);
@@ -136,7 +136,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.NoDifferentialConfig");
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// First run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -145,7 +145,7 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	    lola::vx::v3::AtomicNeuron::AnalogValue(123);
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Second run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -154,13 +154,13 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	    !config.neuron_block.atomic_neurons.front().leak.enable_multiplication;
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Third run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
 	{
 		hate::Timer timer;
-		grenade::vx::execution::run(executor, network_graph.get_graph(), input_map, initial_config);
+		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Fourth run: expect CapMem settling time
 		EXPECT_GE(timer.get_ms(), capmem_settling_time_ms);
 	}
@@ -203,7 +203,7 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 
 	auto const run_func = [&]() -> grenade::vx::signal_flow::OutputData {
 		return grenade::vx::execution::run(
-		    executor, network_graph.get_graph(), input_map, initial_config);
+		    executor, network_graph.get_graph(), initial_config, input_map);
 	};
 
 	hate::Timer timer;

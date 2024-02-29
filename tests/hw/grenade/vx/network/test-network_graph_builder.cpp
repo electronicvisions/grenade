@@ -104,7 +104,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const result = extract_neuron_spikes(result_map, network_graph);
 
@@ -210,7 +210,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const result = extract_neuron_spikes(result_map, network_graph);
 
@@ -342,7 +342,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 		auto const result = extract_neuron_spikes(result_map, network_graph);
 
@@ -510,7 +510,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const result = extract_neuron_spikes(result_map, network_graph);
 

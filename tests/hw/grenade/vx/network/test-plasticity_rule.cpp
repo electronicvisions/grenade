@@ -104,7 +104,7 @@ TEST(PlasticityRule, RawRecording)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const result = std::get<PlasticityRule::RawRecordingData>(
 	                        extract_plasticity_rule_recording_data(
@@ -462,10 +462,10 @@ TEST(PlasticityRule, TimedRecording)
 
 		// run graph with given inputs and return results
 		EXPECT_NO_THROW((grenade::vx::execution::run(
-		    executor, network_graph.get_graph(), inputs, chip_configs)));
+		    executor, network_graph.get_graph(), chip_configs, inputs)));
 
 		auto const result_map =
-		    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 		auto const recording_data = extract_plasticity_rule_recording_data(
 		    result_map, network_graph, plasticity_rule_descriptor);
@@ -694,7 +694,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 
 		// run graph with given inputs and return results
 		auto const result_map =
-		    execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+		    execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 		auto const result =
 		    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
@@ -790,7 +790,7 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	auto const routing_result = routing::PortfolioRouter{}(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 }
 
 TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
@@ -884,7 +884,7 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	auto const routing_result = routing::PortfolioRouter{}(network);
 	auto const network_graph = build_network_graph(network, routing_result);
 
-	execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 }
 
 TEST(PlasticityRule, WriteReadPPUSymbol)
@@ -972,7 +972,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID())->write_ppu_symbols;
 
 	auto const result =
-	    execution::run(executor, network_graph.get_graph(), inputs, chip_configs, hooks);
+	    execution::run(executor, network_graph.get_graph(), chip_configs, inputs, hooks);
 
 	EXPECT_EQ(result.read_ppu_symbols.at(0).at(common::ExecutionInstanceID()), expectation_symbols);
 }

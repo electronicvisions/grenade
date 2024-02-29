@@ -67,7 +67,7 @@ TEST(Addition, Single)
 	chip_configs[instance] = *chip;
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(executor, g, input_list, chip_configs);
+	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
 
 	EXPECT_EQ(result_map.data.size(), 1);
 

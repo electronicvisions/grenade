@@ -97,7 +97,7 @@ TEST(CADCRecording, General)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const result = extract_cadc_samples(result_map, network_graph);
 

@@ -81,7 +81,7 @@ signal_flow::OutputData run(
     execution::JITGraphExecutor::PlaybackHooks& playback_hooks)
 {
 	return grenade::vx::execution::run(
-	    executor, network_graph.get_graph(), input, config, playback_hooks);
+	    executor, network_graph.get_graph(), config, input, playback_hooks);
 }
 
 std::vector<signal_flow::OutputData> run(
@@ -96,7 +96,7 @@ std::vector<signal_flow::OutputData> run(
 	for (size_t i = 0; i < network_graphs.size(); i++) {
 		graphs.push_back(network_graphs[i].get().get_graph());
 	}
-	return grenade::vx::execution::run(executor, graphs, inputs, configs, playback_hooks);
+	return grenade::vx::execution::run(executor, graphs, configs, inputs, playback_hooks);
 }
 
 signal_flow::OutputData run(

@@ -108,8 +108,8 @@ private:
 	friend std::vector<signal_flow::OutputData> run(
 	    JITGraphExecutor& executor,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
 	    std::vector<std::reference_wrapper<ChipConfigs const>> const& configs,
+	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
 	    PlaybackHooks& playback_hooks);
 };
 

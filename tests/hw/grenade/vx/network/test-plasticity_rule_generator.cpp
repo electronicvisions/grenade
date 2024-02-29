@@ -203,7 +203,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 
 	// run graph with given inputs and return results
 	auto const result_map =
-	    grenade::vx::execution::run(executor, network_graph.get_graph(), inputs, chip_configs);
+	    grenade::vx::execution::run(executor, network_graph.get_graph(), chip_configs, inputs);
 
 	auto const recorded_data =
 	    std::get<PlasticityRule::TimedRecordingData>(extract_plasticity_rule_recording_data(

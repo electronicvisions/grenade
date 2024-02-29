@@ -65,7 +65,7 @@ std::vector<std::vector<signal_flow::Int8>> ReLU::run(
 	}
 	input_map.data[m_input_vertex] = timed_inputs;
 
-	auto const output_map = execution::run(executor, m_graph, input_map, configs);
+	auto const output_map = execution::run(executor, m_graph, configs, input_map);
 
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
