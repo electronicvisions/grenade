@@ -817,8 +817,8 @@ signal_flow::IODataMap ExecutionInstanceBuilder::post_process(
 			        },
 			        [&](stadls::vx::v3::ContainerTicket const& ticket) {
 				        m_local_data_output.read_ppu_symbols.resize(m_batch_entries.size());
-				        m_local_data_output.read_ppu_symbols.at(batch_index)
-				            .at(m_execution_instance)[name] =
+				        m_local_data_output.read_ppu_symbols.at(
+				            batch_index)[m_execution_instance][name] =
 				            dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(ticket.get());
 			        },
 			    },
