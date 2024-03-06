@@ -177,29 +177,33 @@ struct GENPYBIND(visible) PlasticityRule
 
 
 typedef common::TimedData<std::vector<std::vector<int8_t>>> _SingleEntryPerSynapseInt8
-    GENPYBIND(opaque(false));
+    GENPYBIND(opaque(false), expose_as(_SingleEntryPerSynapseInt8));
 typedef common::TimedData<std::vector<std::vector<uint8_t>>> _SingleEntryPerSynapseUInt8
-    GENPYBIND(opaque(false));
+    GENPYBIND(opaque(false), expose_as(_SingleEntryPerSynapseUInt8));
 typedef common::TimedData<std::vector<std::vector<int16_t>>> _SingleEntryPerSynapseInt16
-    GENPYBIND(opaque(false));
+    GENPYBIND(opaque(false), expose_as(_SingleEntryPerSynapseInt16));
 typedef common::TimedData<std::vector<std::vector<uint16_t>>> _SingleEntryPerSynapseUInt16
-    GENPYBIND(opaque(false));
-typedef common::TimedData<std::vector<int8_t>> _ArrayEntryInt8 GENPYBIND(opaque(false));
-typedef common::TimedData<std::vector<uint8_t>> _ArrayEntryUInt8 GENPYBIND(opaque(false));
-typedef common::TimedData<std::vector<int16_t>> _ArrayEntryInt16 GENPYBIND(opaque(false));
-typedef common::TimedData<std::vector<uint16_t>> _ArrayEntryUInt16 GENPYBIND(opaque(false));
+    GENPYBIND(opaque(false), expose_as(_SingleEntryPerSynapseUInt16));
+typedef common::TimedData<std::vector<int8_t>> _ArrayEntryInt8
+    GENPYBIND(opaque(false), expose_as(_ArrayEntryInt8));
+typedef common::TimedData<std::vector<uint8_t>> _ArrayEntryUInt8
+    GENPYBIND(opaque(false), expose_as(_ArrayEntryUInt8));
+typedef common::TimedData<std::vector<int16_t>> _ArrayEntryInt16
+    GENPYBIND(opaque(false), expose_as(_ArrayEntryInt16));
+typedef common::TimedData<std::vector<uint16_t>> _ArrayEntryUInt16
+    GENPYBIND(opaque(false), expose_as(_ArrayEntryUInt16));
 
 typedef common::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<int8_t>>>>
-    _SingleEntryPerNeuronInt8 GENPYBIND(opaque(false));
+    _SingleEntryPerNeuronInt8 GENPYBIND(opaque(false), expose_as(_SingleEntryPerNeuronInt8));
 typedef common::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint8_t>>>>
-    _SingleEntryPerNeuronUInt8 GENPYBIND(opaque(false));
+    _SingleEntryPerNeuronUInt8 GENPYBIND(opaque(false), expose_as(_SingleEntryPerNeuronUInt8));
 typedef common::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<int16_t>>>>
-    _SingleEntryPerNeuronInt16 GENPYBIND(opaque(false));
+    _SingleEntryPerNeuronInt16 GENPYBIND(opaque(false), expose_as(_SingleEntryPerNeuronInt16));
 typedef common::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint16_t>>>>
-    _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false));
+    _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false), expose_as(_SingleEntryPerNeuronUInt16));
 
 } // namespace grenade::vx::network
