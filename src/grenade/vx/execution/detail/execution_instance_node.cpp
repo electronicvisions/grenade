@@ -174,7 +174,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			usages_after[i - 1] = usages;
 		}
 
-		configs_visited.push_back(config);
+		configs_visited.push_back(std::move(config));
 
 		LOG4CXX_TRACE(
 		    logger, "operator(): Preprocessed local vertices for realtime section in "
@@ -273,7 +273,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	}
 
 	PlaybackPrograms program = PlaybackPrograms{
-	    .realtime = programs,
+	    .realtime = std::move(programs),
 	    .has_hook_around_realtime = has_hook_around_realtime,
 	    .has_plasticity = ppu_symbols.has_value()};
 
