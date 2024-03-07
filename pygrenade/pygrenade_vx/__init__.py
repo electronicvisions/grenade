@@ -1,8 +1,8 @@
 import pylogging as logger
-import pygrenade_vx.common
-import pygrenade_vx.execution
-import pygrenade_vx.signal_flow
-import pygrenade_vx.network
+from pygrenade_vx import common
+from pygrenade_vx import execution
+from pygrenade_vx import signal_flow
+from pygrenade_vx import network
 
 if logger.get_root().get_number_of_appenders() == 0:
     logger.reset()
