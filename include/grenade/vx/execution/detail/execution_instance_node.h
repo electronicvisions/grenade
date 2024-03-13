@@ -4,13 +4,13 @@
 #include <tbb/flow_graph.h>
 
 #include "grenade/vx/execution/detail/connection_state_storage.h"
-#include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/output_data.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
+#include "stadls/vx/v3/playback_program.h"
 
 namespace log4cxx {
 class Logger;
@@ -43,6 +43,22 @@ struct ExecutionInstanceNode
 	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
+
+	struct PeriodicCADCReadoutTimes
+	{
+		// Begin of the realtime section of the first realtime snippet, that uses periodic CADC
+		// recording. Matches roughly the time point of the first recorded CADC sample in each batch
+		// entry
+		std::vector<haldls::vx::v3::Timer::Value> time_zero;
+
+		// Begin of the realtime snippets that use cadc recording and are associated with the
+		// according ExecutionInstanceBuilder
+		std::vector<haldls::vx::v3::Timer::Value> interval_begin;
+
+		// End of the realtime snippets that use cadc recording and are associated with the
+		// according ExecutionInstanceBuilder
+		std::vector<haldls::vx::v3::Timer::Value> interval_end;
+	};
 
 private:
 	std::vector<signal_flow::OutputData>& data_maps;

@@ -299,6 +299,8 @@ std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_sampl
 auto& local_periodic_cadc_samples = std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ?
     periodic_cadc_samples_bot : periodic_cadc_samples_top);
 
+uint32_t periodic_cadc_readout_memory_offset = 0;
+
 void perform_periodic_read_recording(size_t const offset)
 {
 	using namespace libnux::vx;
@@ -339,19 +341,15 @@ void perform_periodic_read()
 {
 	using namespace libnux::vx;
 
-	uint32_t offset = 0;
-	uint32_t size = 0;
-
 	// instruction cache warming
-	perform_periodic_read_recording(offset);
+	perform_periodic_read_recording(periodic_cadc_readout_memory_offset);
 	status = grenade::vx::ppu::detail::Status::inside_periodic_read;
 	while (status != grenade::vx::ppu::detail::Status::stop_periodic_read) {
-		perform_periodic_read_recording(offset);
-		offset++;
-		size++;
+		perform_periodic_read_recording(periodic_cadc_readout_memory_offset);
+		periodic_cadc_readout_memory_offset++;
 	}
 
-	std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : periodic_cadc_samples_top) = size;
+	std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : periodic_cadc_samples_top) = periodic_cadc_readout_memory_offset;
 	asm volatile(
 	    "fxvinx 0, %[b0], %[i]\n"
 	    "sync\n"

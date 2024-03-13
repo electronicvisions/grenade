@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
@@ -57,6 +58,10 @@ public:
 	{
 		bool madc_recording;
 		bool event_recording;
+		halco::common::typed_array<
+		    std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>,
+		    halco::hicann_dls::vx::v3::HemisphereOnDLS>
+		    cadc_recording;
 	};
 
 	/**
@@ -92,7 +97,12 @@ public:
 	 * @return signal_flow::OutputData of locally computed results
 	 */
 	signal_flow::OutputData post_process(
-	    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime) SYMBOL_VISIBLE;
+	    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime,
+	    std::vector<halco::common::typed_array<
+	        std::optional<stadls::vx::v3::ContainerTicket>,
+	        halco::hicann_dls::vx::PPUOnDLS>> const& cadc_readout_tickets,
+	    std::optional<ExecutionInstanceNode::PeriodicCADCReadoutTimes> const&
+	        periodic_cadc_readout_times) SYMBOL_VISIBLE;
 	void post_process(signal_flow::Graph::vertex_descriptor const vertex) SYMBOL_VISIBLE;
 
 	/**
@@ -126,6 +136,8 @@ private:
 	typedef halco::common::typed_array<bool, halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	    ticket_request_type;
 	ticket_request_type m_ticket_requests;
+
+	ExecutionInstanceNode::PeriodicCADCReadoutTimes m_periodic_cadc_readout_times;
 
 	struct BatchEntry
 	{

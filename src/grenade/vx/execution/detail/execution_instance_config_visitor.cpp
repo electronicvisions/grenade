@@ -15,11 +15,39 @@
 #include "hate/variant.h"
 #include "lola/vx/ppu.h"
 #include <filesystem>
+#include <iterator>
 #include <vector>
 #include <boost/range/combine.hpp>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
+
+ExecutionInstanceConfigVisitor::PpuUsage::PpuUsage(
+    ExecutionInstanceConfigVisitor::PpuUsage&& other) :
+    has_periodic_cadc_readout(other.has_periodic_cadc_readout),
+    has_cadc_readout(other.has_cadc_readout),
+    plasticity_rules(std::move(other.plasticity_rules))
+{}
+
+ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsage::operator=(
+    ExecutionInstanceConfigVisitor::PpuUsage&& other)
+{
+	has_periodic_cadc_readout = other.has_periodic_cadc_readout;
+	has_cadc_readout = other.has_cadc_readout;
+	plasticity_rules = std::move(other.plasticity_rules);
+	return *this;
+}
+
+ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsage::operator+=(
+    ExecutionInstanceConfigVisitor::PpuUsage&& other)
+{
+	has_periodic_cadc_readout = has_periodic_cadc_readout || other.has_periodic_cadc_readout;
+	has_cadc_readout = has_cadc_readout || other.has_cadc_readout;
+	plasticity_rules.insert(
+	    plasticity_rules.begin(), std::make_move_iterator(other.plasticity_rules.begin()),
+	    std::make_move_iterator(other.plasticity_rules.end()));
+	return *this;
+}
 
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     signal_flow::Graph const& graph,
@@ -28,11 +56,11 @@ ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_config(chip_config),
-    m_has_periodic_cadc_readout(false)
+    m_has_periodic_cadc_readout(false),
+    m_has_cadc_readout(false)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
-	m_requires_ppu = false;
 	m_used_madc = false;
 
 	/** Silence everything which is not set in the graph. */
@@ -97,9 +125,9 @@ void ExecutionInstanceConfigVisitor::process(
 		}
 	}
 
-	m_requires_ppu = true;
 	m_has_periodic_cadc_readout =
 	    data.get_mode() == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic;
+	m_has_cadc_readout = true;
 }
 
 template <>
@@ -331,7 +359,6 @@ void ExecutionInstanceConfigVisitor::process(
 	}
 	// store on-PPU handles for later PPU source code generation
 	m_plasticity_rules.push_back({vertex, data, std::move(synapses), std::move(neurons)});
-	m_requires_ppu = true;
 }
 
 template <>
@@ -435,7 +462,10 @@ void ExecutionInstanceConfigVisitor::process(
 	}
 }
 
-void ExecutionInstanceConfigVisitor::pre_process()
+std::tuple<
+    ExecutionInstanceConfigVisitor::PpuUsage,
+    halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>>
+ExecutionInstanceConfigVisitor::operator()()
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigVisitor");
 	auto const execution_instance_vertex =
@@ -454,93 +484,12 @@ void ExecutionInstanceConfigVisitor::pre_process()
 		    },
 		    m_graph.get_vertex_property(vertex));
 	}
-}
 
-std::tuple<lola::vx::v3::Chip&, std::optional<lola::vx::v3::PPUElfFile::symbols_type>>
-ExecutionInstanceConfigVisitor::operator()()
-{
-	log4cxx::LoggerPtr const logger =
-	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigBuilder.generate()");
-
-	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v3;
-	using namespace haldls::vx::v3;
-	using namespace stadls::vx::v3;
-	using namespace lola::vx::v3;
-
-	pre_process();
-
-	hate::Timer ppu_timer;
-	std::optional<PPUElfFile::symbols_type> ppu_symbols;
-	if (m_requires_ppu) {
-		PPUElfFile::Memory ppu_program;
-		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
-		PPUMemoryWordOnPPU ppu_location_coord;
-		PPUMemoryBlockOnPPU ppu_status_coord;
-		{
-			PPUProgramGenerator ppu_program_generator;
-			for (auto const& [descriptor, rule, synapses, neurons] : m_plasticity_rules) {
-				ppu_program_generator.add(descriptor, rule, synapses, neurons);
-			}
-			ppu_program_generator.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
-			CachingCompiler compiler;
-			auto const program = compiler.compile(ppu_program_generator.done());
-			ppu_program = program.memory;
-			ppu_symbols = program.symbols;
-			ppu_neuron_reset_mask_coord =
-			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("neuron_reset_mask").coordinate);
-			ppu_location_coord =
-			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("ppu").coordinate).toMin();
-			ppu_status_coord = std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate);
-		}
-		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
-
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			// zero-initialize all symbols (esp. bss)
-			assert(ppu_symbols);
-			for (auto const& [_, symbol] : *ppu_symbols) {
-				std::visit(
-				    hate::overloaded{
-				        [&](PPUMemoryBlockOnPPU const& coordinate) {
-					        PPUMemoryBlock config(coordinate.toPPUMemoryBlockSize());
-					        m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
-					            coordinate, config);
-				        },
-				        [&](ExternalPPUMemoryBlockOnFPGA const& coordinate) {
-					        ExternalPPUMemoryBlock config(
-					            coordinate.toExternalPPUMemoryBlockSize());
-					        m_config.external_ppu_memory.set_subblock(
-					            coordinate.toMin().value(), config);
-				        }},
-				    symbol.coordinate);
-			}
-
-			// set internal PPU program
-			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
-			    PPUMemoryBlockOnPPU(
-			        PPUMemoryWordOnPPU(),
-			        PPUMemoryWordOnPPU(ppu_program.internal.get_words().size() - 1)),
-			    ppu_program.internal);
-
-			// set external PPU program
-			if (ppu_program.external) {
-				m_config.external_ppu_memory.set_subblock(0, ppu_program.external.value());
-			}
-
-			// set neuron reset mask
-			halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;
-			for (auto const col : iter_all<NeuronColumnOnDLS>()) {
-				values[col] = m_enabled_neuron_resets[AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS())
-				                                          .toNeuronResetOnDLS()];
-			}
-			auto const neuron_reset_mask = to_vector_unit_row(values);
-			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
-			    ppu_neuron_reset_mask_coord, neuron_reset_mask);
-			m_config.ppu_memory[ppu.toPPUMemoryOnDLS()].set_word(
-			    ppu_location_coord, PPUMemoryWord::Value(ppu.value()));
-		}
-	}
-	return {m_config, ppu_symbols};
+	ExecutionInstanceConfigVisitor::PpuUsage ppu_usage;
+	ppu_usage.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
+	ppu_usage.has_cadc_readout = m_has_cadc_readout;
+	ppu_usage.plasticity_rules = std::move(m_plasticity_rules);
+	return {std::move(ppu_usage), std::move(m_enabled_neuron_resets)};
 }
 
 } // namespace grenade::vx::execution::detail

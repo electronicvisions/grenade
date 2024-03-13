@@ -12,6 +12,7 @@
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/output_data.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "halco/hicann-dls/vx/hemisphere.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
 #include "haldls/vx/v3/fpga.h"
@@ -347,9 +348,9 @@ void ExecutionInstanceBuilder::process(
 				size_t offset = ppu_vector_alignment;
 				// get samples
 				auto& samples = sample_batches.at(batch_index);
-				samples.resize(num_samples);
+				common::Time time_0;
 				for (size_t i = 0; i < num_samples; ++i) {
-					auto& local_samples = samples.at(i);
+					common::TimedData<std::vector<signal_flow::Int8>> local_samples;
 					uint64_t time = 0;
 					for (size_t j = 0; j < 8; ++j) {
 						time |=
@@ -358,6 +359,13 @@ void ExecutionInstanceBuilder::process(
 					}
 					local_samples.time =
 					    common::Time(time / 2); // FPGA clock 125MHz vs. PPU clock 250MHz
+					// Since there's no time synchronisation between PPUs and ChipTime, we assume
+					// the first received sample happens at time 0 and calculate the time of later
+					// samples from that reference point via the given PPU-local counter value.
+					if (i == 0) {
+						time_0 = local_samples.time;
+					}
+					local_samples.time -= time_0;
 					offset += ppu_vector_alignment;
 					auto const get_index = [](auto const& column) {
 						size_t const j = column / 2;
@@ -367,25 +375,26 @@ void ExecutionInstanceBuilder::process(
 						return index;
 					};
 					local_samples.data.resize(data.output().size);
-					for (size_t j = 0; auto const& column_collection : columns) {
-						for (auto const& column : column_collection) {
-							local_samples.data.at(j) =
-							    signal_flow::Int8(local_block.at(offset + get_index(column.value()))
-							                          .get_value()
-							                          .value());
-							j++;
+					Timer::Value allowed_interval_begin =
+					    m_periodic_cadc_readout_times.interval_begin[batch_index] -
+					    m_periodic_cadc_readout_times.time_zero[batch_index];
+					Timer::Value allowed_interval_end =
+					    m_periodic_cadc_readout_times.interval_end[batch_index] -
+					    m_periodic_cadc_readout_times.time_zero[batch_index];
+					if (local_samples.time.toTimerOnFPGAValue() >= allowed_interval_begin &&
+					    local_samples.time.toTimerOnFPGAValue() < allowed_interval_end) {
+						for (size_t j = 0; auto const& column_collection : columns) {
+							for (auto const& column : column_collection) {
+								local_samples.data.at(j) = signal_flow::Int8(
+								    local_block.at(offset + get_index(column.value()))
+								        .get_value()
+								        .value());
+								j++;
+							}
 						}
+						samples.push_back(local_samples);
 					}
 					offset += 256;
-				}
-				// Since there's no time synchronisation between PPUs and ChipTime, we assume the
-				// first received sample happens at time 0 and calculate the time of later samples
-				// from that reference point via the given PPU-local counter value.
-				if (!samples.empty()) {
-					auto const time_0 = samples.at(0).time;
-					for (auto& entry : samples) {
-						entry.time -= time_0;
-					}
 				}
 			}
 		}
@@ -717,13 +726,41 @@ ExecutionInstanceBuilder::Usages ExecutionInstanceBuilder::pre_process()
 			m_post_vertices.push_back(vertex);
 		}
 	}
-	return ExecutionInstanceBuilder::Usages{.madc_recording = m_madc_readout_vertex.has_value(), .event_recording = m_event_output_vertex.has_value() || m_madc_readout_vertex.has_value()};
+	halco::common::typed_array<
+	    std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>,
+	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
+	    cadc_recording;
+	if (m_cadc_readout_mode) {
+		for (auto const hemisphere :
+		     halco::common::iter_all<halco::hicann_dls::vx::v3::HemisphereOnDLS>()) {
+			if (m_ticket_requests[hemisphere]) {
+				cadc_recording[hemisphere] =
+				    std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>(
+				        {*m_cadc_readout_mode});
+			}
+		}
+	}
+	return ExecutionInstanceBuilder::Usages{
+	    .madc_recording = m_madc_readout_vertex.has_value(),
+	    .event_recording = m_event_output_vertex.has_value() || m_madc_readout_vertex.has_value(),
+	    .cadc_recording = cadc_recording};
 }
 
 signal_flow::OutputData ExecutionInstanceBuilder::post_process(
-    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime)
+    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime,
+    std::vector<halco::common::typed_array<
+        std::optional<stadls::vx::v3::ContainerTicket>,
+        halco::hicann_dls::vx::PPUOnDLS>> const& cadc_readout_tickets,
+    std::optional<ExecutionInstanceNode::PeriodicCADCReadoutTimes> const&
+        periodic_cadc_readout_times)
 {
 	m_chunked_program = realtime;
+	for (size_t i = 0; i < m_batch_entries.size(); i++) {
+		m_batch_entries[i].m_extmem_result = cadc_readout_tickets.at(i);
+	}
+	if (periodic_cadc_readout_times) {
+		m_periodic_cadc_readout_times = periodic_cadc_readout_times.value();
+	}
 
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
@@ -871,7 +908,8 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		builder.merge_back(m_hooks.inside_realtime_end);
 		builder.merge_back(m_hooks.post_realtime);
 		PlaybackProgramBuilder empty_PPB;
-		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> empty_realtime_column;
+		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> empty_realtime_column(
+		    m_batch_entries.size());
 		return {
 		    std::move(empty_PPB), std::move(builder), std::move(empty_realtime_column),
 		    std::move(empty_PPB)};
@@ -1081,7 +1119,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
 			if (*m_cadc_readout_mode ==
-			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
+			        signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic &&
+			    !std::any_of(
+			        before.cadc_recording.begin(), before.cadc_recording.end(),
+			        [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> modes) {
+				        return modes.contains(
+				            signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
+			        })) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
 					builder.write(
 					    current_time, PPUMemoryWordOnDLS(ppu_status_coord, ppu),
@@ -1167,7 +1211,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
 			if (*m_cadc_readout_mode ==
-			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
+			        signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic &&
+			    !std::any_of(
+			        after.cadc_recording.begin(), after.cadc_recording.end(),
+			        [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> modes) {
+				        return modes.contains(
+				            signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
+			        })) {
 				builder.copy(ppu_command_stop_periodic_read.builder + current_time);
 				current_time += ppu_command_stop_periodic_read.result;
 			}
@@ -1186,58 +1236,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			config.set_enable_event_recording(false);
 			builder.write(current_time, EventRecordingConfigOnFPGA(), config);
 			current_time += Timer::Value(2);
-		}
-		// readout extmem data from periodic CADC readout
-		if (has_cadc_readout) {
-			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode ==
-			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
-				InstructionTimeoutConfig instruction_timeout;
-				instruction_timeout.set_value(InstructionTimeoutConfig::Value(
-				    100000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
-				ppu_finish_builder.write(
-				    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
-				ppu_finish_builder.copy_back(wait_for_ppu_command_idle);
-				ppu_finish_builder.write(
-				    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(),
-				    InstructionTimeoutConfig());
-				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					if (!m_ticket_requests[ppu.toHemisphereOnDLS()]) {
-						continue;
-					}
-					assert(ppu_periodic_cadc_readout_samples_coord[ppu]);
-
-					// calculate aproximate number of expected samples
-					size_t expected_size = 0;
-					// lower bound on sample duration -> upper bound on sample rate
-					size_t const approx_sample_duration =
-					    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
-					// get experiment duration either via runtime or via last spike time
-					if (!m_input_list.runtime.empty()) {
-						expected_size = m_input_list.runtime.at(b).at(m_execution_instance) /
-						                approx_sample_duration;
-					} else if (m_event_input_vertex) {
-						auto const& spikes =
-						    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-						        m_local_data.data.at(*m_event_input_vertex))
-						        .at(b);
-						if (!spikes.empty()) {
-							expected_size = spikes.back().time / approx_sample_duration;
-						}
-					}
-					// add a sample as constant margin for error
-					expected_size += 1;
-					// cap at maximal possible amount of samples
-					expected_size = std::min(expected_size, static_cast<size_t>(100));
-
-					batch_entry.m_extmem_result[ppu] =
-					    ppu_finish_builder.read(ExternalPPUMemoryBlockOnFPGA(
-					        ppu_periodic_cadc_readout_samples_coord[ppu]->toMin(),
-					        ExternalPPUMemoryByteOnFPGA(
-					            ppu_periodic_cadc_readout_samples_coord[ppu]->toMin() + 128 +
-					            ((256 + 128) * expected_size) - 1)));
-				}
-			}
 		}
 		// wait until scheduler finished, readout stats
 		if (enable_ppu && m_has_plasticity_rule) {

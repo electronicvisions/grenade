@@ -24,6 +24,29 @@ namespace grenade::vx::execution::detail {
 class ExecutionInstanceConfigVisitor
 {
 public:
+	struct PpuUsage
+	{
+		bool has_periodic_cadc_readout = false;
+		bool has_cadc_readout = false;
+		std::vector<std::tuple<
+		    signal_flow::Graph::vertex_descriptor,
+		    signal_flow::vertex::PlasticityRule,
+		    std::vector<
+		        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
+		    std::vector<
+		        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
+		    plasticity_rules;
+
+		PpuUsage() = default;
+		PpuUsage(PpuUsage&& other);
+		PpuUsage& operator=(PpuUsage&& other);
+
+		/**
+		 * Order has_periodic_cadc_readout and concatenate plasticity_rules
+		 */
+		PpuUsage& operator+=(PpuUsage&& other);
+	};
+
 	/**
 	 * Construct visitor.
 	 * @param graph Graph to use for locality and property lookup
@@ -37,10 +60,11 @@ public:
 
 	/**
 	 * Perform visit operation and generate initial configuration.
-	 * @return Reference to altered chip object and optional PPU program
-	 * symbols
+	 * @return PpuUsage
 	 */
-	std::tuple<lola::vx::v3::Chip&, std::optional<lola::vx::v3::PPUElfFile::symbols_type>>
+	std::tuple<
+	    PpuUsage,
+	    halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>>
 	operator()() SYMBOL_VISIBLE;
 
 private:
@@ -51,8 +75,8 @@ private:
 
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
-	bool m_requires_ppu;
 	bool m_has_periodic_cadc_readout;
+	bool m_has_cadc_readout;
 	bool m_used_madc;
 
 	std::vector<std::tuple<
