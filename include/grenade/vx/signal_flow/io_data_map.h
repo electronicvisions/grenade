@@ -59,6 +59,13 @@ struct GENPYBIND(visible) IODataMap
 	std::vector<std::map<common::ExecutionInstanceID, common::Time>> runtime;
 
 	/**
+	 * Minimal waiting time between batch entries.
+	 * For the case of multiple realtime columns (multiple snippets per batch entry),
+	 * only the `inter_batch_entry_wait` of the last realtime column will be processed.
+	 */
+	std::map<common::ExecutionInstanceID, common::Time> inter_batch_entry_wait;
+
+	/**
 	 * Optional time information of performed execution to be filled by executor.
 	 */
 	std::optional<ExecutionTimeInfo> execution_time_info;

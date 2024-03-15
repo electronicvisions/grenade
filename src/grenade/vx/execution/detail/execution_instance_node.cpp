@@ -262,6 +262,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 				assemble_builder.merge_back(realtime_columns[0].stop_ppu);
 			}
 		}
+		if (input_data_maps[input_data_maps.size() - 1].get().inter_batch_entry_wait.contains(
+		        execution_instance)) {
+			assemble_builder.block_until(
+			    TimerOnDLS(), config_time + input_data_maps[input_data_maps.size() - 1]
+			                                    .get()
+			                                    .inter_batch_entry_wait.at(execution_instance)
+			                                    .toTimerOnFPGAValue());
+		}
 		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga()) >
 		    stadls::vx::playback_memory_size_to_fpga) {
 			programs.push_back(std::move(final_builder.done()));
