@@ -231,7 +231,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			assemble_builder.merge_back(arm_madc);
 			assemble_builder.merge_back(std::move(program_builder.done()));
 			assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-			programs.push_back(std::move(assemble_builder.done()));
 		} else {
 			// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
 			if (i == 0) {
