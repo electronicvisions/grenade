@@ -1,0 +1,22 @@
+#pragma once
+
+#include "grenade/vx/network/abstract/multicompartment_hardware_constraint.h"
+#include "grenade/vx/network/abstract/multicompartment_hardware_resource.h"
+#include "grenade/vx/network/abstract/property.h"
+
+namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+
+struct Environment;
+struct CompartmentOnNeuron;
+
+// Mechanism Base-Class
+struct GENPYBIND(visible) SYMBOL_VISIBLE Mechanism : public Property<Mechanism>
+{
+	virtual bool conflict(Mechanism const& other) const = 0;
+	virtual HardwareResourcesWithConstraints get_hardware(
+	    CompartmentOnNeuron const& compartment, Environment const& environment) const = 0;
+	virtual bool valid() const = 0;
+};
+
+
+} // namespace grenade::vx::network
