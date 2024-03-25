@@ -2,6 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/detail/constructor_transform.h"
 #include "grenade/vx/network/abstract/detail/graph.h"
+#include "grenade/vx/network/abstract/detail/property_holder.h"
 #include "grenade/vx/network/abstract/edge_on_graph.h"
 #include "grenade/vx/network/abstract/property.h"
 #include "grenade/vx/network/abstract/vertex_on_graph.h"
@@ -346,14 +347,12 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
 
 private:
 	Backend m_graph;
-	std::unordered_map<VertexDescriptor, Holder<Vertex>> m_vertices;
-	std::unordered_map<EdgeDescriptor, Holder<Edge>> m_edges;
+	std::unordered_map<VertexDescriptor, detail::PropertyHolder<Vertex, Holder>> m_vertices;
+	std::unordered_map<EdgeDescriptor, detail::PropertyHolder<Edge, Holder>> m_edges;
 
 	void check_contains(VertexDescriptor const& descriptor, char const* description) const;
 	void check_contains(EdgeDescriptor const& descriptor, char const* description) const;
 
-	static_assert(std::is_base_of_v<grenade::vx::network::Property<Vertex>, Vertex>);
-	static_assert(std::is_base_of_v<grenade::vx::network::Property<Edge>, Edge>);
 	static_assert(std::is_base_of_v<VertexOnGraph<VertexDescriptor, Backend>, VertexDescriptor>);
 	static_assert(std::is_base_of_v<EdgeOnGraph<EdgeDescriptor, Backend>, EdgeDescriptor>);
 	static_assert(detail::IsSupportedGraph<Backend>::value);

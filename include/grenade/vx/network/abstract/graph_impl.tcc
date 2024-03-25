@@ -104,7 +104,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
     Vertex const& vertex)
 {
 	VertexDescriptor const descriptor(boost::add_vertex(m_graph));
-	m_vertices.emplace(descriptor, vertex.copy());
+	m_vertices.emplace(descriptor, vertex);
 	return descriptor;
 }
 
@@ -122,7 +122,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
     Vertex&& vertex)
 {
 	VertexDescriptor const descriptor(boost::add_vertex(m_graph));
-	m_vertices.emplace(descriptor, vertex.move());
+	m_vertices.emplace(descriptor, std::move(vertex));
 	return descriptor;
 }
 
@@ -151,7 +151,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 		   << ") and graph doesn't support multiple edges between the same vertices.";
 		throw std::runtime_error(ss.str());
 	}
-	m_edges.emplace(descriptor, edge.copy());
+	m_edges.emplace(descriptor, edge);
 	return descriptor;
 }
 
@@ -180,7 +180,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 		   << ") and graph doesn't support multiple edges between the same vertices.";
 		throw std::runtime_error(ss.str());
 	}
-	m_edges.emplace(descriptor, edge.move());
+	m_edges.emplace(descriptor, std::move(edge));
 	return descriptor;
 }
 
@@ -313,11 +313,7 @@ Vertex const& Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescri
     VertexDescriptor const& descriptor) const
 {
 	check_contains(descriptor, "get");
-	auto const& vertex = m_vertices.at(descriptor);
-	if (!vertex) {
-		throw std::logic_error("Unexpected access to moved-from object.");
-	}
-	return *vertex;
+	return *m_vertices.at(descriptor);
 }
 
 template <
@@ -333,7 +329,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
     VertexDescriptor const& descriptor, Vertex const& vertex)
 {
 	check_contains(descriptor, "set");
-	m_vertices.at(descriptor) = vertex.copy();
+	m_vertices.at(descriptor) = vertex;
 }
 
 template <
@@ -349,7 +345,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
     VertexDescriptor const& descriptor, Vertex&& vertex)
 {
 	check_contains(descriptor, "set");
-	m_vertices.at(descriptor) = vertex.move();
+	m_vertices.at(descriptor) = std::move(vertex);
 }
 
 template <
@@ -365,11 +361,7 @@ Edge const& Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescript
     EdgeDescriptor const& descriptor) const
 {
 	check_contains(descriptor, "get");
-	auto const& edge = m_edges.at(descriptor);
-	if (!edge) {
-		throw std::logic_error("Unexpected access to moved-from object.");
-	}
-	return *edge;
+	return *m_edges.at(descriptor);
 }
 
 template <
@@ -385,7 +377,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
     EdgeDescriptor const& descriptor, Edge const& edge)
 {
 	check_contains(descriptor, "set");
-	m_edges.at(descriptor) = edge.copy();
+	m_edges.at(descriptor) = edge;
 }
 
 template <
@@ -401,7 +393,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
     EdgeDescriptor const& descriptor, Edge&& edge)
 {
 	check_contains(descriptor, "set");
-	m_edges.at(descriptor) = edge.move();
+	m_edges.at(descriptor) = std::move(edge);
 }
 
 template <
