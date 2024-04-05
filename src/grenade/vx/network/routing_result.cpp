@@ -48,7 +48,7 @@ std::ostream& operator<<(
 	for (auto const& [descriptor, labels] : result.background_spike_source_labels) {
 		os << '\t' << descriptor << '\n';
 		for (auto const& [hemisphere, label] : labels) {
-			os << "\t\t" << hemisphere << ": [" << hate::join_string(label, ", ") << "]\n";
+			os << "\t\t" << hemisphere << ": [" << hate::join(label, ", ") << "]\n";
 		}
 	}
 

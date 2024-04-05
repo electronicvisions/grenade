@@ -172,8 +172,7 @@ std::optional<std::vector<SynapseDriverOnDLSManager::Allocation>> SynapseDriverO
 		// log label space to explore
 		LOG4CXX_DEBUG(
 		    m_logger, "solve(): Label space to explore:\n\t["
-		                  << hate::join_string(label_space.begin(), label_space.end(), ", ")
-		                  << "] (" << label_space.empty() << " "
+		                  << hate::join(label_space, ", ") << "] (" << label_space.empty() << " "
 		                  << (label_space.empty() ? 0
 		                                          : std::accumulate(
 		                                                label_space.begin(), label_space.end(),

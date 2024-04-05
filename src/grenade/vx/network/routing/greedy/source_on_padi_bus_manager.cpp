@@ -48,7 +48,7 @@ std::ostream& operator<<(std::ostream& os, SourceOnPADIBusManager::Partition::Gr
 {
 	os << "Group(\n";
 	std::stringstream ss;
-	ss << hate::join_string(config.sources.begin(), config.sources.end(), ", ") << "\n";
+	ss << hate::join(config.sources, ", ") << "\n";
 	ss << config.allocation_request;
 	os << hate::indent(ss.str(), "\t") << "\n";
 	os << ")";

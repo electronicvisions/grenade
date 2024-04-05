@@ -367,9 +367,7 @@ void perform_periodic_read()
 		sources.push_back(inja::render(source_template, parameters));
 	}
 
-	LOG4CXX_TRACE(
-	    logger, "Generated PPU program sources:\n"
-	                << hate::join_string(sources.begin(), sources.end(), "\n\n") << ".");
+	LOG4CXX_TRACE(logger, "Generated PPU program sources:\n" << hate::join(sources, "\n\n") << ".");
 	LOG4CXX_TRACE(logger, "Generated PPU program sources in " << timer.print() << ".");
 	return sources;
 }

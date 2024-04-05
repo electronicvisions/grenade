@@ -535,9 +535,7 @@ bool NetworkGraph::valid() const
 					        neuron_post) == compartment_neurons_post.end()) {
 						LOG4CXX_ERROR(
 						    logger, "Abstract network compartment ("
-						                << hate::join_string(
-						                       compartment_neurons_post.begin(),
-						                       compartment_neurons_post.end(), ", ")
+						                << hate::join(compartment_neurons_post, ", ")
 						                << ") doesn't contain target atomic neuroni ("
 						                << neuron_post << ").");
 						return false;

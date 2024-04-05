@@ -18,7 +18,7 @@ bool ConnectionToHardwareRoutes::operator!=(ConnectionToHardwareRoutes const& ot
 std::ostream& operator<<(std::ostream& os, ConnectionToHardwareRoutes const& routes)
 {
 	os << "ConnectionToHardwareRoutes("
-	   << hate::join_string(routes.atomic_neurons_on_target_compartment, ", ") << ")";
+	   << hate::join(routes.atomic_neurons_on_target_compartment, ", ") << ")";
 	return os;
 }
 

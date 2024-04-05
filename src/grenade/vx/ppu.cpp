@@ -349,8 +349,7 @@ Compiler::Program Compiler::compile(std::vector<std::string> sources)
 
 	std::stringstream ss;
 	ss << "cd " << temporary.get_path() << " && ";
-	ss << name << " "
-	   << hate::join_string(options_before_source.begin(), options_before_source.end(), " ") << " ";
+	ss << name << " " << hate::join(options_before_source, " ") << " ";
 	for (auto const& source : source_paths) {
 		std::filesystem::path path(source);
 		if (path.is_absolute()) {
@@ -359,7 +358,7 @@ Compiler::Program Compiler::compile(std::vector<std::string> sources)
 			ss << "../" / path << " ";
 		}
 	}
-	ss << hate::join_string(options_after_source.begin(), options_after_source.end(), " ") << " -o"
+	ss << hate::join(options_after_source, " ") << " -o"
 	   << "program.bin";
 	ss << " > "
 	   << "compile_log"

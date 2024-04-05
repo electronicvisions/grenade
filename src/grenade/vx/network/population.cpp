@@ -61,7 +61,7 @@ std::ostream& operator<<(std::ostream& os, Population::Neuron::Compartment const
 	os << "\n";
 	os << "\treceptors:\n";
 	for (auto const& receptor : config.receptors) {
-		os << "\t\t[" << hate::join_string(receptor.begin(), receptor.end(), ", ") << "]\n";
+		os << "\t\t[" << hate::join(receptor, ", ") << "]\n";
 	}
 	os << ")";
 	return os;

@@ -201,7 +201,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::RawRecordingData cons
 	os << "RawRecordingData(data:\n";
 	for (size_t i = 0; i < data.data.size(); ++i) {
 		os << "\tbatch entry " << i << ":\n";
-		os << "\t\t" << hate::join_string(data.data.at(i), ", ") << "\n";
+		os << "\t\t" << hate::join(data.data.at(i), ", ") << "\n";
 	}
 	os << ")";
 	return os;
@@ -222,7 +222,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 						    os << "\t\t\t" << dd.at(b).at(s).time << "\n";
 						    std::vector<intmax_t> copy(
 						        dd.at(b).at(s).data.begin(), dd.at(b).at(s).data.end());
-						    os << "\t\t\t" << hate::join_string(copy, ", ") << "\n";
+						    os << "\t\t\t" << hate::join(copy, ", ") << "\n";
 					    }
 				    }
 			    },
@@ -241,7 +241,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 						    os << "\t\t\t" << dd.at(b).at(s).time << "\n";
 						    std::vector<intmax_t> copy(
 						        dd.at(b).at(s).data.begin(), dd.at(b).at(s).data.end());
-						    os << "\t\t\t" << hate::join_string(copy, ", ") << "\n";
+						    os << "\t\t\t" << hate::join(copy, ", ") << "\n";
 					    }
 				    }
 			    },
@@ -259,7 +259,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 					    os << "\t\t\t" << dd.at(b).at(s).time << "\n";
 					    std::vector<intmax_t> copy(
 					        dd.at(b).at(s).data.begin(), dd.at(b).at(s).data.end());
-					    os << "\t\t\t" << hate::join_string(copy, ", ") << "\n";
+					    os << "\t\t\t" << hate::join(copy, ", ") << "\n";
 				    }
 			    }
 		    },
