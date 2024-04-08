@@ -21,35 +21,26 @@ bool Network::ExecutionInstance::operator!=(Network::ExecutionInstance const& ot
 
 std::ostream& operator<<(std::ostream& os, Network::ExecutionInstance const& execution_instance)
 {
-	os << "ExecutionInstance(\n";
-	os << "\tpopulations:\n";
-	{
-		std::vector<std::string> pops;
-		for (auto const& [descriptor, population] : execution_instance.populations) {
-			std::stringstream ss;
-			ss << descriptor << ": ";
-			std::visit([&ss](auto const& pop) { ss << pop; }, population);
-			pops.push_back(ss.str());
-		}
-		os << hate::indent(hate::join_string(pops.begin(), pops.end(), "\n"), "\t\t");
-		os << "\tprojections:\n";
+	hate::IndentingOstream ios(os);
+	ios << "ExecutionInstance(\n";
+	ios << hate::Indentation("\t");
+	ios << "populations:\n";
+	ios << hate::Indentation("\t\t");
+	for (auto const& [descriptor, population] : execution_instance.populations) {
+		ios << descriptor << ": ";
+		std::visit([&ios](auto const& pop) { ios << pop; }, population);
 	}
-	{
-		std::stringstream ss;
-		for (auto const& [descriptor, projection] : execution_instance.projections) {
-			ss << descriptor << ": " << projection << "\n";
-		}
-		os << hate::indent(ss.str(), "\t\t");
-		os << "\tplasticity rules:\n";
+	ios << hate::Indentation("\t") << "projections:\n";
+	ios << hate::Indentation("\t\t");
+	for (auto const& [descriptor, projection] : execution_instance.projections) {
+		ios << descriptor << ": " << projection << "\n";
 	}
-	{
-		std::stringstream ss;
-		for (auto const& [descriptor, rule] : execution_instance.plasticity_rules) {
-			ss << descriptor << ": " << rule << "\n";
-		}
-		os << hate::indent(ss.str(), "\t\t");
+	ios << hate::Indentation("\t") << "plasticity rules:\n";
+	ios << hate::Indentation("\t\t");
+	for (auto const& [descriptor, rule] : execution_instance.plasticity_rules) {
+		ios << descriptor << ": " << rule << "\n";
 	}
-	os << "\n)";
+	ios << hate::Indentation() << "\n)";
 	return os;
 }
 
@@ -69,20 +60,19 @@ bool Network::operator!=(Network const& other) const
 
 std::ostream& operator<<(std::ostream& os, Network const& network)
 {
-	os << "Network(\n";
+	hate::IndentingOstream ios(os);
+	ios << "Network(\n" << hate::Indentation("\t");
 	for (auto [id, execution_instance] : network.execution_instances) {
-		os << "\t" << id << ":\n";
-		std::stringstream ss;
-		ss << execution_instance;
-		os << hate::indent(ss.str(), "\t") << "\n";
+		ios << id << ":\n";
+		ios << execution_instance;
+		ios << "\n";
 	}
 	for (auto const& [id, projection] : network.inter_execution_instance_projections) {
-		os << "\t" << id << ":\n";
-		std::stringstream ss;
-		ss << projection;
-		os << hate::indent(ss.str(), "\t") << "\n";
+		ios << id << ":\n";
+		ios << projection;
+		ios << "\n";
 	}
-	os << ")";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 

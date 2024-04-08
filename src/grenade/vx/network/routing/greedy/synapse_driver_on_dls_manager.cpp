@@ -60,15 +60,15 @@ std::ostream& operator<<(
 
 std::ostream& operator<<(std::ostream& os, SynapseDriverOnDLSManager::Allocation const& config)
 {
-	os << "Allocation(\n";
-	os << "\tsynapse_drivers:\n";
-	std::stringstream ss;
+	hate::IndentingOstream ios(os);
+	ios << "Allocation(\n";
+	ios << hate::Indentation("\t") << "synapse_drivers:\n";
+	ios << hate::Indentation("\t\t");
 	for (auto const& [padi_bus, allocation] : config.synapse_drivers) {
-		ss << padi_bus << ": " << allocation << "\n";
+		ios << padi_bus << ": " << allocation << "\n";
 	}
-	os << hate::indent(ss.str(), "\t\t");
-	os << "\tlabel: " << config.label << "\n";
-	os << ")";
+	ios << hate::Indentation("\t") << "label: " << config.label << "\n";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 
@@ -146,13 +146,14 @@ std::optional<std::vector<SynapseDriverOnDLSManager::Allocation>> SynapseDriverO
 	bool solved = true;
 	for (auto const& padi_busses : dependent_padi_busses) {
 		// log collection of interdependent PADI-busses
-		LOG4CXX_DEBUG(
-		    m_logger,
-		    "solve(): Trying to solve synapse driver allocation requests of interdependent "
-		    "PADI-bus(ses):\n"
-		        << hate::indent(
-		               hate::join_string(padi_busses.begin(), padi_busses.end(), "\n"), "\t")
-		        << ".");
+		std::stringstream ss;
+		hate::IndentingOstream iss(ss);
+		iss << "solve(): Trying to solve synapse driver allocation requests of interdependent "
+		       "PADI-bus(ses):\n";
+		iss << hate::Indentation("\t");
+		iss << hate::join(padi_busses, "\n");
+		iss << ".";
+		LOG4CXX_DEBUG(m_logger, ss.str());
 
 		// get unique dependent label groups present on PADI-bus collection
 		auto const unique_dependent_label_groups =
@@ -251,11 +252,11 @@ std::optional<std::vector<SynapseDriverOnDLSManager::Allocation>> SynapseDriverO
 		if (!detail::SynapseDriverOnDLSManager::valid_solution(solution, requested_allocations)) {
 			throw std::logic_error("Allocations are not a valid solution to requests.");
 		}
-		LOG4CXX_DEBUG(
-		    m_logger,
-		    "solve(): Found solution:\n"
-		        << hate::indent(hate::join_string(solution.begin(), solution.end(), "\n"), "\t")
-		        << ".");
+		std::stringstream ss;
+		hate::IndentingOstream iss(ss);
+		iss << "solve(): Found solution:\n" << hate::Indentation("\t");
+		iss << hate::join(solution, "\n") << ".";
+		LOG4CXX_DEBUG(m_logger, ss.str());
 		return solution;
 	}
 	LOG4CXX_DEBUG(m_logger, "solve(): Found no solution.");

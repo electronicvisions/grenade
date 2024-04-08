@@ -76,31 +76,29 @@ bool PlasticityRule::operator!=(PlasticityRule const& other) const
 
 std::ostream& operator<<(std::ostream& os, PlasticityRule const& plasticity_rule)
 {
-	os << "PlasticityRule(\n";
-	os << "\tprojections:\n";
+	hate::IndentingOstream ios(os);
+	ios << "PlasticityRule(\n";
+	ios << hate::Indentation("\t") << "projections:\n" << hate::Indentation("\t\t");
 	for (auto const& d : plasticity_rule.projections) {
-		os << "\t\t" << d << "\n";
+		ios << d << "\n";
 	}
-	os << "\tpopulations:\n";
+	ios << hate::Indentation("\t") << "populations:\n" << hate::Indentation("\t\t");
 	for (auto const& d : plasticity_rule.populations) {
-		std::stringstream ss;
-		ss << d;
-		os << hate::indent(ss.str(), "\t\t") << "\n";
+		ios << d << "\n";
 	}
-	os << "\tkernel: \n" << hate::indent(plasticity_rule.kernel, "\t\t") << "\n";
-	os << "\t" << plasticity_rule.timer << "\n";
-	std::stringstream ss;
-	ss << "\tenable_requires_one_source_per_row_in_order: " << std::boolalpha
-	   << plasticity_rule.enable_requires_one_source_per_row_in_order << "\n";
-	os << ss.str();
-	os << "\trecording: ";
+	ios << hate::Indentation("\t") << "kernel:\n"
+	    << hate::Indentation("\t\t") << plasticity_rule.kernel << "\n";
+	ios << hate::Indentation("\t") << plasticity_rule.timer << "\n";
+	ios << "enable_requires_one_source_per_row_in_order: " << std::boolalpha
+	    << plasticity_rule.enable_requires_one_source_per_row_in_order << "\n";
+	ios << "recording: ";
 	if (plasticity_rule.recording) {
-		std::visit([&](auto const& recording) { os << recording; }, *plasticity_rule.recording);
+		std::visit([&](auto const& recording) { ios << recording; }, *plasticity_rule.recording);
 	} else {
-		os << "disabled";
+		ios << "disabled";
 	}
-	os << "\n";
-	os << ")";
+	ios << "\n" << hate::Indentation();
+	ios << ")";
 	return os;
 }
 

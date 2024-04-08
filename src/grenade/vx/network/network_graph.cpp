@@ -606,22 +606,19 @@ bool NetworkGraph::valid() const
 						    "element difference found.");
 					}
 					if (!missing_in_hardware_network.empty()) {
-						LOG4CXX_ERROR(
-						    logger, "Abstract network connectum missing in hardware network:\n"
-						                << hate::indent(
-						                       hate::join_string(
-						                           missing_in_hardware_network.begin(),
-						                           missing_in_hardware_network.end(), "\n"),
-						                       "\t\t"));
+						std::stringstream ss;
+						hate::IndentingOstream iss(ss);
+						iss << "Abstract network connectum missing in hardware network:\n";
+						iss << hate::Indentation("\t\t");
+						iss << hate::join(missing_in_hardware_network, "\n");
+						LOG4CXX_ERROR(logger, ss.str());
 					}
 					if (!missing_in_abstract_network.empty()) {
-						LOG4CXX_ERROR(
-						    logger, "Hardware network connectum missing in abstract network:\n"
-						                << hate::indent(
-						                       hate::join_string(
-						                           missing_in_abstract_network.begin(),
-						                           missing_in_abstract_network.end(), "\n"),
-						                       "\t\t"));
+						std::stringstream ss;
+						hate::IndentingOstream iss(ss);
+						iss << hate::Indentation("\t\t");
+						iss << "Hardware network connectum missing in abstract network:\n";
+						iss << hate::join(missing_in_abstract_network, "\n");
 					}
 					return false;
 				}

@@ -46,12 +46,13 @@ bool SourceOnPADIBusManager::Partition::Group::valid() const
 
 std::ostream& operator<<(std::ostream& os, SourceOnPADIBusManager::Partition::Group const& config)
 {
-	os << "Group(\n";
-	std::stringstream ss;
-	ss << hate::join(config.sources, ", ") << "\n";
-	ss << config.allocation_request;
-	os << hate::indent(ss.str(), "\t") << "\n";
-	os << ")";
+	hate::IndentingOstream ios(os);
+	ios << "Group(\n";
+	ios << hate::Indentation("\t");
+	ios << hate::join(config.sources, ", ") << "\n";
+	ios << config.allocation_request << "\n";
+	ios << hate::Indentation();
+	ios << ")";
 	return os;
 }
 
@@ -70,27 +71,21 @@ bool SourceOnPADIBusManager::Partition::valid() const
 
 std::ostream& operator<<(std::ostream& os, SourceOnPADIBusManager::Partition const& config)
 {
-	os << "Partition(\n";
-	os << "\tinternal:\n";
+	hate::IndentingOstream ios(os);
+	ios << "Partition(\n";
+	ios << hate::Indentation("\t") << "internal:\n";
 	if (!config.internal.empty()) {
-		os << hate::indent(
-		          hate::join_string(config.internal.begin(), config.internal.end(), "\n"), "\t\t")
-		   << "\n";
+		ios << hate::Indentation("\t\t") << hate::join(config.internal, "\n") << "\n";
 	}
-	os << "\tbackground:\n";
+	ios << hate::Indentation("\t") << "background:\n";
 	if (!config.background.empty()) {
-		os << hate::indent(
-		          hate::join_string(config.background.begin(), config.background.end(), "\n"),
-		          "\t\t")
-		   << "\n";
+		ios << hate::Indentation("\t\t") << hate::join(config.background, "\n") << "\n";
 	}
-	os << "\texternal:\n";
+	ios << hate::Indentation("\t") << "external:\n";
 	if (!config.external.empty()) {
-		os << hate::indent(
-		          hate::join_string(config.external.begin(), config.external.end(), "\n"), "\t\t")
-		   << "\n";
+		ios << hate::Indentation("\t\t") << hate::join(config.external, "\n") << "\n";
 	}
-	os << ")";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 

@@ -123,16 +123,18 @@ double NetworkGraphStatistics::ExecutionInstance::get_synapse_driver_usage() con
 
 std::ostream& operator<<(std::ostream& os, NetworkGraphStatistics::ExecutionInstance const& value)
 {
-	os << "ExecutionInstance(\n";
-	os << "\tnum populations: " << value.m_num_populations << "\n";
-	os << "\tnum projections: " << value.m_num_projections << "\n";
-	os << "\tnum neurons: " << value.m_num_neurons << "\n";
-	os << "\tnum synapses: " << value.m_num_synapses << "\n";
-	os << "\tnum synapse drivers: " << value.m_num_synapse_drivers << "\n";
-	os << "\tneuron usage: " << value.m_neuron_usage << "\n";
-	os << "\tsynapse usage: " << value.m_synapse_usage << "\n";
-	os << "\tsynapse driver usage: " << value.m_synapse_driver_usage << "\n";
-	os << ")";
+	hate::IndentingOstream ios(os);
+	ios << "ExecutionInstance(\n";
+	ios << hate::Indentation("\t");
+	ios << "num populations: " << value.m_num_populations << "\n";
+	ios << "num projections: " << value.m_num_projections << "\n";
+	ios << "num neurons: " << value.m_num_neurons << "\n";
+	ios << "num synapses: " << value.m_num_synapses << "\n";
+	ios << "num synapse drivers: " << value.m_num_synapse_drivers << "\n";
+	ios << "neuron usage: " << value.m_neuron_usage << "\n";
+	ios << "synapse usage: " << value.m_synapse_usage << "\n";
+	ios << "synapse driver usage: " << value.m_synapse_driver_usage << "\n";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 
@@ -165,20 +167,20 @@ std::chrono::microseconds NetworkGraphStatistics::get_routing_duration() const
 
 std::ostream& operator<<(std::ostream& os, NetworkGraphStatistics const& value)
 {
-	os << "NetworkGraphStatistics(\n";
+	hate::IndentingOstream ios(os);
+	ios << "NetworkGraphStatistics(\n";
 	for (auto const& [id, execution_instance] : value.m_execution_instances) {
-		std::stringstream ss;
-		ss << execution_instance;
-		os << "\t" << id << ":\n";
-		os << hate::indent(ss.str(), "\t\t") << "\n";
+		ios << hate::Indentation("\t") << id << ":\n";
+		ios << hate::Indentation("\t\t") << execution_instance << "\n";
 	}
-	os << "\tabstract network construction duration: "
-	   << hate::to_string(value.m_abstract_network_construction_duration) << "\n";
-	os << "\thardware network construction duration: "
-	   << hate::to_string(value.m_hardware_network_construction_duration) << "\n";
-	os << "\tverification duration: " << hate::to_string(value.m_verification_duration) << "\n";
-	os << "\trouting duration: " << hate::to_string(value.m_routing_duration) << "\n";
-	os << ")";
+	ios << hate::Indentation("\t");
+	ios << "abstract network construction duration: "
+	    << hate::to_string(value.m_abstract_network_construction_duration) << "\n";
+	ios << "hardware network construction duration: "
+	    << hate::to_string(value.m_hardware_network_construction_duration) << "\n";
+	ios << "verification duration: " << hate::to_string(value.m_verification_duration) << "\n";
+	ios << "routing duration: " << hate::to_string(value.m_routing_duration) << "\n";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 

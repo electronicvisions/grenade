@@ -106,15 +106,16 @@ bool Population::Neuron::valid() const
 
 std::ostream& operator<<(std::ostream& os, Population::Neuron const& config)
 {
-	os << "Neuron(\n";
-	os << "\tcoordinate: " << config.coordinate;
-	os << "\tcompartments:\n";
+	hate::IndentingOstream ios(os);
+	ios << "Neuron(\n";
+	ios << hate::Indentation("\t");
+	ios << "coordinate: " << config.coordinate;
+	ios << "compartments:\n";
+	ios << hate::Indentation("\t\t");
 	for (auto const& compartment : config.compartments) {
-		std::stringstream ss;
-		ss << compartment.first << ": " << compartment.second;
-		os << hate::indent(ss.str(), "\t\t") << "\n";
+		ios << compartment.first << ": " << compartment.second << "\n";
 	}
-	os << ")";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 
@@ -140,15 +141,15 @@ std::ostream& operator<<(std::ostream& os, Population const& population)
 	if (!population.valid()) {
 		throw std::runtime_error("Population not valid.");
 	}
-	os << "Population(\n";
-	os << "\t" << static_cast<common::EntityOnChip const&>(population) << "\n";
-	os << "\tsize: " << population.neurons.size() << "\n";
-	std::stringstream ss;
+	hate::IndentingOstream ios(os);
+	ios << "Population(\n";
+	ios << hate::Indentation("\t");
+	ios << static_cast<common::EntityOnChip const&>(population) << "\n";
+	ios << "size: " << population.neurons.size() << "\n";
 	for (size_t i = 0; i < population.neurons.size(); ++i) {
-		ss << population.neurons.at(i) << "\n";
+		ios << population.neurons.at(i) << "\n";
 	}
-	os << hate::indent(ss.str(), "\t");
-	os << ")";
+	ios << hate::Indentation() << ")";
 	return os;
 }
 
