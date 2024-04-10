@@ -49,13 +49,10 @@ std::vector<std::string> PPUProgramGenerator::done()
 {{recorded_memory_definition}}
 
 ## if has_timed_recording
-Recording recorded_scratchpad_memory_top_{{i}}[{{plasticity_rule.timer.num_periods}}]
-    __attribute__((section("ext.data.keep")));
-Recording recorded_scratchpad_memory_bot_{{i}}[{{plasticity_rule.timer.num_periods}}]
+Recording recorded_scratchpad_memory_{{i}}[{{plasticity_rule.timer.num_periods}}]
     __attribute__((section("ext.data.keep")));
 ## else if has_raw_recording
-Recording recorded_scratchpad_memory_top_{{i}} __attribute__((section("ext.data.keep")));
-Recording recorded_scratchpad_memory_bot_{{i}} __attribute__((section("ext.data.keep")));
+Recording recorded_scratchpad_memory_{{i}} __attribute__((section("ext.data.keep")));
 ## endif
 
 {{kernel_str}}
@@ -112,15 +109,13 @@ void plasticity_rule_{{i}}()
 ## if has_raw_recording or has_timed_recording
 ## if has_raw_recording
 	plasticity_rule_kernel_{{i}}(
-	    synapse_array_view_handle, neuron_view_handle, ppu == libnux::vx::PPUOnDLS::top ?
-	    recorded_scratchpad_memory_top_{{i}} : recorded_scratchpad_memory_bot_{{i}});
+	    synapse_array_view_handle, neuron_view_handle, recorded_scratchpad_memory_{{i}});
 ## else if has_timed_recording
 	static size_t recorded_scratchpad_memory_period = 0;
 
 	plasticity_rule_kernel_{{i}}(
 	    synapse_array_view_handle, neuron_view_handle,
-	    (ppu == libnux::vx::PPUOnDLS::top ? recorded_scratchpad_memory_top_{{i}} :
-	    recorded_scratchpad_memory_bot_{{i}})[recorded_scratchpad_memory_period]);
+	    recorded_scratchpad_memory_{{i}}[recorded_scratchpad_memory_period]);
 
 	// TODO: reset by routine called prior to realtime section for each batch entry
 	// instead of modulo
@@ -128,8 +123,7 @@ void plasticity_rule_{{i}}()
 	recorded_scratchpad_memory_period %= {{plasticity_rule.timer.num_periods}};
 ## endif
 
-	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_top_{{i}});
-	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_bot_{{i}});
+	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_{{i}});
 ## else
 	plasticity_rule_kernel_{{i}}(synapse_array_view_handle, neuron_view_handle);
 ## endif

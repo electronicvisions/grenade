@@ -153,7 +153,9 @@ private:
 		std::vector<ticket_ppu_type> m_ppu_timer_event_drop_count;
 		ticket_ppu_type m_ppu_scheduler_finished;
 		ticket_ppu_type m_ppu_mailbox;
-		std::map<signal_flow::Graph::vertex_descriptor, ticket_extmem_type>
+		std::map<
+		    signal_flow::Graph::vertex_descriptor,
+		    std::optional<stadls::vx::v3::ContainerTicket>>
 		    m_plasticity_rule_recorded_scratchpad_memory;
 
 		typedef std::map<

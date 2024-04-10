@@ -3,7 +3,6 @@
 #include "grenade/vx/signal_flow/port_restriction.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
-#include "halco/hicann-dls/vx/v3/ppu.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/math.h"
 #include "hate/variant.h"
@@ -837,9 +836,6 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 					local_sample.data.resize(
 					    synapse_view_shape.num_rows * synapse_view_shape.columns.size());
 					for (size_t synapse = 0; synapse < local_sample.data.size(); ++synapse) {
-						size_t const ppu_offset = synapse_view_shape.hemisphere.value()
-						                              ? local_data_sample.data.size() / 2
-						                              : 0;
 						size_t const row_offset =
 						    (synapse / synapse_view_shape.columns.size()) *
 						    halco::hicann_dls::vx::v3::SynapseOnSynapseRow::size;
@@ -857,7 +853,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						size_t const total_offset =
 						    (sizeof(ElementType) *
 						     (row_offset + column_parity_offset + column_in_parity_offset)) +
-						    timed_data_intervals.at(name).first + ppu_offset;
+						    timed_data_intervals.at(name).first;
 						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
 						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
 							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
@@ -899,16 +895,13 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
 					auto& local_sample = local_batch_values.at(sample);
 					auto& local_data_sample = local_data.at(sample);
-					size_t const ppu_offset = synapse_view_shape.hemisphere.value()
-					                              ? local_data_sample.data.size() / 2
-					                              : 0;
 					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(
 					    synapse_view_shape.num_rows * synapse_view_shape.columns.size());
 					for (size_t synapse = 0; synapse < local_sample.data.size(); ++synapse) {
 						size_t const total_offset = (sizeof(ElementType) * synapse) +
 						                            timed_data_intervals.at(name).first +
-						                            ppu_offset + synapse_view_offset;
+						                            synapse_view_offset;
 						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
 						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
 							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
@@ -952,8 +945,6 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(neuron_view_shape.columns.size());
 					for (size_t neuron = 0; neuron < local_sample.data.size(); ++neuron) {
-						size_t const ppu_offset =
-						    neuron_view_shape.row.value() ? local_data_sample.data.size() / 2 : 0;
 						size_t const column_parity_offset =
 						    (neuron_view_shape.columns.at(neuron % neuron_view_shape.columns.size())
 						         .value() %
@@ -966,7 +957,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 						size_t const total_offset =
 						    (sizeof(ElementType) *
 						     (column_parity_offset + column_in_parity_offset)) +
-						    timed_data_intervals.at(name).first + ppu_offset;
+						    timed_data_intervals.at(name).first;
 						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
 						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
 							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
@@ -1007,14 +998,12 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				for (size_t sample = 0; sample < local_batch_values.size(); ++sample) {
 					auto& local_sample = local_batch_values.at(sample);
 					auto& local_data_sample = local_data.at(sample);
-					size_t const ppu_offset =
-					    neuron_view_shape.row.value() ? local_data_sample.data.size() / 2 : 0;
 					local_sample.time = local_data_sample.time;
 					local_sample.data.resize(neuron_view_shape.columns.size());
 					for (size_t neuron = 0; neuron < local_sample.data.size(); ++neuron) {
 						size_t const total_offset = (sizeof(ElementType) * neuron) +
 						                            timed_data_intervals.at(name).first +
-						                            ppu_offset + neuron_view_offset;
+						                            neuron_view_offset;
 						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
 						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
 							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
@@ -1047,28 +1036,17 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				auto& local_sample = local_batch_values.at(sample);
 				auto& local_data_sample = local_data.at(sample);
 				local_sample.time = local_data_sample.time;
-				local_sample.data.resize(size * 2);
-				for (auto const ppu :
-				     halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
-					for (size_t element = 0; element < local_sample.data.size() / 2; ++element) {
-						auto const local_ppu_offset =
-						    (ppu == halco::hicann_dls::vx::v3::PPUOnDLS::bottom)
-						        ? local_sample.data.size() / 2
-						        : 0;
-						auto const ppu_offset = (ppu == halco::hicann_dls::vx::v3::PPUOnDLS::bottom)
-						                            ? local_data_sample.data.size() / 2
-						                            : 0;
-						size_t const total_offset = (sizeof(ElementType) * element) +
-						                            timed_data_intervals.at(name).first +
-						                            ppu_offset;
-						std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
-						for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
-							local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
-							    local_data_sample.data.at(total_offset + byte).value();
-						}
-						local_sample.data.at(element + local_ppu_offset) =
-						    *reinterpret_cast<ElementType*>(&local_sample_bytes);
+				local_sample.data.resize(size);
+				for (size_t element = 0; element < local_sample.data.size() / 2; ++element) {
+					size_t const total_offset =
+					    (sizeof(ElementType) * element) + timed_data_intervals.at(name).first;
+					std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
+					for (size_t byte = 0; byte < sizeof(ElementType); ++byte) {
+						local_sample_bytes.at(sizeof(ElementType) - 1 - byte) =
+						    local_data_sample.data.at(total_offset + byte).value();
 					}
+					local_sample.data.at(element) =
+					    *reinterpret_cast<ElementType*>(&local_sample_bytes);
 				}
 			}
 		}
@@ -1286,8 +1264,7 @@ std::vector<Port> PlasticityRule::inputs() const
 Port PlasticityRule::output() const
 {
 	return Port(
-	    (get_recorded_memory_data_interval().second - get_recorded_memory_data_interval().first) *
-	        2 /* two PPUs */,
+	    (get_recorded_memory_data_interval().second - get_recorded_memory_data_interval().first),
 	    ConnectionType::Int8);
 }
 
