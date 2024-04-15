@@ -1,5 +1,5 @@
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
-#ifdef __ppu__
+
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "libnux/vx/correlation.h"
 #include "libnux/vx/dls.h"
@@ -9,7 +9,7 @@ extern volatile libnux::vx::PPUOnDLS ppu;
 
 namespace grenade::vx::ppu {
 
-inline SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_weights(size_t index_row) const
+SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_weights(size_t index_row) const
 {
 	if (::ppu != hemisphere || !rows.test(index_row)) {
 		exit(1);
@@ -18,7 +18,7 @@ inline SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_weights(size_t in
 	return get_row_via_vector(index_row, dls_weight_base);
 }
 
-inline void SynapseArrayViewHandle::set_weights(Row const& value, size_t index_row) const
+void SynapseArrayViewHandle::set_weights(Row const& value, size_t index_row) const
 {
 	if (::ppu != hemisphere || !rows.test(index_row)) {
 		exit(1);
@@ -28,8 +28,7 @@ inline void SynapseArrayViewHandle::set_weights(Row const& value, size_t index_r
 	set_row_via_vector_masked(value, column_mask, index_row, dls_weight_base);
 }
 
-inline SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_causal_correlation(
-    size_t index_row) const
+SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_causal_correlation(size_t index_row) const
 {
 	if (::ppu != hemisphere || !rows.test(index_row)) {
 		exit(1);
@@ -44,8 +43,7 @@ inline SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_causal_correlatio
 	return ret;
 }
 
-inline SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_acausal_correlation(
-    size_t index_row) const
+SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_acausal_correlation(size_t index_row) const
 {
 	if (::ppu != hemisphere || !rows.test(index_row)) {
 		exit(1);
@@ -60,7 +58,7 @@ inline SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_acausal_correlati
 	return ret;
 }
 
-inline SynapseArrayViewHandle::CorrelationRow SynapseArrayViewHandle::get_correlation(
+SynapseArrayViewHandle::CorrelationRow SynapseArrayViewHandle::get_correlation(
     size_t index_row, bool reset) const
 {
 	if (::ppu != hemisphere || !rows.test(index_row)) {
@@ -88,7 +86,7 @@ inline SynapseArrayViewHandle::CorrelationRow SynapseArrayViewHandle::get_correl
 	return ret;
 }
 
-inline void SynapseArrayViewHandle::reset_correlation(size_t index_row) const
+void SynapseArrayViewHandle::reset_correlation(size_t index_row) const
 {
 	if (::ppu != hemisphere || !rows.test(index_row)) {
 		exit(1);
@@ -99,4 +97,3 @@ inline void SynapseArrayViewHandle::reset_correlation(size_t index_row) const
 }
 
 } // namespace grenade::vx::ppu
-#endif

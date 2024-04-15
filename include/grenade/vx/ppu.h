@@ -146,6 +146,7 @@ struct Compiler
 	    get_library_paths(),
 	    "-lgcc",
 	    "-lnux_vx_v3",
+	    "-lgrenade_ppu_vx",
 	    "-lhalco_common_ppu_vx",
 	    "-lhalco_hicann_dls_ppu_vx",
 	    "-lhalco_hicann_dls_ppu_vx_v3",

@@ -181,6 +181,8 @@ std::string get_library_paths()
 	std::set<std::string> library_paths;
 	library_paths.insert(get_library_path("libnux_vx_v3.a", "lib", "libnux"));
 	library_paths.insert(
+	    get_library_path("libgrenade_ppu_vx.a", std::filesystem::path("lib") / "ppu", "grenade"));
+	library_paths.insert(
 	    get_library_path("libfisch_ppu_vx.a", std::filesystem::path("lib") / "ppu", "fisch"));
 	library_paths.insert(
 	    get_library_path("libhaldls_ppu_vx_v3.a", std::filesystem::path("lib") / "ppu", "haldls"));

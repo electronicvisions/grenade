@@ -1,5 +1,6 @@
 #pragma once
 #include "hate/bitset.h"
+#include "hate/visibility.h"
 #ifdef __ppu__
 #include "libnux/vx/vector.h"
 #endif
@@ -38,7 +39,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Weight values of requested row without column masking
 	 */
-	Row get_weights(size_t index_row) const;
+	Row get_weights(size_t index_row) const SYMBOL_VISIBLE;
 
 	/**
 	 * Set weight values of specified row.
@@ -48,7 +49,7 @@ struct SynapseArrayViewHandle
 	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere or wrong row
 	 * not present in rows.
 	 */
-	void set_weights(Row const& value, size_t index_row) const;
+	void set_weights(Row const& value, size_t index_row) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get causal correlation of specified row.
@@ -57,7 +58,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Correlation values of requested row without column masking
 	 */
-	Row get_causal_correlation(size_t index_row) const;
+	Row get_causal_correlation(size_t index_row) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get acausal correlation of specified row.
@@ -66,7 +67,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Correlation values of requested row without column masking
 	 */
-	Row get_acausal_correlation(size_t index_row) const;
+	Row get_acausal_correlation(size_t index_row) const SYMBOL_VISIBLE;
 
 	/**
 	 * Correlation values of a synapse row.
@@ -86,7 +87,7 @@ struct SynapseArrayViewHandle
 	 * not present in the handle.
 	 * @returns Correlation values of requested row without column masking
 	 */
-	CorrelationRow get_correlation(size_t index_row, bool reset) const;
+	CorrelationRow get_correlation(size_t index_row, bool reset) const SYMBOL_VISIBLE;
 
 	/**
 	 * Reset correlation measurement of specified row.
@@ -95,10 +96,8 @@ struct SynapseArrayViewHandle
 	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere or wrong row
 	 * not present in the handle.
 	 */
-	void reset_correlation(size_t index_row) const;
+	void reset_correlation(size_t index_row) const SYMBOL_VISIBLE;
 #endif
 };
 
 } // namespace grenade::vx::ppu
-
-#include "grenade/vx/ppu/synapse_array_view_handle.tcc"

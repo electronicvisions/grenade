@@ -1,5 +1,5 @@
-#pragma once
-#ifdef __ppu__
+#include "grenade/vx/ppu/neuron_view_handle.h"
+
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "haldls/vx/v3/neuron.h"
@@ -46,7 +46,7 @@ uint8_t get_rate_counter(NeuronViewHandle const& handle, size_t column)
 
 } // namespace detail
 
-inline uint8_t NeuronViewHandle::get_rate_counter(size_t column, bool reset)
+uint8_t NeuronViewHandle::get_rate_counter(size_t column, bool reset)
 {
 	if (reset) {
 		return detail::get_rate_counter<true>(*this, column);
@@ -71,7 +71,7 @@ NeuronViewHandle::Row get_rate_counters(NeuronViewHandle const& handle)
 
 } // namespace detail
 
-inline NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
+NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
 {
 	if (reset) {
 		return detail::get_rate_counters<true>(*this);
@@ -79,7 +79,7 @@ inline NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
 	return detail::get_rate_counters<false>(*this);
 }
 
-inline NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts()
+NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts()
 {
 	if (::ppu != hemisphere) {
 		exit(1);
@@ -95,4 +95,3 @@ inline NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts()
 }
 
 } // namespace grenade::vx::ppu
-#endif

@@ -1,5 +1,6 @@
 #pragma once
 #include "hate/bitset.h"
+#include "hate/visibility.h"
 #ifdef __ppu__
 #include "libnux/vx/dls.h"
 #include "libnux/vx/vector.h"
@@ -33,13 +34,13 @@ struct NeuronViewHandle
 	 * @param column Neuron column for which to get value
 	 * @param reset Whether to reset the counters directly after read-out
 	 */
-	uint8_t get_rate_counter(size_t column, bool reset);
+	uint8_t get_rate_counter(size_t column, bool reset) SYMBOL_VISIBLE;
 
 	/**
 	 * Get neuron rate counter values.
 	 * @param reset Whether to reset the counters directly after read-out
 	 */
-	Row get_rate_counters(bool reset);
+	Row get_rate_counters(bool reset) SYMBOL_VISIBLE;
 
 	/**
 	 * Get analog readouts via CADC.
@@ -48,10 +49,8 @@ struct NeuronViewHandle
 	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere
 	 * @returns Analog readout values without column masking
 	 */
-	Row get_analog_readouts();
+	Row get_analog_readouts() SYMBOL_VISIBLE;
 #endif
 };
 
 } // namespace grenade::vx::ppu
-
-#include "grenade/vx/ppu/neuron_view_handle.tcc"
