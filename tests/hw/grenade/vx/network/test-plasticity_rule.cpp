@@ -113,7 +113,7 @@ TEST(PlasticityRule, RawRecording)
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
 		auto const& samples = result.at(i);
-		EXPECT_EQ(samples.size(), 8 * 2);
+		EXPECT_EQ(samples.size(), 8);
 		for (size_t j = 0; auto const& sample : samples) {
 			EXPECT_EQ(static_cast<int>(sample), j % 8);
 			j++;
@@ -489,7 +489,7 @@ TEST(PlasticityRule, TimedRecording)
 						            EXPECT_EQ(samples.size(), plasticity_rule.timer.num_periods);
 						            for (size_t time = 0; auto const& sample : samples) {
 							            EXPECT_EQ(sample.time, time);
-							            EXPECT_EQ(sample.data.size(), obsv.size * 2);
+							            EXPECT_EQ(sample.data.size(), obsv.size);
 							            for (size_t i = 0; i < sample.data.size(); ++i) {
 								            EXPECT_EQ(
 								                static_cast<int>(sample.data.at(i)),

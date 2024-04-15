@@ -1037,7 +1037,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				auto& local_data_sample = local_data.at(sample);
 				local_sample.time = local_data_sample.time;
 				local_sample.data.resize(size);
-				for (size_t element = 0; element < local_sample.data.size() / 2; ++element) {
+				for (size_t element = 0; element < local_sample.data.size(); ++element) {
 					size_t const total_offset =
 					    (sizeof(ElementType) * element) + timed_data_intervals.at(name).first;
 					std::array<int8_t, sizeof(ElementType)> local_sample_bytes;
