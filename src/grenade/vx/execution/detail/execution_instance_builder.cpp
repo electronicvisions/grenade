@@ -965,8 +965,10 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("status").coordinate).toMin();
 		ppu_result_coord =
 		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("cadc_result").coordinate);
-		ppu_runtime_coord =
-		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("runtime").coordinate).toMin();
+		if (m_ppu_symbols->contains("runtime")) {
+			ppu_runtime_coord =
+			    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("runtime").coordinate).toMin();
+		}
 		if (m_ppu_symbols->contains("scheduler_event_drop_count")) {
 			ppu_scheduler_event_drop_count_coord.emplace(std::get<PPUMemoryBlockOnPPU>(
 			    m_ppu_symbols->at("scheduler_event_drop_count").coordinate));
@@ -1078,20 +1080,22 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			current_time += Timer::Value(2);
 		}
 		// set runtime on PPU
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			if (!m_input_list.runtime.empty()) {
-				// TODO (Issue #3993): Implement calculation of PPU clock freuqency vs. FPGA
-				// frequency
-				builder.write(
-				    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
-				    PPUMemoryWord(PPUMemoryWord::Value(
-				        m_input_list.runtime.at(b).at(m_execution_instance) * 2)));
-			} else {
-				builder.write(
-				    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
-				    PPUMemoryWord(PPUMemoryWord::Value(0)));
+		if (enable_ppu && m_has_plasticity_rule) {
+			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				if (!m_input_list.runtime.empty()) {
+					// TODO (Issue #3993): Implement calculation of PPU clock freuqency vs. FPGA
+					// frequency
+					builder.write(
+					    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
+					    PPUMemoryWord(PPUMemoryWord::Value(
+					        m_input_list.runtime.at(b).at(m_execution_instance) * 2)));
+				} else {
+					builder.write(
+					    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
+					    PPUMemoryWord(PPUMemoryWord::Value(0)));
+				}
+				current_time += Timer::Value(2);
 			}
-			current_time += Timer::Value(2);
 		}
 		// start MADC
 		if (m_madc_readout_vertex && !before.madc_recording) {

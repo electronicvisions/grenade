@@ -254,7 +254,7 @@ Timer timer_{{i}}_{{realtime_column_index}} = [](){
 		}
 	}
 	// scheduler
-	{
+	if (!m_plasticity_rules.empty()) {
 		// clang-format off
 		std::string source_template = R"grenadeTemplate(
 #include "libnux/scheduling/SchedulerSignaller.hpp"
@@ -323,9 +323,11 @@ void scheduling()
 			parameters["max_realtime_column_index"] = max_realtime_column_index;
 		}
 		sources.push_back(inja::render(source_template, parameters));
+	} else {
+		sources.push_back("void scheduling() {}");
 	}
 	// periodic CADC readout
-	{
+	if (has_periodic_cadc_readout) {
 		// clang-format off
 		std::string source_template = R"grenadeTemplate(
 #include "grenade/vx/ppu/detail/status.h"
@@ -410,6 +412,8 @@ void perform_periodic_read()
 		size_t const num_samples = has_periodic_cadc_readout ? num_cadc_samples_in_extmem : 0;
 		parameters["num_samples"] = num_samples;
 		sources.push_back(inja::render(source_template, parameters));
+	} else {
+		sources.push_back("void perform_periodic_read() {}");
 	}
 
 	{

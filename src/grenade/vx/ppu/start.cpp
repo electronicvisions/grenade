@@ -30,6 +30,7 @@ void perform_periodic_read();
 
 int start()
 {
+	static_cast<void>(ppu);
 	stopped = Stopped::no;
 	mailbox_write_string("inside start\n");
 	__vector int8_t baseline_read[dls_num_vectors_per_row];
