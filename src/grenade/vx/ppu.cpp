@@ -327,7 +327,7 @@ TemporaryDirectory::~TemporaryDirectory()
 
 Compiler::Compiler() {}
 
-Compiler::Program Compiler::compile(std::vector<std::string> sources)
+Compiler::Objectfile Compiler::compile_objectfile(std::vector<std::string> sources)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
 	auto tmpdir = std::filesystem::temp_directory_path();
@@ -345,13 +345,110 @@ Compiler::Program Compiler::compile(std::vector<std::string> sources)
 		i++;
 		source_paths.push_back(path);
 	}
-	source_paths.push_back(get_program_base_source());
 
 	std::stringstream ss;
 	ss << "cd " << temporary.get_path() << " && ";
 	ss << name << " " << hate::join(options_before_source, " ") << " ";
+	ss << " -c ";
 	for (auto const& source : source_paths) {
 		std::filesystem::path path(source);
+		if (path.is_absolute()) {
+			ss << path << " ";
+		} else {
+			ss << "../" / path << " ";
+		}
+	}
+	ss << hate::join(options_after_source, " ") << " -o"
+	   << "objectfile.o";
+	ss << " > "
+	   << "compile_log"
+	   << " 2>&1";
+	LOG4CXX_DEBUG(logger, "compile(): Command: " << ss.str());
+	auto ret = std::system(ss.str().c_str());
+	std::stringstream log;
+	{
+		log << std::ifstream(temporary.get_path() / "compile_log").rdbuf();
+	}
+	if (ret != 0) {
+		throw std::runtime_error("Compilation failed:\n" + log.str());
+	}
+	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
+	Objectfile objectfile;
+	if (logger->isDebugEnabled()) {
+		ret = std::system(("powerpc-ppu-readelf -a " +
+		                   std::string(temporary.get_path() / "objectfile.o") + " > " +
+		                   std::string(temporary.get_path() / "readelf_log") + " 2>&1")
+		                      .c_str());
+		{
+			std::stringstream log;
+			{
+				log << std::ifstream(temporary.get_path() / "readelf_log").rdbuf();
+			}
+			if (ret != 0) {
+				throw std::runtime_error("Readelf failed:\n" + log.str());
+			}
+			objectfile.readelf = log.str();
+			LOG4CXX_DEBUG(logger, "compile(): Readelf:\n" << log.str());
+		}
+		{
+			std::stringstream log;
+			auto path = temporary.get_path() / "objectfile.su";
+			log << std::ifstream(path).rdbuf();
+			objectfile.stack_sizes = log.str();
+			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
+		}
+	}
+	if (logger->isTraceEnabled()) {
+		ret = std::system(("powerpc-ppu-objdump -Mnux -d " +
+		                   std::string(temporary.get_path() / "objectfile.o") + " > " +
+		                   std::string(temporary.get_path() / "objdump_log") + " 2>&1")
+		                      .c_str());
+		{
+			std::stringstream log;
+			{
+				log << std::ifstream(temporary.get_path() / "objdump_log").rdbuf();
+			}
+			if (ret != 0) {
+				throw std::runtime_error("Objdump failed:\n" + log.str());
+			}
+			objectfile.objdump = log.str();
+			LOG4CXX_TRACE(logger, "compile(): Objdump:\n" << log.str());
+		}
+	}
+	{
+		auto path = std::filesystem::path(temporary.get_path() / "objectfile.o");
+		std::ifstream objectfile_file(path, std::ios::binary);
+		objectfile.content = std::string(std::istreambuf_iterator<char>(objectfile_file), {});
+	}
+	return objectfile;
+}
+
+
+Compiler::Program Compiler::link_from_objectfiles(std::vector<Objectfile> objectfiles)
+{
+	auto logger = log4cxx::Logger::getLogger("grenade.Compiler");
+	auto tmpdir = std::filesystem::temp_directory_path();
+	tmpdir /= "grenade-compiler-XXXXXX";
+	TemporaryDirectory temporary(tmpdir.string());
+
+	// save objectfiles to files for compiler subprocess to use
+	std::vector<std::string> objectfile_paths;
+	for (size_t i = 0; auto const& objectfile : objectfiles) {
+		auto const path = temporary.get_path() / ("objectfile_" + std::to_string(i) + ".o");
+		{
+			std::ofstream fs(path, std::ios::binary);
+			fs << objectfile.content;
+		}
+		i++;
+		objectfile_paths.push_back(path);
+	}
+
+	std::stringstream ss;
+	ss << "cd " << temporary.get_path() << " && ";
+	ss << name << " " << hate::join(options_before_source, " ") << " ";
+	ss << hate::join(link_options_before_source, " ") << " ";
+	for (auto const& objectfile : objectfile_paths) {
+		std::filesystem::path path(objectfile);
 		if (path.is_absolute()) {
 			ss << path << " ";
 		} else {
@@ -392,8 +489,8 @@ Compiler::Program Compiler::compile(std::vector<std::string> sources)
 		}
 		{
 			std::stringstream log;
-			for (auto const& source_path : source_paths) {
-				auto path = std::filesystem::path(source_path).replace_extension("su");
+			for (auto const& objectfile_path : objectfile_paths) {
+				auto path = std::filesystem::path(objectfile_path).replace_extension("su");
 				log << std::ifstream(path).rdbuf();
 			}
 			program.stack_sizes = log.str();
@@ -423,8 +520,32 @@ Compiler::Program Compiler::compile(std::vector<std::string> sources)
 	return program;
 }
 
+Compiler::Program Compiler::compile(std::vector<std::string> sources)
+{
+	std::vector<Objectfile> objectfiles;
+	for (auto const& source : sources) {
+		objectfiles.push_back(compile_objectfile({source}));
+	}
+	return link_from_objectfiles(objectfiles);
+}
+
 
 std::string CachingCompiler::ProgramCache::Source::sha1() const
+{
+	boost::compute::detail::sha1 digestor;
+	for (auto const& option : options_before_source) {
+		digestor.process(option);
+	}
+	for (auto const& option : options_after_source) {
+		digestor.process(option);
+	}
+	for (auto const& source : source_codes) {
+		digestor.process(source);
+	}
+	return static_cast<std::string>(digestor);
+}
+
+std::string CachingCompiler::ObjectfileCache::Source::sha1() const
 {
 	boost::compute::detail::sha1 digestor;
 	for (auto const& option : options_before_source) {
@@ -445,19 +566,49 @@ CachingCompiler::ProgramCache& CachingCompiler::get_program_cache()
 	return data;
 }
 
+CachingCompiler::ObjectfileCache& CachingCompiler::get_objectfile_cache()
+{
+	static ObjectfileCache data;
+	return data;
+}
+
+CachingCompiler::Objectfile CachingCompiler::compile_objectfile_cached(
+    std::vector<std::string> sources)
+{
+	auto& objectfile_cache = get_objectfile_cache();
+	std::lock_guard lock(objectfile_cache.data_mutex);
+	ObjectfileCache::Source cache_source;
+	cache_source.options_before_source = options_before_source;
+	cache_source.options_after_source = options_after_source;
+	cache_source.source_codes = sources;
+	auto const sha1 = cache_source.sha1();
+	if (objectfile_cache.data.contains(sha1)) {
+		return objectfile_cache.data.at(sha1);
+	} else {
+		auto const objectfile = compile_objectfile(sources);
+		objectfile_cache.data[sha1] = objectfile;
+		return objectfile;
+	}
+}
+
 CachingCompiler::Program CachingCompiler::compile(std::vector<std::string> sources)
 {
 	auto& program_cache = get_program_cache();
 	std::lock_guard lock(program_cache.data_mutex);
 	ProgramCache::Source source;
 	source.options_before_source = options_before_source;
+	source.link_options_before_source = link_options_before_source;
 	source.options_after_source = options_after_source;
 	source.source_codes = sources;
 	auto const sha1 = source.sha1();
 	if (program_cache.data.contains(sha1)) {
 		return program_cache.data.at(sha1);
 	} else {
-		auto const program = static_cast<Compiler*>(this)->compile(sources);
+		std::vector<Objectfile> objectfiles;
+		for (auto const& source : sources) {
+			objectfiles.push_back(compile_objectfile_cached({source}));
+		}
+		auto const program = link_from_objectfiles(objectfiles);
 		program_cache.data[sha1] = program;
 		return program;
 	}

@@ -108,6 +108,33 @@ struct Compiler
 		std::optional<std::string> stack_sizes;
 	};
 
+	/**
+	 * PPU objectfile result of compilation.
+	 */
+	struct Objectfile
+	{
+		/** Content of objectfile. */
+		std::string content;
+
+		/**
+		 * Optional readelf -a output of objectfile.
+		 * Generation is performed for loglevel debug.
+		 */
+		std::optional<std::string> readelf;
+
+		/**
+		 * Optional objdump -d output of objectfile.
+		 * Generation is performed for loglevel trace.
+		 */
+		std::optional<std::string> objdump;
+
+		/**
+		 * Optional stack size output of functions of objectfile.
+		 * Generation is performed for loglevel debug.
+		 */
+		std::optional<std::string> stack_sizes;
+	};
+
 	Compiler() SYMBOL_VISIBLE;
 
 	std::vector<std::string> options_before_source = {
@@ -135,11 +162,16 @@ struct Compiler
 	    "-DSYSTEM_HICANN_DLS_MINI",
 	    "-DLIBNUX_TIME_RESOLUTION_SHIFT=0",
 	    "-fuse-ld=bfd",
-	    "-Wl,--gc-sections",
 	    "-nostartfiles",
-	    "-T" + get_linker_file("elf32nux.x"),
 	    "-Wl,--defsym=mailbox_size=4096",
 	};
+
+	// clang-format off
+	std::vector<std::string> link_options_before_source = {
+	    "-T" + get_linker_file("elf32nux.x"),
+	    "-Wl,--gc-sections"
+	};
+	// clang-format on
 
 	std::vector<std::string> options_after_source = {
 	    "-Bstatic",
@@ -162,6 +194,14 @@ struct Compiler
 	 * Compile sources into target program.
 	 */
 	Program compile(std::vector<std::string> sources) SYMBOL_VISIBLE;
+
+protected:
+	/**
+	 * Compile sources into target objectfile.
+	 */
+	Objectfile compile_objectfile(std::vector<std::string> sources) SYMBOL_VISIBLE;
+
+	Program link_from_objectfiles(std::vector<Objectfile> objectfiles) SYMBOL_VISIBLE;
 };
 
 
@@ -188,6 +228,10 @@ struct CachingCompiler : public Compiler
 			 */
 			std::vector<std::string> options_before_source;
 			/**
+			 * Compiler options before the source location specification.
+			 */
+			std::vector<std::string> link_options_before_source;
+			/**
 			 * Compiler options after the source location specification.
 			 */
 			std::vector<std::string> options_after_source;
@@ -204,12 +248,50 @@ struct CachingCompiler : public Compiler
 	};
 
 	/**
+	 * Cache for compiled PPU objectfiles.
+	 * The objectfile information is indexed by hashed compilation options and the source code.
+	 * It assumes, that the included headers are not modified concurrently.
+	 */
+	struct ObjectfileCache
+	{
+		/**
+		 * Sources used for compilation of objectfile serving as hash source into the cache.
+		 */
+		struct Source
+		{
+			/**
+			 * Compiler options before the source location specification.
+			 */
+			std::vector<std::string> options_before_source;
+			/**
+			 * Compiler options after the source location specification.
+			 */
+			std::vector<std::string> options_after_source;
+			/**
+			 * Source codes.
+			 */
+			std::vector<std::string> source_codes;
+
+			std::string sha1() const SYMBOL_VISIBLE;
+		};
+
+		std::map<std::string, Objectfile> data;
+		std::mutex data_mutex;
+	};
+
+	/**
 	 * Compile sources into target program or return from cache if already compiled.
 	 */
 	Program compile(std::vector<std::string> sources) SYMBOL_VISIBLE;
 
 private:
+	/**
+	 * Compile sources into target objectfile or return from cache if already compiled.
+	 */
+	Objectfile compile_objectfile_cached(std::vector<std::string> source) SYMBOL_VISIBLE;
+
 	static ProgramCache& get_program_cache();
+	static ObjectfileCache& get_objectfile_cache();
 };
 
 } // namespace grenade::vx

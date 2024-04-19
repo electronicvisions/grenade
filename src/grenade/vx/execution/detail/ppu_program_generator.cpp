@@ -380,7 +380,16 @@ void perform_periodic_read()
 		sources.push_back(inja::render(source_template, parameters));
 	}
 
-	LOG4CXX_TRACE(logger, "Generated PPU program sources:\n" << hate::join(sources, "\n\n") << ".");
+	{
+		std::ifstream fs(get_program_base_source());
+		std::stringstream ss;
+		ss << fs.rdbuf();
+		sources.push_back(ss.str());
+	}
+
+	LOG4CXX_TRACE(
+	    logger, "Generated PPU program sources:\n"
+	                << hate::join(sources.begin(), sources.end(), "\n\n") << ".");
 	LOG4CXX_TRACE(logger, "Generated PPU program sources in " << timer.print() << ".");
 	return sources;
 }
