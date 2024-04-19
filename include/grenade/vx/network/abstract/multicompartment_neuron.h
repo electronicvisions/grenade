@@ -35,7 +35,7 @@ namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // Neuron uses Graph-Representation
-struct GENPYBIND(visible) SYMBOL_VISIBLE Neuron
+struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
     : private common::Graph<
           Neuron,
           common::detail::UndirectedGraph,
@@ -81,13 +81,74 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Neuron
 	CompartmentOnNeuron source(CompartmentConnectionOnNeuron const& descriptor) const;
 	CompartmentOnNeuron target(CompartmentConnectionOnNeuron const& descriptor) const;
 
-	// Iterator over all Compartments
+	// Return Iterator to begin and end of all compartments.
 	typedef VertexIterator CompartmentIterator;
 	std::pair<CompartmentIterator, CompartmentIterator> compartment_iterators() const;
 
-	// Checks if Neuron Contains Compartment via Compartment-ID
+	// Return Iterator to begin and end of all compartment-connections
+	typedef EdgeIterator CompartmentConnectionIterator;
+	std::pair<CompartmentConnectionIterator, CompartmentConnectionIterator>
+	compartment_connection_iterators() const;
+
+	// Return Iterator to begin and end of adjecent compartments to given compartment
+	std::pair<AdjacencyIterator, AdjacencyIterator> adjacent_compartments(
+	    CompartmentOnNeuron const& descriptor) const;
+
+	/**
+	 * Return mapping of compartments between this and other neuron.
+	 * If no mapping between all the neurons compartments is possible an map with the possible
+	 * compartment mappings is returned.
+	 */
+	std::map<CompartmentOnNeuron, CompartmentOnNeuron> isomorphism(Neuron const& other) const;
+
+	/**
+	 * Create a mapping of compartments if the neurons are isomorphic and the number of
+	 * unmapped compartments.
+	 * @param other Neuron to compare against.
+	 * @param callback Callback function, that is used to write the results.
+	 * @param compartment_equivalent Function to deterime whether two compartments on different
+	 * neurons have equivalent properties (resource requirements).
+	 */
+	template <typename Callback, typename CompartmentEquivalent>
+	void isomorphism(
+	    Neuron const& other,
+	    Callback&& callback,
+	    CompartmentEquivalent&& compartment_equivalent) const;
+
+	/**
+	 *  Create a mapping of compartments of the neurons largest subneuron and the number of
+	 * unmapped compartments.
+	 * @param other Neuron to compare against.
+	 * @param callback Callback function, that is used to write results.
+	 * @param compartment_equivalent Function to determine whether two compartments on different
+	 * neurons have euqivalent properites (resource requirements).
+	 */
+	template <typename Callback, typename CompartmentEquivalent>
+	void isomorphism_subgraph(
+	    Neuron const& other,
+	    Callback&& callback,
+	    CompartmentEquivalent&& compartment_equivalent) const;
+
+	// Return a map of each compartment-descriptor to an index.
+	std::map<CompartmentOnNeuron::Value, size_t> get_compartment_index_map() const;
+
+	// Check if two compartments are neighbours.
+	bool neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const;
+
+	// Check if all compartments are interconnected.
+	bool compartments_connected() const;
+
+	// Checks if neuron contains a given compartment.
 	bool contains(CompartmentOnNeuron const& descriptor) const;
 };
 
+std::ostream& operator<<(std::ostream& os, Neuron const& neuron);
+
+
+std::ostream& operator<<(std::ostream& os, Neuron const& neuron);
+
+
 } // namespace abstract
 } // namespace grenade::vx::network
+
+#include "grenade/vx/network/abstract/multicompartment_neuron.tcc"

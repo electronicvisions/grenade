@@ -15,7 +15,8 @@ extern template struct SYMBOL_VISIBLE
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-struct GENPYBIND(visible) CompartmentOnNeuron
+
+struct GENPYBIND(inline_base("*")) CompartmentOnNeuron
     : public common::VertexOnGraph<CompartmentOnNeuron, common::detail::UndirectedGraph>
 {
 	using VertexOnGraph::VertexOnGraph;

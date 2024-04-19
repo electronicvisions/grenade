@@ -10,8 +10,18 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) SYMBOL_VISIBLE Environment
 {
+	void add(
+	    CompartmentOnNeuron const& compartment, SynapticInputEnvironment const& synaptic_input);
+	void add(
+	    CompartmentOnNeuron const& compartment,
+	    std::vector<common::PropertyHolder<SynapticInputEnvironment>> const& synaptic_inputs);
+
+	std::vector<common::PropertyHolder<SynapticInputEnvironment>> get(
+	    CompartmentOnNeuron const& compartment) const;
+
+private:
 	std::map<CompartmentOnNeuron, std::vector<common::PropertyHolder<SynapticInputEnvironment>>>
-	    synaptic_connections;
+	    m_synaptic_connections;
 };
 
 } // namespace abstract

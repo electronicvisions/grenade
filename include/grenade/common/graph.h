@@ -9,7 +9,11 @@
 #include "hate/visibility.h"
 #include <memory>
 #include <unordered_map>
+#include <boost/graph/connected_components.hpp>
+#include <boost/graph/isomorphism.hpp>
+#include <boost/graph/vf2_sub_graph_iso.hpp>
 #include <boost/iterator/transform_iterator.hpp>
+#include <boost/property_map/property_map.hpp>
 
 namespace grenade {
 namespace common GENPYBIND_TAG_GRENADE_COMMON {
@@ -18,8 +22,8 @@ namespace common GENPYBIND_TAG_GRENADE_COMMON {
  * Graph containing storage for element properties.
  * @tparam Derived Derived graph class
  * @tparam Backend Backend graph implementation without storage, required to be a
- * boost::adjacency_list with descriptor stability across mutable operations and bidirectional or
- * undirected directionality
+ * boost::adjacency_list with descriptor stability across mutable operations and bidirectional
+ * or undirected directionality
  * @tparam VertexT Vertex property type
  * @tparam EdgeT Edge property type
  * @tparam VertexDescriptorT Vertex descriptor type
@@ -156,6 +160,11 @@ struct SYMBOL_VISIBLE Graph
 	 * @throws std::runtime_error On edges being present to or from vertex
 	 */
 	virtual void remove_vertex(VertexDescriptor const& descriptor);
+
+	/**
+	 * Clear graph. Removes all edges and vertices of graph.
+	 */
+	void clear_graph();
 
 	/**
 	 * Get vertex property.
@@ -383,6 +392,51 @@ struct SYMBOL_VISIBLE Graph
 	virtual bool valid() const;
 
 	/**
+	 * Return if graph is fully connected
+	 */
+	bool is_connected() const;
+
+	/**
+	 * Return Mapping of Vertex Descriptors to indices
+	 */
+	std::map<typename VertexDescriptor::Value, size_t> get_vertex_index_map() const;
+
+	/**
+	 * Return one possible mapping of vertices of compared graphs.
+	 * If no mapping is possible an empty map is returned.
+	 * @param other Graph compared against.
+	 */
+	std::map<VertexDescriptor, VertexDescriptor> isomorphism(Graph const& other) const;
+
+	/**
+	 * Create a mapping of vertices if the graphs are isomorphic and the number of unmapped
+	 * vertices if the graphs only have subgraph-isomorphisms.
+	 * @param other Graph compared against.
+	 * @param callback Callback function that returns whether the search for other subgraph
+	 * isomorphisms should be continued. Inserts mapping to result. Takes number of unmapped
+	 * compartments, mapping from Graph to other Graph and reversed mapping and returns a bool. If
+	 * true another mapping of vertices is searched.
+	 * @param vertex_equivalent Function that returns if two vertices are equivalent.
+	 */
+	template <typename Callback, typename VertexEquivalent>
+	void isomorphism(
+	    Graph const& other, Callback&& callback, VertexEquivalent&& vertex_equivalent) const;
+
+	/**
+	 * Create a mapping of vertices if the graphs are isomorphic and the number of unmapped
+	 * vertices if the graphs only have subgraph-isomorphisms.
+	 * @param other Graph compared against.
+	 * @param callback Callback function that returns whether the search for other subgraph
+	 * isomorphisms should be continued. Inserts mapping to result. Takes number of unmapped
+	 * compartments, mapping from Graph to other Graph and reversed mapping and returns a bool. If
+	 * true another mapping of vertices is searched.
+	 * @param vertex_equivalent Function that returns if two vertices are equivalent.
+	 */
+	template <typename Callback, typename VertexEquivalent>
+	void isomorphism_subgraph(
+	    Graph const& other, Callback&& callback, VertexEquivalent&& vertex_equivalent) const;
+
+	/**
 	 * Get whether graphs are equal except their descriptors.
 	 * This is the case exactly if all vertex and edge properties are equal and in the same order as
 	 * well as the edges connect the same vertices in the same order.
@@ -406,6 +460,9 @@ private:
 	void check_contains(VertexDescriptor const& descriptor, char const* description) const;
 	void check_contains(EdgeDescriptor const& descriptor, char const* description) const;
 
+	void is_connected_rec(
+	    VertexDescriptor const& vertex, std::set<VertexDescriptor>& marked_vertices) const;
+
 	static_assert(std::is_base_of_v<VertexOnGraph<VertexDescriptor, Backend>, VertexDescriptor>);
 	static_assert(std::is_base_of_v<EdgeOnGraph<EdgeDescriptor, Backend>, EdgeDescriptor>);
 	static_assert(detail::IsSupportedGraph<Backend>::value);
@@ -427,3 +484,5 @@ std::ostream& operator<<(
 
 } // namespace common
 } // namespace grenade
+
+#include "grenade/common/graph.tcc"

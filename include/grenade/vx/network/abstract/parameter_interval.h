@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/genpybind.h"
 #include <iosfwd>
 
 namespace grenade::vx::network::abstract {
@@ -28,6 +29,10 @@ private:
 // Print Interval
 template <typename T>
 std::ostream& operator<<(std::ostream& os, ParameterInterval<T> const& interval);
+
+
+typedef ParameterInterval<double> ParameterIntervalDouble GENPYBIND(opaque(false));
+
 
 } // namespace grenade::vx::network::abstract
 

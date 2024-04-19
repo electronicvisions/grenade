@@ -2,9 +2,11 @@
 
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"
 
-namespace grenade::vx::network::abstract {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-struct SYMBOL_VISIBLE SynapticInputEnvironmentConductance : public SynapticInputEnvironment
+struct SYMBOL_VISIBLE GENPYBIND(visible) SynapticInputEnvironmentConductance
+    : public SynapticInputEnvironment
 {
 	SynapticInputEnvironmentConductance() = default;
 	SynapticInputEnvironmentConductance(bool exitatory, int number);
@@ -19,4 +21,5 @@ protected:
 	bool is_equal_to(SynapticInputEnvironmentConductance const& other) const;
 };
 
-} // namespace grenade::vx::network::abstract
+} // namespace abstract
+} // namespace grenade::vx::network

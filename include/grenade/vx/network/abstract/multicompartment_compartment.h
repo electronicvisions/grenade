@@ -15,7 +15,7 @@
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-struct SYMBOL_VISIBLE GENPYBIND(visible) Compartment : public common::Property<Compartment>
+struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public common::Property<Compartment>
 {
 	virtual MechanismOnCompartment add(Mechanism const& mechanism);
 	virtual void remove(MechanismOnCompartment const& descriptor);

@@ -134,7 +134,7 @@ def build(bld):
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp'),
         test_main = 'tests/common/grenade/main.cpp',
-        use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc', 'grenade_vx_serialization'],
+        use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc', 'grenade_vx_serialization', 'grenade_test_common_inc'],
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=240,
         install_path = '${PREFIX}/bin',
@@ -176,6 +176,13 @@ def build(bld):
                 "INCLUDE_PATH": join(get_toplevel_path(), "grenade", "include")
             },
         )
+
+    bld(
+    target = 'grenade_test_common_inc',
+    export_includes = 'tests/common',
+    )
+
+
 
 # for grenade_vx's runtime dependency on grenade_ppu_base_vx
 from waflib.TaskGen import feature, after_method

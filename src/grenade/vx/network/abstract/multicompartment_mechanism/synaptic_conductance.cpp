@@ -40,12 +40,13 @@ HardwareResourcesWithConstraints MechanismSynapticInputConductance::get_hardware
 	HardwareResourcesWithConstraints resources_with_constraints;
 	std::vector<common::PropertyHolder<HardwareResource>> resource_list;
 	std::vector<common::PropertyHolder<HardwareConstraint>> constraint_list;
-	if (environment.synaptic_connections.find(compartment) ==
-	    environment.synaptic_connections.end()) {
+
+	std::vector<common::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
+	    environment.get(compartment);
+
+	if (synaptic_inputs.size() == 0) {
 		throw std::invalid_argument(" No information about this compartment in environment");
 	}
-	std::vector<common::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
-	    environment.synaptic_connections.at(compartment);
 
 	// Loop over all Synaptic Inputs of Compartment
 	for (auto const& i : synaptic_inputs) {
@@ -54,6 +55,10 @@ HardwareResourcesWithConstraints MechanismSynapticInputConductance::get_hardware
 		}
 		// Calculate Number of Synaptic Circuits required
 		int number_of_inputs = round((*i).number_of_inputs.number_total);
+		// Always request one neuron circuit instead of none
+		if (number_of_inputs == 0) {
+			number_of_inputs = 1;
+		}
 
 		// Minimal Numbers in Top and Bottom Row
 		if ((*i).number_of_inputs.number_top != 0 || (*i).number_of_inputs.number_bottom != 0) {

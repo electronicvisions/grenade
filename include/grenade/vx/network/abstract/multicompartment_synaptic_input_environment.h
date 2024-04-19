@@ -5,9 +5,11 @@
 #include <utility>
 
 
-namespace grenade::vx::network::abstract {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-struct SYMBOL_VISIBLE SynapticInputEnvironment : public common::Property<SynapticInputEnvironment>
+struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) SynapticInputEnvironment
+    : public common::Property<SynapticInputEnvironment>
 {
 	SynapticInputEnvironment() = default;
 	SynapticInputEnvironment(bool exitatory, int number);
@@ -25,4 +27,5 @@ protected:
 	virtual bool is_equal_to(SynapticInputEnvironment const& other) const;
 };
 
-} // namespace grenade::vx::network::abstract
+} // abstract
+} // namespace grenade::vx::network

@@ -7,7 +7,7 @@ namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // CompartmentConnection
-struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnection
+struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) CompartmentConnection
     : public common::Property<CompartmentConnection>
 {
 	CompartmentConnection() = default;

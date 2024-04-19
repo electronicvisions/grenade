@@ -30,14 +30,14 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 	bool valid() const;
 
 	// Parameter Space
-	struct ParameterSpace
+	struct GENPYBIND(visible) ParameterSpace
 	{
 		// Interval with range of Parameters
 		ParameterInterval<double> conductance_interval;
 		ParameterInterval<double> potential_interval;
 		ParameterInterval<double> time_constant_interval;
 
-		struct Parameterization
+		struct GENPYBIND(visible) Parameterization
 		{
 			Parameterization() = default;
 			Parameterization(

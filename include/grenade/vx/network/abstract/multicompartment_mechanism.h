@@ -11,7 +11,7 @@ struct Environment;
 struct CompartmentOnNeuron;
 
 // Mechanism Base-Class
-struct GENPYBIND(visible) SYMBOL_VISIBLE Mechanism : public common::Property<Mechanism>
+struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public common::Property<Mechanism>
 {
 	virtual bool conflict(Mechanism const& other) const = 0;
 	virtual HardwareResourcesWithConstraints get_hardware(

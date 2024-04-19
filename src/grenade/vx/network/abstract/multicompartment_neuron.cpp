@@ -99,23 +99,82 @@ CompartmentOnNeuron Neuron::target(CompartmentConnectionOnNeuron const& descript
 }
 
 // Iterators over Compartments
-typedef common::Graph<
-    Neuron,
-    common::detail::UndirectedGraph,
-    Compartment,
-    CompartmentConnection,
-    CompartmentOnNeuron,
-    CompartmentConnectionOnNeuron,
-    std::unique_ptr>::VertexIterator CompartmentIterator;
-std::pair<CompartmentIterator, CompartmentIterator> Neuron::compartment_iterators() const
+std::pair<Neuron::CompartmentIterator, Neuron::CompartmentIterator> Neuron::compartment_iterators()
+    const
 {
 	return this->vertices();
 }
 
+// Iterator over all CompartmentConnections
+std::pair<Neuron::CompartmentConnectionIterator, Neuron::CompartmentConnectionIterator>
+Neuron::compartment_connection_iterators() const
+{
+	return this->edges();
+}
+
+// Iterator to adjecent Compartments to given compartment
+std::pair<Neuron::AdjacencyIterator, Neuron::AdjacencyIterator> Neuron::adjacent_compartments(
+    CompartmentOnNeuron const& descriptor) const
+{
+	return this->adjacent_vertices(descriptor);
+}
+
+// Returns CompartmentID-Mappingt to other neuron if isomorphic
+std::map<CompartmentOnNeuron, CompartmentOnNeuron> Neuron::isomorphism(Neuron const& other) const
+{
+	return Graph::isomorphism(other);
+}
+
+// Returns map of index to Compartment
+std::map<CompartmentOnNeuron::Value, size_t> Neuron::get_compartment_index_map() const
+{
+	std::map<CompartmentOnNeuron::Value, size_t> mapping;
+	size_t index = 0;
+	for (auto compartment : boost::make_iterator_range(compartment_iterators())) {
+		mapping.emplace(compartment.value(), index);
+		index++;
+	}
+	return mapping;
+}
+
+// Checks if two compartments are neighbours
+bool Neuron::neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const
+{
+	for (auto compartment : boost::make_iterator_range(adjacent_compartments(source))) {
+		if (compartment == target) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// Checks if all compartments are connected
+bool Neuron::compartments_connected() const
+{
+	return this->is_connected();
+}
 
 // Checks if Neuron Contains Compartment via Compartment-ID
 bool Neuron::contains(CompartmentOnNeuron const& descriptor) const
 {
 	return Graph::contains(descriptor);
 }
+
+std::ostream& operator<<(std::ostream& os, Neuron const& neuron)
+{
+	os << "Neuron(\n";
+	os << "\tCompartments: " << neuron.num_compartments() << "\n";
+	for (auto compartment : boost::make_iterator_range(neuron.compartment_iterators())) {
+		os << "\t\t" << compartment << "\n";
+	}
+	os << "\tConnections: " << neuron.num_compartment_connections() << "\n";
+	;
+	for (auto connection : boost::make_iterator_range(neuron.compartment_connection_iterators())) {
+		os << "\t\t" << connection << "\n";
+	}
+	os << ")\n";
+
+	return os;
+}
+
 } // namespace grenade::vx::network::abstract

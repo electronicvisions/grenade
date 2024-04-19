@@ -10,7 +10,6 @@ CompartmentOnNeuron ResourceManager::add_config(
 	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints>
 	    hardware_resources_with_constraints_on_mechanims =
 	        neuron.get(compartment).get_hardware(compartment, environment);
-
 	// Circuit Configuration
 	NumberTopBottom neuron_circuit_config;
 	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
@@ -63,10 +62,10 @@ CompartmentOnNeuron ResourceManager::add_config(
 			max_request_top = Value.number_top;
 		}
 	}
-
 	// Add Configuration to Resource Map in ResourceManager
 	neuron_circuit_config = NumberTopBottom(max_request_total, max_request_top, max_request_bottom);
 	resource_map.emplace(compartment, neuron_circuit_config);
+	m_total += NumberTopBottom(max_request_total, max_request_top, max_request_bottom);
 	return compartment;
 }
 
@@ -80,10 +79,23 @@ void ResourceManager::remove_config(CompartmentOnNeuron const& compartment)
 
 NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& compartment) const
 {
-	if (!resource_map.contains(compartment)) {
-		throw std::invalid_argument("Compartment not in Resource Manager");
+	if (resource_map.find(compartment) == resource_map.end()) {
+		throw std::invalid_argument("Invalid Compartment: No Configuration");
 	}
 	return *(resource_map.at(compartment));
+}
+
+void ResourceManager::add_config(Neuron const& neuron, Environment const& environment)
+{
+	for (auto i = neuron.compartment_iterators().first; i != neuron.compartment_iterators().second;
+	     i++) {
+		add_config(*i, neuron, environment);
+	}
+}
+
+NumberTopBottom const& ResourceManager::get_total() const
+{
+	return m_total;
 }
 
 } // namespace grenade::vx::network::abstract

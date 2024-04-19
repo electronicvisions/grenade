@@ -36,6 +36,11 @@ HardwareResourcesWithConstraints MechanismCapacitance::get_hardware(
 		num_of_hardware_resources = (capacitance_model / capacity_convert) + 1;
 	}
 
+	// Always request one neuron circuit instead of none
+	if (num_of_hardware_resources == 0) {
+		num_of_hardware_resources = 1;
+	}
+
 	// Push Number of Required Hardware Ressources into Resource List
 	for (int i = 0; i < num_of_hardware_resources; i++) {
 		resource_list.push_back(HardwareResourceCapacity());

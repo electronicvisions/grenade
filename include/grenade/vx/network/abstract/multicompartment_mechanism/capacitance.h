@@ -30,12 +30,12 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismCapacitance : public Mechanism
 
 
 	// Parameter Space
-	struct ParameterSpace
+	struct GENPYBIND(visible) ParameterSpace
 	{
 		// Interval with range of Parameters
 		ParameterInterval<double> capacitance_interval;
 
-		struct Parameterization
+		struct GENPYBIND(visible) Parameterization
 		{
 			Parameterization() = default;
 			Parameterization(double const& value);

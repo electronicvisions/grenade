@@ -85,8 +85,7 @@ TEST(multicompartment_neuron, Resources)
 
 	std::vector<grenade::common::PropertyHolder<SynapticInputEnvironment>>
 	    synaptic_input_on_compartment_a = {synaptic_input_current_a, synaptic_input_current_b};
-	environment.synaptic_connections.emplace(
-	    compartment_a_on_neuron, synaptic_input_on_compartment_a);
+	environment.add(compartment_a_on_neuron, synaptic_input_on_compartment_a);
 
 	SynapticInputEnvironmentConductance synaptic_input_conductance_a(true, 700);
 	SynapticInputEnvironmentConductance synaptic_input_conductance_b(
@@ -95,8 +94,7 @@ TEST(multicompartment_neuron, Resources)
 	std::vector<grenade::common::PropertyHolder<SynapticInputEnvironment>>
 	    synaptic_input_on_compartment_b = {
 	        synaptic_input_conductance_a, synaptic_input_conductance_b};
-	environment.synaptic_connections.emplace(
-	    compartment_b_on_neuron, synaptic_input_on_compartment_b);
+	environment.add(compartment_b_on_neuron, synaptic_input_on_compartment_b);
 
 
 	// Add Compartment-Configuration to Resource-Manager

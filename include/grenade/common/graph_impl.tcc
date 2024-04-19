@@ -806,6 +806,118 @@ bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 	return true;
 }
 
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+std::map<typename VertexDescriptor::Value, size_t>
+Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
+    get_vertex_index_map() const
+{
+	std::map<typename VertexDescriptor::Value, size_t> vertex_index;
+	size_t i = 0;
+
+	for (auto it = vertices().first; it != vertices().second; it++) {
+		vertex_index[it->value()] = i;
+		i++;
+	}
+
+	return vertex_index;
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+std::map<VertexDescriptor, VertexDescriptor>
+Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::isomorphism(
+    Graph const& other) const
+{
+	auto vertex_index_1 = get_vertex_index_map();
+	auto const vertex_index_2 = other.get_vertex_index_map();
+	std::map<VertexDescriptor, VertexDescriptor> vertex_mapping;
+	std::vector<typename VertexDescriptor::Value> f(num_vertices());
+
+	/**
+	 * case for one vertex
+	 * isomorphism maps on 0 instead of vertex id
+	 * should be fixed in boost-1.86.0
+	 */
+	if (num_vertices() == 1) {
+		vertex_mapping.emplace(*(vertices().first), *(other.vertices().first));
+		return vertex_mapping;
+	}
+
+	bool valid = boost::isomorphism(
+	    backend(), other.backend(),
+	    boost::isomorphism_map(boost::make_iterator_property_map(
+	                               f.begin(), boost::make_assoc_property_map(vertex_index_1), f[0]))
+	        .vertex_index1_map(boost::make_assoc_property_map(vertex_index_1))
+	        .vertex_index2_map(boost::make_assoc_property_map(vertex_index_2)));
+
+	if (!valid) {
+		return vertex_mapping;
+	}
+
+	for (auto const& [key_1, value_1] : vertex_index_1) {
+		vertex_mapping.emplace(key_1, f.at(value_1));
+	}
+
+	return vertex_mapping;
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::is_connected()
+    const
+{
+	std::set<VertexDescriptor> marked_vertices;
+	VertexDescriptor root = *(vertices().first);
+
+	is_connected_rec(root, marked_vertices);
+
+	return (marked_vertices.size() == num_vertices());
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
+    is_connected_rec(
+        VertexDescriptor const& vertex, std::set<VertexDescriptor>& marked_vertices) const
+{
+	marked_vertices.emplace(vertex);
+
+	for (auto neighbour : boost::make_iterator_range(adjacent_vertices(vertex))) {
+		if (!marked_vertices.contains(neighbour)) {
+			is_connected_rec(neighbour, marked_vertices);
+		}
+	}
+}
+
 
 template <
     typename Derived,
