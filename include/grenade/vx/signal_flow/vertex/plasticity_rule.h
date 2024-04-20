@@ -485,7 +485,7 @@ struct PlasticityRule : public EntityOnChip
 	 * Get C++ definition of recorded memory structure.
 	 * This structure is instantiated and made available to the plasticity rule kernel.
 	 */
-	std::string get_recorded_memory_definition() const SYMBOL_VISIBLE;
+	std::string get_recorded_memory_declaration() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get interval in memory layout of data within recording.

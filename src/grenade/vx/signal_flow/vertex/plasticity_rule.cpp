@@ -419,7 +419,7 @@ void to_json(inja::json& j, PlasticityRule::NeuronViewShape const& shape)
 	j = inja::json{{"num_columns", shape.columns.size()}};
 }
 
-std::string PlasticityRule::get_recorded_memory_definition() const
+std::string PlasticityRule::get_recorded_memory_declaration() const
 {
 	if (!m_recording) {
 		return "";
