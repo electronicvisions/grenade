@@ -28,7 +28,7 @@ def configure(cfg):
     cfg.load('pycodestyle')
 
 def build(bld):
-    bld.env.DLSvx_HARDWARE_AVAILABLE = "SLURM_HWDB_YAML" in os.environ
+    bld.env.BBS_HARDWARE_AVAILABLE = "SLURM_HWDB_YAML" in os.environ
 
     if not bld.env.with_pybind:
         bld.fatal('building pygrenade requires pybind')
@@ -112,7 +112,7 @@ def build(bld):
         install_path='${PREFIX}/bin',
         pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
         pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle"),
-        skip_run=not bld.env.DLSvx_HARDWARE_AVAILABLE
+        skip_run=not bld.env.BBS_HARDWARE_AVAILABLE
     )
 
     bld.add_post_fun(summary)
