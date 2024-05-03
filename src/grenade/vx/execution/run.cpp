@@ -97,7 +97,7 @@ std::vector<signal_flow::OutputData> run(
 		auto const get_vps = [graphs, vertex](size_t i) {
 			std::set<DLSGlobal> vps;
 			auto const& vertex_descriptor_map = graphs[i].get().get_vertex_descriptor_map();
-			for (auto const& [_, vertex_descriptor] :
+			for (auto const& [vertex_descriptor, _] :
 			     boost::make_iterator_range(vertex_descriptor_map.right.equal_range(vertex))) {
 				auto const& vertex_property =
 				    graphs[i].get().get_vertex_property(vertex_descriptor);
