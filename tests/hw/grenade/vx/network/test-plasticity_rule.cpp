@@ -670,11 +670,9 @@ TEST(PlasticityRule, ExecutorInitialState)
 		}
 		kernel << "  for (size_t i = 0; i < std::get<0>(recording.w).size(); ++i) {\n";
 		kernel << "    size_t active_column = 0;\n";
-		kernel << "    for (size_t j = 0; j < synapses[0].columns.size; ++j) {\n";
-		kernel << "      if (synapses[0].columns.test(j)) {\n";
-		kernel << "        std::get<0>(recording.w)[i][active_column] = w[j];\n";
+		kernel << "    for (size_t column: synapses[0].columns) {\n";
+		kernel << "        std::get<0>(recording.w)[i][active_column] = w[column];\n";
 		kernel << "        active_column++;\n";
-		kernel << "      }\n";
 		kernel << "    }\n";
 		kernel << "  synapses[0].set_weights(w, 0);\n";
 		kernel << "  }\n";
@@ -935,6 +933,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
 	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
+	kernel << "#include <array>\n";
 	kernel << "using namespace grenade::vx::ppu;\n";
 	kernel << "volatile uint32_t test;\n";
 	kernel << "void PLASTICITY_RULE_KERNEL(std::array<SynapseArrayViewHandle, 1>& synapses, "

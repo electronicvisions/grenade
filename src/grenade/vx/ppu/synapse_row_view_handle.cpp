@@ -1,5 +1,7 @@
 #include "grenade/vx/ppu/synapse_row_view_handle.h"
 
+#include "libnux/system.h"
+
 namespace grenade::vx::ppu {
 
 SynapseRowViewHandle::UnsignedRow SynapseRowViewHandle::get_causal_correlation() const

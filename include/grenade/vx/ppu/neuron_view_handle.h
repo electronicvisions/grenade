@@ -1,6 +1,7 @@
 #pragma once
-#include "hate/bitset.h"
 #include "hate/visibility.h"
+#include <cstdint>
+#include <vector>
 #ifdef __ppu__
 #include "libnux/vx/dls.h"
 #include "libnux/vx/vector.h"
@@ -13,9 +14,8 @@ struct NeuronViewHandle
 {
 	/**
 	 * Columns in neuron view.
-	 * TODO: replace numbers by halco constants
 	 */
-	hate::bitset<256, uint32_t> columns;
+	std::vector<uint8_t> columns;
 
 #ifdef __ppu__
 	/**
@@ -31,10 +31,10 @@ struct NeuronViewHandle
 	/**
 	 * Get single neuron rate counter value.
 	 * If column is not part of view exit(1).
-	 * @param column Neuron column for which to get value
+	 * @param column_index Index of neuron column in columns for which to get value
 	 * @param reset Whether to reset the counters directly after read-out
 	 */
-	uint8_t get_rate_counter(size_t column, bool reset) const SYMBOL_VISIBLE;
+	uint8_t get_rate_counter(size_t column_index, bool reset) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get neuron rate counter values.

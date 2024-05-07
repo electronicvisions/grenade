@@ -45,22 +45,15 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "          hate::for_each([&](auto& "
 		          "weights_per_synapse_view, auto& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
-		kernel << "              size_t row = 0;\n";
-		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
-		kernel << "                if (synapse.rows.test(i)) {\n";
+		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
 		kernel << "                  auto const tmp = "
 		       << "static_cast<VectorRowFracSat8>(synapse.get_weights(i));\n";
-		kernel << "                  size_t column = 0;\n";
-		kernel << "                  for (size_t j = 0; j < synapse.columns.size; ++j) {\n";
-		kernel << "                    if (synapse.columns.test(j)) {\n";
-		kernel << "                      weights_per_synapse_view[row][column] = tmp[j];\n";
-		kernel << "                      column++;\n";
-		kernel << "                    }\n";
+		kernel << "                  for (size_t j = 0; j < synapse.columns.size(); ++j) {\n";
+		kernel
+		    << "                      weights_per_synapse_view[i][j] = tmp[synapse.columns[j]];\n";
 		kernel << "                  }\n";
-		kernel << "                  do_not_optimize_away(weights_per_synapse_view[row]);\n";
+		kernel << "                  do_not_optimize_away(weights_per_synapse_view[i]);\n";
 		kernel << "                  do_not_optimize_away(weights_per_synapse_view);\n";
-		kernel << "                  row++;\n";
-		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
 		kernel << "          }, recording.weights, synapses);\n";
@@ -72,26 +65,18 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "          hate::for_each("
 		          "[&](auto& correlation_causal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
-		kernel << "              size_t row = 0;\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
-		kernel << "                if (synapse.rows.test(i)) {\n";
 		kernel << "                  vector_row_t causal;\n";
 		kernel << "                  get_causal_correlation(&(causal.even.data), "
-		          "                    &(causal.odd.data), i);\n";
+		          "                    &(causal.odd.data), synapse.rows[i]);\n";
 		kernel << "                  do_not_optimize_away(causal);\n";
-		kernel << "                  reset_correlation(i);\n";
+		kernel << "                  reset_correlation(synapse.rows[i]);\n";
 		kernel << "                  VectorRowFracSat8 const tmp = "
 		          "causal.convert_contiguous();\n";
-		kernel << "                  size_t column = 0;\n";
-		kernel << "                  for (size_t j = 0; j < synapse.columns.size; ++j) {\n";
-		kernel << "                    if (synapse.columns.test(j)) {\n";
-		kernel << "                      correlation_causal_per_synapse_view[row][column] "
-		          "= tmp[j];\n";
-		kernel << "                      column++;\n";
-		kernel << "                    }\n";
+		kernel << "                  for (size_t j = 0; j < synapse.columns.size(); ++j) {\n";
+		kernel << "                      correlation_causal_per_synapse_view[i][j] "
+		          "= tmp[synapse.columns[j]];\n";
 		kernel << "                  }\n";
-		kernel << "                  row++;\n";
-		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
 		kernel << "          }, recording.correlation_causal, synapses);\n";
@@ -103,26 +88,18 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "          hate::for_each("
 		          "[&](auto& correlation_acausal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
-		kernel << "              size_t row = 0;\n";
-		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
-		kernel << "                if (synapse.rows.test(i)) {\n";
+		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
 		kernel << "                  vector_row_t acausal;\n";
 		kernel << "                  get_acausal_correlation(&(acausal.even.data), "
-		          "                    &(acausal.odd.data), i);\n";
+		          "                    &(acausal.odd.data), synapse.rows[i]);\n";
 		kernel << "                  do_not_optimize_away(acausal);\n";
-		kernel << "                  reset_correlation(i);\n";
+		kernel << "                  reset_correlation(synapse.rows[i]);\n";
 		kernel << "                  VectorRowFracSat8 const tmp = "
 		          "acausal.convert_contiguous();\n";
-		kernel << "                  size_t column = 0;\n";
-		kernel << "                  for (size_t j = 0; j < synapse.columns.size; ++j) {\n";
-		kernel << "                    if (synapse.columns.test(j)) {\n";
-		kernel << "                      correlation_acausal_per_synapse_view[row][column] "
-		          "= tmp[j];\n";
-		kernel << "                      column++;\n";
-		kernel << "                    }\n";
+		kernel << "                  for (size_t j = 0; j < synapse.columns.size(); ++j) {\n";
+		kernel << "                      correlation_acausal_per_synapse_view[i][j] "
+		          "= tmp[synapse.columns[j]];\n";
 		kernel << "                  }\n";
-		kernel << "                  row++;\n";
-		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
 		kernel << "          }, recording.correlation_acausal, synapses);\n";
@@ -135,33 +112,25 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		          "[&](auto& correlation_causal_per_synapse_view, auto& "
 		          "correlation_acausal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
-		kernel << "              size_t row = 0;\n";
-		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
-		kernel << "                if (synapse.rows.test(i)) {\n";
+		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
 		kernel << "                  vector_row_t causal;\n";
 		kernel << "                  vector_row_t acausal;\n";
 		kernel << "                  get_correlation(&(causal.even.data), "
 		          "                    &(causal.odd.data), &(acausal.even.data), "
-		          "&(acausal.odd.data), i);\n";
+		          "&(acausal.odd.data), synapse.rows[i]);\n";
 		kernel << "                  do_not_optimize_away(causal);\n";
 		kernel << "                  do_not_optimize_away(acausal);\n";
-		kernel << "                  reset_correlation(i);\n";
+		kernel << "                  reset_correlation(synapse.rows[i]);\n";
 		kernel << "                  VectorRowFracSat8 const tmp_causal = "
 		          "causal.convert_contiguous();\n";
 		kernel << "                  VectorRowFracSat8 const tmp_acausal = "
 		          "acausal.convert_contiguous();\n";
-		kernel << "                  size_t column = 0;\n";
-		kernel << "                  for (size_t j = 0; j < synapse.columns.size; ++j) {\n";
-		kernel << "                    if (synapse.columns.test(j)) {\n";
-		kernel << "                      correlation_causal_per_synapse_view[row][column] "
-		          "= tmp_causal[j];\n";
-		kernel << "                      correlation_acausal_per_synapse_view[row][column] "
-		          "= tmp_acausal[j];\n";
-		kernel << "                      column++;\n";
-		kernel << "                    }\n";
+		kernel << "                  for (size_t j = 0; j < synapse.columns.size(); ++j) {\n";
+		kernel << "                      correlation_causal_per_synapse_view[i][j] "
+		          "= tmp_causal[synapse.columns[j]];\n";
+		kernel << "                      correlation_acausal_per_synapse_view[i][j] "
+		          "= tmp_acausal[synapse.columns[j]];\n";
 		kernel << "                  }\n";
-		kernel << "                  row++;\n";
-		kernel << "                }\n";
 		kernel << "              }\n";
 		kernel << "            }\n";
 		kernel << "          }, recording.correlation_causal, recording.correlation_acausal, "

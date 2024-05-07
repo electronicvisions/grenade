@@ -94,10 +94,10 @@ ppu::SynapseArrayViewHandle SynapseArrayViewSparse::toSynapseArrayViewHandle() c
 	}
 	ppu::SynapseArrayViewHandle result;
 	for (auto const& column : used_columns) {
-		result.columns.set(column.value());
+		result.columns.push_back(column.value());
 	}
 	for (auto const& row : used_rows) {
-		result.rows.set(row.value());
+		result.rows.push_back(row.value());
 	}
 	return result;
 }

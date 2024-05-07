@@ -1,6 +1,7 @@
 #pragma once
-#include "hate/bitset.h"
 #include "hate/visibility.h"
+#include <cstdint>
+#include <vector>
 #ifdef __ppu__
 #include "libnux/vx/vector.h"
 #endif
@@ -11,13 +12,12 @@ struct SynapseArrayViewHandle
 {
 	/**
 	 * Columns in synapse array of view.
-	 * TODO: replace numbers by halco constants
 	 */
-	hate::bitset<256, uint32_t> columns;
+	std::vector<uint8_t> columns;
 	/**
 	 * Rows in synapse array of view.
 	 */
-	hate::bitset<256, uint32_t> rows;
+	std::vector<uint8_t> rows;
 
 #ifdef __ppu__
 	/**

@@ -236,11 +236,11 @@ synapse_array_view_handle_INDEX = {
 		synapse_array_view_handle.hemisphere = static_cast<libnux::vx::PPUOnDLS>({{synapse.hemisphere}});
 		synapse_array_view_handle.column_mask = 0;
 ## for column in synapse.enabled_columns
-		synapse_array_view_handle.columns.set({{column}});
+		synapse_array_view_handle.columns.push_back({{column}});
 		synapse_array_view_handle.column_mask[{{column}}] = 1;
 ## endfor
 ## for row in synapse.enabled_rows
-		synapse_array_view_handle.rows.set({{row}});
+		synapse_array_view_handle.rows.push_back({{row}});
 ## endfor
 		return synapse_array_view_handle;
 	}(){% if not loop.is_last %},{% endif %}
@@ -253,7 +253,7 @@ neuron_view_handle_INDEX = {
 		grenade::vx::ppu::NeuronViewHandle neuron_view_handle;
 		neuron_view_handle.hemisphere = static_cast<libnux::vx::PPUOnDLS>({{neuron.hemisphere}});
 ## for column in neuron.enabled_columns
-		neuron_view_handle.columns.set({{column}});
+		neuron_view_handle.columns.push_back({{column}});
 ## endfor
 		return neuron_view_handle;
 	}(){% if not loop.is_last %},{% endif %}
@@ -266,16 +266,12 @@ neuron_view_handle_INDEX = {
 			parameters["neurons"] = inja::json::array();
 			for (auto const& [synram, synapse_array_view_handle] : synapses) {
 				std::vector<size_t> enabled_columns;
-				for (size_t column = 0; column < synapse_array_view_handle.columns.size; ++column) {
-					if (synapse_array_view_handle.columns.test(column)) {
-						enabled_columns.push_back(column);
-					}
+				for (auto const column : synapse_array_view_handle.columns) {
+					enabled_columns.push_back(column);
 				}
 				std::vector<size_t> enabled_rows;
-				for (size_t row = 0; row < synapse_array_view_handle.rows.size; ++row) {
-					if (synapse_array_view_handle.rows.test(row)) {
-						enabled_rows.push_back(row);
-					}
+				for (auto const row : synapse_array_view_handle.rows) {
+					enabled_rows.push_back(row);
 				}
 				parameters["synapses"].push_back(
 				    {{"hemisphere", synram.toHemisphereOnDLS().value()},
@@ -284,10 +280,8 @@ neuron_view_handle_INDEX = {
 			}
 			for (auto const& [row, neuron_view_handle] : neurons) {
 				std::vector<size_t> enabled_columns;
-				for (size_t column = 0; column < neuron_view_handle.columns.size; ++column) {
-					if (neuron_view_handle.columns.test(column)) {
-						enabled_columns.push_back(column);
-					}
+				for (auto const column : neuron_view_handle.columns) {
+					enabled_columns.push_back(column);
 				}
 				parameters["neurons"].push_back(
 				    {{"hemisphere", row.toHemisphereOnDLS().value()},
@@ -417,32 +411,14 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 			parameters["synapses"] = inja::json::array();
 			parameters["neurons"] = inja::json::array();
 			for (auto const& [synram, synapse_array_view_handle] : synapses) {
-				std::vector<size_t> enabled_columns;
-				for (size_t column = 0; column < synapse_array_view_handle.columns.size; ++column) {
-					if (synapse_array_view_handle.columns.test(column)) {
-						enabled_columns.push_back(column);
-					}
-				}
-				std::vector<size_t> enabled_rows;
-				for (size_t row = 0; row < synapse_array_view_handle.rows.size; ++row) {
-					if (synapse_array_view_handle.rows.test(row)) {
-						enabled_rows.push_back(row);
-					}
-				}
 				parameters["synapses"].push_back(
 				    {{"hemisphere", synram.value()},
-				     {"enabled_columns", enabled_columns},
-				     {"enabled_rows", enabled_rows}});
+				     {"enabled_columns", synapse_array_view_handle.columns},
+				     {"enabled_rows", synapse_array_view_handle.rows}});
 			}
 			for (auto const& [row, neuron_view_handle] : neurons) {
-				std::vector<size_t> enabled_columns;
-				for (size_t column = 0; column < neuron_view_handle.columns.size; ++column) {
-					if (neuron_view_handle.columns.test(column)) {
-						enabled_columns.push_back(column);
-					}
-				}
 				parameters["neurons"].push_back(
-				    {{"hemisphere", row.value()}, {"enabled_columns", enabled_columns}});
+				    {{"hemisphere", row.value()}, {"enabled_columns", neuron_view_handle.columns}});
 			}
 			parameters["id"] = plasticity_rule.get_id().value();
 			auto const handles_index = handles_indices.at({i, realtime_column_index});

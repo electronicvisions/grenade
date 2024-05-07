@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/vx/ppu/synapse_row_view_handle.h"
+#include <array>
 #include <boost/iterator/iterator_facade.hpp>
 
 namespace grenade::vx::ppu {
@@ -19,7 +20,6 @@ struct SynapseRowViewHandleRange
 		friend class SynapseRowViewHandleRange;
 		friend class boost::iterator_core_access;
 
-		Iterator(SynapseArrayViewHandle const& synapses);
 		Iterator(SynapseArrayViewHandle const& synapses, size_t row);
 
 		typedef SynapseRowViewHandle reference;
@@ -58,12 +58,9 @@ struct SynapseRowViewHandleSignedRange
 		friend class boost::iterator_core_access;
 
 		Iterator(
-		    SynapseArrayViewHandle const& synapses_exc, SynapseArrayViewHandle const& synapses_inh);
-		Iterator(
 		    SynapseArrayViewHandle const& synapses_exc,
 		    SynapseArrayViewHandle const& synapses_inh,
-		    size_t exc_row,
-		    size_t inh_row);
+		    size_t row);
 
 		typedef SynapseRowViewHandleSigned reference;
 		void check() const;
@@ -73,8 +70,7 @@ struct SynapseRowViewHandleSignedRange
 
 		SynapseArrayViewHandle const& m_synapses_exc;
 		SynapseArrayViewHandle const& m_synapses_inh;
-		size_t m_exc_row{0};
-		size_t m_inh_row{0};
+		size_t m_row;
 	};
 
 	SynapseRowViewHandleSignedRange(

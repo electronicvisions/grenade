@@ -41,7 +41,7 @@ ppu::NeuronViewHandle NeuronView::toNeuronViewHandle() const
 {
 	ppu::NeuronViewHandle result;
 	for (auto const& column : m_columns) {
-		result.columns.set(column.value());
+		result.columns.push_back(column.value());
 	}
 	return result;
 }
