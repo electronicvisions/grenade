@@ -411,7 +411,6 @@ void RoutingBuilder::apply_source_labels(
 				     neurons.at(i).coordinate.get_placed_compartments()) {
 					for (size_t an = 0; an < atomic_neurons.size(); ++an) {
 						local_labels.at(i)[compartment].resize(atomic_neurons.size());
-						// TODO: check spike master
 						if (!internal.contains(std::tuple{descriptor, i, compartment})) {
 							if (!neither_recorded_nor_source_neurons.contains(
 							        atomic_neurons.at(an))) {
@@ -433,14 +432,15 @@ void RoutingBuilder::apply_source_labels(
 							[[maybe_unused]] auto const& spike_master =
 							    neurons.at(i).compartments.at(compartment).spike_master;
 							assert(spike_master);
-							assert(spike_master->neuron_on_compartment == an);
-							local_labels.at(i)[compartment].at(an).emplace(
-							    internal.at(std::tuple{descriptor, i, compartment})
-							        .get_neuron_backend_address_out());
-							LOG4CXX_DEBUG(
-							    m_logger, "apply_source_labels(): Set label for: "
-							                  << descriptor << " " << i << " " << compartment << " "
-							                  << an << ".");
+							if (spike_master->neuron_on_compartment == an) {
+								local_labels.at(i)[compartment].at(an).emplace(
+								    internal.at(std::tuple{descriptor, i, compartment})
+								        .get_neuron_backend_address_out());
+								LOG4CXX_DEBUG(
+								    m_logger, "apply_source_labels(): Set label for: "
+								                  << descriptor << " " << i << " " << compartment
+								                  << " " << an << ".");
+							}
 						}
 					}
 				}
