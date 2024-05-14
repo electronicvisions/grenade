@@ -7,6 +7,7 @@ namespace grenade::vx::signal_flow {
 OutputData::OutputData() :
     Data(),
     execution_time_info(),
+    execution_health_info(),
     read_ppu_symbols(),
     pre_execution_chips(),
     mutex(std::make_unique<std::mutex>())
@@ -15,6 +16,7 @@ OutputData::OutputData() :
 OutputData::OutputData(OutputData&& other) :
     Data(static_cast<Data&&>(other)),
     execution_time_info(std::move(other.execution_time_info)),
+    execution_health_info(std::move(other.execution_health_info)),
     read_ppu_symbols(std::move(other.read_ppu_symbols)),
     pre_execution_chips(std::move(other.pre_execution_chips)),
     mutex(std::move(other.mutex))
@@ -26,6 +28,7 @@ OutputData& OutputData::operator=(OutputData&& other)
 {
 	static_cast<Data&>(*this).operator=(static_cast<Data&&>(other));
 	execution_time_info = std::move(other.execution_time_info);
+	execution_health_info = std::move(other.execution_health_info);
 	read_ppu_symbols = std::move(other.read_ppu_symbols);
 	pre_execution_chips = std::move(other.pre_execution_chips);
 	mutex = std::move(other.mutex);
@@ -60,6 +63,12 @@ void OutputData::merge(OutputData&& other)
 		execution_time_info = std::move(other.execution_time_info);
 		other.execution_time_info.reset();
 	}
+	if (execution_health_info && other.execution_health_info) {
+		execution_health_info->merge(*(other.execution_health_info));
+	} else {
+		execution_health_info = std::move(other.execution_health_info);
+		other.execution_health_info.reset();
+	}
 }
 
 void OutputData::merge(OutputData& other)
@@ -72,6 +81,7 @@ void OutputData::clear()
 	std::unique_lock<std::mutex> lock(*mutex);
 	static_cast<Data&>(*this).clear();
 	execution_time_info.reset();
+	execution_health_info.reset();
 	read_ppu_symbols.clear();
 	pre_execution_chips.clear();
 }

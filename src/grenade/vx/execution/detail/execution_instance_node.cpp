@@ -8,6 +8,7 @@
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/capmem.h"
 #include "grenade/vx/execution/detail/generator/get_state.h"
+#include "grenade/vx/execution/detail/generator/health_info.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
@@ -477,7 +478,17 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// Experiment assembly
 	std::vector<PlaybackProgram> programs;
 	PlaybackProgramBuilder final_builder;
+	std::vector<generator::HealthInfo::Result> health_info_results_pre;
+	std::vector<generator::HealthInfo::Result> health_info_results_post;
 	for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
+		if (final_builder.empty()) {
+			auto [health_info_builder_pre, health_info_result_pre] =
+			    generate(generator::HealthInfo());
+			health_info_results_pre.push_back(health_info_result_pre);
+			final_builder.merge_back(health_info_builder_pre.done());
+			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+		}
+
 		AbsoluteTimePlaybackProgramBuilder program_builder;
 		haldls::vx::v3::Timer::Value config_time =
 		    realtime_columns[0].realtimes[i].pre_realtime_duration;
@@ -571,13 +582,24 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			                                    .toTimerOnFPGAValue());
 		}
 		// Create playback programs with the maximal amount of batch entries that fit in as a whole
-		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga()) >
+		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga() +
+		     generate(generator::HealthInfo()).builder.done().size_to_fpga()) >
 		    stadls::vx::playback_memory_size_to_fpga) {
+			auto [health_info_builder_post, health_info_result_post] =
+			    generate(generator::HealthInfo());
+			health_info_results_post.push_back(health_info_result_post);
+			final_builder.merge_back(health_info_builder_post.done());
+			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 			programs.push_back(std::move(final_builder.done()));
 		}
 		final_builder.merge_back(assemble_builder);
 	}
 	if (!final_builder.empty()) {
+		auto [health_info_builder_post, health_info_result_post] =
+		    generate(generator::HealthInfo());
+		health_info_results_post.push_back(health_info_result_post);
+		final_builder.merge_back(health_info_builder_post.done());
+		final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 		programs.push_back(std::move(final_builder.done()));
 	}
 
@@ -750,6 +772,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		connection_lock.unlock();
 	}
 
+	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
+	for (size_t i = 0; i < health_info_results_pre.size(); ++i) {
+		execution_health_info +=
+		    (health_info_results_post.at(i).get_execution_health_info() -=
+		     health_info_results_pre.at(i).get_execution_health_info());
+	}
+
 	for (size_t i = 0; i < realtime_column_count; i++) {
 		// extract output data map
 		hate::Timer const post_timer;
@@ -768,6 +797,11 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		assert(result_data_map.execution_time_info);
 		result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
 		    connection_execution_duration_after - connection_execution_duration_before;
+
+		// annotate execution health info
+		signal_flow::ExecutionHealthInfo execution_health_info_total;
+		execution_health_info_total.execution_instances[execution_instance] = execution_health_info;
+		result_data_map.execution_health_info = execution_health_info_total;
 
 		// add pre-execution config to result data map
 		result_data_map.pre_execution_chips[execution_instance] = configs_visited[i];

@@ -199,6 +199,9 @@ std::vector<signal_flow::OutputData> run(
 		} else {
 			output_activation_maps[i].execution_time_info = execution_time_info;
 		}
+		if (!output_activation_maps[i].execution_health_info) {
+			output_activation_maps[i].execution_health_info = signal_flow::ExecutionHealthInfo();
+		}
 	}
 
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
@@ -218,6 +221,10 @@ std::vector<signal_flow::OutputData> run(
 		                output_activation_maps[0].execution_time_info->execution_duration.count()) *
 		            100.)
 		        << " % of total graph execution time.");
+	}
+	if (output_activation_maps[0].execution_health_info) {
+		LOG4CXX_TRACE(
+		    logger, "run(): " << *(output_activation_maps[0].execution_health_info) << ".");
 	}
 
 	return output_activation_maps;

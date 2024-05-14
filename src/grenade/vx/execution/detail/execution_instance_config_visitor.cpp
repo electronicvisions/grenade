@@ -409,6 +409,12 @@ void ExecutionInstanceConfigVisitor::process(
     signal_flow::vertex::CrossbarNode const& data)
 {
 	m_config.crossbar.nodes[data.get_coordinate()] = data.get_config();
+	// enable drop counter for accumulated measure in health info
+	m_config.crossbar.nodes[data.get_coordinate()].set_enable_drop_counter(true);
+	auto enable_event_counter = m_config.crossbar.outputs.get_enable_event_counter();
+	// enable event counter of output for accumulated measure in health info
+	enable_event_counter[data.get_coordinate().toCrossbarOutputOnDLS()] = true;
+	m_config.crossbar.outputs.set_enable_event_counter(enable_event_counter);
 }
 
 template <>

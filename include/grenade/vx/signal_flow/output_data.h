@@ -4,6 +4,7 @@
 #include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
 #include "grenade/vx/signal_flow/event.h"
+#include "grenade/vx/signal_flow/execution_health_info.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "haldls/vx/v3/ppu.h"
@@ -27,6 +28,11 @@ struct GENPYBIND(visible) OutputData : public Data
 	 * Optional time information of performed execution to be filled by executor.
 	 */
 	std::optional<ExecutionTimeInfo> execution_time_info;
+
+	/**
+	 * Optional health information of performed execution to be filled by executor.
+	 */
+	std::optional<ExecutionHealthInfo> execution_health_info;
 
 	typedef std::vector<std::map<
 	    common::ExecutionInstanceID,
