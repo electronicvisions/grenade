@@ -478,13 +478,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
 		// stop_ppu and the playback hooks
 		PlaybackProgramBuilder assemble_builder;
-		if (realtime_columns.size() > 1) {
+		if (i == 0) {
 			assemble_builder.merge_back(arm_madc);
+		}
+		if (realtime_columns.size() > 1) {
 			assemble_builder.merge_back(std::move(program_builder.done()));
 		} else {
 			// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
 			if (i == 0) {
-				assemble_builder.merge_back(arm_madc);
 				assemble_builder.merge_back(hooks.pre_realtime);
 			}
 			// append inside_realtime_begin hook
