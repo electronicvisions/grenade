@@ -19,17 +19,16 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
 	kernel << "#include \"grenade/vx/ppu/neuron_view_handle.h\"\n";
+	kernel << "#include \"grenade/vx/ppu/time.h\"\n";
 	kernel << "#include \"libnux/vx/location.h\"\n";
 	kernel << "#include \"libnux/vx/correlation.h\"\n";
 	kernel << "#include \"libnux/vx/vector_convert.h\"\n";
-	kernel << "#include \"libnux/vx/time.h\"\n";
 	kernel << "#include \"libnux/vx/helper.h\"\n";
 	kernel << "#include \"hate/tuple.h\"\n";
 
 	kernel << "using namespace grenade::vx::ppu;\n";
 	kernel << "using namespace libnux::vx;\n";
 
-	kernel << "extern uint64_t time_origin;\n";
 	kernel << "extern volatile PPUOnDLS ppu;\n";
 
 	kernel << "template <size_t N>\n";
@@ -38,7 +37,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 	          "Recording& recording)\n";
 	kernel << "{\n";
 
-	kernel << "  recording.time = now() - time_origin;\n";
+	kernel << "  recording.time = now();\n";
 
 	if (m_observables.contains(Observable::weights)) {
 		kernel << "        {\n";

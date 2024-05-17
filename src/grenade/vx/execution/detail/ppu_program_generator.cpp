@@ -495,12 +495,12 @@ Timer timer_{{handles_index}}_{{id}}_{{i}} = [](){
 #include "libnux/vx/mailbox.h"
 #include "libnux/vx/dls.h"
 #include "libnux/vx/time.h"
+#include "grenade/vx/ppu/detail/time.h"
 
 extern volatile libnux::vx::PPUOnDLS ppu;
 
 volatile uint32_t runtime;
 volatile uint32_t scheduler_event_drop_count;
-uint64_t time_origin = 0;
 
 ## for i in plasticity_rules_i
 extern Timer timer_{{i.0}}_{{i.1}}_{{i.2}};
@@ -521,7 +521,7 @@ void scheduling()
 
 ## if length(plasticity_rules_i) > 0
 	auto current = get_time();
-	time_origin = libnux::vx::now();
+	grenade::vx::ppu::detail::initialize_time_origin();
 	SchedulerSignallerTimer timer(current, current + runtime);
 ## for i in plasticity_rules_i
 	timer_{{i.0}}_{{i.1}}_{{i.2}}.set_first_deadline(current + timer_{{i.0}}_{{i.1}}_{{i.2}}.get_first_deadline());

@@ -1,5 +1,6 @@
 #include "grenade/vx/ppu/detail/status.h"
 
+#ifndef __ppu__
 #include <ostream>
 
 namespace grenade::vx::ppu::detail {
@@ -34,3 +35,4 @@ std::ostream& operator<<(std::ostream& os, Status const& value)
 }
 
 } // namespace grenade::vx::ppu::detail
+#endif

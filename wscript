@@ -81,7 +81,7 @@ def build(bld):
 
         bld.stlib(
             target = 'grenade_ppu_vx',
-            source = bld.path.ant_glob('src/grenade/vx/ppu/*.cpp', excl='src/grenade/vx/ppu/start.cpp'),
+            source = bld.path.ant_glob('src/grenade/vx/ppu/**/*.cpp', excl='src/grenade/vx/ppu/start.cpp'),
             install_path = '${PREFIX}/lib/ppu',
             use = ['grenade_inc', 'nux_vx_v3', 'haldls_ppu_vx_v3'],
             linkflags = '-Wl,-z,defs',
