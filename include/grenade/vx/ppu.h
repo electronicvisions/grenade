@@ -136,7 +136,7 @@ struct Compiler
 	    "-DLIBNUX_TIME_RESOLUTION_SHIFT=0",
 	    "-fuse-ld=bfd",
 	    "-Wl,--gc-sections",
-	    "-nostdlib",
+	    "-nostartfiles",
 	    "-T" + get_linker_file("elf32nux.x"),
 	    "-Wl,--defsym=mailbox_size=4096",
 	};
@@ -144,7 +144,6 @@ struct Compiler
 	std::vector<std::string> options_after_source = {
 	    "-Bstatic",
 	    get_library_paths(),
-	    "-lgcc",
 	    "-lnux_vx_v3",
 	    "-lgrenade_ppu_vx",
 	    "-lhalco_common_ppu_vx",
@@ -156,8 +155,6 @@ struct Compiler
 	    "-Wl,--whole-archive",
 	    get_libnux_runtime("nux_runtime_vx_v3.o"),
 	    "-Wl,--no-whole-archive",
-	    "-lc",
-	    "-lgcc",
 	    "-Bdynamic",
 	};
 
