@@ -35,7 +35,8 @@ struct GENPYBIND(visible) OutputData : public Data
 	        std::variant<
 	            std::
 	                map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>,
-	            lola::vx::v3::ExternalPPUMemoryBlock>>>>
+	            lola::vx::v3::ExternalPPUMemoryBlock,
+	            lola::vx::v3::ExternalPPUDRAMMemoryBlock>>>>
 	    ReadPPUSymbols;
 
 	/**

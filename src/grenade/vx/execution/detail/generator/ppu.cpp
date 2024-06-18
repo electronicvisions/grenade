@@ -60,6 +60,11 @@ stadls::vx::PlaybackGeneratorReturn<PPUStart::Builder, PPUStart::Result> PPUStar
 		ctrl.set_inhibit_reset(true);
 		builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
 	}
+	// increase instruction timeout
+	InstructionTimeoutConfig instruction_timeout;
+	instruction_timeout.set_value(InstructionTimeoutConfig::Value(
+	    1000000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
+	builder.write(halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
 	// wait for PPUs to be ready
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
 		using namespace haldls::vx::v3;
@@ -74,6 +79,9 @@ stadls::vx::PlaybackGeneratorReturn<PPUStart::Builder, PPUStart::Result> PPUStar
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
 	}
+	// reset instruction timeout to default
+	builder.write(
+	    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
 	return {std::move(builder), {}};
 }
 
@@ -131,8 +139,14 @@ signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type PPUReadHooks::R
 			                     .get())}};
 		        },
 		        [&ret, name](stadls::vx::v3::ContainerTicket const& ticket) {
-			        ret[name] =
-			            dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(ticket.get());
+			        if (auto const ptr = dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const*>(
+			                &ticket.get());
+			            ptr) {
+				        ret[name] = *ptr;
+			        } else {
+				        ret[name] = dynamic_cast<lola::vx::v3::ExternalPPUDRAMMemoryBlock const&>(
+				            ticket.get());
+			        }
 		        },
 		    },
 		    ticket);
@@ -163,6 +177,9 @@ PPUReadHooks::generate() const
 			        result.tickets[name] = values;
 		        },
 		        [&](halco::hicann_dls::vx::v3::ExternalPPUMemoryBlockOnFPGA const& coordinate) {
+			        result.tickets.insert({name, builder.read(coordinate)});
+		        },
+		        [&](halco::hicann_dls::vx::v3::ExternalPPUDRAMMemoryBlockOnFPGA const& coordinate) {
 			        result.tickets.insert({name, builder.read(coordinate)});
 		        }},
 		    m_symbols.at(name).coordinate);

@@ -613,17 +613,32 @@ void ExecutionInstanceBuilder::process(
 		    m_input_list.batch_size());
 		for (size_t i = 0; i < values.size(); ++i) {
 			auto& local_values = values.at(i);
+			auto const& local_ticket =
+			    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(vertex);
+			assert(local_ticket);
+			std::vector<uint8_t> bytes;
+
+			if (auto const ptr =
+			        dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const*>(&local_ticket->get());
+			    ptr) {
+				for (auto const& byte : ptr->get_bytes()) {
+					bytes.push_back(byte.get_value().value());
+				}
+			} else if (auto const ptr =
+			               dynamic_cast<lola::vx::v3::ExternalPPUDRAMMemoryBlock const*>(
+			                   &local_ticket->get());
+			           ptr) {
+				for (auto const& byte : ptr->get_bytes()) {
+					bytes.push_back(byte.get_value().value());
+				}
+			} else {
+				throw std::logic_error("Recording scratchpad on internal memory not supported.");
+			}
 			if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
 			        *data.get_recording())) {
 				// TODO: Think about what shall happen with timing info
 				local_values.resize(1);
 				local_values.at(0).data.resize(data.output().size);
-				auto const& local_ticket =
-				    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(vertex);
-				assert(local_ticket);
-				auto const bytes =
-				    dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(local_ticket->get())
-				        .get_bytes();
 				if (bytes.size() != data.get_recorded_scratchpad_memory_size()) {
 					throw std::logic_error(
 					    "Recording scratchpad memory size (" + std::to_string(bytes.size()) +
@@ -631,8 +646,7 @@ void ExecutionInstanceBuilder::process(
 					    std::to_string(data.get_recorded_scratchpad_memory_size()) + ").");
 				}
 				for (size_t j = 0; j < bytes.size(); ++j) {
-					local_values.at(0).data.at(j) =
-					    signal_flow::Int8(bytes.at(j).get_value().value());
+					local_values.at(0).data.at(j) = signal_flow::Int8(bytes.at(j));
 				}
 			} else if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
 			               *data.get_recording())) {
@@ -640,12 +654,6 @@ void ExecutionInstanceBuilder::process(
 				for (auto& e : local_values) {
 					e.data.resize(data.output().size);
 				}
-				auto const& local_ticket =
-				    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(vertex);
-				assert(local_ticket);
-				auto const bytes =
-				    dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(local_ticket->get())
-				        .get_bytes();
 				if (bytes.size() !=
 				    data.get_recorded_scratchpad_memory_size() * data.get_timer().num_periods) {
 					throw std::logic_error(
@@ -659,39 +667,19 @@ void ExecutionInstanceBuilder::process(
 				for (size_t period = 0; period < data.get_timer().num_periods; ++period) {
 					uint64_t time = 0;
 					size_t period_offset = period * data.get_recorded_scratchpad_memory_size();
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 0).get_value().value()) & 0xff)
-					        << 56;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 1).get_value().value()) & 0xff)
-					        << 48;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 2).get_value().value()) & 0xff)
-					        << 40;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 3).get_value().value()) & 0xff)
-					        << 32;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 4).get_value().value()) & 0xff)
-					        << 24;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 5).get_value().value()) & 0xff)
-					        << 16;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 6).get_value().value()) & 0xff)
-					        << 8;
-					time |= static_cast<uint64_t>(
-					            (bytes.at(period_offset + 7).get_value().value()) & 0xff)
-					        << 0;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 0)) & 0xff) << 56;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 1)) & 0xff) << 48;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 2)) & 0xff) << 40;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 3)) & 0xff) << 32;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 4)) & 0xff) << 24;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 5)) & 0xff) << 16;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 6)) & 0xff) << 8;
+					time |= static_cast<uint64_t>((bytes.at(period_offset + 7)) & 0xff) << 0;
 					// TODO: decide what to do with the other time of the other PPU (top).
 					local_values.at(period).time = common::Time(time / 2);
 					for (size_t j = 0; j < local_values.at(period).data.size(); ++j) {
-						local_values.at(period).data.at(j) = signal_flow::Int8(
-						    bytes
-						        .at(period_offset + data.get_recorded_memory_data_interval().first +
-						            j)
-						        .get_value()
-						        .value());
+						local_values.at(period).data.at(j) = signal_flow::Int8(bytes.at(
+						    period_offset + data.get_recorded_memory_data_interval().first + j));
 					}
 				}
 			} else {
@@ -902,7 +890,10 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	typed_array<std::optional<ExternalPPUMemoryBlockOnFPGA>, PPUOnDLS>
 	    ppu_periodic_cadc_readout_samples_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
-	std::map<signal_flow::Graph::vertex_descriptor, ExternalPPUMemoryBlockOnFPGA>
+	std::map<
+	    signal_flow::Graph::vertex_descriptor,
+	    std::variant<
+	        PPUMemoryBlockOnPPU, ExternalPPUMemoryBlockOnFPGA, ExternalPPUDRAMMemoryBlockOnFPGA>>
 	    ppu_plasticity_rule_recorded_scratchpad_memory_coord;
 	if (enable_ppu) {
 		assert(m_ppu_symbols);
@@ -927,12 +918,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		for (auto const& [descriptor, _] :
 		     m_batch_entries.at(0).m_plasticity_rule_recorded_scratchpad_memory) {
 			ppu_plasticity_rule_recorded_scratchpad_memory_coord[descriptor] =
-			    std::get<ExternalPPUMemoryBlockOnFPGA>(
-			        m_ppu_symbols
-			            ->at(
-			                "recorded_scratchpad_memory_" + std::to_string(descriptor) + "_" +
-			                std::to_string(m_realtime_column_index))
-			            .coordinate);
+			    m_ppu_symbols
+			        ->at(
+			            "recorded_scratchpad_memory_" + std::to_string(descriptor) + "_" +
+			            std::to_string(m_realtime_column_index))
+			        .coordinate;
 		}
 
 		if (has_cadc_readout) {
@@ -1207,7 +1197,20 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			for (auto const& [descriptor, coord] :
 			     ppu_plasticity_rule_recorded_scratchpad_memory_coord) {
 				batch_entry.m_plasticity_rule_recorded_scratchpad_memory.at(descriptor) =
-				    ppu_finish_builder.read(coord);
+				    std::visit(
+				        hate::overloaded{
+				            [&ppu_finish_builder](ExternalPPUMemoryBlockOnFPGA const& c) {
+					            return ppu_finish_builder.read(c);
+				            },
+				            [&ppu_finish_builder](ExternalPPUDRAMMemoryBlockOnFPGA const& c) {
+					            return ppu_finish_builder.read(c);
+				            },
+				            [](PPUMemoryBlockOnPPU const&) -> stadls::vx::v3::ContainerTicket {
+					            throw std::logic_error(
+					                "Recording scratchpad on internal memory not uspported.");
+				            },
+				        },
+				        coord);
 			}
 		}
 		realtimes.push_back(ExecutionInstanceBuilder::RealtimeSnippet{

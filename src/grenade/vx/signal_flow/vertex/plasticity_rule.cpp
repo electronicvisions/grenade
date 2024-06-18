@@ -32,9 +32,15 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::Timer const& timer)
 	return os;
 }
 
+PlasticityRule::RawRecording::RawRecording() : scratchpad_memory_size(0), placement_in_dram(true) {}
+PlasticityRule::RawRecording::RawRecording(size_t scratchpad_memory_size, bool placement_in_dram) :
+    scratchpad_memory_size(scratchpad_memory_size), placement_in_dram(placement_in_dram)
+{}
+
 bool PlasticityRule::RawRecording::operator==(RawRecording const& other) const
 {
-	return scratchpad_memory_size == other.scratchpad_memory_size;
+	return scratchpad_memory_size == other.scratchpad_memory_size &&
+	       placement_in_dram == other.placement_in_dram;
 }
 
 bool PlasticityRule::RawRecording::operator!=(RawRecording const& other) const
@@ -44,7 +50,9 @@ bool PlasticityRule::RawRecording::operator!=(RawRecording const& other) const
 
 std::ostream& operator<<(std::ostream& os, PlasticityRule::RawRecording const& recording)
 {
-	os << "RawRecording(scratchpad_memory_size: " << recording.scratchpad_memory_size << ")";
+	os << "RawRecording(scratchpad_memory_size: " << recording.scratchpad_memory_size;
+	os << ", placement in dram: " << recording.placement_in_dram;
+	os << ")";
 	return os;
 }
 
@@ -124,9 +132,15 @@ std::ostream& operator<<(
 	return os;
 }
 
+PlasticityRule::TimedRecording::TimedRecording() : observables(), placement_in_dram(true) {}
+PlasticityRule::TimedRecording::TimedRecording(
+    std::map<std::string, Observable> observables, bool placement_in_dram) :
+    observables(std::move(observables)), placement_in_dram(placement_in_dram)
+{}
+
 bool PlasticityRule::TimedRecording::operator==(TimedRecording const& other) const
 {
-	return observables == other.observables;
+	return observables == other.observables && placement_in_dram == other.placement_in_dram;
 }
 
 bool PlasticityRule::TimedRecording::operator!=(TimedRecording const& other) const
@@ -142,6 +156,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecording const&
 		std::visit([&](auto const& t) { os << t; }, type);
 		os << "\n";
 	}
+	os << "\tplacement in dram: " << recording.placement_in_dram << "\n";
 	os << ")";
 	return os;
 }

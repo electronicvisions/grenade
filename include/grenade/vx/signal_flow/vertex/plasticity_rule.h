@@ -85,6 +85,14 @@ struct PlasticityRule : public EntityOnChip
 		 */
 		size_t scratchpad_memory_size;
 
+		/**
+		 * Whether to place the recording data in dram on the FPGA or in block ram.
+		 */
+		bool placement_in_dram;
+
+		RawRecording() SYMBOL_VISIBLE;
+		RawRecording(size_t scratchpad_memory_size, bool placement_in_dram) SYMBOL_VISIBLE;
+
 		bool operator==(RawRecording const& other) const SYMBOL_VISIBLE;
 		bool operator!=(RawRecording const& other) const SYMBOL_VISIBLE;
 
@@ -321,6 +329,16 @@ struct PlasticityRule : public EntityOnChip
 		 * same names as used in this map.
 		 */
 		std::map<std::string, Observable> observables;
+
+		/**
+		 * Whether to place the recording data in dram on the FPGA or in block ram.
+		 */
+		bool placement_in_dram;
+
+		TimedRecording() SYMBOL_VISIBLE;
+
+		TimedRecording(std::map<std::string, Observable> observables, bool placement_in_dram)
+		    SYMBOL_VISIBLE;
 
 		bool operator==(TimedRecording const& other) const SYMBOL_VISIBLE;
 		bool operator!=(TimedRecording const& other) const SYMBOL_VISIBLE;

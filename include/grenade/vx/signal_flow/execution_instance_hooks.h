@@ -22,7 +22,8 @@ struct GENPYBIND(
 	    std::string,
 	    std::variant<
 	        std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>,
-	        lola::vx::v3::ExternalPPUMemoryBlock>>
+	        lola::vx::v3::ExternalPPUMemoryBlock,
+	        lola::vx::v3::ExternalPPUDRAMMemoryBlock>>
 	    WritePPUSymbols;
 
 	typedef std::set<std::string> ReadPPUSymbols;

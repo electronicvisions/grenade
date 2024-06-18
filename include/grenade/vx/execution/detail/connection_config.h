@@ -31,6 +31,12 @@ struct ConnectionConfig
 	void set_chip(lola::vx::v3::Chip const& value, bool split_base_differential) SYMBOL_VISIBLE;
 
 	/**
+	 * Set external PPU DRAM memory which is to be applied next.
+	 */
+	void set_external_ppu_dram_memory(
+	    std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> const& value) SYMBOL_VISIBLE;
+
+	/**
 	 * Get whether applying current state differential changes CapMem.
 	 */
 	bool get_differential_changes_capmem() const SYMBOL_VISIBLE;
@@ -61,6 +67,17 @@ private:
 	Words m_chip_differential_words;
 	Addresses m_chip_base_addresses;
 	Addresses m_chip_differential_addresses;
+
+	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> m_external_ppu_dram_memory;
+	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> m_last_external_ppu_dram_memory;
+
+	Words m_external_ppu_dram_memory_words;
+	Addresses m_external_ppu_dram_memory_addresses;
+	std::map<Addresses::value_type, Words::value_type> m_last_external_ppu_dram_memory_words;
+	Words m_external_ppu_dram_memory_base_words;
+	Words m_external_ppu_dram_memory_differential_words;
+	Addresses m_external_ppu_dram_memory_base_addresses;
+	Addresses m_external_ppu_dram_memory_differential_addresses;
 };
 
 

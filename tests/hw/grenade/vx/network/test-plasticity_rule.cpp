@@ -66,7 +66,7 @@ TEST(PlasticityRule, RawRecording)
 	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
 	plasticity_rule.timer.num_periods = 1;
 	plasticity_rule.projections.push_back(projection_descriptor);
-	plasticity_rule.recording = PlasticityRule::RawRecording{8};
+	plasticity_rule.recording = PlasticityRule::RawRecording{8, true};
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -643,10 +643,12 @@ TEST(PlasticityRule, ExecutorInitialState)
 		plasticity_rule.timer.num_periods = 1;
 		plasticity_rule.projections.push_back(projection_descriptor);
 		plasticity_rule.recording = PlasticityRule::TimedRecording{
-		    {{"w", PlasticityRule::TimedRecording::ObservablePerSynapse{
-		               PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8,
-		               PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
-		                   packed_active_columns}}}};
+		    {{"w",
+		      PlasticityRule::TimedRecording::ObservablePerSynapse{
+		          PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8,
+		          PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
+		              packed_active_columns}}},
+		    true};
 
 		std::stringstream kernel;
 		kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";

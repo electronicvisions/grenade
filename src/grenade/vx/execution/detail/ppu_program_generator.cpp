@@ -59,9 +59,9 @@ std::vector<std::string> PPUProgramGenerator::done()
 
 ## if has_timed_recording
 Recording recorded_scratchpad_memory_{{i}}_{{realtime_column_index}}[{{plasticity_rule.timer.num_periods}}]
-    __attribute__((section("ext.data.keep")));
+    __attribute__((section("{{recording_placement}}.data.keep")));
 ## else if has_raw_recording
-Recording recorded_scratchpad_memory_{{i}}_{{realtime_column_index}} __attribute__((section("ext.data.keep")));
+Recording recorded_scratchpad_memory_{{i}}_{{realtime_column_index}} __attribute__((section("{{recording_placement}}.data.keep")));
 ## endif
 )grenadeTemplate";
 			// clang-format on
@@ -207,6 +207,17 @@ Timer timer_{{i}}_{{realtime_column_index}} = [](){
 			    plasticity_rule.get_recording() &&
 			    std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
 			        *plasticity_rule.get_recording());
+
+			std::string recording_placement;
+			if (plasticity_rule.get_recording()) {
+				recording_placement = std::visit(
+				    [](auto const& recording) {
+					    return recording.placement_in_dram ? std::string("ext_dram")
+					                                       : std::string("ext");
+				    },
+				    *plasticity_rule.get_recording());
+			}
+			parameters["recording_placement"] = recording_placement;
 
 			parameters["plasticity_rule"]["timer"]["start"] =
 			    plasticity_rule.get_timer().start.value();

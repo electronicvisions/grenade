@@ -1,6 +1,7 @@
 #include "grenade/vx/execution/detail/connection_config.h"
 
 #include "haldls/vx/v3/omnibus_constants.h"
+#include "lola/vx/v3/ppu.h"
 #include "stadls/visitors.h"
 
 namespace grenade::vx::execution::detail {
@@ -96,6 +97,75 @@ void ConnectionConfig::set_chip(lola::vx::v3::Chip const& value, bool const spli
 	}
 }
 
+void ConnectionConfig::set_external_ppu_dram_memory(
+    std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> const& value)
+{
+	m_last_external_ppu_dram_memory = m_external_ppu_dram_memory;
+	m_external_ppu_dram_memory = value;
+	m_last_external_ppu_dram_memory_words.clear();
+	for (size_t i = 0; i < m_external_ppu_dram_memory_addresses.size(); ++i) {
+		m_last_external_ppu_dram_memory_words.emplace(
+		    m_external_ppu_dram_memory_addresses[i], m_external_ppu_dram_memory_words[i]);
+	}
+
+	m_external_ppu_dram_memory_words.clear();
+	m_external_ppu_dram_memory_addresses.clear();
+	if (m_external_ppu_dram_memory) {
+		halco::hicann_dls::vx::v3::ExternalPPUDRAMMemoryBlockOnFPGA const coord(
+		    halco::hicann_dls::vx::v3::ExternalPPUDRAMMemoryByteOnFPGA(0),
+		    halco::hicann_dls::vx::v3::ExternalPPUDRAMMemoryByteOnFPGA(
+		        m_external_ppu_dram_memory->size() - 1));
+		haldls::vx::visit_preorder(
+		    *m_external_ppu_dram_memory, coord,
+		    stadls::EncodeVisitor<Words>{m_external_ppu_dram_memory_words});
+
+		hate::Empty<lola::vx::v3::ExternalPPUDRAMMemoryBlock> empty_config;
+		haldls::vx::visit_preorder(
+		    empty_config, coord,
+		    stadls::WriteAddressVisitor<Addresses>{m_external_ppu_dram_memory_addresses});
+	}
+
+	if (!m_enable_differential_config) {
+		m_external_ppu_dram_memory_differential_words.clear();
+		m_external_ppu_dram_memory_differential_addresses.clear();
+
+		m_external_ppu_dram_memory_base_addresses = m_external_ppu_dram_memory_addresses;
+		m_external_ppu_dram_memory_base_words = m_external_ppu_dram_memory_words;
+	} else if (get_is_fresh()) {
+		assert(m_external_ppu_dram_memory_base_words.empty());
+		assert(m_external_ppu_dram_memory_differential_words.empty());
+		assert(m_external_ppu_dram_memory_base_addresses.empty());
+		assert(m_external_ppu_dram_memory_differential_addresses.empty());
+
+		m_external_ppu_dram_memory_base_addresses = m_external_ppu_dram_memory_addresses;
+		m_external_ppu_dram_memory_base_words = m_external_ppu_dram_memory_words;
+	} else {
+		assert(
+		    m_external_ppu_dram_memory_words.size() == m_external_ppu_dram_memory_addresses.size());
+
+		m_external_ppu_dram_memory_base_words.clear();
+		m_external_ppu_dram_memory_differential_words.clear();
+		m_external_ppu_dram_memory_base_addresses.clear();
+		m_external_ppu_dram_memory_differential_addresses.clear();
+		for (size_t i = 0; i < m_external_ppu_dram_memory_addresses.size(); ++i) {
+			if (auto it = m_last_external_ppu_dram_memory_words.find(
+			        m_external_ppu_dram_memory_addresses[i]);
+			    it != m_last_external_ppu_dram_memory_words.end() &&
+			    it->second != m_external_ppu_dram_memory_words.at(i)) {
+				m_external_ppu_dram_memory_differential_addresses.push_back(
+				    m_external_ppu_dram_memory_addresses[i]);
+				m_external_ppu_dram_memory_differential_words.push_back(
+				    m_external_ppu_dram_memory_words[i]);
+			} else {
+				m_external_ppu_dram_memory_base_addresses.push_back(
+				    m_external_ppu_dram_memory_addresses[i]);
+				m_external_ppu_dram_memory_base_words.push_back(
+				    m_external_ppu_dram_memory_words[i]);
+			}
+		}
+	}
+}
+
 bool ConnectionConfig::get_is_fresh() const
 {
 	return m_chip_words.empty();
@@ -103,8 +173,10 @@ bool ConnectionConfig::get_is_fresh() const
 
 bool ConnectionConfig::get_has_differential() const
 {
-	return !m_chip_differential_words.empty();
+	return !m_chip_differential_words.empty() ||
+	       !m_external_ppu_dram_memory_differential_words.empty();
 }
+
 
 bool ConnectionConfig::get_differential_changes_capmem() const
 {
@@ -125,12 +197,28 @@ bool ConnectionConfig::get_differential_changes_capmem() const
 
 haldls::vx::Encodable::BackendCocoListVariant ConnectionConfig::get_base()
 {
-	return std::pair{m_chip_base_addresses, m_chip_base_words};
+	Addresses addresses(m_chip_base_addresses);
+	addresses.insert(
+	    addresses.end(), m_external_ppu_dram_memory_base_addresses.begin(),
+	    m_external_ppu_dram_memory_base_addresses.end());
+	Words words(m_chip_base_words);
+	words.insert(
+	    words.end(), m_external_ppu_dram_memory_base_words.begin(),
+	    m_external_ppu_dram_memory_base_words.end());
+	return std::pair{addresses, words};
 }
 
 haldls::vx::Encodable::BackendCocoListVariant ConnectionConfig::get_differential()
 {
-	return std::pair{m_chip_differential_addresses, m_chip_differential_words};
+	Addresses addresses(m_chip_differential_addresses);
+	addresses.insert(
+	    addresses.end(), m_external_ppu_dram_memory_differential_addresses.begin(),
+	    m_external_ppu_dram_memory_differential_addresses.end());
+	Words words(m_chip_differential_words);
+	words.insert(
+	    words.end(), m_external_ppu_dram_memory_differential_words.begin(),
+	    m_external_ppu_dram_memory_differential_words.end());
+	return std::pair{addresses, words};
 }
 
 

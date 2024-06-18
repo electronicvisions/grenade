@@ -70,6 +70,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// vector for storing all execution_instance_builders
 	std::vector<ExecutionInstanceBuilder> builders;
 	std::vector<Chip> configs_visited;
+	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
 	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
 
 	// vectors for storing the information on what chip components are used in the realtime snippets before and after the current one (the according index)
@@ -128,6 +129,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
 
+		// set external DRAM PPU program
+		external_ppu_dram_memory_visited = std::move(ppu_program.external_dram);
+
 		for (size_t i = 0; i < realtime_column_count; i++) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				// zero-initialize all symbols (esp. bss)
@@ -145,7 +149,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 						            coordinate.toExternalPPUMemoryBlockSize());
 						        configs_visited[i].external_ppu_memory.set_subblock(
 						            coordinate.toMin().value(), block);
-					        }},
+					        },
+					        [&](ExternalPPUDRAMMemoryBlockOnFPGA const& /* coordinate */) {}},
 					    symbol.coordinate);
 				}
 
@@ -200,6 +205,12 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 					        configs_visited[i].external_ppu_memory.set_subblock(
 					            coordinate.toMin().value(),
 					            std::get<lola::vx::v3::ExternalPPUMemoryBlock>(memory_config));
+				        },
+				        [&](ExternalPPUDRAMMemoryBlockOnFPGA const& coordinate) {
+					        assert(external_ppu_dram_memory_visited);
+					        external_ppu_dram_memory_visited->set_subblock(
+					            coordinate.toMin().value(),
+					            std::get<lola::vx::v3::ExternalPPUDRAMMemoryBlock>(memory_config));
 				        }},
 				    ppu_symbols->at(name).coordinate);
 			}
@@ -559,6 +570,10 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool const is_fresh_connection_state_storage_config =
 	    connection_state_storage.config.get_is_fresh();
 	connection_state_storage.config.set_chip(configs_visited[0], true);
+	if (external_ppu_dram_memory_visited) {
+		connection_state_storage.config.set_external_ppu_dram_memory(
+		    external_ppu_dram_memory_visited);
+	}
 
 	bool const enforce_base = !connection_state_storage.config.get_enable_differential_config() ||
 	                          is_fresh_connection_state_storage_config ||
