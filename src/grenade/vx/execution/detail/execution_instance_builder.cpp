@@ -1112,13 +1112,18 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			}
 		}
 		// reset neurons
-		if (enable_ppu) {
-			builder.merge(ppu_command_reset_neurons.builder + current_time);
-			current_time += ppu_command_reset_neurons.result;
-			current_time += Timer::Value(4 * Timer::Value::fpga_clock_cycles_per_us);
-		} else {
-			builder.merge(builder_neuron_reset.builder + current_time);
-			current_time += builder_neuron_reset.result;
+		if (std::any_of(
+		        m_neuron_resets.enable_resets.begin(), m_neuron_resets.enable_resets.end(),
+		        [](auto const& val) { return val; })) {
+			if (enable_ppu) {
+				builder.merge(ppu_command_reset_neurons.builder + current_time);
+				current_time += ppu_command_reset_neurons.result;
+				// may need time to fetch instructions from extmem
+				current_time += Timer::Value(4 * Timer::Value::fpga_clock_cycles_per_us);
+			} else {
+				builder.merge(builder_neuron_reset.builder + current_time);
+				current_time += builder_neuron_reset.result;
+			}
 		}
 		// start periodic CADC readout
 		if (has_cadc_readout) {
