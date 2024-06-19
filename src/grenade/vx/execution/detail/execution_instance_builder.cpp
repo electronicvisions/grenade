@@ -1187,6 +1187,10 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			batch_entry.m_ticket_events_end =
 			    builder.read(current_time, NullPayloadReadableOnFPGA());
 			current_time += Timer::Value(1);
+		} else { // wait until current time to ensure correct timing of following commands
+			// for this we insert an arbitrary command without side-effect, which is fast to execute
+			builder.read(current_time, NullPayloadReadableOnFPGA());
+			current_time += Timer::Value(1);
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
