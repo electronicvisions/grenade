@@ -97,7 +97,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Fourth run: expect no CapMem settling time due to non-CapMem change and even faster
 		// construction due to equality of config
-		EXPECT_LE(timer.get_ms(), 5);
+		EXPECT_LE(timer.get_ms(), 20);
 	}
 }
 

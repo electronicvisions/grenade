@@ -26,45 +26,6 @@
 
 namespace grenade::vx::execution::detail {
 
-namespace {
-
-/**
- * Helper to only encode the constant addresses of the lola Chip object once.
- */
-static const std::vector<halco::hicann_dls::vx::OmnibusAddress> chip_addresses = []() {
-	using namespace halco::hicann_dls::vx::v3;
-	typedef std::vector<OmnibusAddress> addresses_type;
-	addresses_type storage;
-	lola::vx::v3::Chip config;
-	haldls::vx::visit_preorder(
-	    config, ChipOnDLS(), stadls::WriteAddressVisitor<addresses_type>{storage});
-	return storage;
-}();
-
-/**
- * Helper to check whether a collection of addresses contains CapMem value configuration.
- * @param addresses Addresses to check
- * @return Boolean value.
- */
-bool contains_capmem(std::vector<halco::hicann_dls::vx::OmnibusAddress> const& addresses)
-{
-	// iterate over all addresses and check whether the base matches one of the CapMem base
-	// addresses.
-	for (auto const& address : addresses) {
-		// select only the upper 16 bit and compare to the CapMem base address.
-		auto const base = (address.value() & 0xffff0000);
-		// north-west and south-west base addresses suffice because east base addresses only have
-		// another bit set in the lower 16 bit.
-		if ((base == haldls::vx::v3::capmem_nw_sram_base_address) ||
-		    (base == haldls::vx::v3::capmem_sw_sram_base_address)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-} // namespace
-
 ExecutionInstanceNode::ExecutionInstanceNode(
     std::vector<signal_flow::OutputData>& data_maps,
     std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps,
@@ -652,68 +613,30 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	}
 
 	hate::Timer const initial_config_program_timer;
+	bool const is_fresh_connection_state_storage_config =
+	    connection_state_storage.config.get_is_fresh();
+	connection_state_storage.config.set_chip(configs_visited[0], true);
+
+	bool const enforce_base = !connection_state_storage.config.get_enable_differential_config() ||
+	                          is_fresh_connection_state_storage_config;
+	bool const has_capmem_changes =
+	    !connection_state_storage.config.get_enable_differential_config() ||
+	    is_fresh_connection_state_storage_config ||
+	    connection_state_storage.config.get_differential_changes_capmem();
+	bool const nothing_changed = connection_state_storage.config.get_enable_differential_config() &&
+	                             !is_fresh_connection_state_storage_config &&
+	                             !connection_state_storage.config.get_has_differential();
+
 	PlaybackProgramBuilder base_builder;
 	PlaybackProgramBuilder differential_builder;
-	bool enforce_base = true;
-	bool nothing_changed = false;
-	bool has_capmem_changes = false;
-	if (!connection_state_storage.enable_differential_config) {
-		// generate static configuration
-		base_builder.write(ChipOnDLS(), configs_visited[0]);
-		has_capmem_changes = true;
-	} else if (connection_state_storage.current_config_words.empty() /* first invocation */) {
-		typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
-		haldls::vx::visit_preorder(
-		    configs_visited[0], ChipOnDLS(),
-		    stadls::EncodeVisitor<words_type>{connection_state_storage.current_config_words});
-		fisch::vx::PlaybackProgramBuilder fisch_base_builder;
-		std::vector<fisch::vx::Omnibus> base_data;
-		for (size_t i = 0; i < connection_state_storage.current_config_words.size(); ++i) {
-			base_data.push_back(
-			    fisch::vx::Omnibus(connection_state_storage.current_config_words.at(i)));
-		}
-		fisch_base_builder.write(chip_addresses, base_data);
-		base_builder.merge_back(fisch_base_builder);
-		has_capmem_changes = true;
-	} else {
-		enforce_base = false;
-
-		if (configs_visited[0] != connection_state_storage.current_config) {
-			typedef std::vector<OmnibusAddress> addresses_type;
-			typedef std::vector<fisch::vx::word_access_type::Omnibus> words_type;
-
-			auto const& write_addresses = chip_addresses;
-
-			ChipOnDLS coord;
-			words_type data_initial;
-			haldls::vx::visit_preorder(
-			    configs_visited[0], coord, stadls::EncodeVisitor<words_type>{data_initial});
-			words_type& data_current = connection_state_storage.current_config_words;
-			assert(data_current.size() == chip_addresses.size());
-
-			fisch::vx::PlaybackProgramBuilder fisch_base_builder;
-			fisch::vx::PlaybackProgramBuilder fisch_differential_builder;
-			std::vector<fisch::vx::Omnibus> base_data;
-			std::vector<fisch::vx::Omnibus> differential_data;
-			addresses_type base_addresses;
-			addresses_type differential_addresses;
-			for (size_t i = 0; i < write_addresses.size(); ++i) {
-				if (data_initial.at(i) != data_current.at(i)) {
-					differential_addresses.push_back(write_addresses.at(i));
-					differential_data.push_back(fisch::vx::Omnibus(data_initial.at(i)));
-				} else {
-					base_addresses.push_back(write_addresses.at(i));
-					base_data.push_back(fisch::vx::Omnibus(data_initial.at(i)));
-				}
-			}
-			data_current = data_initial;
-			fisch_differential_builder.write(differential_addresses, differential_data);
-			fisch_base_builder.write(base_addresses, base_data);
-			base_builder.merge_back(fisch_base_builder);
-			differential_builder.merge_back(fisch_differential_builder);
-			has_capmem_changes = contains_capmem(differential_addresses);
-		} else {
-			nothing_changed = true;
+	if (!nothing_changed) {
+		base_builder.write(
+		    ConnectionConfigBaseCoordinate(),
+		    ConnectionConfigBase(connection_state_storage.config));
+		if (connection_state_storage.config.get_has_differential()) {
+			differential_builder.write(
+			    ConnectionConfigDifferentialCoordinate(),
+			    ConnectionConfigDifferential(connection_state_storage.config));
 		}
 	}
 
@@ -731,6 +654,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	hate::Timer const exec_timer;
 	std::chrono::nanoseconds connection_execution_duration_before{0};
 	std::chrono::nanoseconds connection_execution_duration_after{0};
+
 	if (!program.realtime.empty() || !base_program.empty()) {
 		// only lock execution section for non-differential config mode
 		if (!connection_state_storage.enable_differential_config) {
@@ -784,32 +708,29 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    logger, "operator(): Executed built PlaybackPrograms in " << exec_timer.print() << ".");
 
 	// update connection state
-	hate::Timer const update_state_timer;
-	if (connection_state_storage.enable_differential_config) {
-		connection_state_storage.current_config = configs_visited[configs_visited.size() - 1];
+	if (configs_visited.size() > 1 || ppu_symbols) {
+		hate::Timer const update_state_timer;
+		// reference because we don't use it otherwise afterwards
+		auto& current_config = configs_visited[configs_visited.size() - 1];
 		if (ppu_symbols) {
 			for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
 				assert(read_ticket_ppu_memory[ppu]);
-				connection_state_storage.current_config.ppu_memory[ppu] =
-				    dynamic_cast<haldls::vx::v3::PPUMemory const&>(
-				        read_ticket_ppu_memory[ppu]->get());
+				current_config.ppu_memory[ppu] = dynamic_cast<haldls::vx::v3::PPUMemory const&>(
+				    read_ticket_ppu_memory[ppu]->get());
 			}
 			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
 				assert(read_ticket_synaptic_weights[coord]);
-				connection_state_storage.current_config.synapse_blocks[coord.toSynapseBlockOnDLS()]
-				    .matrix.weights = dynamic_cast<lola::vx::v3::SynapseWeightMatrix const&>(
-				                          read_ticket_synaptic_weights[coord]->get())
-				                          .values;
+				current_config.synapse_blocks[coord.toSynapseBlockOnDLS()].matrix.weights =
+				    dynamic_cast<lola::vx::v3::SynapseWeightMatrix const&>(
+				        read_ticket_synaptic_weights[coord]->get())
+				        .values;
 			}
-			connection_state_storage.current_config_words.clear();
-			haldls::vx::visit_preorder(
-			    connection_state_storage.current_config, ChipOnDLS(),
-			    stadls::EncodeVisitor<std::vector<fisch::vx::word_access_type::Omnibus>>{
-			        connection_state_storage.current_config_words});
 		}
+		connection_state_storage.config.set_chip(current_config, false);
+		LOG4CXX_TRACE(
+		    logger,
+		    "operator(): Updated connection state in " << update_state_timer.print() << ".");
 	}
-	LOG4CXX_TRACE(
-	    logger, "operator(): Updated connection state in " << update_state_timer.print() << ".");
 
 	// unlock execution section for differential config mode
 	if (connection_state_storage.enable_differential_config) {
