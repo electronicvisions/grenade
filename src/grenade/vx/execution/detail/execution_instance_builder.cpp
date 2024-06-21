@@ -54,13 +54,15 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::InputData const& input_list,
     signal_flow::Data const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-    signal_flow::ExecutionInstanceHooks& hooks) :
+    signal_flow::ExecutionInstanceHooks& hooks,
+    size_t realtime_column_index) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_input_list(input_list),
     m_data_output(data_output),
     m_ppu_symbols(ppu_symbols),
     m_hooks(hooks),
+    m_realtime_column_index(realtime_column_index),
     m_post_vertices(),
     m_local_data(),
     m_local_data_output(),
@@ -979,7 +981,10 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		     m_batch_entries.at(0).m_plasticity_rule_recorded_scratchpad_memory) {
 			ppu_plasticity_rule_recorded_scratchpad_memory_coord[descriptor] =
 			    std::get<ExternalPPUMemoryBlockOnFPGA>(
-			        m_ppu_symbols->at("recorded_scratchpad_memory_" + std::to_string(descriptor))
+			        m_ppu_symbols
+			            ->at(
+			                "recorded_scratchpad_memory_" + std::to_string(descriptor) + "_" +
+			                std::to_string(m_realtime_column_index))
 			            .coordinate);
 		}
 

@@ -139,7 +139,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		Chip config = configs[i];
 		std::tuple<ExecutionInstanceConfigVisitor::PpuUsage, typed_array<bool, NeuronResetOnDLS>>
 		    ppu_information =
-		        ExecutionInstanceConfigVisitor(graphs[i], execution_instance, config)();
+		        ExecutionInstanceConfigVisitor(graphs[i], execution_instance, config, i)();
 		configs_visited.push_back(std::move(config));
 		overall_ppu_usage += std::move(std::get<0>(ppu_information));
 		enabled_neuron_resets.push_back(std::get<1>(ppu_information));
@@ -154,9 +154,10 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		PPUMemoryBlockOnPPU ppu_status_coord;
 		{
 			PPUProgramGenerator ppu_program_generator;
-			for (auto const& [descriptor, rule, synapses, neurons] :
+			for (auto const& [descriptor, rule, synapses, neurons, realtime_column_index] :
 			     overall_ppu_usage.plasticity_rules) {
-				ppu_program_generator.add(descriptor, rule, synapses, neurons);
+				ppu_program_generator.add(
+				    descriptor, rule, synapses, neurons, realtime_column_index);
 			}
 			ppu_program_generator.has_periodic_cadc_readout =
 			    overall_ppu_usage.has_periodic_cadc_readout;
@@ -258,7 +259,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool uses_bot_cadc = false;
 	for (size_t i = 0; i < configs.size(); i++) {
 		ExecutionInstanceBuilder builder(
-		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, hooks);
+		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, hooks, i);
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
@@ -503,8 +504,10 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 				assemble_builder.merge_back(hooks.inside_realtime_end);
 			}
 		}
-		// append ppu_finish_builder
-		assemble_builder.merge_back(realtime_columns[0].realtimes[i].ppu_finish_builder);
+		// append ppu_finish_builders
+		for (size_t j = 0; j < realtime_columns.size(); j++) {
+			assemble_builder.merge_back(realtime_columns[j].realtimes[i].ppu_finish_builder);
+		}
 		// wait for response data
 		assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 		if (realtime_columns.size() <= 1) {

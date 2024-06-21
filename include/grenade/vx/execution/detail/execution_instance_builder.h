@@ -52,7 +52,8 @@ public:
 	    signal_flow::InputData const& input_list,
 	    signal_flow::Data const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
+	    signal_flow::ExecutionInstanceHooks& hooks,
+	    size_t realtime_column_index) SYMBOL_VISIBLE;
 
 	struct Usages
 	{
@@ -120,6 +121,8 @@ private:
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
 	signal_flow::ExecutionInstanceHooks& m_hooks;
+
+	size_t m_realtime_column_index;
 
 	std::vector<signal_flow::Graph::vertex_descriptor> m_post_vertices;
 

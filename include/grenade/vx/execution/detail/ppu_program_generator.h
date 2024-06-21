@@ -24,7 +24,8 @@ public:
 	        synapses,
 	    std::vector<
 	        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>> const&
-	        neurons) SYMBOL_VISIBLE;
+	        neurons,
+	    size_t realtime_column_index) SYMBOL_VISIBLE;
 
 	std::vector<std::string> done() SYMBOL_VISIBLE;
 
@@ -35,7 +36,8 @@ private:
 	    signal_flow::Graph::vertex_descriptor,
 	    signal_flow::vertex::PlasticityRule,
 	    std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
-	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
+	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>,
+	    size_t>>
 	    m_plasticity_rules;
 };
 

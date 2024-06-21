@@ -18,9 +18,10 @@ void PPUProgramGenerator::add(
         std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
         synapses,
     std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>> const&
-        neurons)
+        neurons,
+    size_t realtime_column_index)
 {
-	m_plasticity_rules.push_back({descriptor, rule, synapses, neurons});
+	m_plasticity_rules.push_back({descriptor, rule, synapses, neurons, realtime_column_index});
 }
 
 std::vector<std::string> PPUProgramGenerator::done()
@@ -33,26 +34,34 @@ std::vector<std::string> PPUProgramGenerator::done()
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
+	size_t max_realtime_column_index = 0;
+	for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+	     m_plasticity_rules) {
+		max_realtime_column_index = std::max(max_realtime_column_index, realtime_column_index);
+	}
+
 	std::vector<std::string> sources;
 	// plasticity rules
 	{
-		for (auto const& [i, plasticity_rule, synapses, neurons] : m_plasticity_rules) {
+		for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+		     m_plasticity_rules) {
 			std::stringstream kernel;
 			auto kernel_str = plasticity_rule.get_kernel();
 			std::string const kernel_name("PLASTICITY_RULE_KERNEL");
 			kernel_str.replace(
 			    kernel_str.find(kernel_name), kernel_name.size(),
-			    "plasticity_rule_kernel_" + std::to_string(i));
+			    "plasticity_rule_kernel_" + std::to_string(i) + "_" +
+			        std::to_string(realtime_column_index));
 
 			// clang-format off
 			std::string source_template = R"grenadeTemplate(
 {{recorded_memory_definition}}
 
 ## if has_timed_recording
-Recording recorded_scratchpad_memory_{{i}}[{{plasticity_rule.timer.num_periods}}]
+Recording recorded_scratchpad_memory_{{i}}_{{realtime_column_index}}[{{plasticity_rule.timer.num_periods}}]
     __attribute__((section("ext.data.keep")));
 ## else if has_raw_recording
-Recording recorded_scratchpad_memory_{{i}} __attribute__((section("ext.data.keep")));
+Recording recorded_scratchpad_memory_{{i}}_{{realtime_column_index}} __attribute__((section("ext.data.keep")));
 ## endif
 
 {{kernel_str}}
@@ -100,22 +109,22 @@ neuron_view_handle = {
 
 extern volatile libnux::vx::PPUOnDLS ppu;
 
-void plasticity_rule_{{i}}()
+void plasticity_rule_{{i}}_{{realtime_column_index}}()
 {
-	libnux::vx::mailbox_write_string("plasticity rule {{i}}: b: ");
+	libnux::vx::mailbox_write_string("plasticity rule {{i}}_{{realtime_column_index}}: b: ");
 	auto const b = get_time();
 	libnux::vx::mailbox_write_int(b);
 
 ## if has_raw_recording or has_timed_recording
 ## if has_raw_recording
-	plasticity_rule_kernel_{{i}}(
-	    synapse_array_view_handle, neuron_view_handle, recorded_scratchpad_memory_{{i}});
+	plasticity_rule_kernel_{{i}}_{{realtime_column_index}}(
+	    synapse_array_view_handle, neuron_view_handle, recorded_scratchpad_memory_{{i}}_{{realtime_column_index}});
 ## else if has_timed_recording
 	static size_t recorded_scratchpad_memory_period = 0;
 
-	plasticity_rule_kernel_{{i}}(
+	plasticity_rule_kernel_{{i}}_{{realtime_column_index}}(
 	    synapse_array_view_handle, neuron_view_handle,
-	    recorded_scratchpad_memory_{{i}}[recorded_scratchpad_memory_period]);
+	    recorded_scratchpad_memory_{{i}}_{{realtime_column_index}}[recorded_scratchpad_memory_period]);
 
 	// TODO: reset by routine called prior to realtime section for each batch entry
 	// instead of modulo
@@ -123,9 +132,9 @@ void plasticity_rule_{{i}}()
 	recorded_scratchpad_memory_period %= {{plasticity_rule.timer.num_periods}};
 ## endif
 
-	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_{{i}});
+	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_{{i}}_{{realtime_column_index}});
 ## else
-	plasticity_rule_kernel_{{i}}(synapse_array_view_handle, neuron_view_handle);
+	plasticity_rule_kernel_{{i}}_{{realtime_column_index}}(synapse_array_view_handle, neuron_view_handle);
 ## endif
 
 	libnux::vx::mailbox_write_string(" d: ");
@@ -135,22 +144,26 @@ void plasticity_rule_{{i}}()
 
 #include "libnux/scheduling/Service.hpp"
 
-Service_Function<{{i}}, &plasticity_rule_{{i}}> service_{{i}};
+Service_Function<{{i}} * ({{max_realtime_column_index}} + 1) + {{realtime_column_index}}, &plasticity_rule_{{i}}_{{realtime_column_index}}> service_{{i}}_{{realtime_column_index}};
 
 #include "libnux/scheduling/Timer.hpp"
 
-Timer timer_{{i}} = [](){
+Timer timer_{{i}}_{{realtime_column_index}} = [](){
 	Timer t;
 	t.set_first_deadline({{plasticity_rule.timer.start}});
 	t.set_num_periods({{plasticity_rule.timer.num_periods}});
 	t.set_period({{plasticity_rule.timer.period}});
-	t.set_service(service_{{i}});
+	t.set_service(service_{{i}}_{{realtime_column_index}});
 	return t;
 }();)grenadeTemplate";
 			// clang-format on
 
 			inja::json parameters;
 			parameters["i"] = i;
+
+			parameters["max_realtime_column_index"] = max_realtime_column_index;
+
+			parameters["realtime_column_index"] = realtime_column_index;
 
 			parameters["kernel_str"] = kernel_str;
 			parameters["recorded_memory_definition"] =
@@ -227,17 +240,17 @@ volatile uint32_t scheduler_event_drop_count;
 uint64_t time_origin = 0;
 
 ## for i in plasticity_rules_i
-extern Timer timer_{{i}};
-volatile uint32_t timer_{{i}}_event_drop_count;
-extern void plasticity_rule_{{i}}();
-extern Service_Function<{{i}}, &plasticity_rule_{{i}}> service_{{i}};
+extern Timer timer_{{i.0}}_{{i.1}};
+volatile uint32_t timer_{{i.0}}_{{i.1}}_event_drop_count;
+extern void plasticity_rule_{{i.0}}_{{i.1}}();
+extern Service_Function<{{i.0}} * ({{max_realtime_column_index}} + 1) + {{i.1}}, &plasticity_rule_{{i.0}}_{{i.1}}> service_{{i.0}}_{{i.1}};
 ## endfor
 
 namespace {
 
 Scheduler<32> scheduler;
-auto timers = std::tie({% for i in plasticity_rules_i %}timer_{{i}}{% if not loop.is_last %}, {% endif %}{% endfor %});
-auto services = std::tie({% for i in plasticity_rules_i %}service_{{i}}{% if not loop.is_last %}, {% endif %}{% endfor %});
+auto timers = std::tie({% for i in plasticity_rules_i %}timer_{{i.0}}_{{i.1}}{% if not loop.is_last %}, {% endif %}{% endfor %});
+auto services = std::tie({% for i in plasticity_rules_i %}service_{{i.0}}_{{i.1}}{% if not loop.is_last %}, {% endif %}{% endfor %});
 
 } // namespace
 
@@ -251,7 +264,7 @@ void scheduling()
 	time_origin = libnux::vx::now();
 	SchedulerSignallerTimer timer(current, current + runtime);
 ## for i in plasticity_rules_i
-	timer_{{i}}.set_first_deadline(current + timer_{{i}}.get_first_deadline());
+	timer_{{i.0}}_{{i.1}}.set_first_deadline(current + timer_{{i.0}}_{{i.1}}.get_first_deadline());
 ## endfor
 	libnux::vx::mailbox_write_string("time:");
 	libnux::vx::mailbox_write_int(current);
@@ -261,7 +274,7 @@ void scheduling()
 
 	scheduler_event_drop_count = scheduler.get_dropped_events_count();
 ## for i in plasticity_rules_i
-	timer_{{i}}_event_drop_count = timer_{{i}}.get_missed_count();
+	timer_{{i.0}}_{{i.1}}_event_drop_count = timer_{{i.0}}_{{i.1}}.get_missed_count();
 ## endfor
 ## endif
 })grenadeTemplate";
@@ -269,11 +282,13 @@ void scheduling()
 
 		inja::json parameters;
 		{
-			std::vector<size_t> plasticity_rules_i;
-			for (auto const& [i, _, __, ___] : m_plasticity_rules) {
-				plasticity_rules_i.push_back(i);
+			std::vector<std::array<size_t, 2>> plasticity_rules_i;
+			for (auto const& [i, _, __, ___, realtime_column_index] : m_plasticity_rules) {
+				plasticity_rules_i.emplace_back(std::array<size_t, 2>{i, realtime_column_index});
 			}
 			parameters["plasticity_rules_i"] = plasticity_rules_i;
+
+			parameters["max_realtime_column_index"] = max_realtime_column_index;
 		}
 		sources.push_back(inja::render(source_template, parameters));
 	}

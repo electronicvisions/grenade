@@ -52,10 +52,12 @@ ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsa
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     signal_flow::Graph const& graph,
     common::ExecutionInstanceID const& execution_instance,
-    lola::vx::v3::Chip& chip_config) :
+    lola::vx::v3::Chip& chip_config,
+    size_t realtime_column_index) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_config(chip_config),
+    m_realtime_column_index(realtime_column_index),
     m_has_periodic_cadc_readout(false),
     m_has_cadc_readout(false)
 {
@@ -358,7 +360,8 @@ void ExecutionInstanceConfigVisitor::process(
 		}
 	}
 	// store on-PPU handles for later PPU source code generation
-	m_plasticity_rules.push_back({vertex, data, std::move(synapses), std::move(neurons)});
+	m_plasticity_rules.push_back(
+	    {vertex, data, std::move(synapses), std::move(neurons), m_realtime_column_index});
 }
 
 template <>

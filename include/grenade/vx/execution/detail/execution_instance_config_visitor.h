@@ -34,7 +34,8 @@ public:
 		    std::vector<
 		        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
 		    std::vector<
-		        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
+		        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>,
+		    size_t>>
 		    plasticity_rules;
 
 		PpuUsage() = default;
@@ -56,7 +57,8 @@ public:
 	ExecutionInstanceConfigVisitor(
 	    signal_flow::Graph const& graph,
 	    common::ExecutionInstanceID const& execution_instance,
-	    lola::vx::v3::Chip& config) SYMBOL_VISIBLE;
+	    lola::vx::v3::Chip& config,
+	    size_t realtime_column_index) SYMBOL_VISIBLE;
 
 	/**
 	 * Perform visit operation and generate initial configuration.
@@ -73,6 +75,8 @@ private:
 
 	lola::vx::v3::Chip& m_config;
 
+	size_t m_realtime_column_index;
+
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
 	bool m_has_periodic_cadc_readout;
@@ -83,7 +87,8 @@ private:
 	    signal_flow::Graph::vertex_descriptor,
 	    signal_flow::vertex::PlasticityRule,
 	    std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
-	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>>>
+	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>,
+	    size_t>>
 	    m_plasticity_rules;
 
 	/**
