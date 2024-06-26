@@ -25,6 +25,9 @@ struct GENPYBIND(visible) VertexOnGraph
 
 	auto operator<=>(VertexOnGraph const& other) const = default;
 
+	GENPYBIND(expose_as(__hash__))
+	size_t hash() const;
+
 	GENPYBIND(stringstream)
 	friend std::ostream& operator<<(std::ostream& os, VertexOnGraph const& value)
 	{

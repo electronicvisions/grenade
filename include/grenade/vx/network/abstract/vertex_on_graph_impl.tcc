@@ -17,6 +17,17 @@ typename VertexOnGraph<Derived, Backend>::Value const& VertexOnGraph<Derived, Ba
 }
 
 template <typename Derived, typename Backend>
+size_t VertexOnGraph<Derived, Backend>::hash() const
+{
+	// We include the type name in the hash to reduce the number of hash collisions in
+	// python code, where __hash__ is used in heterogeneous containers.
+	static const size_t seed = boost::hash_value(typeid(VertexOnGraph).name());
+	size_t hash = seed;
+	boost::hash_combine(hash, std::hash<VertexOnGraph>{}(*this));
+	return hash;
+}
+
+template <typename Derived, typename Backend>
 std::ostream& VertexOnGraph<Derived, Backend>::print(std::ostream& os) const
 {
 	return (os << hate::name<Derived>() << "(" << m_value << ")");
