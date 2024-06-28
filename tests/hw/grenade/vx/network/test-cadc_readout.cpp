@@ -39,87 +39,98 @@ TEST(CADCRecording, General)
 {
 	// Construct connection to HW
 	auto chip_configs = get_chip_configs_bypass_excitatory();
-	grenade::vx::execution::JITGraphExecutor executor;
 
 	grenade::vx::common::ExecutionInstanceID instance;
 
-	// build network
-	NetworkBuilder network_builder;
+	// CADC sampling shall take between one and {2.5, 7.0} us depending on placement of recording
+	// data
+	std::map<bool, float> expected_period = {{false, 2.5}, {true, 7.0}};
 
-	Population::Neurons neurons;
-	for (auto const column : iter_all<NeuronColumnOnDLS>()) {
-		neurons.push_back(Population::Neuron(
-		    LogicalNeuronOnDLS(
-		        LogicalNeuronCompartments(
-		            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-		        AtomicNeuronOnDLS(column, NeuronRowOnDLS::top)),
-		    Population::Neuron::Compartments{
-		        {CompartmentOnLogicalNeuron(),
-		         Population::Neuron::Compartment{
-		             Population::Neuron::Compartment::SpikeMaster(0, false),
-		             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
-	}
-	std::mt19937 rng{std::random_device{}()};
-	std::shuffle(neurons.begin(), neurons.end(), rng);
-	Population population_internal{std::move(neurons)};
-	auto const population_internal_descriptor = network_builder.add(population_internal);
+	for (auto const placement_on_dram : {false, true}) {
+		grenade::vx::execution::JITGraphExecutor executor;
 
-	CADCRecording cadc_recording;
-	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnExecutionInstance(
-	        population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0),
-	    CADCRecording::Neuron::Source::membrane});
-	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnExecutionInstance(
-	        population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0),
-	    CADCRecording::Neuron::Source::membrane});
-	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnExecutionInstance(
-	        population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0),
-	    CADCRecording::Neuron::Source::membrane});
-	cadc_recording.neurons.push_back(CADCRecording::Neuron{
-	    AtomicNeuronOnExecutionInstance(
-	        population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0),
-	    CADCRecording::Neuron::Source::membrane});
-	network_builder.add(cadc_recording);
+		// build network
+		NetworkBuilder network_builder;
 
-	auto const network = network_builder.done();
-	auto const routing_result = routing::PortfolioRouter()(network);
-	auto const network_graph = build_network_graph(network, routing_result);
-
-	grenade::vx::signal_flow::InputData inputs;
-	inputs.runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 100)}});
-	inputs.runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 150)}});
-
-	// run graph with given inputs and return results
-	auto const result_map = run(executor, network_graph, chip_configs, inputs);
-
-	auto const result = extract_cadc_samples(result_map, network_graph);
-
-	EXPECT_EQ(result.size(), inputs.batch_size());
-	std::set<grenade::vx::common::Time> unique_times;
-	for (size_t i = 0; i < result.size(); ++i) {
-		std::map<AtomicNeuronOnNetwork, size_t> samples_per_neuron;
-		auto const& samples = result.at(i);
-		for (auto const& sample : samples) {
-			auto const& [t, an_on_network, _] = sample;
-			samples_per_neuron[an_on_network] += 1;
-			unique_times.insert(t);
+		Population::Neurons neurons;
+		for (auto const column : iter_all<NeuronColumnOnDLS>()) {
+			neurons.push_back(Population::Neuron(
+			    LogicalNeuronOnDLS(
+			        LogicalNeuronCompartments(
+			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
+			        AtomicNeuronOnDLS(column, NeuronRowOnDLS::top)),
+			    Population::Neuron::Compartments{
+			        {CompartmentOnLogicalNeuron(),
+			         Population::Neuron::Compartment{
+			             Population::Neuron::Compartment::SpikeMaster(0, false),
+			             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
 		}
-		EXPECT_EQ(samples_per_neuron.size(), cadc_recording.neurons.size());
-		for (auto const& [_, num] : samples_per_neuron) {
-			// CADC sampling shall take between one and 2.5 us
-			EXPECT_GE(
-			    num,
-			    inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us / 2.5);
-			EXPECT_LE(
-			    num, inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us);
+		std::mt19937 rng{std::random_device{}()};
+		std::shuffle(neurons.begin(), neurons.end(), rng);
+		Population population_internal{std::move(neurons)};
+		auto const population_internal_descriptor = network_builder.add(population_internal);
+
+		CADCRecording cadc_recording;
+		cadc_recording.placement_on_dram = placement_on_dram;
+		cadc_recording.neurons.push_back(CADCRecording::Neuron{
+		    AtomicNeuronOnExecutionInstance(
+		        population_internal_descriptor, 14, CompartmentOnLogicalNeuron(), 0),
+		    CADCRecording::Neuron::Source::membrane});
+		cadc_recording.neurons.push_back(CADCRecording::Neuron{
+		    AtomicNeuronOnExecutionInstance(
+		        population_internal_descriptor, 60, CompartmentOnLogicalNeuron(), 0),
+		    CADCRecording::Neuron::Source::membrane});
+		cadc_recording.neurons.push_back(CADCRecording::Neuron{
+		    AtomicNeuronOnExecutionInstance(
+		        population_internal_descriptor, 25, CompartmentOnLogicalNeuron(), 0),
+		    CADCRecording::Neuron::Source::membrane});
+		cadc_recording.neurons.push_back(CADCRecording::Neuron{
+		    AtomicNeuronOnExecutionInstance(
+		        population_internal_descriptor, 150, CompartmentOnLogicalNeuron(), 0),
+		    CADCRecording::Neuron::Source::membrane});
+		network_builder.add(cadc_recording);
+
+		auto const network = network_builder.done();
+		auto const routing_result = routing::PortfolioRouter()(network);
+		auto const network_graph = build_network_graph(network, routing_result);
+
+		grenade::vx::signal_flow::InputData inputs;
+		inputs.runtime.push_back(
+		    {{instance, grenade::vx::common::Time(
+		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 100)}});
+		inputs.runtime.push_back(
+		    {{instance, grenade::vx::common::Time(
+		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 150)}});
+
+		// run graph with given inputs and return results
+		auto const result_map = run(executor, network_graph, chip_configs, inputs);
+
+		auto const result = extract_cadc_samples(result_map, network_graph);
+
+		EXPECT_EQ(result.size(), inputs.batch_size());
+		std::set<grenade::vx::common::Time> unique_times;
+		for (size_t i = 0; i < result.size(); ++i) {
+			std::map<AtomicNeuronOnNetwork, size_t> samples_per_neuron;
+			auto const& samples = result.at(i);
+			for (auto const& sample : samples) {
+				auto const& [t, an_on_network, _] = sample;
+				samples_per_neuron[an_on_network] += 1;
+				unique_times.insert(t);
+			}
+			EXPECT_EQ(samples_per_neuron.size(), cadc_recording.neurons.size())
+			    << placement_on_dram;
+			for (auto const& [_, num] : samples_per_neuron) {
+				EXPECT_GE(
+				    num, inputs.runtime.at(i).at(instance) /
+				             Timer::Value::fpga_clock_cycles_per_us /
+				             expected_period.at(placement_on_dram))
+				    << placement_on_dram;
+				EXPECT_LE(
+				    num, inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us)
+				    << placement_on_dram;
+			}
 		}
+		// only test that time is recorded and not all zeros
+		EXPECT_GT(unique_times.size(), 1);
 	}
-	// only test that time is recorded and not all zeros
-	EXPECT_GT(unique_times.size(), 1);
 }

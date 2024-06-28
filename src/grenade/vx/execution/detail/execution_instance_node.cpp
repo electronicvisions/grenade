@@ -117,6 +117,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			}
 			ppu_program_generator.has_periodic_cadc_readout =
 			    overall_ppu_usage.has_periodic_cadc_readout;
+			ppu_program_generator.has_periodic_cadc_readout_on_dram =
+			    overall_ppu_usage.has_periodic_cadc_readout_on_dram;
 			CachingCompiler compiler;
 			auto const program = compiler.compile(ppu_program_generator.done());
 			ppu_program = program.memory;
@@ -221,6 +223,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    logger, "operator(): Constructed configuration(s) in " << configs_timer.print() << ".");
 
 	std::vector<bool> periodic_cadc_recording;
+	std::vector<bool> periodic_cadc_dram_recording;
 	bool uses_top_cadc = false;
 	bool uses_bot_cadc = false;
 	bool uses_madc = false;
@@ -244,6 +247,12 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		    usages.cadc_recording.begin(), usages.cadc_recording.end(),
 		    [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> const& mode) {
 			    return mode.contains(signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
+		    }));
+		periodic_cadc_dram_recording.push_back(std::any_of(
+		    usages.cadc_recording.begin(), usages.cadc_recording.end(),
+		    [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> const& mode) {
+			    return mode.contains(
+			        signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram);
 		    }));
 		uses_top_cadc = uses_top_cadc || !usages.cadc_recording[HemisphereOnDLS::top].empty();
 		uses_bot_cadc = uses_bot_cadc || !usages.cadc_recording[HemisphereOnDLS::bottom].empty();
@@ -283,7 +292,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			subsequent_times[j] = current_times[j] + realtime_column.realtimes[j].realtime_duration;
 		}
 		realtime_durations.push_back(realtime_durations_local_column);
-		if (periodic_cadc_recording[i]) {
+		if (periodic_cadc_recording[i] || periodic_cadc_dram_recording[i]) {
 			if (!times_of_first_cadc_sample) {
 				std::vector<Timer::Value> determined_times_of_first_cadc_sample;
 				for (size_t j = 0; j < realtime_column.realtimes.size(); j++) {
@@ -311,8 +320,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::vector<typed_array<std::optional<ContainerTicket>, PPUOnDLS>> cadc_readout_tickets(
 	    realtime_columns[0].realtimes.size(),
 	    typed_array<std::optional<ContainerTicket>, PPUOnDLS>{});
-	if (std::find(periodic_cadc_recording.begin(), periodic_cadc_recording.end(), true) !=
-	    periodic_cadc_recording.end()) {
+	auto const has_periodic_cadc_recording =
+	    std::find(periodic_cadc_recording.begin(), periodic_cadc_recording.end(), true) !=
+	    periodic_cadc_recording.end();
+	auto const has_periodic_cadc_dram_recording =
+	    std::find(periodic_cadc_dram_recording.begin(), periodic_cadc_dram_recording.end(), true) !=
+	    periodic_cadc_dram_recording.end();
+	assert(!has_periodic_cadc_recording || !has_periodic_cadc_dram_recording);
+	if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
 		PlaybackProgramBuilder cadc_finalize_builder_base;
 
 		InstructionTimeoutConfig instruction_timeout;
@@ -354,7 +369,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			// calculate expected time durations where periodic_cadc_recording is enabled
 			Timer::Value expected_pcr_time = Timer::Value(0);
 			for (size_t j = 0; j < realtime_column_count; j++) {
-				if (periodic_cadc_recording[j]) {
+				if (periodic_cadc_recording[j] || periodic_cadc_dram_recording[j]) {
 					expected_pcr_time += realtime_durations[j][i];
 				}
 			}
@@ -367,36 +382,66 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			// add a sample as constant margin for error
 			estimated_size += 1;
 			// cap at maximal possible amount of samples
-			if (estimated_size > static_cast<size_t>(100)) {
+			if (estimated_size > (has_periodic_cadc_dram_recording ? static_cast<size_t>(100 * 2048)
+			                                                       : static_cast<size_t>(100))) {
 				LOG4CXX_WARN(
 				    logger, "It is estimated, that the CADC will measure "
 				                << estimated_size << " samples in batch entry " << i
 				                << ", but only the first 100 can be recorded.");
-				estimated_size = static_cast<size_t>(100);
+				estimated_size = has_periodic_cadc_dram_recording ? static_cast<size_t>(100 * 2048)
+				                                                  : static_cast<size_t>(100);
 			}
-			if (uses_top_cadc) {
-				cadc_readout_tickets[i][PPUOnDLS::top] =
-				    cadc_finalize_builder.read(ExternalPPUMemoryBlockOnFPGA(
-				        std::get<ExternalPPUMemoryBlockOnFPGA>(
-				            ppu_symbols->at("periodic_cadc_samples_top").coordinate)
-				            .toMin(),
-				        ExternalPPUMemoryByteOnFPGA(
-				            std::get<ExternalPPUMemoryBlockOnFPGA>(
-				                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
-				                .toMin() +
-				            128 + ((256 + 128) * estimated_size) - 1)));
+			if (has_periodic_cadc_recording) {
+				if (uses_top_cadc) {
+					cadc_readout_tickets[i][PPUOnDLS::top] =
+					    cadc_finalize_builder.read(ExternalPPUMemoryBlockOnFPGA(
+					        std::get<ExternalPPUMemoryBlockOnFPGA>(
+					            ppu_symbols->at("periodic_cadc_samples_top").coordinate)
+					            .toMin(),
+					        ExternalPPUMemoryByteOnFPGA(
+					            std::get<ExternalPPUMemoryBlockOnFPGA>(
+					                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
+					                .toMin() +
+					            128 + ((256 + 128) * estimated_size) - 1)));
+				}
+				if (uses_bot_cadc) {
+					cadc_readout_tickets[i][PPUOnDLS::bottom] =
+					    cadc_finalize_builder.read(ExternalPPUMemoryBlockOnFPGA(
+					        std::get<ExternalPPUMemoryBlockOnFPGA>(
+					            ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
+					            .toMin(),
+					        ExternalPPUMemoryByteOnFPGA(
+					            std::get<ExternalPPUMemoryBlockOnFPGA>(
+					                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
+					                .toMin() +
+					            128 + ((256 + 128) * estimated_size) - 1)));
+				}
 			}
-			if (uses_bot_cadc) {
-				cadc_readout_tickets[i][PPUOnDLS::bottom] =
-				    cadc_finalize_builder.read(ExternalPPUMemoryBlockOnFPGA(
-				        std::get<ExternalPPUMemoryBlockOnFPGA>(
-				            ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
-				            .toMin(),
-				        ExternalPPUMemoryByteOnFPGA(
-				            std::get<ExternalPPUMemoryBlockOnFPGA>(
-				                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
-				                .toMin() +
-				            128 + ((256 + 128) * estimated_size) - 1)));
+			if (has_periodic_cadc_dram_recording) {
+				if (uses_top_cadc) {
+					cadc_readout_tickets[i][PPUOnDLS::top] =
+					    cadc_finalize_builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
+					        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+					            ppu_symbols->at("periodic_cadc_samples_top").coordinate)
+					            .toMin(),
+					        ExternalPPUDRAMMemoryByteOnFPGA(
+					            std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+					                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
+					                .toMin() +
+					            128 + ((256 + 128) * estimated_size) - 1)));
+				}
+				if (uses_bot_cadc) {
+					cadc_readout_tickets[i][PPUOnDLS::bottom] =
+					    cadc_finalize_builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
+					        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+					            ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
+					            .toMin(),
+					        ExternalPPUDRAMMemoryByteOnFPGA(
+					            std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+					                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
+					                .toMin() +
+					            128 + ((256 + 128) * estimated_size) - 1)));
+				}
 			}
 			// Reset the offset, from where the PPU begins to write the recorded CADC data
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -494,8 +539,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			assemble_builder.merge_back(hooks.post_realtime);
 		}
 		// append cadc_finazlize_builder for periodic_cadc data readout
-		if (std::find(periodic_cadc_recording.begin(), periodic_cadc_recording.end(), true) !=
-		    periodic_cadc_recording.end()) {
+		if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
 			assemble_builder.merge_back(cadc_finalize_builders.at(i));
 		}
 		// for the last batch entry, stop the PPU

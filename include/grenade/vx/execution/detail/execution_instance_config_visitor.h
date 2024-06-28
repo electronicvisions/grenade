@@ -27,6 +27,7 @@ public:
 	struct PpuUsage
 	{
 		bool has_periodic_cadc_readout = false;
+		bool has_periodic_cadc_readout_on_dram = false;
 		bool has_cadc_readout = false;
 		std::vector<std::tuple<
 		    signal_flow::Graph::vertex_descriptor,
@@ -80,6 +81,7 @@ private:
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>
 	    m_enabled_neuron_resets;
 	bool m_has_periodic_cadc_readout;
+	bool m_has_periodic_cadc_readout_on_dram;
 	bool m_has_cadc_readout;
 	bool m_used_madc;
 

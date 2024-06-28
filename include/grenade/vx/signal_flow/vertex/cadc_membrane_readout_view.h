@@ -44,7 +44,8 @@ struct CADCMembraneReadoutView : public EntityOnChip
 	enum class Mode
 	{
 		hagen,
-		periodic
+		periodic,
+		periodic_on_dram
 	};
 
 	typedef std::vector<std::vector<lola::vx::v3::AtomicNeuron::Readout::Source>> Sources;

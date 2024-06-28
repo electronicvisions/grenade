@@ -323,18 +323,33 @@ void ExecutionInstanceBuilder::process(
 		} else {
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 				assert(m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]);
-				auto const local_block = dynamic_cast<ExternalPPUMemoryBlock const&>(
-				    m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]->get());
-
+				std::vector<uint8_t> local_bytes;
+				if (*m_cadc_readout_mode ==
+				    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
+					auto const local_block = dynamic_cast<ExternalPPUMemoryBlock const&>(
+					    m_batch_entries.at(batch_index)
+					        .m_extmem_result[synram.toPPUOnDLS()]
+					        ->get());
+					for (auto const& byte : local_block.get_bytes()) {
+						local_bytes.push_back(byte.get_value().value());
+					}
+				} else {
+					auto const local_block = dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(
+					    m_batch_entries.at(batch_index)
+					        .m_extmem_result[synram.toPPUOnDLS()]
+					        ->get());
+					for (auto const& byte : local_block.get_bytes()) {
+						local_bytes.push_back(byte.get_value().value());
+					}
+				}
 				uint32_t const local_block_size_expectation =
-				    (local_block.size() - ppu_vector_alignment /* num samples */) /
+				    (local_bytes.size() - ppu_vector_alignment /* num samples */) /
 				    (ppu_vector_alignment /* sample time stamp */ +
 				     2 * ppu_vector_alignment /* sample values */);
 				// get number of samples
 				uint32_t num_samples = 0;
 				for (size_t i = 0; i < 4; ++i) {
-					num_samples |= static_cast<uint32_t>(local_block.at(i).get_value().value())
-					               << (3 - i) * CHAR_BIT;
+					num_samples |= static_cast<uint32_t>(local_bytes.at(i)) << (3 - i) * CHAR_BIT;
 				}
 				if (num_samples > local_block_size_expectation) {
 					auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
@@ -353,9 +368,8 @@ void ExecutionInstanceBuilder::process(
 					common::TimedData<std::vector<signal_flow::Int8>> local_samples;
 					uint64_t time = 0;
 					for (size_t j = 0; j < 8; ++j) {
-						time |=
-						    static_cast<uint64_t>(local_block.at(offset + j).get_value().value())
-						    << (7 - j) * CHAR_BIT;
+						time |= static_cast<uint64_t>(local_bytes.at(offset + j))
+						        << (7 - j) * CHAR_BIT;
 					}
 					local_samples.time =
 					    common::Time(time / 2); // FPGA clock 125MHz vs. PPU clock 250MHz
@@ -386,9 +400,7 @@ void ExecutionInstanceBuilder::process(
 						for (size_t j = 0; auto const& column_collection : columns) {
 							for (auto const& column : column_collection) {
 								local_samples.data.at(j) = signal_flow::Int8(
-								    local_block.at(offset + get_index(column.value()))
-								        .get_value()
-								        .value());
+								    local_bytes.at(offset + get_index(column.value())));
 								j++;
 							}
 						}
@@ -871,6 +883,23 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	    m_ticket_requests.begin(), m_ticket_requests.end(), [](auto const v) { return v; });
 	assert(has_cadc_readout ? enable_ppu : true);
 
+	bool const has_periodic_cadc_readout =
+	    ((*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic &&
+	      !std::any_of(
+	          before.cadc_recording.begin(), before.cadc_recording.end(),
+	          [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> modes) {
+		          return modes.contains(
+		              signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
+	          })) ||
+	     (*m_cadc_readout_mode ==
+	          signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram &&
+	      !std::any_of(
+	          before.cadc_recording.begin(), before.cadc_recording.end(),
+	          [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> modes) {
+		          return modes.contains(
+		              signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram);
+	          })));
+
 	if (has_cadc_readout) {
 		assert(m_cadc_readout_mode);
 		if ((*m_cadc_readout_mode ==
@@ -887,8 +916,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PlaybackProgramBuilder wait_for_ppu_command_idle;
 	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
-	typed_array<std::optional<ExternalPPUMemoryBlockOnFPGA>, PPUOnDLS>
-	    ppu_periodic_cadc_readout_samples_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
 	std::map<
 	    signal_flow::Graph::vertex_descriptor,
@@ -923,19 +950,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			            "recorded_scratchpad_memory_" + std::to_string(descriptor) + "_" +
 			            std::to_string(m_realtime_column_index))
 			        .coordinate;
-		}
-
-		if (has_cadc_readout) {
-			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode ==
-			    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
-				ppu_periodic_cadc_readout_samples_coord[PPUOnDLS::top] =
-				    std::get<ExternalPPUMemoryBlockOnFPGA>(
-				        m_ppu_symbols->at("periodic_cadc_samples_top").coordinate);
-				ppu_periodic_cadc_readout_samples_coord[PPUOnDLS::bottom] =
-				    std::get<ExternalPPUMemoryBlockOnFPGA>(
-				        m_ppu_symbols->at("periodic_cadc_samples_bot").coordinate);
-			}
 		}
 
 		// generate absolute time playback snippets for PPU command polling
@@ -1023,22 +1037,12 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			}
 		}
 		// start periodic CADC readout
-		if (has_cadc_readout) {
-			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode ==
-			        signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic &&
-			    !std::any_of(
-			        before.cadc_recording.begin(), before.cadc_recording.end(),
-			        [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> modes) {
-				        return modes.contains(
-				            signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
-			        })) {
-				auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
-				    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::periodic_read));
-				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
-				builder.merge(ppu_command_builder += current_time);
-				current_time += ppu_command_result.duration;
-			}
+		if (has_cadc_readout && has_periodic_cadc_readout) {
+			auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
+			    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::periodic_read));
+			m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+			builder.merge(ppu_command_builder += current_time);
+			current_time += ppu_command_result.duration;
 			current_time += Timer::Value(6 * Timer::Value::fpga_clock_cycles_per_us);
 		}
 		// wait for membrane to settle
@@ -1117,24 +1121,14 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			}
 		}
 		// stop periodic CADC readout
-		if (has_cadc_readout) {
-			assert(m_cadc_readout_mode);
-			if (*m_cadc_readout_mode ==
-			        signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic &&
-			    !std::any_of(
-			        after.cadc_recording.begin(), after.cadc_recording.end(),
-			        [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> modes) {
-				        return modes.contains(
-				            signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
-			        })) {
-				auto [ppu_command_builder, ppu_command_result] =
-				    stadls::vx::generate(generator::PPUCommand(
-				        ppu_status_coord, ppu::detail::Status::stop_periodic_read,
-				        ppu::detail::Status::inside_periodic_read));
-				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
-				builder.merge(ppu_command_builder += current_time);
-				current_time += ppu_command_result.duration;
-			}
+		if (has_cadc_readout && has_periodic_cadc_readout) {
+			auto [ppu_command_builder, ppu_command_result] =
+			    stadls::vx::generate(generator::PPUCommand(
+			        ppu_status_coord, ppu::detail::Status::stop_periodic_read,
+			        ppu::detail::Status::inside_periodic_read));
+			m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+			builder.merge(ppu_command_builder += current_time);
+			current_time += ppu_command_result.duration;
 		}
 		// stop MADC (and power-down in last batch entry)
 		if (m_madc_readout_vertex && !after.madc_recording) {

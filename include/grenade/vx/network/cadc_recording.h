@@ -13,8 +13,11 @@ struct GENPYBIND(visible) CADCRecording : public NeuronRecording
 	CADCRecording() = default;
 	CADCRecording(
 	    std::vector<Neuron> const& neurons,
+	    bool placement_on_dram = false,
 	    common::EntityOnChip::ChipCoordinate chip_coordinate =
 	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+
+	bool placement_on_dram{false};
 };
 
 } // namespace grenade::vx::network

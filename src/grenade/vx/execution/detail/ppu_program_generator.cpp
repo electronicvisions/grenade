@@ -338,7 +338,7 @@ void scheduling()
 		sources.push_back("void scheduling() {}");
 	}
 	// periodic CADC readout
-	if (has_periodic_cadc_readout) {
+	if (has_periodic_cadc_readout || has_periodic_cadc_readout_on_dram) {
 		// clang-format off
 		std::string source_template = R"grenadeTemplate(
 #include "grenade/vx/ppu/detail/status.h"
@@ -352,9 +352,9 @@ void scheduling()
 extern volatile libnux::vx::PPUOnDLS ppu;
 extern volatile grenade::vx::ppu::detail::Status status;
 std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t>
-    periodic_cadc_samples_top __attribute__((section("ext.data")));
+    periodic_cadc_samples_top __attribute__((section("{{recording_placement}}.data")));
 std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t>
-    periodic_cadc_samples_bot __attribute__((section("ext.data")));
+    periodic_cadc_samples_bot __attribute__((section("{{recording_placement}}.data")));
 
 auto& local_periodic_cadc_samples = std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ?
     periodic_cadc_samples_bot : periodic_cadc_samples_top);
@@ -384,8 +384,8 @@ void perform_periodic_read_recording(size_t const offset)
 	"fxvoutx 0, %[b0], %[i]\n"
 	"fxvoutx 1, %[b1], %[i]\n"
 	::
-	  [b0] "b" (GlobalAddress::from_global(0, reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),
-	  [b1] "b" (GlobalAddress::from_global(0, reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd)) & 0x3fff'ffff).to_extmem().to_fxviox_addr()),
+	  [b0] "b" (GlobalAddress::from_global(0, reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.even)) & 0x1fff'ffff).to_{{recording_global_address}}().to_fxviox_addr()),
+	  [b1] "b" (GlobalAddress::from_global(0, reinterpret_cast<uint32_t>(&(local_periodic_cadc_samples[offset].second.odd)) & 0x1fff'ffff).to_{{recording_global_address}}().to_fxviox_addr()),
 	  [ca_base] "r" (dls_causal_base),
 	  [cab_base] "r" (dls_causal_base|dls_buffer_enable_mask),
 	  [i] "r" (uint32_t(0)),
@@ -413,15 +413,21 @@ void perform_periodic_read()
 	asm volatile(
 	    "fxvinx 0, %[b0], %[i]\n"
 	    "sync\n"
-	    :: [b0] "r"(dls_extmem_base), [i] "r"(uint32_t(0))
+	    :: [b0] "r"(dls_{{recording_global_address}}_base), [i] "r"(uint32_t(0))
 	    : "qv0", "memory"
 	);
 })grenadeTemplate";
 		// clang-format on
 
 		inja::json parameters;
-		size_t const num_samples = has_periodic_cadc_readout ? num_cadc_samples_in_extmem : 0;
+		size_t const num_samples = (has_periodic_cadc_readout || has_periodic_cadc_readout_on_dram)
+		                               ? num_cadc_samples_in_extmem
+		                               : 0;
 		parameters["num_samples"] = num_samples;
+		parameters["recording_placement"] =
+		    has_periodic_cadc_readout_on_dram ? std::string("ext_dram") : std::string("ext");
+		parameters["recording_global_address"] =
+		    has_periodic_cadc_readout_on_dram ? std::string("extmem_dram") : std::string("extmem");
 		sources.push_back(inja::render(source_template, parameters));
 	} else {
 		sources.push_back("void perform_periodic_read() {}");

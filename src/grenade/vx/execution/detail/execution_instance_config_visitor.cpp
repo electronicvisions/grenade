@@ -25,6 +25,7 @@ namespace grenade::vx::execution::detail {
 ExecutionInstanceConfigVisitor::PpuUsage::PpuUsage(
     ExecutionInstanceConfigVisitor::PpuUsage&& other) :
     has_periodic_cadc_readout(other.has_periodic_cadc_readout),
+    has_periodic_cadc_readout_on_dram(other.has_periodic_cadc_readout_on_dram),
     has_cadc_readout(other.has_cadc_readout),
     plasticity_rules(std::move(other.plasticity_rules))
 {}
@@ -33,6 +34,7 @@ ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsa
     ExecutionInstanceConfigVisitor::PpuUsage&& other)
 {
 	has_periodic_cadc_readout = other.has_periodic_cadc_readout;
+	has_periodic_cadc_readout_on_dram = other.has_periodic_cadc_readout_on_dram;
 	has_cadc_readout = other.has_cadc_readout;
 	plasticity_rules = std::move(other.plasticity_rules);
 	return *this;
@@ -42,6 +44,8 @@ ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsa
     ExecutionInstanceConfigVisitor::PpuUsage&& other)
 {
 	has_periodic_cadc_readout = has_periodic_cadc_readout || other.has_periodic_cadc_readout;
+	has_periodic_cadc_readout_on_dram =
+	    has_periodic_cadc_readout_on_dram || other.has_periodic_cadc_readout_on_dram;
 	has_cadc_readout = has_cadc_readout || other.has_cadc_readout;
 	plasticity_rules.insert(
 	    plasticity_rules.begin(), std::make_move_iterator(other.plasticity_rules.begin()),
@@ -59,6 +63,7 @@ ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     m_config(chip_config),
     m_realtime_column_index(realtime_column_index),
     m_has_periodic_cadc_readout(false),
+    m_has_periodic_cadc_readout_on_dram(false),
     m_has_cadc_readout(false)
 {
 	using namespace halco::common;
@@ -130,6 +135,8 @@ void ExecutionInstanceConfigVisitor::process(
 
 	m_has_periodic_cadc_readout =
 	    data.get_mode() == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic;
+	m_has_periodic_cadc_readout_on_dram =
+	    data.get_mode() == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram;
 	m_has_cadc_readout = true;
 }
 
@@ -491,6 +498,7 @@ ExecutionInstanceConfigVisitor::operator()()
 
 	ExecutionInstanceConfigVisitor::PpuUsage ppu_usage;
 	ppu_usage.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
+	ppu_usage.has_periodic_cadc_readout_on_dram = m_has_periodic_cadc_readout_on_dram;
 	ppu_usage.has_cadc_readout = m_has_cadc_readout;
 	ppu_usage.plasticity_rules = std::move(m_plasticity_rules);
 	return {std::move(ppu_usage), std::move(m_enabled_neuron_resets)};

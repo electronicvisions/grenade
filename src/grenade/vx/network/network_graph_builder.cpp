@@ -1756,8 +1756,10 @@ void NetworkGraphBuilder::add_cadc_recording(
 		// TODO (Issue #3986): support source selection in vertex
 		signal_flow::vertex::CADCMembraneReadoutView vertex(
 		    std::move(columns), row.toSynramOnDLS(),
-		    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic, std::move(sources),
-		    get_chip_coordinate(instance));
+		    cadc_recording.placement_on_dram
+		        ? signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram
+		        : signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic,
+		    std::move(sources), get_chip_coordinate(instance));
 		signal_flow::vertex::DataOutput data_output(
 		    signal_flow::ConnectionType::Int8, vertex.output().size);
 		auto const cv = graph.add(std::move(vertex), instance, inputs);

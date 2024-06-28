@@ -30,6 +30,7 @@ public:
 	std::vector<std::string> done() SYMBOL_VISIBLE;
 
 	bool has_periodic_cadc_readout = false;
+	bool has_periodic_cadc_readout_on_dram = false;
 
 private:
 	std::vector<std::tuple<
