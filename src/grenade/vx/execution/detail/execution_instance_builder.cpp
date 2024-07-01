@@ -1329,11 +1329,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 				        batch_entry.ppu_symbols.insert({name, ppu_finish_builder.read(coordinate)});
 			        }},
 			    m_ppu_symbols->at(name).coordinate);
-			for (auto const& [descriptor, coord] :
-			     ppu_plasticity_rule_recorded_scratchpad_memory_coord) {
-				batch_entry.m_plasticity_rule_recorded_scratchpad_memory.at(descriptor) =
-				    ppu_finish_builder.read(coord);
-			}
 		}
 		realtimes.push_back(ExecutionInstanceBuilder::RealtimeSnippet{
 		    .builder = std::move(builder),
