@@ -6,6 +6,7 @@
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/detail/generator/capmem.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
@@ -594,17 +595,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    logger, "operator(): Generated playback program for read-back of PPU alterations in "
 	                << read_timer.print() << ".");
 
-	// wait for CapMem to settle
-	auto const capmem_settling_wait_program_generator = []() {
-		PlaybackProgramBuilder capmem_settling_wait_builder;
-		capmem_settling_wait_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		capmem_settling_wait_builder.write(TimerOnDLS(), haldls::vx::v3::Timer());
-		haldls::vx::v3::Timer::Value const capmem_settling_time(
-		    100000 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us);
-		capmem_settling_wait_builder.block_until(TimerOnDLS(), capmem_settling_time);
-		return capmem_settling_wait_builder.done();
-	};
-
 	std::unique_lock<std::mutex> connection_lock(connection_state_storage.mutex, std::defer_lock);
 	// exclusive access to connection_state_storage and connection required from here in
 	// differential mode
@@ -681,7 +671,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// Always write capmem settling wait reinit, but only enforce it when the wait is
 		// immediately required, i.e. after changes to the capmem.
 		connection_state_storage.reinit_capmem_settling_wait.set(
-		    capmem_settling_wait_program_generator(), std::nullopt, has_capmem_changes);
+		    generate(generator::CapMemSettlingWait()).builder.done(), std::nullopt,
+		    has_capmem_changes);
 
 		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
 		connection_state_storage.reinit_trigger.set(
