@@ -6,6 +6,7 @@
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
@@ -75,7 +76,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// vector for storing all execution_instance_builders
 	std::vector<ExecutionInstanceBuilder> builders;
 	std::vector<Chip> configs_visited;
-	PlaybackProgramBuilder arm_madc;
 	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
 
 	// vectors for storing the information on what chip components are used in the realtime snippets before and after the current one (the according index)
@@ -218,6 +218,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::vector<bool> periodic_cadc_recording;
 	bool uses_top_cadc = false;
 	bool uses_bot_cadc = false;
+	bool uses_madc = false;
 	for (size_t i = 0; i < configs.size(); i++) {
 		ExecutionInstanceBuilder builder(
 		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, hooks, i);
@@ -225,6 +226,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 		hate::Timer const realtime_preprocess_timer;
 		ExecutionInstanceBuilder::Usages usages = builders[i].pre_process();
+		if (usages.madc_recording) {
+			uses_madc = true;
+		}
 		if(i < usages_before.size() - 1){
 			usages_before[i + 1] = usages;
 		}
@@ -291,10 +295,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 
 		realtime_columns.push_back(std::move(realtime_column));
-		// check, if madc is used at all in the entire program and catch arm_madc, if so
-		if (!realtime_columns[i].arm_madc.empty()) {
-			arm_madc = std::move(realtime_columns[i].arm_madc);
-		}
 		LOG4CXX_TRACE(
 		    logger, "operator(): Generated playback program builders and processed CADC readout "
 		            "time information for realtime column "
@@ -440,8 +440,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
 		// stop_ppu and the playback hooks
 		PlaybackProgramBuilder assemble_builder;
-		if (i == 0) {
-			assemble_builder.merge_back(arm_madc);
+		if (i == 0 && uses_madc) {
+			assemble_builder.merge_back(generate(generator::MADCArm()).builder);
 		}
 		if (realtime_columns.size() > 1) {
 			assemble_builder.merge_back(std::move(program_builder.done()));

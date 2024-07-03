@@ -911,8 +911,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			}
 		}
 		PlaybackProgramBuilder empty_PPB;
-		return {
-		    std::move(empty_PPB), std::move(empty_PPB), std::move(realtime), std::move(empty_PPB)};
+		return {std::move(empty_PPB), std::move(realtime), std::move(empty_PPB)};
 	}
 
 	// absolute time playback builder sequence to be concatenated in the end
@@ -1028,15 +1027,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			wait_for_ppu_command_idle.block_until(
 			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
 		}
-	}
-
-	// arm MADC
-	PlaybackProgramBuilder madc_arm;
-	if (m_madc_readout_vertex) {
-		madc_arm = stadls::vx::generate(generator::MADCArm()).builder.done();
-		madc_arm.write(TimerOnDLS(), Timer());
-		madc_arm.block_until(
-		    TimerOnDLS(), Timer::Value(1000 * Timer::Value::fpga_clock_cycles_per_us));
 	}
 
 	// bring PPUs in running state (start PPUs)
@@ -1366,7 +1356,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	}
 	return ExecutionInstanceBuilder::Ret{
 	    .start_ppu = std::move(trigger_builder),
-	    .arm_madc = std::move(madc_arm),
 	    .realtimes = std::move(realtimes),
 	    .stop_ppu = std::move(builder_stopPPU)};
 }

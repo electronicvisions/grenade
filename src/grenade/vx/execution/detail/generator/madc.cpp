@@ -12,7 +12,6 @@ using namespace halco::hicann_dls::vx::v3;
 stadls::vx::PlaybackGeneratorReturn<MADCArm::Builder, MADCArm::Result> MADCArm::generate() const
 {
 	Builder builder;
-	Result current_time = Result(0);
 
 	MADCControl config;
 	config.set_enable_power_down_after_sampling(false);
@@ -20,14 +19,16 @@ stadls::vx::PlaybackGeneratorReturn<MADCArm::Builder, MADCArm::Result> MADCArm::
 	config.set_wake_up(true);
 	config.set_enable_pre_amplifier(true);
 	config.set_enable_continuous_sampling(true);
-	builder.write(current_time, MADCControlOnDLS(), config);
-	current_time += Timer::Value(2);
+	builder.write(MADCControlOnDLS(), config);
+	builder.write(TimerOnDLS(), Timer());
+	builder.block_until(TimerOnDLS(), Timer::Value(1000 * Timer::Value::fpga_clock_cycles_per_us));
 
-	return {std::move(builder), current_time};
+	return {std::move(builder), {}};
 }
 
 
-stadls::vx::PlaybackGeneratorReturn<MADCArm::Builder, MADCArm::Result> MADCStart::generate() const
+stadls::vx::PlaybackGeneratorReturn<MADCStart::Builder, MADCStart::Result> MADCStart::generate()
+    const
 {
 	Builder builder;
 	Result current_time = Result(0);
@@ -45,7 +46,7 @@ stadls::vx::PlaybackGeneratorReturn<MADCArm::Builder, MADCArm::Result> MADCStart
 }
 
 
-stadls::vx::PlaybackGeneratorReturn<MADCArm::Builder, MADCArm::Result> MADCStop::generate() const
+stadls::vx::PlaybackGeneratorReturn<MADCStop::Builder, MADCStop::Result> MADCStop::generate() const
 {
 	Builder builder;
 	Result current_time = Result(0);

@@ -81,7 +81,6 @@ public:
 	struct Ret
 	{
 		stadls::vx::v3::PlaybackProgramBuilder start_ppu;
-		stadls::vx::v3::PlaybackProgramBuilder arm_madc;
 		std::vector<RealtimeSnippet> realtimes;
 		stadls::vx::v3::PlaybackProgramBuilder stop_ppu;
 	};
