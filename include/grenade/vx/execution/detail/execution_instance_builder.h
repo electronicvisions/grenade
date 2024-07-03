@@ -82,7 +82,6 @@ public:
 	{
 		stadls::vx::v3::PlaybackProgramBuilder start_ppu;
 		std::vector<RealtimeSnippet> realtimes;
-		stadls::vx::v3::PlaybackProgramBuilder stop_ppu;
 	};
 
 	/**

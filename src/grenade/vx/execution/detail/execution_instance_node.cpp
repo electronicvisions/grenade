@@ -8,6 +8,7 @@
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/capmem.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
+#include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
@@ -108,12 +109,12 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	}
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
+	PPUMemoryBlockOnPPU ppu_status_coord;
 	if (overall_ppu_usage.has_cadc_readout || !overall_ppu_usage.plasticity_rules.empty()) {
 		hate::Timer ppu_timer;
 		PPUElfFile::Memory ppu_program;
 		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
 		PPUMemoryWordOnPPU ppu_location_coord;
-		PPUMemoryBlockOnPPU ppu_status_coord;
 		{
 			PPUProgramGenerator ppu_program_generator;
 			for (auto const& [descriptor, rule, synapses, neurons, realtime_column_index] :
@@ -484,8 +485,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			assemble_builder.merge_back(cadc_finalize_builders.at(i));
 		}
 		// for the last batch entry, stop the PPU
-		if (i == realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.merge_back(realtime_columns[0].stop_ppu);
+		if (i == realtime_columns[0].realtimes.size() - 1 && ppu_symbols) {
+			assemble_builder.merge_back(
+			    generate(generator::PPUStop(ppu_status_coord.toMin())).builder);
 		}
 		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
 		if (input_data_maps[input_data_maps.size() - 1].get().inter_batch_entry_wait.contains(
@@ -523,39 +525,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	hate::Timer const schedule_out_replacement_timer;
 	PlaybackProgramBuilder schedule_out_replacement_builder;
 	if (ppu_symbols) {
+		schedule_out_replacement_builder.merge_back(
+		    generate(generator::PPUStop(ppu_status_coord.toMin())).builder);
 		using namespace haldls::vx::v3;
-		// stop PPUs
-		auto const ppu_status_coord =
-		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate).toMin();
-		auto const ppu_stopped_coord =
-		    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("stopped").coordinate).toMin();
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUMemoryWord config(
-			    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::stop)));
-			schedule_out_replacement_builder.write(
-			    PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-		}
-		// poll for completion by waiting until PPU is stopped
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PollingOmnibusBlockConfig config;
-			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-			                       PPUMemoryWordOnDLS(ppu_stopped_coord, ppu))
-			                       .at(0));
-			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Stopped::yes)));
-			config.set_mask(
-			    PollingOmnibusBlockConfig::Value(PollingOmnibusBlockConfig::Value::max));
-			schedule_out_replacement_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
-			schedule_out_replacement_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			schedule_out_replacement_builder.block_until(
-			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-		}
-		// disable inhibit reset
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(false);
-			schedule_out_replacement_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-		}
 		// only PPU memory is volatile between batch entries and therefore read
 		for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
 			schedule_out_replacement_builder.read(ppu);

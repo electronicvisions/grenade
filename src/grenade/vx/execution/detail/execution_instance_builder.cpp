@@ -911,7 +911,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			}
 		}
 		PlaybackProgramBuilder empty_PPB;
-		return {std::move(empty_PPB), std::move(realtime), std::move(empty_PPB)};
+		return {std::move(empty_PPB), std::move(realtime)};
 	}
 
 	// absolute time playback builder sequence to be concatenated in the end
@@ -1325,39 +1325,8 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		    .realtime_duration = realtime_duration});
 	}
 
-	// stop PPUs
-	PlaybackProgramBuilder builder_stopPPU;
-	if (enable_ppu) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUMemoryWord config(
-			    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::stop)));
-			builder_stopPPU.write(PPUMemoryWordOnDLS(ppu_status_coord, ppu), config);
-		}
-		// poll for completion by waiting until PPU is asleep
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PollingOmnibusBlockConfig config;
-			config.set_address(
-			    PPUStatusRegister::read_addresses<PollingOmnibusBlockConfig::Address>(
-			        ppu.toPPUStatusRegisterOnDLS())
-			        .at(0));
-			config.set_target(PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(true)));
-			config.set_mask(PollingOmnibusBlockConfig::Value(0x00000001));
-			builder_stopPPU.write(PollingOmnibusBlockConfigOnFPGA(), config);
-			builder_stopPPU.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			builder_stopPPU.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-		}
-		// disable inhibit reset
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(false);
-			builder_stopPPU.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-		}
-		builder_stopPPU.block_until(BarrierOnFPGA(), Barrier::omnibus);
-	}
 	return ExecutionInstanceBuilder::Ret{
-	    .start_ppu = std::move(trigger_builder),
-	    .realtimes = std::move(realtimes),
-	    .stop_ppu = std::move(builder_stopPPU)};
+	    .start_ppu = std::move(trigger_builder), .realtimes = std::move(realtimes)};
 }
 
 } // namespace grenade::vx::execution::detail
