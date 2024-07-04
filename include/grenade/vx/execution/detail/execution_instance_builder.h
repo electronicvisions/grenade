@@ -80,7 +80,6 @@ public:
 
 	struct Ret
 	{
-		stadls::vx::v3::PlaybackProgramBuilder start_ppu;
 		std::vector<RealtimeSnippet> realtimes;
 	};
 

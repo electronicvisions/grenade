@@ -610,7 +610,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 
-	auto const trigger_program = realtime_columns[0].start_ppu.done();
+	auto const trigger_program =
+	    ppu_symbols ? generate(generator::PPUStart(ppu_status_coord.toMin())).builder.done()
+	                : PlaybackProgram();
 
 	// execute
 	hate::Timer const exec_timer;

@@ -910,8 +910,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 				realtime[i].builder.copy(m_hooks.inside_realtime);
 			}
 		}
-		PlaybackProgramBuilder empty_PPB;
-		return {std::move(empty_PPB), std::move(realtime)};
+		return {std::move(realtime)};
 	}
 
 	// absolute time playback builder sequence to be concatenated in the end
@@ -1026,32 +1025,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			wait_for_ppu_command_idle.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			wait_for_ppu_command_idle.block_until(
 			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-		}
-	}
-
-	// bring PPUs in running state (start PPUs)
-	PlaybackProgramBuilder trigger_builder;
-	if (m_ppu_symbols) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			haldls::vx::v3::PPUControlRegister ctrl;
-			ctrl.set_inhibit_reset(true);
-			trigger_builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
-		}
-		auto const ppu_status_coord =
-		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("status").coordinate).toMin();
-		// wait for PPUs to be ready
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			using namespace haldls::vx::v3;
-			PollingOmnibusBlockConfig config;
-			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
-			                       .at(0));
-			config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
-			config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
-			trigger_builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
-			trigger_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			trigger_builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
 		}
 	}
 
@@ -1325,8 +1298,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		    .realtime_duration = realtime_duration});
 	}
 
-	return ExecutionInstanceBuilder::Ret{
-	    .start_ppu = std::move(trigger_builder), .realtimes = std::move(realtimes)};
+	return ExecutionInstanceBuilder::Ret{std::move(realtimes)};
 }
 
 } // namespace grenade::vx::execution::detail

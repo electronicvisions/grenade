@@ -42,6 +42,30 @@ private:
 
 
 /**
+ * Generator for a playback program snippet for starting the PPUs.
+ */
+struct PPUStart
+{
+	typedef hate::Nil Result;
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+
+	/**
+	 * Construct blocking PPU command.
+	 * @param coord PPU memory location at which to place the command
+	 */
+	PPUStart(halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& coord) : m_coord(coord) {}
+
+protected:
+	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
+
+	friend auto stadls::vx::generate<PPUStart>(PPUStart const&);
+
+private:
+	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_coord;
+};
+
+
+/**
  * Generator for a playback program snippet for stopping the PPUs.
  */
 struct PPUStop

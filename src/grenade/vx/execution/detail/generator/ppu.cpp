@@ -27,6 +27,34 @@ stadls::vx::PlaybackGeneratorReturn<PPUCommand::Builder, PPUCommand::Result> PPU
 	return {std::move(builder), current_time};
 }
 
+
+stadls::vx::PlaybackGeneratorReturn<PPUStart::Builder, PPUStart::Result> PPUStart::generate() const
+{
+	Builder builder;
+
+	for (auto const ppu : iter_all<PPUOnDLS>()) {
+		haldls::vx::v3::PPUControlRegister ctrl;
+		ctrl.set_inhibit_reset(true);
+		builder.write(ppu.toPPUControlRegisterOnDLS(), ctrl);
+	}
+	// wait for PPUs to be ready
+	for (auto const ppu : iter_all<PPUOnDLS>()) {
+		using namespace haldls::vx::v3;
+		PollingOmnibusBlockConfig config;
+		config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+		                       PPUMemoryWordOnDLS(m_coord, ppu))
+		                       .at(0));
+		config.set_target(
+		    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
+		config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+		builder.write(PollingOmnibusBlockConfigOnFPGA(), config);
+		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+	}
+	return {std::move(builder), {}};
+}
+
+
 stadls::vx::PlaybackGeneratorReturn<PPUStop::Builder, PPUStop::Result> PPUStop::generate() const
 {
 	Builder builder;
