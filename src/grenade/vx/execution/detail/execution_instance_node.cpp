@@ -61,11 +61,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	hate::Timer const build_timer;
 
+	assert(
+	    (std::set<size_t>{data_maps.size(), input_data_maps.size(), graphs.size(), configs.size()}
+	         .size() == 1));
+	size_t const realtime_column_count = data_maps.size();
+
 	bool const has_hook_around_realtime =
 	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
 	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
 
-	if (configs.size() != 1) {
+	if (realtime_column_count != 1) {
 		// check, that no playback hooks are used when having multiple realtime columns
 		if (!hooks.pre_static_config.empty() || !hooks.pre_realtime.empty() ||
 		    !hooks.inside_realtime_begin.empty() || !hooks.inside_realtime.empty() ||
@@ -98,7 +103,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	ExecutionInstanceConfigVisitor::PpuUsage overall_ppu_usage;
 	std::vector<typed_array<bool, NeuronResetOnDLS>> enabled_neuron_resets;
 	hate::Timer const configs_timer;
-	for (size_t i = 0; i < configs.size(); i++) {
+	for (size_t i = 0; i < realtime_column_count; i++) {
 		Chip config = configs[i];
 		std::tuple<ExecutionInstanceConfigVisitor::PpuUsage, typed_array<bool, NeuronResetOnDLS>>
 		    ppu_information =
@@ -136,7 +141,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
 
-		for (size_t i = 0; i < configs_visited.size(); i++) {
+		for (size_t i = 0; i < realtime_column_count; i++) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				// zero-initialize all symbols (esp. bss)
 				assert(ppu_symbols);
@@ -221,7 +226,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool uses_top_cadc = false;
 	bool uses_bot_cadc = false;
 	bool uses_madc = false;
-	for (size_t i = 0; i < configs.size(); i++) {
+	for (size_t i = 0; i < realtime_column_count; i++) {
 		ExecutionInstanceBuilder builder(
 		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, hooks, i);
 		builders.push_back(std::move(builder));
@@ -257,7 +262,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::vector<Timer::Value> current_times; // beginning of the realtime section of the snippets
 	std::vector<Timer::Value>
 	    subsequent_times; // beginning of the realtime section of the subsequent snippets
-	for(size_t i = 0; i < configs.size(); i++){
+	for (size_t i = 0; i < realtime_column_count; i++) {
 		// build realtime programs
 		hate::Timer const realtime_generate_timer;
 		auto realtime_column = builders[i].generate(usages_before[i], usages_after[i]);
@@ -350,7 +355,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			}
 			// calculate expected time durations where periodic_cadc_recording is enabled
 			Timer::Value expected_pcr_time = Timer::Value(0);
-			for (size_t j = 0; j < periodic_cadc_recording.size(); j++) {
+			for (size_t j = 0; j < realtime_column_count; j++) {
 				if (periodic_cadc_recording[j]) {
 					expected_pcr_time += realtime_durations[j][i];
 				}
@@ -416,7 +421,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		AbsoluteTimePlaybackProgramBuilder program_builder;
 		haldls::vx::v3::Timer::Value config_time =
 		    realtime_columns[0].realtimes[i].pre_realtime_duration;
-		for (size_t j = 0; j < realtime_columns.size(); j++) {
+		for (size_t j = 0; j < realtime_column_count; j++) {
 			if (j > 0) {
 				config_time += realtime_columns[j - 1].realtimes[i].realtime_duration;
 				program_builder.write(
@@ -468,7 +473,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			}
 		}
 		// append ppu_finish_builders
-		for (size_t j = 0; j < realtime_columns.size(); j++) {
+		for (size_t j = 0; j < realtime_column_count; j++) {
 			assemble_builder.merge_back(realtime_columns[j].realtimes[i].ppu_finish_builder);
 		}
 		// wait for response data
@@ -705,7 +710,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		connection_lock.unlock();
 	}
 
-	for (size_t i = 0; i < configs.size(); i++) {
+	for (size_t i = 0; i < realtime_column_count; i++) {
 		// extract output data map
 		hate::Timer const post_timer;
 		auto result_data_map = builders[i].post_process(
