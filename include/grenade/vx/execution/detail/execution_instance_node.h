@@ -76,7 +76,6 @@ private:
 	{
 		std::vector<stadls::vx::v3::PlaybackProgram> realtime;
 		bool has_hook_around_realtime;
-		bool has_plasticity;
 	};
 };
 

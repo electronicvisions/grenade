@@ -7,6 +7,7 @@
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/capmem.h"
+#include "grenade/vx/execution/detail/generator/get_state.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
@@ -515,9 +516,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	}
 
 	PlaybackPrograms program = PlaybackPrograms{
-	    .realtime = std::move(programs),
-	    .has_hook_around_realtime = has_hook_around_realtime,
-	    .has_plasticity = ppu_symbols.has_value()};
+	    .realtime = std::move(programs), .has_hook_around_realtime = has_hook_around_realtime};
 
 	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
 	    program.has_hook_around_realtime) {
@@ -532,19 +531,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	if (ppu_symbols) {
 		schedule_out_replacement_builder.merge_back(
 		    generate(generator::PPUStop(ppu_status_coord.toMin())).builder);
-		using namespace haldls::vx::v3;
-		// only PPU memory is volatile between batch entries and therefore read
-		for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
-			schedule_out_replacement_builder.read(ppu);
-		}
-		// if plasticity is present, synaptic weights are volatile between batch entries, read
-		if (program.has_plasticity) {
-			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
-				schedule_out_replacement_builder.read(coord);
-			}
-		}
-		schedule_out_replacement_builder.block_until(
-		    BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+		schedule_out_replacement_builder.merge_back(
+		    generate(generator::GetState{ppu_symbols.has_value()}).builder);
 	}
 	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
 	LOG4CXX_TRACE(
@@ -552,22 +540,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	                << schedule_out_replacement_timer.print() << ".");
 
 	hate::Timer const read_timer;
-	PlaybackProgramBuilder read_builder;
-	halco::common::typed_array<std::optional<ContainerTicket>, PPUMemoryOnDLS>
-	    read_ticket_ppu_memory;
-	halco::common::typed_array<std::optional<ContainerTicket>, SynapseWeightMatrixOnDLS>
-	    read_ticket_synaptic_weights;
+	PlaybackProgram get_state_program;
+	std::optional<generator::GetState::Result> get_state_result;
 	if (connection_state_storage.enable_differential_config && ppu_symbols) {
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			read_ticket_ppu_memory[ppu.toPPUMemoryOnDLS()].emplace(
-			    read_builder.read(ppu.toPPUMemoryOnDLS()));
-		}
-		for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
-			read_ticket_synaptic_weights[coord].emplace(read_builder.read(coord));
-		}
-		read_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+		auto get_state = generate(generator::GetState(ppu_symbols.has_value()));
+		get_state_program = get_state.builder.done();
+		get_state_result = get_state.result;
 	}
-	auto read_program = read_builder.done();
 	LOG4CXX_TRACE(
 	    logger, "operator(): Generated playback program for read-back of PPU alterations in "
 	                << read_timer.print() << ".");
@@ -664,8 +643,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 		// If the PPUs (can) alter state, read it back to update current_config accordingly to
 		// represent the actual hardware state.
-		if (!read_program.empty()) {
-			backend::run(connection, read_program);
+		if (!get_state_program.empty()) {
+			backend::run(connection, get_state_program);
 		}
 
 		// unlock execution section for non-differential config mode
@@ -680,21 +659,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// update connection state
 	if (configs_visited.size() > 1 || ppu_symbols) {
 		hate::Timer const update_state_timer;
-		// reference because we don't use it otherwise afterwards
-		auto& current_config = configs_visited[configs_visited.size() - 1];
-		if (ppu_symbols) {
-			for (auto const ppu : iter_all<PPUMemoryOnDLS>()) {
-				assert(read_ticket_ppu_memory[ppu]);
-				current_config.ppu_memory[ppu] = dynamic_cast<haldls::vx::v3::PPUMemory const&>(
-				    read_ticket_ppu_memory[ppu]->get());
-			}
-			for (auto const coord : iter_all<SynapseWeightMatrixOnDLS>()) {
-				assert(read_ticket_synaptic_weights[coord]);
-				current_config.synapse_blocks[coord.toSynapseBlockOnDLS()].matrix.weights =
-				    dynamic_cast<lola::vx::v3::SynapseWeightMatrix const&>(
-				        read_ticket_synaptic_weights[coord]->get())
-				        .values;
-			}
+		auto current_config = configs_visited[configs_visited.size() - 1];
+		if (get_state_result) {
+			get_state_result->apply(current_config);
 		}
 		connection_state_storage.config.set_chip(current_config, false);
 		LOG4CXX_TRACE(
