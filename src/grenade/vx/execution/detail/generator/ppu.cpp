@@ -5,6 +5,7 @@
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
 #include "haldls/vx/v3/ppu.h"
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail::generator {
 
@@ -13,18 +14,39 @@ using namespace stadls::vx::v3;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 
+void PPUCommand::Result::evaluate() const
+{
+	for (auto const ppu : iter_all<PPUOnDLS>()) {
+		auto const previous_status_value = static_cast<grenade::vx::ppu::detail::Status>(
+		    dynamic_cast<PPUMemoryWord const&>(previous_status[ppu].get()).get_value().value());
+		if (previous_status_value != expected_previous_status) {
+			auto logger =
+			    log4cxx::Logger::getLogger("grenade.execution.detail.generator.PPUCommand");
+			LOG4CXX_WARN(
+			    logger, "evaluate(): PPU status of " << ppu << "(" << previous_status_value
+			                                         << ") doesn't match expectation ("
+			                                         << expected_previous_status << ")");
+		}
+	}
+}
+
 stadls::vx::PlaybackGeneratorReturn<PPUCommand::Builder, PPUCommand::Result> PPUCommand::generate()
     const
 {
 	Builder builder;
-	Result current_time = Result(0);
+	Result result;
+	haldls::vx::v3::Timer::Value current_time(0);
 	// write command to be executed
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
+		result.previous_status[ppu] = builder.read(current_time, PPUMemoryWordOnDLS(m_coord, ppu));
+		current_time += Timer::Value(1);
 		PPUMemoryWord config(PPUMemoryWord::Value(static_cast<uint32_t>(m_status)));
 		builder.write(current_time, PPUMemoryWordOnDLS(m_coord, ppu), config);
 		current_time += Timer::Value(2);
 	}
-	return {std::move(builder), current_time};
+	result.duration = current_time;
+	result.expected_previous_status = m_expected_previous_status;
+	return {std::move(builder), result};
 }
 
 

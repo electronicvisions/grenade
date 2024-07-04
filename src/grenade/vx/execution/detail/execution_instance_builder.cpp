@@ -775,6 +775,9 @@ signal_flow::OutputData ExecutionInstanceBuilder::post_process(
 	std::chrono::nanoseconds total_realtime_duration{0};
 	for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 		auto const& batch_entry = m_batch_entries.at(batch_index);
+		for (auto const& ppu_command_result : batch_entry.ppu_command_results) {
+			ppu_command_result.evaluate();
+		}
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
 			auto const& scheduler_finished = batch_entry.m_ppu_scheduler_finished[ppu];
 			if (scheduler_finished) {
@@ -938,16 +941,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	PPUMemoryBlockOnPPU ppu_result_coord;
 	PPUMemoryWordOnPPU ppu_runtime_coord;
 	PPUMemoryWordOnPPU ppu_status_coord;
-	stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-	    ppu_command_baseline_read;
-	stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-	    ppu_command_reset_neurons;
-	stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-	    ppu_command_read;
-	stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-	    ppu_command_stop_periodic_read;
-	stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
-	    ppu_command_scheduler;
 	PlaybackProgramBuilder wait_for_ppu_command_idle;
 	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
 	typed_array<std::optional<ExternalPPUMemoryBlockOnFPGA>, PPUOnDLS>
@@ -1000,20 +993,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 
 		// generate absolute time playback snippets for PPU command polling
-		ppu_command_baseline_read = stadls::vx::generate(
-		    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::baseline_read));
-		ppu_command_reset_neurons = stadls::vx::generate(
-		    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::reset_neurons));
-		ppu_command_read = stadls::vx::generate(
-		    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::read));
-		ppu_command_stop_periodic_read = stadls::vx::generate(
-		    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::stop_periodic_read));
 		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			ppu_command_scheduler.builder.write(
-			    ppu_command_scheduler.result, PPUMemoryWordOnDLS(ppu_status_coord, ppu),
-			    PPUMemoryWord(
-			        PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::scheduler))));
-			ppu_command_scheduler.result += Timer::Value(2);
 			PollingOmnibusBlockConfig config;
 			config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
 			                       PPUMemoryWordOnDLS(ppu_status_coord, ppu))
@@ -1071,8 +1051,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		if (has_cadc_readout && enable_cadc_baseline) {
 			assert(m_cadc_readout_mode);
 			if (*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen) {
-				builder.merge(ppu_command_baseline_read.builder + current_time);
-				current_time += ppu_command_baseline_read.result;
+				auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
+				    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::baseline_read));
+				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+				builder.merge(ppu_command_builder += current_time);
+				current_time += ppu_command_result.duration;
 				current_time += Timer::Value(20 * Timer::Value::fpga_clock_cycles_per_us);
 			}
 		}
@@ -1081,8 +1064,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		        m_neuron_resets.enable_resets.begin(), m_neuron_resets.enable_resets.end(),
 		        [](auto const& val) { return val; })) {
 			if (enable_ppu) {
-				builder.merge(ppu_command_reset_neurons.builder + current_time);
-				current_time += ppu_command_reset_neurons.result;
+				auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
+				    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::reset_neurons));
+				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+				builder.merge(ppu_command_builder += current_time);
+				current_time += ppu_command_result.duration;
 				// may need time to fetch instructions from extmem
 				current_time += Timer::Value(4 * Timer::Value::fpga_clock_cycles_per_us);
 			} else {
@@ -1101,13 +1087,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 				        return modes.contains(
 				            signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
 			        })) {
-				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					builder.write(
-					    current_time, PPUMemoryWordOnDLS(ppu_status_coord, ppu),
-					    PPUMemoryWord(PPUMemoryWord::Value(
-					        static_cast<uint32_t>(ppu::detail::Status::periodic_read))));
-					current_time += Timer::Value(2);
-				}
+				auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
+				    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::periodic_read));
+				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+				builder.merge(ppu_command_builder += current_time);
+				current_time += ppu_command_result.duration;
 			}
 			current_time += Timer::Value(6 * Timer::Value::fpga_clock_cycles_per_us);
 		}
@@ -1124,8 +1108,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		// trigger PPU scheduler
 		if (enable_ppu && m_has_plasticity_rule) {
-			builder.merge(ppu_command_scheduler.builder + current_time);
-			current_time += ppu_command_scheduler.result;
+			auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
+			    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::scheduler));
+			m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+			builder.merge(ppu_command_builder += current_time);
+			current_time += ppu_command_result.duration;
 		}
 		// insert events of realtime section
 		Timer::Value inside_realtime_duration(0);
@@ -1175,8 +1162,11 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		if (has_cadc_readout) {
 			assert(m_cadc_readout_mode);
 			if (*m_cadc_readout_mode == signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen) {
-				builder.merge(ppu_command_read.builder + current_time);
-				current_time += ppu_command_read.result;
+				auto [ppu_command_builder, ppu_command_result] = stadls::vx::generate(
+				    generator::PPUCommand(ppu_status_coord, ppu::detail::Status::read));
+				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+				builder.merge(ppu_command_builder += current_time);
+				current_time += ppu_command_result.duration;
 				// readout result
 				current_time += Timer::Value(Timer::Value::fpga_clock_cycles_per_us * 10);
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -1197,8 +1187,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 				        return modes.contains(
 				            signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
 			        })) {
-				builder.copy(ppu_command_stop_periodic_read.builder + current_time);
-				current_time += ppu_command_stop_periodic_read.result;
+				auto [ppu_command_builder, ppu_command_result] =
+				    stadls::vx::generate(generator::PPUCommand(
+				        ppu_status_coord, ppu::detail::Status::stop_periodic_read,
+				        ppu::detail::Status::inside_periodic_read));
+				m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
+				builder.merge(ppu_command_builder += current_time);
+				current_time += ppu_command_result.duration;
 			}
 		}
 		// stop MADC (and power-down in last batch entry)

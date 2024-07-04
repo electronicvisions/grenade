@@ -7,6 +7,7 @@
 #include "grenade/vx/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
+#include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -181,6 +182,8 @@ private:
 		        stadls::vx::v3::ContainerTicket>>
 		    ppu_symbol_ticket_type;
 		ppu_symbol_ticket_type ppu_symbols;
+
+		std::vector<generator::PPUCommand::Result> ppu_command_results;
 	};
 
 	std::vector<BatchEntry> m_batch_entries;
