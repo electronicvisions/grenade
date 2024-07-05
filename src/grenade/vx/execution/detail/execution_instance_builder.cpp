@@ -902,19 +902,17 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		        return r.contains(m_execution_instance) && r.at(m_execution_instance) != 0;
 	        });
 	if (!has_computation) {
-		PlaybackProgramBuilder builder;
-		builder.merge_back(m_hooks.pre_static_config);
-		builder.merge_back(m_hooks.pre_realtime);
-		builder.merge_back(m_hooks.inside_realtime_begin);
-		builder.merge_back(m_hooks.inside_realtime.done());
-		builder.merge_back(m_hooks.inside_realtime_end);
-		builder.merge_back(m_hooks.post_realtime);
+		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> realtime(m_batch_entries.size());
+		for (size_t i = 0; i < realtime.size(); ++i) {
+			if (i == realtime.size() - 1) {
+				realtime[i].builder.merge(m_hooks.inside_realtime);
+			} else {
+				realtime[i].builder.copy(m_hooks.inside_realtime);
+			}
+		}
 		PlaybackProgramBuilder empty_PPB;
-		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> empty_realtime_column(
-		    m_batch_entries.size());
 		return {
-		    std::move(empty_PPB), std::move(builder), std::move(empty_realtime_column),
-		    std::move(empty_PPB)};
+		    std::move(empty_PPB), std::move(empty_PPB), std::move(realtime), std::move(empty_PPB)};
 	}
 
 	// absolute time playback builder sequence to be concatenated in the end
