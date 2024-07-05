@@ -67,20 +67,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	         .size() == 1));
 	size_t const realtime_column_count = data_maps.size();
 
-	bool const has_hook_around_realtime =
-	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
-	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
-
-	if (realtime_column_count != 1) {
-		// check, that no playback hooks are used when having multiple realtime columns
-		if (!hooks.pre_static_config.empty() || !hooks.pre_realtime.empty() ||
-		    !hooks.inside_realtime_begin.empty() || !hooks.inside_realtime.empty() ||
-		    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty() ||
-		    !hooks.write_ppu_symbols.empty() || !hooks.read_ppu_symbols.empty()) {
-			throw std::logic_error("playback hooks cannot be used in multi-config-experiments");
-		}
-	}
-
 	// vector for storing all execution_instance_builders
 	std::vector<ExecutionInstanceBuilder> builders;
 	std::vector<Chip> configs_visited;
@@ -433,6 +419,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			program_builder.merge(realtime_columns[j].realtimes[i].builder);
 		}
 
+		// insert inside_realtime hook
+		if (i < realtime_columns[0].realtimes.size() - 1) {
+			program_builder.copy(hooks.inside_realtime);
+		} else {
+			program_builder.merge(hooks.inside_realtime);
+		}
+
 		// reset config to initial config at end of each realtime_row if experiment has multiple
 		// configs
 		if (realtime_columns.size() > 1) {
@@ -451,27 +444,23 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		if (i == 0 && uses_madc) {
 			assemble_builder.merge_back(generate(generator::MADCArm()).builder);
 		}
-		if (realtime_columns.size() > 1) {
-			assemble_builder.merge_back(std::move(program_builder.done()));
+		// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
+		if (i == 0) {
+			assemble_builder.merge_back(hooks.pre_realtime);
+		}
+		// append inside_realtime_begin hook
+		if (i < realtime_columns[0].realtimes.size() - 1) {
+			assemble_builder.copy_back(hooks.inside_realtime_begin);
 		} else {
-			// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
-			if (i == 0) {
-				assemble_builder.merge_back(hooks.pre_realtime);
-			}
-			// append inside_realtime_begin hook
-			if (i < realtime_columns[0].realtimes.size() - 1) {
-				assemble_builder.copy_back(hooks.inside_realtime_begin);
-			} else {
-				assemble_builder.merge_back(hooks.inside_realtime_begin);
-			}
-			// append realtime section
-			assemble_builder.merge_back(std::move(program_builder.done()));
-			// append inside_realtime_end hook
-			if (i < realtime_columns[0].realtimes.size() - 1) {
-				assemble_builder.copy_back(hooks.inside_realtime_end);
-			} else {
-				assemble_builder.merge_back(hooks.inside_realtime_end);
-			}
+			assemble_builder.merge_back(hooks.inside_realtime_begin);
+		}
+		// append realtime section
+		assemble_builder.merge_back(std::move(program_builder.done()));
+		// append inside_realtime_end hook
+		if (i < realtime_columns[0].realtimes.size() - 1) {
+			assemble_builder.copy_back(hooks.inside_realtime_end);
+		} else {
+			assemble_builder.merge_back(hooks.inside_realtime_end);
 		}
 		// append ppu_finish_builders
 		for (size_t j = 0; j < realtime_column_count; j++) {
@@ -479,11 +468,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 		// wait for response data
 		assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		if (realtime_columns.size() <= 1) {
-			// for the last batch entry, append post_realtime hook
-			if (i == realtime_columns[0].realtimes.size() - 1) {
-				assemble_builder.merge_back(hooks.post_realtime);
-			}
+		// for the last batch entry, append post_realtime hook
+		if (i == realtime_columns[0].realtimes.size() - 1) {
+			assemble_builder.merge_back(hooks.post_realtime);
 		}
 		// append cadc_finazlize_builder for periodic_cadc data readout
 		if (std::find(periodic_cadc_recording.begin(), periodic_cadc_recording.end(), true) !=
@@ -515,11 +502,11 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		programs.push_back(std::move(final_builder.done()));
 	}
 
-	PlaybackPrograms program = PlaybackPrograms{
-	    .realtime = std::move(programs), .has_hook_around_realtime = has_hook_around_realtime};
+	bool const has_hook_around_realtime =
+	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
+	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
 
-	if (program.realtime.size() > 1 && connection.is_quiggeldy() &&
-	    program.has_hook_around_realtime) {
+	if (programs.size() > 1 && connection.is_quiggeldy() && has_hook_around_realtime) {
 		LOG4CXX_WARN(
 		    logger, "operator(): Connection uses quiggeldy and more than one playback programs "
 		            "shall be executed back-to-back with a pre or post realtime hook. Their "
@@ -564,16 +551,19 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	connection_state_storage.config.set_chip(configs_visited[0], true);
 
 	bool const enforce_base = !connection_state_storage.config.get_enable_differential_config() ||
-	                          is_fresh_connection_state_storage_config;
+	                          is_fresh_connection_state_storage_config ||
+	                          !hooks.pre_static_config.empty();
 	bool const has_capmem_changes =
-	    !connection_state_storage.config.get_enable_differential_config() ||
-	    is_fresh_connection_state_storage_config ||
-	    connection_state_storage.config.get_differential_changes_capmem();
+	    enforce_base || connection_state_storage.config.get_differential_changes_capmem();
 	bool const nothing_changed = connection_state_storage.config.get_enable_differential_config() &&
 	                             !is_fresh_connection_state_storage_config &&
-	                             !connection_state_storage.config.get_has_differential();
+	                             !connection_state_storage.config.get_has_differential() &&
+	                             hooks.pre_static_config.empty();
 
 	PlaybackProgramBuilder base_builder;
+
+	base_builder.merge_back(hooks.pre_static_config);
+
 	PlaybackProgramBuilder differential_builder;
 	if (!nothing_changed) {
 		base_builder.write(
@@ -603,7 +593,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::chrono::nanoseconds connection_execution_duration_before{0};
 	std::chrono::nanoseconds connection_execution_duration_after{0};
 
-	if (!program.realtime.empty() || !base_program.empty()) {
+	if (!programs.empty() || !base_program.empty()) {
 		// only lock execution section for non-differential config mode
 		if (!connection_state_storage.enable_differential_config) {
 			connection_lock.lock();
@@ -637,7 +627,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		    trigger_program, std::nullopt, !trigger_program.empty());
 
 		// Execute realtime sections
-		for (auto& p : program.realtime) {
+		for (auto& p : programs) {
 			backend::run(connection, p);
 		}
 
@@ -671,7 +661,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// unlock execution section for differential config mode
 	if (connection_state_storage.enable_differential_config) {
-		if (!program.realtime.empty() || !base_program.empty()) {
+		if (!programs.empty() || !base_program.empty()) {
 			connection_execution_duration_after = connection.get_time_info().execution_duration;
 		}
 		connection_lock.unlock();
@@ -681,7 +671,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// extract output data map
 		hate::Timer const post_timer;
 		auto result_data_map = builders[i].post_process(
-		    program.realtime, cadc_readout_tickets, cadc_readout_time_information[i]);
+		    programs, cadc_readout_tickets, cadc_readout_time_information[i]);
 		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
 
 		// add execution duration per hardware to result data map

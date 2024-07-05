@@ -906,13 +906,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 	        });
 	if (!has_computation) {
 		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> realtime(m_batch_entries.size());
-		for (size_t i = 0; i < realtime.size(); ++i) {
-			if (i == realtime.size() - 1) {
-				realtime[i].builder.merge(m_hooks.inside_realtime);
-			} else {
-				realtime[i].builder.copy(m_hooks.inside_realtime);
-			}
-		}
 		return {std::move(realtime)};
 	}
 
@@ -1124,12 +1117,6 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			        m_local_data.data.at(*m_event_input_vertex))
 			        .at(b));
 			events = stadls::vx::generate(event_generator);
-		}
-		// assume, that inside_realtime hook doesn't exceed TimedSpikeToChipSequence in time
-		if ((m_batch_entries.size() == 1) || (b == m_batch_entries.size() - 1)) {
-			events.builder.merge(m_hooks.inside_realtime);
-		} else {
-			events.builder.copy(m_hooks.inside_realtime);
 		}
 		events.builder += current_time;
 		builder.merge(events.builder);

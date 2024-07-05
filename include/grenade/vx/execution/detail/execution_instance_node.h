@@ -71,12 +71,6 @@ private:
 	ConnectionStateStorage& connection_state_storage;
 	signal_flow::ExecutionInstanceHooks& hooks;
 	log4cxx::LoggerPtr logger;
-
-	struct PlaybackPrograms
-	{
-		std::vector<stadls::vx::v3::PlaybackProgram> realtime;
-		bool has_hook_around_realtime;
-	};
 };
 
 } // namespace grenade::vx::execution::detail
