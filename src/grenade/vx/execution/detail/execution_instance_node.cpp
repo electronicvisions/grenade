@@ -215,7 +215,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool uses_madc = false;
 	for (size_t i = 0; i < realtime_column_count; i++) {
 		ExecutionInstanceBuilder builder(
-		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, hooks, i);
+		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, i);
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
@@ -401,6 +401,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		}
 	}
 
+	// storage for PPU read-hooks results to evaluate post-execution
+	std::vector<generator::PPUReadHooks::Result> ppu_read_hooks_results;
+
 	// Experiment assembly
 	std::vector<PlaybackProgram> programs;
 	PlaybackProgramBuilder final_builder;
@@ -465,6 +468,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// append ppu_finish_builders
 		for (size_t j = 0; j < realtime_column_count; j++) {
 			assemble_builder.merge_back(realtime_columns[j].realtimes[i].ppu_finish_builder);
+		}
+		// append PPU read hooks
+		if (ppu_symbols) {
+			auto [ppu_read_hooks_builder, ppu_read_hooks_result] =
+			    generate(generator::PPUReadHooks(hooks.read_ppu_symbols, *ppu_symbols));
+			assemble_builder.merge_back(ppu_read_hooks_builder);
+			ppu_read_hooks_results.push_back(std::move(ppu_read_hooks_result));
 		}
 		// wait for response data
 		assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
@@ -673,6 +683,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		auto result_data_map = builders[i].post_process(
 		    programs, cadc_readout_tickets, cadc_readout_time_information[i]);
 		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
+
+		// extract PPU read hooks
+		result_data_map.read_ppu_symbols.resize(ppu_read_hooks_results.size());
+		for (size_t b = 0; b < ppu_read_hooks_results.size(); ++b) {
+			result_data_map.read_ppu_symbols.at(b)[execution_instance] =
+			    ppu_read_hooks_results.at(b).evaluate();
+		}
 
 		// add execution duration per hardware to result data map
 		assert(result_data_map.execution_time_info);

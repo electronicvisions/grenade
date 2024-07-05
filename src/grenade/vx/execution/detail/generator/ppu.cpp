@@ -5,6 +5,7 @@
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
 #include "haldls/vx/v3/ppu.h"
+#include "hate/variant.h"
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail::generator {
@@ -107,5 +108,71 @@ stadls::vx::PlaybackGeneratorReturn<PPUStop::Builder, PPUStop::Result> PPUStop::
 	builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 	return {std::move(builder), {}};
 }
+
+
+signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type PPUReadHooks::Result::evaluate()
+    const
+{
+	signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type ret;
+	for (auto const& [name, ticket] : tickets) {
+		std::visit(
+		    hate::overloaded{
+		        [&ret, name](std::map<
+		                     halco::hicann_dls::vx::v3::HemisphereOnDLS,
+		                     stadls::vx::v3::ContainerTicket> const& tickets) {
+			        ret[name] = std::map<
+			            halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
+			            {halco::hicann_dls::vx::v3::HemisphereOnDLS::top,
+			             dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+			                 tickets.at(halco::hicann_dls::vx::v3::HemisphereOnDLS::top).get())},
+			            {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom,
+			             dynamic_cast<haldls::vx::v3::PPUMemoryBlock const&>(
+			                 tickets.at(halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom)
+			                     .get())}};
+		        },
+		        [&ret, name](stadls::vx::v3::ContainerTicket const& ticket) {
+			        ret[name] =
+			            dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const&>(ticket.get());
+		        },
+		    },
+		    ticket);
+	}
+	return ret;
+}
+
+stadls::vx::PlaybackGeneratorReturn<PPUReadHooks::Builder, PPUReadHooks::Result>
+PPUReadHooks::generate() const
+{
+	Builder builder;
+	Result result;
+
+	for (auto const& name : m_symbol_names) {
+		if (!m_symbols.contains(name)) {
+			throw std::runtime_error("Provided unknown symbol name via ExecutionInstanceHooks.");
+		}
+		std::visit(
+		    hate::overloaded{
+		        [&](halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU const& coordinate) {
+			        std::map<HemisphereOnDLS, ContainerTicket> values;
+			        values.emplace(
+			            HemisphereOnDLS::top,
+			            builder.read(PPUMemoryBlockOnDLS(coordinate, PPUOnDLS::top)));
+			        values.emplace(
+			            HemisphereOnDLS::bottom,
+			            builder.read(PPUMemoryBlockOnDLS(coordinate, PPUOnDLS::bottom)));
+			        result.tickets[name] = values;
+		        },
+		        [&](halco::hicann_dls::vx::v3::ExternalPPUMemoryBlockOnFPGA const& coordinate) {
+			        result.tickets.insert({name, builder.read(coordinate)});
+		        }},
+		    m_symbols.at(name).coordinate);
+	}
+	if (!builder.empty()) {
+		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+	}
+
+	return {std::move(builder), std::move(result)};
+}
+
 
 } // namespace grenade::vx::execution::detail::generator

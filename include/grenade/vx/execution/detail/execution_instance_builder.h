@@ -9,7 +9,6 @@
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/signal_flow/data.h"
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/output_data.h"
@@ -45,7 +44,6 @@ public:
 	 * @param input_list Input list to use for input data lookup
 	 * @param data_output Data output from depended-on executions to use for data lookup
 	 * @param chip_config Chip configuration to use
-	 * @param hooks Playback sequences to inject
 	 */
 	ExecutionInstanceBuilder(
 	    signal_flow::Graph const& graph,
@@ -53,7 +51,6 @@ public:
 	    signal_flow::InputData const& input_list,
 	    signal_flow::Data const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-	    signal_flow::ExecutionInstanceHooks& hooks,
 	    size_t realtime_column_index) SYMBOL_VISIBLE;
 
 	struct Usages
@@ -118,8 +115,6 @@ private:
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
-	signal_flow::ExecutionInstanceHooks& m_hooks;
-
 	size_t m_realtime_column_index;
 
 	std::vector<signal_flow::Graph::vertex_descriptor> m_post_vertices;
@@ -172,16 +167,6 @@ private:
 		    signal_flow::Graph::vertex_descriptor,
 		    std::optional<stadls::vx::v3::ContainerTicket>>
 		    m_plasticity_rule_recorded_scratchpad_memory;
-
-		typedef std::map<
-		    std::string,
-		    std::variant<
-		        std::map<
-		            halco::hicann_dls::vx::v3::HemisphereOnDLS,
-		            stadls::vx::v3::ContainerTicket>,
-		        stadls::vx::v3::ContainerTicket>>
-		    ppu_symbol_ticket_type;
-		ppu_symbol_ticket_type ppu_symbols;
 
 		std::vector<generator::PPUCommand::Result> ppu_command_results;
 	};

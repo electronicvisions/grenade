@@ -1,13 +1,16 @@
 #pragma once
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/output_data.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/timer.h"
 #include "hate/nil.h"
 #include "hate/visibility.h"
+#include "lola/vx/v3/ppu.h"
 #include "stadls/vx/playback_generator.h"
 #include "stadls/vx/v3/absolute_time_playback_program_builder.h"
 #include "stadls/vx/v3/absolute_time_playback_program_container_ticket.h"
+#include "stadls/vx/v3/container_ticket.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 
 namespace grenade::vx::execution::detail::generator {
@@ -109,6 +112,49 @@ protected:
 
 private:
 	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_coord;
+};
+
+
+/**
+ * Generator for a playback program snippet for reads of PPU symbols requested in hooks.
+ */
+struct PPUReadHooks
+{
+	struct Result
+	{
+		std::map<
+		    std::string,
+		    std::variant<
+		        std::map<
+		            halco::hicann_dls::vx::v3::HemisphereOnDLS,
+		            stadls::vx::v3::ContainerTicket>,
+		        stadls::vx::v3::ContainerTicket>>
+		    tickets;
+
+		signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type evaluate() const;
+	};
+
+	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+
+	/**
+	 * Construct generator for read hooks.
+	 * @param symbol_names PPU symbol names to read out
+	 * @param symbols PPU symbols to use for location lookup
+	 */
+	PPUReadHooks(
+	    std::set<std::string> const& symbol_names,
+	    lola::vx::v3::PPUElfFile::symbols_type const& symbols) :
+	    m_symbol_names(symbol_names), m_symbols(symbols)
+	{}
+
+protected:
+	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
+
+	friend auto stadls::vx::generate<PPUReadHooks>(PPUReadHooks const&);
+
+private:
+	std::set<std::string> const& m_symbol_names;
+	lola::vx::v3::PPUElfFile::symbols_type const& m_symbols;
 };
 
 } // namespace grenade::vx::execution::detail::generator
