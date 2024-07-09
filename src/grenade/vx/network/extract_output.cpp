@@ -62,6 +62,17 @@ extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& n
 				}
 			}
 
+			// add entry for each recorded neuron compartment
+			for (auto const& [_, location] : label_lookup) {
+				auto const& [population_on_execution_instance, neuron_on_population, compartment_on_neuron] =
+				    location;
+				for (auto& local_logical_neuron_events : logical_neuron_events) {
+					local_logical_neuron_events[std::make_tuple(
+					    PopulationOnNetwork(population_on_execution_instance, id),
+					    neuron_on_population, compartment_on_neuron)] = {};
+				}
+			}
+
 			// convert spikes
 			auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
 			    data.data.at(*execution_instance.event_output_vertex));

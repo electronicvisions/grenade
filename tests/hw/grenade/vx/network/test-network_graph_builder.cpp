@@ -124,9 +124,11 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 					EXPECT_LE(spikes.size(), num * 1.2);
 				}
 			} else {
-				EXPECT_FALSE(result.at(j).contains(std::tuple{
-				    population_internal_descriptor, static_cast<size_t>(i),
-				    CompartmentOnLogicalNeuron()}));
+				EXPECT_TRUE(result.at(j)
+				                .at(std::tuple{
+				                    population_internal_descriptor, static_cast<size_t>(i),
+				                    CompartmentOnLogicalNeuron()})
+				                .empty());
 			}
 		}
 	}
@@ -231,9 +233,11 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 					EXPECT_LE(matching, num * 1.2);
 				}
 			} else {
-				EXPECT_FALSE(result.at(j).contains(std::tuple{
-				    population_internal_descriptor, static_cast<size_t>(i),
-				    CompartmentOnLogicalNeuron()}));
+				EXPECT_TRUE(result.at(j)
+				                .at(std::tuple{
+				                    population_internal_descriptor, static_cast<size_t>(i),
+				                    CompartmentOnLogicalNeuron()})
+				                .empty());
 			}
 		}
 	}
@@ -532,9 +536,11 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 					}
 				}
 			} else {
-				EXPECT_FALSE(result.at(j).contains(std::tuple{
-				    population_3_descriptor, static_cast<size_t>(i),
-				    CompartmentOnLogicalNeuron()}));
+				EXPECT_TRUE(result.at(j)
+				                .at(std::tuple{
+				                    population_3_descriptor, static_cast<size_t>(i),
+				                    CompartmentOnLogicalNeuron()})
+				                .empty());
 			}
 		}
 	}
