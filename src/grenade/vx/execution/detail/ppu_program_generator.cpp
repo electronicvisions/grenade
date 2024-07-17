@@ -172,18 +172,13 @@ void plasticity_rule_{{i}}_{{realtime_column_index}}()
 			std::string scheduling_source_template = R"grenadeTemplate(
 extern void plasticity_rule_{{i}}_{{realtime_column_index}}();
 
-#include "libnux/scheduling/Service.hpp"
-
-Service_Function<{{i}} * ({{max_realtime_column_index}} + 1) + {{realtime_column_index}}, &plasticity_rule_{{i}}_{{realtime_column_index}}> service_{{i}}_{{realtime_column_index}};
-
 #include "libnux/scheduling/Timer.hpp"
 
 Timer timer_{{i}}_{{realtime_column_index}} = [](){
-	Timer t;
+	Timer t(&plasticity_rule_{{i}}_{{realtime_column_index}});
 	t.set_first_deadline({{plasticity_rule.timer.start}});
 	t.set_num_periods({{plasticity_rule.timer.num_periods}});
 	t.set_period({{plasticity_rule.timer.period}});
-	t.set_service(service_{{i}}_{{realtime_column_index}});
 	return t;
 }();)grenadeTemplate";
 			// clang-format on
@@ -271,7 +266,6 @@ Timer timer_{{i}}_{{realtime_column_index}} = [](){
 #include "libnux/scheduling/SchedulerSignaller.hpp"
 #include "libnux/scheduling/Scheduler.hpp"
 #include "libnux/scheduling/Timer.hpp"
-#include "libnux/scheduling/Service.hpp"
 #include "libnux/vx/mailbox.h"
 #include "libnux/vx/dls.h"
 #include "libnux/vx/time.h"
@@ -285,15 +279,12 @@ uint64_t time_origin = 0;
 ## for i in plasticity_rules_i
 extern Timer timer_{{i.0}}_{{i.1}};
 volatile uint32_t timer_{{i.0}}_{{i.1}}_event_drop_count;
-extern void plasticity_rule_{{i.0}}_{{i.1}}();
-extern Service_Function<{{i.0}} * ({{max_realtime_column_index}} + 1) + {{i.1}}, &plasticity_rule_{{i.0}}_{{i.1}}> service_{{i.0}}_{{i.1}};
 ## endfor
 
 namespace {
 
 Scheduler<32> scheduler;
 auto timers = std::tie({% for i in plasticity_rules_i %}timer_{{i.0}}_{{i.1}}{% if not loop.is_last %}, {% endif %}{% endfor %});
-auto services = std::tie({% for i in plasticity_rules_i %}service_{{i.0}}_{{i.1}}{% if not loop.is_last %}, {% endif %}{% endfor %});
 
 } // namespace
 
@@ -313,7 +304,7 @@ void scheduling()
 	libnux::vx::mailbox_write_int(current);
 	libnux::vx::mailbox_write_string("\n");
 
-	scheduler.execute(timer, services, timers);
+	scheduler.execute(timer, timers);
 
 	scheduler_event_drop_count = scheduler.get_dropped_events_count();
 ## for i in plasticity_rules_i
