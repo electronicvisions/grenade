@@ -67,36 +67,17 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	         .size() == 1));
 	size_t const realtime_column_count = data_maps.size();
 
-	// vector for storing all execution_instance_builders
-	std::vector<ExecutionInstanceBuilder> builders;
-	std::vector<Chip> configs_visited;
-	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
-	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
+	hate::Timer const configs_timer;
 
-	// vectors for storing the information on what chip components are used in the realtime snippets before and after the current one (the according index)
-	// Example: usages_before[0] holds the usages needed before the first realtime snippet etc...
-	std::vector<ExecutionInstanceBuilder::Usages> usages_before(configs.size());
-	std::vector<ExecutionInstanceBuilder::Usages> usages_after(configs.size());
-	usages_before[0] = ExecutionInstanceBuilder::Usages{
-	    .madc_recording = false,
-	    .event_recording = false,
-	    .cadc_recording = typed_array<
-	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
-	usages_after[usages_after.size() - 1] = ExecutionInstanceBuilder::Usages{
-	    .madc_recording = false,
-	    .event_recording = false,
-	    .cadc_recording = typed_array<
-	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
+	std::vector<Chip> configs_visited(configs.begin(), configs.end());
+	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
 
 	ExecutionInstanceConfigVisitor::PpuUsage overall_ppu_usage;
 	std::vector<typed_array<bool, NeuronResetOnDLS>> enabled_neuron_resets;
-	hate::Timer const configs_timer;
 	for (size_t i = 0; i < realtime_column_count; i++) {
-		Chip config = configs[i];
 		std::tuple<ExecutionInstanceConfigVisitor::PpuUsage, typed_array<bool, NeuronResetOnDLS>>
-		    ppu_information =
-		        ExecutionInstanceConfigVisitor(graphs[i], execution_instance, config, i)();
-		configs_visited.push_back(std::move(config));
+		    ppu_information = ExecutionInstanceConfigVisitor(
+		        graphs[i], execution_instance, configs_visited[i], i)();
 		overall_ppu_usage += std::move(std::get<0>(ppu_information));
 		enabled_neuron_resets.push_back(std::get<1>(ppu_information));
 	}
@@ -221,6 +202,26 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	LOG4CXX_TRACE(
 	    logger, "operator(): Constructed configuration(s) in " << configs_timer.print() << ".");
+
+	// vectors for storing the information on what chip components are used in the realtime snippets
+	// before and after the current one (the according index) Example: usages_before[0] holds the
+	// usages needed before the first realtime snippet etc...
+	std::vector<ExecutionInstanceBuilder::Usages> usages_before(configs.size());
+	std::vector<ExecutionInstanceBuilder::Usages> usages_after(configs.size());
+	usages_before[0] = ExecutionInstanceBuilder::Usages{
+	    .madc_recording = false,
+	    .event_recording = false,
+	    .cadc_recording = typed_array<
+	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
+	usages_after[usages_after.size() - 1] = ExecutionInstanceBuilder::Usages{
+	    .madc_recording = false,
+	    .event_recording = false,
+	    .cadc_recording = typed_array<
+	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
+
+	// vector for storing all execution_instance_builders
+	std::vector<ExecutionInstanceBuilder> builders;
+	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
 
 	std::vector<bool> periodic_cadc_recording;
 	std::vector<bool> periodic_cadc_dram_recording;
