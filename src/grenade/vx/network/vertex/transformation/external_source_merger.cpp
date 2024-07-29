@@ -65,9 +65,10 @@ ExternalSourceMerger::Function::Value ExternalSourceMerger::apply(
 				            .at(b);
 				    for (auto const& local_input_event : local_input_events) {
 					    if (input.translation.contains(local_input_event.data))
-						    for (auto const& label : input.translation.at(local_input_event.data)) {
+						    for (auto const& [label, delay] :
+						         input.translation.at(local_input_event.data)) {
 							    local_ret.push_back(signal_flow::TimedSpikeToChip(
-							        local_input_event.time,
+							        local_input_event.time + delay,
 							        haldls::vx::v3::SpikePack1ToChip({label})));
 						    }
 				    }

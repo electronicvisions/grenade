@@ -31,11 +31,11 @@ struct SYMBOL_VISIBLE ExternalSourceMerger : public signal_flow::vertex::Transfo
 		    signal_flow::ConnectionType::TimedSpikeFromChipSequence;
 
 		/**
-		 * Post labels for pre label.
+		 * Post labels for pre label with according delays.
 		 */
 		std::map<
 		    halco::hicann_dls::vx::v3::SpikeLabel,
-		    std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>
+		    std::vector<std::pair<halco::hicann_dls::vx::v3::SpikeLabel, common::Time>>>
 		    translation;
 
 		bool operator==(InterExecutionInstanceInput const& other) const;

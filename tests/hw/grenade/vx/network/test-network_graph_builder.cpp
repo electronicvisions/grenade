@@ -420,11 +420,12 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	auto const population_2_descriptor =
 	    network_builder.add(population_2, grenade::vx::common::ExecutionInstanceID(1));
 
+	grenade::vx::common::Time delay(100000);
 	{
 		InterExecutionInstanceProjection::Connections projection_connections;
 		for (size_t i = 0; i < population_0.size; ++i) {
 			projection_connections.push_back(
-			    {{i, CompartmentOnLogicalNeuron()}, {i, CompartmentOnLogicalNeuron()}});
+			    {{i, CompartmentOnLogicalNeuron()}, {i, CompartmentOnLogicalNeuron()}, delay});
 		}
 		InterExecutionInstanceProjection projection{
 		    std::move(projection_connections), population_1_descriptor, population_2_descriptor};
@@ -505,9 +506,10 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	}
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
-	    inputs.batch_size(),
-	    {{grenade::vx::common::ExecutionInstanceID(0), grenade::vx::common::Time(num * isi)},
-	     {grenade::vx::common::ExecutionInstanceID(1), grenade::vx::common::Time(num * isi)}});
+	    inputs.batch_size(), {{grenade::vx::common::ExecutionInstanceID(0),
+	                           grenade::vx::common::Time(num * isi + delay)},
+	                          {grenade::vx::common::ExecutionInstanceID(1),
+	                           grenade::vx::common::Time(num * isi + delay)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
@@ -530,9 +532,14 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 					if (i == 0) {
 						EXPECT_GE(spikes.size(), num * 0.8 * 2);
 						EXPECT_LE(spikes.size(), num * 1.2 * 2);
+						// testing for requested delay not trivial due to merge of external inputs
 					} else {
 						EXPECT_GE(spikes.size(), num * 0.8);
 						EXPECT_LE(spikes.size(), num * 1.2);
+						// test that requested delay is performed
+						if (!spikes.empty()) {
+							EXPECT_GE(spikes.at(0), delay);
+						}
 					}
 				}
 			} else {

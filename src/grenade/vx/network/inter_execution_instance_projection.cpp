@@ -6,13 +6,13 @@
 namespace grenade::vx::network {
 
 InterExecutionInstanceProjection::Connection::Connection(
-    Index const& index_pre, Index const& index_post) :
-    index_pre(index_pre), index_post(index_post)
+    Index const& index_pre, Index const& index_post, common::Time const& delay) :
+    index_pre(index_pre), index_post(index_post), delay(delay)
 {}
 
 bool InterExecutionInstanceProjection::Connection::operator==(Connection const& other) const
 {
-	return index_pre == other.index_pre && index_post == other.index_post;
+	return index_pre == other.index_pre && index_post == other.index_post && delay == other.delay;
 }
 
 bool InterExecutionInstanceProjection::Connection::operator!=(Connection const& other) const
@@ -23,7 +23,8 @@ bool InterExecutionInstanceProjection::Connection::operator!=(Connection const& 
 std::ostream& operator<<(
     std::ostream& os, InterExecutionInstanceProjection::Connection const& connection)
 {
-	os << "Connection(" << connection.index_pre << " -> " << connection.index_post << ")";
+	os << "Connection(" << connection.index_pre << " -> " << connection.index_post
+	   << ", delay: " << connection.delay << ")";
 	return os;
 }
 

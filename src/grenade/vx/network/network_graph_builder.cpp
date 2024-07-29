@@ -406,10 +406,11 @@ void NetworkGraphBuilder::add_external_input(
 			        .at(projection.population_post.toPopulationOnExecutionInstance())
 			        .at(connection.index_post.first)
 			        .at(connection.index_post.second);
-			std::vector<halco::hicann_dls::vx::v3::SpikeLabel> spike_labels_post;
+			std::vector<std::pair<halco::hicann_dls::vx::v3::SpikeLabel, common::Time>>
+			    spike_labels_post;
 			for (auto const& maybe_spike_label_post : maybe_spike_labels_post) {
 				assert(maybe_spike_label_post);
-				spike_labels_post.push_back(*maybe_spike_label_post);
+				spike_labels_post.emplace_back(*maybe_spike_label_post, connection.delay);
 			}
 
 			local_translations.translation[*spike_label_pre] = spike_labels_post;
