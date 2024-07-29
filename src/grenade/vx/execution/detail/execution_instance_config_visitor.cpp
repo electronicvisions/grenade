@@ -64,6 +64,7 @@ ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
 	m_used_madc = false;
+	m_enabled_neuron_resets.fill(false);
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : m_config.crossbar.nodes) {
