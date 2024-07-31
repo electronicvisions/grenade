@@ -56,7 +56,7 @@ void OutputData::merge(OutputData&& other)
 	pre_execution_chips.merge(other.pre_execution_chips);
 	if (execution_time_info && other.execution_time_info) {
 		execution_time_info->merge(*(other.execution_time_info));
-	} else {
+	} else if (!execution_time_info) {
 		execution_time_info = std::move(other.execution_time_info);
 		other.execution_time_info.reset();
 	}
