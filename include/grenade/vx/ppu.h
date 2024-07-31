@@ -168,6 +168,7 @@ struct Compiler
 	    get_include_paths(),
 	    "-DSYSTEM_HICANN_DLS_MINI",
 	    "-DLIBNUX_TIME_RESOLUTION_SHIFT=0",
+	    "-DLIBNUX_TIME64=1",
 	    "-fuse-ld=bfd",
 	    "-nostartfiles",
 	    "-Wl,--defsym=mailbox_size=4096",

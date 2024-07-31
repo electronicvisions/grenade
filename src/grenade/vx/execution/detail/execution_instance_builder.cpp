@@ -905,7 +905,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 
 	// look-up PPU-program symbols
 	PPUMemoryBlockOnPPU ppu_result_coord;
-	PPUMemoryWordOnPPU ppu_runtime_coord;
+	PPUMemoryBlockOnPPU ppu_runtime_coord;
 	PPUMemoryWordOnPPU ppu_status_coord;
 	PlaybackProgramBuilder wait_for_ppu_command_idle;
 	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
@@ -923,7 +923,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("cadc_result").coordinate);
 		if (m_ppu_symbols->contains("runtime")) {
 			ppu_runtime_coord =
-			    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("runtime").coordinate).toMin();
+			    std::get<PPUMemoryBlockOnPPU>(m_ppu_symbols->at("runtime").coordinate);
 		}
 		if (m_ppu_symbols->contains("scheduler_event_drop_count")) {
 			ppu_scheduler_event_drop_count_coord.emplace(std::get<PPUMemoryBlockOnPPU>(
@@ -1002,19 +1002,24 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		// set runtime on PPU
 		if (enable_ppu && m_has_plasticity_rule) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
+				PPUMemoryBlock ppu_runtime(ppu_runtime_coord.toPPUMemoryBlockSize());
 				if (!m_data.get_runtime().empty()) {
-					// TODO (Issue #3993): Implement calculation of PPU clock freuqency vs. FPGA
+					// TODO (Issue #3993): Implement calculation of PPU clock frequency vs. FPGA
 					// frequency
-					builder.write(
-					    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
-					    PPUMemoryWord(PPUMemoryWord::Value(
-					        m_data.get_runtime().at(b).at(m_execution_instance) * 2)));
-				} else {
-					builder.write(
-					    current_time, PPUMemoryWordOnDLS(ppu_runtime_coord, ppu),
-					    PPUMemoryWord(PPUMemoryWord::Value(0)));
+					if (m_data.get_runtime().at(b).at(m_execution_instance) >= (1ull << 63)) {
+						throw std::out_of_range(
+						    "PPU runtimes of more than 64-bit PPU clock cycles not supported.");
+					}
+					uint64_t ppu_runtime_value =
+					    m_data.get_runtime().at(b).at(m_execution_instance) * 2;
+					ppu_runtime.at(0) =
+					    PPUMemoryWord(PPUMemoryWord::Value(ppu_runtime_value >> 32));
+					ppu_runtime.at(1) =
+					    PPUMemoryWord(PPUMemoryWord::Value(ppu_runtime_value & 0xffff'ffff));
 				}
-				current_time += Timer::Value(2);
+				builder.write(
+				    current_time, PPUMemoryBlockOnDLS(ppu_runtime_coord, ppu), ppu_runtime);
+				current_time += Timer::Value(4);
 			}
 		}
 		// start MADC

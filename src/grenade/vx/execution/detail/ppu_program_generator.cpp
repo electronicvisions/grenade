@@ -499,7 +499,7 @@ Timer timer_{{handles_index}}_{{id}}_{{i}} = [](){
 
 extern volatile libnux::vx::PPUOnDLS ppu;
 
-volatile uint32_t runtime;
+volatile uint64_t runtime;
 volatile uint32_t scheduler_event_drop_count;
 
 ## for i in plasticity_rules_i
