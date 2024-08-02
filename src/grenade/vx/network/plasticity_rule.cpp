@@ -66,7 +66,7 @@ bool PlasticityRule::operator==(PlasticityRule const& other) const
 	       kernel == other.kernel && timer == other.timer &&
 	       enable_requires_one_source_per_row_in_order ==
 	           other.enable_requires_one_source_per_row_in_order &&
-	       recording == other.recording;
+	       recording == other.recording && id == other.id;
 }
 
 bool PlasticityRule::operator!=(PlasticityRule const& other) const
@@ -97,6 +97,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule const& plasticity_rule
 	} else {
 		ios << "disabled";
 	}
+	ios << "\n" << plasticity_rule.id;
 	ios << "\n" << hate::Indentation();
 	ios << ")";
 	return os;

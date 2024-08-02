@@ -40,19 +40,77 @@ std::vector<std::string> PPUProgramGenerator::done()
 		max_realtime_column_index = std::max(max_realtime_column_index, realtime_column_index);
 	}
 
-	std::vector<std::string> sources;
-	// plasticity rules
+	std::map<signal_flow::vertex::PlasticityRule::ID, std::string> kernel_sources;
 	{
-		for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+		for (auto const& [_, plasticity_rule, synapses, neurons, realtime_column_index] :
 		     m_plasticity_rules) {
 			std::stringstream kernel;
 			auto kernel_str = plasticity_rule.get_kernel();
 			std::string const kernel_name("PLASTICITY_RULE_KERNEL");
 			kernel_str.replace(
 			    kernel_str.find(kernel_name), kernel_name.size(),
-			    "plasticity_rule_kernel_" + std::to_string(i) + "_" +
-			        std::to_string(realtime_column_index));
+			    "plasticity_rule_kernel_" + std::to_string(plasticity_rule.get_id().value()));
 
+			// clang-format off
+			std::string kernel_source_template = R"grenadeTemplate(
+{{recorded_memory_declaration}}
+
+{{kernel_str}}
+
+## if has_raw_recording or has_timed_recording
+void plasticity_rule_{{id}}(std::array<grenade::vx::ppu::SynapseArrayViewHandle, {{num_synapses}}>& synapses, std::array<grenade::vx::ppu::NeuronViewHandle, {{num_neurons}}>& neurons, Recording& recording)
+{
+	plasticity_rule_kernel_{{id}}(synapses, neurons, recording);
+}
+## else
+void plasticity_rule_{{id}}(std::array<grenade::vx::ppu::SynapseArrayViewHandle, {{num_synapses}}>& synapses, std::array<grenade::vx::ppu::NeuronViewHandle, {{num_neurons}}>& neurons)
+{
+	plasticity_rule_kernel_{{id}}(synapses, neurons);
+}
+## endif
+)grenadeTemplate";
+			// clang-format on
+
+			inja::json parameters;
+			parameters["id"] = plasticity_rule.get_id().value();
+
+			parameters["kernel_str"] = kernel_str;
+			parameters["has_raw_recording"] =
+			    plasticity_rule.get_recording() &&
+			    std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
+			        *plasticity_rule.get_recording());
+			parameters["has_timed_recording"] =
+			    plasticity_rule.get_recording() &&
+			    std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
+			        *plasticity_rule.get_recording());
+
+			parameters["recorded_memory_declaration"] =
+			    plasticity_rule.get_recorded_memory_declaration();
+
+			parameters["num_synapses"] = synapses.size();
+			parameters["num_neurons"] = neurons.size();
+
+			auto const rendered_kernel_source = inja::render(kernel_source_template, parameters);
+			if (!kernel_sources.contains(plasticity_rule.get_id())) {
+				kernel_sources.emplace(plasticity_rule.get_id(), rendered_kernel_source);
+			} else {
+				if (kernel_sources.at(plasticity_rule.get_id()) != rendered_kernel_source) {
+					throw std::runtime_error("Plasticity rules marked as same with an equal ID "
+					                         "have different kernel sources.");
+				}
+			}
+		}
+	}
+
+
+	// plasticity rules
+	std::vector<std::string> sources;
+	for (auto const& [_, kernel_source] : kernel_sources) {
+		sources.push_back(kernel_source);
+	}
+	{
+		for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+		     m_plasticity_rules) {
 			// clang-format off
 			std::string recording_source_template = R"grenadeTemplate(
 {{recorded_memory_declaration}}
@@ -111,7 +169,15 @@ neuron_view_handle_{{i}}_{{realtime_column_index}} = {
 			std::string kernel_source_template = R"grenadeTemplate(
 {{recorded_memory_declaration}}
 
-{{kernel_str}}
+#include "grenade/vx/ppu/synapse_array_view_handle.h"
+#include "grenade/vx/ppu/neuron_view_handle.h"
+#include <array>
+
+## if has_raw_recording or has_timed_recording
+void plasticity_rule_{{id}}(std::array<grenade::vx::ppu::SynapseArrayViewHandle, {{length(synapses)}}>& synapses, std::array<grenade::vx::ppu::NeuronViewHandle, {{length(neurons)}}>& neurons, Recording& recording);
+## else
+void plasticity_rule_{{id}}(std::array<grenade::vx::ppu::SynapseArrayViewHandle, {{length(synapses)}}>& synapses, std::array<grenade::vx::ppu::NeuronViewHandle, {{length(neurons)}}>& neurons);
+## endif
 
 extern std::array<grenade::vx::ppu::SynapseArrayViewHandle, {{length(synapses)}}>
 synapse_array_view_handle_{{i}}_{{realtime_column_index}};
@@ -137,27 +203,24 @@ void plasticity_rule_{{i}}_{{realtime_column_index}}()
 
 ## if has_raw_recording or has_timed_recording
 ## if has_raw_recording
-	plasticity_rule_kernel_{{i}}_{{realtime_column_index}}(
+	plasticity_rule_{{id}}(
 	    synapse_array_view_handle_{{i}}_{{realtime_column_index}},
 	    neuron_view_handle_{{i}}_{{realtime_column_index}},
 	    recorded_scratchpad_memory_{{i}}_{{realtime_column_index}});
 ## else if has_timed_recording
 	static size_t recorded_scratchpad_memory_period = 0;
-
-	plasticity_rule_kernel_{{i}}_{{realtime_column_index}}(
+	plasticity_rule_{{id}}(
 	    synapse_array_view_handle_{{i}}_{{realtime_column_index}},
 	    neuron_view_handle_{{i}}_{{realtime_column_index}},
 	    recorded_scratchpad_memory_{{i}}_{{realtime_column_index}}[recorded_scratchpad_memory_period]);
-
 	// TODO: reset by routine called prior to realtime section for each batch entry
 	// instead of modulo
 	recorded_scratchpad_memory_period++;
 	recorded_scratchpad_memory_period %= {{plasticity_rule.timer.num_periods}};
 ## endif
-
 	libnux::vx::do_not_optimize_away(recorded_scratchpad_memory_{{i}}_{{realtime_column_index}});
 ## else
-	plasticity_rule_kernel_{{i}}_{{realtime_column_index}}(
+	plasticity_rule_{{id}}(
 	    synapse_array_view_handle_{{i}}_{{realtime_column_index}},
 	    neuron_view_handle_{{i}}_{{realtime_column_index}});
 ## endif
@@ -190,7 +253,6 @@ Timer timer_{{i}}_{{realtime_column_index}} = [](){
 
 			parameters["realtime_column_index"] = realtime_column_index;
 
-			parameters["kernel_str"] = kernel_str;
 			parameters["recorded_memory_declaration"] =
 			    plasticity_rule.get_recorded_memory_declaration();
 
@@ -252,6 +314,7 @@ Timer timer_{{i}}_{{realtime_column_index}} = [](){
 				parameters["neurons"].push_back(
 				    {{"hemisphere", row.value()}, {"enabled_columns", enabled_columns}});
 			}
+			parameters["id"] = plasticity_rule.get_id().value();
 
 			sources.push_back(inja::render(recording_source_template, parameters));
 			sources.push_back(inja::render(handles_source_template, parameters));

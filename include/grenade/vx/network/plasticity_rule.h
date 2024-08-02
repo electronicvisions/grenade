@@ -109,6 +109,14 @@ struct GENPYBIND(visible) PlasticityRule
 	std::optional<Recording> recording;
 
 	/**
+	 * Identifier of same plasticity rule.
+	 * Plasticity rules with equal identifier share their state across realtime snippets.
+	 * Currently, in addition, the complete provided kernel code is required to be equal.
+	 */
+	typedef signal_flow::vertex::PlasticityRule::ID ID GENPYBIND(opaque(false));
+	ID id;
+
+	/**
 	 * Recording data corresponding to a raw recording.
 	 */
 	typedef signal_flow::vertex::PlasticityRule::RawRecordingData RawRecordingData

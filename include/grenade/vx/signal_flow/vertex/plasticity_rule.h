@@ -466,6 +466,16 @@ struct PlasticityRule : public EntityOnChip
 		void serialize(Archive& ar, std::uint32_t version);
 	};
 
+	/**
+	 * Identifier of same plasticity rule.
+	 * Plasticity rules with equal identifier share their state across realtime snippets.
+	 * Currently, in addition, the complete provided kernel code is required to be equal.
+	 */
+	struct GENPYBIND(inline_base("*")) ID : public halco::common::detail::BaseType<ID, uintmax_t>
+	{
+		constexpr explicit ID(uintmax_t const value = 0) : base_t(value) {}
+	};
+
 	PlasticityRule() = default;
 
 	/**
@@ -476,6 +486,9 @@ struct PlasticityRule : public EntityOnChip
 	 * @param neuron_view_shapes Shapes of neuron views to alter
 	 * @param recording Optional recording providing memory for the plasticity rule to store
 	 * information during execution.
+	 * @param id Identifier of same plasticity rule across realtime snippets.
+	 *           Plasticity rules with equal identifier share their state across realtime snippets.
+	 *           Currently, in addition, the complete provided kernel code is required to be equal.
 	 * @param chip_coordinate Coordinate of chip to use
 	 */
 	PlasticityRule(
@@ -484,6 +497,7 @@ struct PlasticityRule : public EntityOnChip
 	    std::vector<SynapseViewShape> const& synapse_view_shapes,
 	    std::vector<NeuronViewShape> const& neuron_view_shapes,
 	    std::optional<Recording> const& recording,
+	    ID const& id = ID(),
 	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
 
 	/**
@@ -535,6 +549,7 @@ struct PlasticityRule : public EntityOnChip
 	std::vector<SynapseViewShape> const& get_synapse_view_shapes() const SYMBOL_VISIBLE;
 	std::vector<NeuronViewShape> const& get_neuron_view_shapes() const SYMBOL_VISIBLE;
 	std::optional<Recording> get_recording() const SYMBOL_VISIBLE;
+	ID const& get_id() const SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	std::vector<Port> inputs() const SYMBOL_VISIBLE;
@@ -560,6 +575,7 @@ private:
 	std::vector<SynapseViewShape> m_synapse_view_shapes;
 	std::vector<NeuronViewShape> m_neuron_view_shapes;
 	std::optional<Recording> m_recording;
+	ID m_id;
 
 	friend struct cereal::access;
 	template <typename Archive>

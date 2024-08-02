@@ -290,13 +290,15 @@ PlasticityRule::PlasticityRule(
     std::vector<SynapseViewShape> const& synapse_view_shapes,
     std::vector<NeuronViewShape> const& neuron_view_shapes,
     std::optional<Recording> const& recording,
+    ID const& id,
     ChipCoordinate const& chip_coordinate) :
     EntityOnChip(chip_coordinate),
     m_kernel(std::move(kernel)),
     m_timer(timer),
     m_synapse_view_shapes(synapse_view_shapes),
     m_neuron_view_shapes(neuron_view_shapes),
-    m_recording(recording)
+    m_recording(recording),
+    m_id(id)
 {}
 
 size_t PlasticityRule::get_recorded_scratchpad_memory_size() const
@@ -1264,6 +1266,11 @@ std::optional<PlasticityRule::Recording> PlasticityRule::get_recording() const
 	return m_recording;
 }
 
+PlasticityRule::ID const& PlasticityRule::get_id() const
+{
+	return m_id;
+}
+
 std::vector<Port> PlasticityRule::inputs() const
 {
 	std::vector<Port> ret;
@@ -1290,6 +1297,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule const& config)
 		os << "\nrecording:\n";
 		std::visit([&](auto const& recording) { os << recording << "\n"; }, *config.m_recording);
 	}
+	os << "\n" << config.m_id << "\n";
 	os << ")";
 	return os;
 }
@@ -1312,7 +1320,7 @@ bool PlasticityRule::operator==(PlasticityRule const& other) const
 {
 	return (m_kernel == other.m_kernel) && (m_timer == other.m_timer) &&
 	       (m_synapse_view_shapes == other.m_synapse_view_shapes) &&
-	       (m_recording == other.m_recording);
+	       (m_recording == other.m_recording) && (m_id == other.m_id);
 }
 
 bool PlasticityRule::operator!=(PlasticityRule const& other) const
