@@ -34,13 +34,13 @@ struct NeuronViewHandle
 	 * @param column Neuron column for which to get value
 	 * @param reset Whether to reset the counters directly after read-out
 	 */
-	uint8_t get_rate_counter(size_t column, bool reset) SYMBOL_VISIBLE;
+	uint8_t get_rate_counter(size_t column, bool reset) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get neuron rate counter values.
 	 * @param reset Whether to reset the counters directly after read-out
 	 */
-	Row get_rate_counters(bool reset) SYMBOL_VISIBLE;
+	Row get_rate_counters(bool reset) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get analog readouts via CADC.
@@ -49,7 +49,7 @@ struct NeuronViewHandle
 	 * @throws Exit with exit code 1 on access from wrong PPU compared to hemisphere
 	 * @returns Analog readout values without column masking
 	 */
-	Row get_analog_readouts() SYMBOL_VISIBLE;
+	Row get_analog_readouts() const SYMBOL_VISIBLE;
 #endif
 };
 

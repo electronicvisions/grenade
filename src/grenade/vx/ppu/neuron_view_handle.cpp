@@ -46,7 +46,7 @@ uint8_t get_rate_counter(NeuronViewHandle const& handle, size_t column)
 
 } // namespace detail
 
-uint8_t NeuronViewHandle::get_rate_counter(size_t column, bool reset)
+uint8_t NeuronViewHandle::get_rate_counter(size_t column, bool reset) const
 {
 	if (reset) {
 		return detail::get_rate_counter<true>(*this, column);
@@ -71,7 +71,7 @@ NeuronViewHandle::Row get_rate_counters(NeuronViewHandle const& handle)
 
 } // namespace detail
 
-NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
+NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset) const
 {
 	if (reset) {
 		return detail::get_rate_counters<true>(*this);
@@ -79,7 +79,7 @@ NeuronViewHandle::Row NeuronViewHandle::get_rate_counters(bool reset)
 	return detail::get_rate_counters<false>(*this);
 }
 
-NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts()
+NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts() const
 {
 	if (::ppu != hemisphere) {
 		exit(1);
