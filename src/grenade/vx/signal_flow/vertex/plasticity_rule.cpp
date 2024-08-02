@@ -15,6 +15,11 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
+PlasticityRule::Timer::Value PlasticityRule::Timer::get_last() const
+{
+	return Value(start + period * num_periods);
+}
+
 bool PlasticityRule::Timer::operator==(Timer const& other) const
 {
 	return (start == other.start) && (period == other.period) && (num_periods == other.num_periods);

@@ -60,6 +60,11 @@ struct PlasticityRule : public EntityOnChip
 		Value period;
 		size_t num_periods;
 
+		/**
+		 * Get last execution time.
+		 */
+		Value get_last() const;
+
 		bool operator==(Timer const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Timer const& other) const SYMBOL_VISIBLE;
 
