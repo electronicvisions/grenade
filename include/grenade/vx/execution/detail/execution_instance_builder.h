@@ -44,6 +44,8 @@ public:
 	 * @param input_list Input list to use for input data lookup
 	 * @param data_output Data output from depended-on executions to use for data lookup
 	 * @param chip_config Chip configuration to use
+	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
+	 * which the builder generates
 	 */
 	ExecutionInstanceBuilder(
 	    signal_flow::Graph const& graph,
@@ -51,7 +53,9 @@ public:
 	    signal_flow::InputData const& input_list,
 	    signal_flow::Data const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-	    size_t realtime_column_index) SYMBOL_VISIBLE;
+	    size_t realtime_column_index,
+	    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const&
+	        timed_recording_index_offset) SYMBOL_VISIBLE;
 
 	struct Usages
 	{
@@ -177,6 +181,8 @@ private:
 	std::optional<signal_flow::vertex::CADCMembraneReadoutView::Mode> m_cadc_readout_mode;
 
 	bool m_has_plasticity_rule{false};
+
+	std::map<signal_flow::vertex::PlasticityRule::ID, size_t> m_timed_recording_index_offset;
 
 	/**
 	 * Check if any incoming vertex requires post processing.

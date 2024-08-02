@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <variant>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
@@ -103,6 +104,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	}
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
+	std::vector<std::map<signal_flow::vertex::PlasticityRule::ID, size_t>>
+	    plasticity_rule_timed_recording_start_periods(realtime_column_count);
 	PPUMemoryBlockOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_stopped_coord;
 	if (overall_ppu_usage.has_cadc_readout || !overall_ppu_usage.plasticity_rules.empty()) {
@@ -112,10 +115,24 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		PPUMemoryWordOnPPU ppu_location_coord;
 		{
 			PPUProgramGenerator ppu_program_generator;
+			std::vector<std::map<signal_flow::vertex::PlasticityRule::ID, size_t>>
+			    plasticity_rule_timed_recording_num_periods(realtime_column_count);
 			for (auto const& [descriptor, rule, synapses, neurons, realtime_column_index] :
 			     overall_ppu_usage.plasticity_rules) {
 				ppu_program_generator.add(
 				    descriptor, rule, synapses, neurons, realtime_column_index);
+				plasticity_rule_timed_recording_num_periods.at(
+				    realtime_column_index)[rule.get_id()] = rule.get_timer().num_periods;
+			}
+			// sum up number of periods for different plasticity rules in order to get the index
+			// offset of the rule in the recording data for each realtime snippet.
+			for (size_t i = 0; i < realtime_column_count; ++i) {
+				for (size_t j = 0; j < i; ++j) {
+					for (auto const& [id, num_periods] :
+					     plasticity_rule_timed_recording_num_periods.at(j)) {
+						plasticity_rule_timed_recording_start_periods.at(i)[id] += num_periods;
+					}
+				}
 			}
 			ppu_program_generator.has_periodic_cadc_readout =
 			    overall_ppu_usage.has_periodic_cadc_readout;
@@ -244,7 +261,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool uses_madc = false;
 	for (size_t i = 0; i < realtime_column_count; i++) {
 		ExecutionInstanceBuilder builder(
-		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, i);
+		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, i,
+		    plasticity_rule_timed_recording_start_periods.at(i));
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;

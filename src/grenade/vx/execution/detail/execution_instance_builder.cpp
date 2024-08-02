@@ -54,14 +54,16 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::InputData const& input_list,
     signal_flow::Data const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-    size_t realtime_column_index) :
+    size_t realtime_column_index,
+    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const& timed_recording_index_offset) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_data(input_list, data_output),
     m_ppu_symbols(ppu_symbols),
     m_realtime_column_index(realtime_column_index),
     m_post_vertices(),
-    m_madc_readout_vertex()
+    m_madc_readout_vertex(),
+    m_timed_recording_index_offset(timed_recording_index_offset)
 {
 	// check that input list provides all requested input for local graph
 	if (!input_data_matches_graph(input_list)) {
@@ -935,12 +937,38 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		for (auto const& [descriptor, _] :
 		     m_batch_entries.at(0).m_plasticity_rule_recorded_scratchpad_memory) {
+			auto const& plasticity_rule = std::get<signal_flow::vertex::PlasticityRule>(
+			    m_graph.get_vertex_property(descriptor));
 			ppu_plasticity_rule_recorded_scratchpad_memory_coord[descriptor] =
 			    m_ppu_symbols
 			        ->at(
-			            "recorded_scratchpad_memory_" + std::to_string(descriptor) + "_" +
-			            std::to_string(m_realtime_column_index))
+			            "recorded_scratchpad_memory_" +
+			            std::to_string(plasticity_rule.get_id().value()))
 			        .coordinate;
+			if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
+			        *plasticity_rule.get_recording())) {
+				size_t const period_start =
+				    m_timed_recording_index_offset.contains(plasticity_rule.get_id())
+				        ? m_timed_recording_index_offset.at(plasticity_rule.get_id())
+				        : 0;
+				// we advance the coordinate to the position in the one recording memory object this
+				// snippet requests to read out. And we save it in the local variable
+				// ppu_plasticity_rule_recorded_scratchpad_memory_coord
+				std::visit(
+				    [period_start, plasticity_rule](auto& coord) {
+					    auto min = coord.toMin();
+					    min = decltype(min)(
+					        min.value() +
+					        plasticity_rule.get_recorded_scratchpad_memory_size() * period_start);
+					    auto const max = decltype(coord.toMax())(
+					        min.value() +
+					        plasticity_rule.get_timer().num_periods *
+					            plasticity_rule.get_recorded_scratchpad_memory_size() -
+					        1);
+					    coord = std::decay_t<decltype(coord)>(min, max);
+				    },
+				    ppu_plasticity_rule_recorded_scratchpad_memory_coord.at(descriptor));
+			}
 		}
 
 		// generate absolute time playback snippets for PPU command polling
