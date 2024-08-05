@@ -51,9 +51,9 @@ struct PlasticityRule : public EntityOnChip
 	{
 		/** PPU clock cycles. */
 		struct GENPYBIND(inline_base("*")) Value
-		    : public halco::common::detail::RantWrapper<Value, uintmax_t, 0xffffffff, 0>
+		    : public halco::common::detail::BaseType<Value, uint64_t>
 		{
-			constexpr explicit Value(uintmax_t const value = 0) : rant_t(value) {}
+			constexpr explicit Value(uint64_t const value = 0) : base_t(value) {}
 		};
 
 		Value start;

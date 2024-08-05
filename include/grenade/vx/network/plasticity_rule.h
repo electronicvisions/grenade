@@ -3,6 +3,7 @@
 #include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/projection_on_execution_instance.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
+#include "halco/common/geometry.h"
 #include "hate/visibility.h"
 #include <map>
 #include <optional>
@@ -63,9 +64,9 @@ struct GENPYBIND(visible) PlasticityRule
 	{
 		/** PPU clock cycles. */
 		struct GENPYBIND(inline_base("*")) Value
-		    : public halco::common::detail::RantWrapper<Value, uintmax_t, 0xffffffff, 0>
+		    : public halco::common::detail::BaseType<Value, uint64_t>
 		{
-			constexpr explicit Value(uintmax_t const value = 0) : rant_t(value) {}
+			constexpr explicit Value(uint64_t const value = 0) : base_t(value) {}
 		};
 
 		Value start;
