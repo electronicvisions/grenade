@@ -415,7 +415,9 @@ void NetworkGraphBuilder::add_external_input(
 				spike_labels_post.emplace_back(*maybe_spike_label_post, connection.delay);
 			}
 
-			local_translations.translation[*spike_label_pre] = spike_labels_post;
+			local_translations.translation[*spike_label_pre].insert(
+			    local_translations.translation[*spike_label_pre].end(), spike_labels_post.begin(),
+			    spike_labels_post.end());
 		}
 	}
 
