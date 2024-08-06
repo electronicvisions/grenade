@@ -489,7 +489,6 @@ Timer timer_{{handles_index}}_{{id}}_{{i}} = [](){
 	if (!m_plasticity_rules.empty()) {
 		// clang-format off
 		std::string source_template = R"grenadeTemplate(
-#include "libnux/scheduling/SchedulerSignaller.hpp"
 #include "libnux/scheduling/Scheduler.hpp"
 #include "libnux/scheduling/Timer.hpp"
 #include "libnux/vx/mailbox.h"
@@ -520,9 +519,8 @@ void scheduling()
 	static_cast<void>(runtime);
 
 ## if length(plasticity_rules_i) > 0
-	auto current = get_time();
+	auto const current = get_time();
 	grenade::vx::ppu::detail::initialize_time_origin();
-	SchedulerSignallerTimer timer(current, current + runtime);
 ## for i in plasticity_rules_i
 	timer_{{i.0}}_{{i.1}}_{{i.2}}.set_first_deadline(current + timer_{{i.0}}_{{i.1}}_{{i.2}}.get_first_deadline());
 ## endfor
@@ -530,7 +528,7 @@ void scheduling()
 	libnux::vx::mailbox_write_int(current);
 	libnux::vx::mailbox_write_string("\n");
 
-	scheduler.execute(timer, timers);
+	scheduler.execute(current + runtime, timers);
 
 	scheduler_event_drop_count = scheduler.get_dropped_events_count();
 ## for i in plasticity_rules_i
