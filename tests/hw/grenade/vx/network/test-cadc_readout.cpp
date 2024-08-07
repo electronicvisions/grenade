@@ -101,14 +101,14 @@ TEST(CADCRecording, General)
 	auto const result = extract_cadc_samples(result_map, network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
-	std::set<grenade::vx::signal_flow::Int8> unique_values;
+	std::set<grenade::vx::common::Time> unique_times;
 	for (size_t i = 0; i < result.size(); ++i) {
 		std::map<AtomicNeuronOnNetwork, size_t> samples_per_neuron;
 		auto const& samples = result.at(i);
 		for (auto const& sample : samples) {
-			auto const& [_, an_on_network, v] = sample;
+			auto const& [t, an_on_network, _] = sample;
 			samples_per_neuron[an_on_network] += 1;
-			unique_values.insert(v);
+			unique_times.insert(t);
 		}
 		EXPECT_EQ(samples_per_neuron.size(), cadc_recording.neurons.size());
 		for (auto const& [_, num] : samples_per_neuron) {
@@ -120,5 +120,6 @@ TEST(CADCRecording, General)
 			    num, inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us);
 		}
 	}
-	EXPECT_GT(unique_values.size(), 1);
+	// only test that time is recorded and not all zeros
+	EXPECT_GT(unique_times.size(), 1);
 }
