@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "hate/visibility.h"
 #include <chrono>
@@ -87,8 +87,8 @@ struct GENPYBIND(visible) NetworkGraphStatistics
 		friend NetworkGraphStatistics extract_statistics(NetworkGraph const& network_graph);
 	};
 
-	std::map<common::ExecutionInstanceID, ExecutionInstance> const& get_execution_instances() const
-	    SYMBOL_VISIBLE;
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> const&
+	get_execution_instances() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get duration spent constructing abstract network (Network).
@@ -113,7 +113,7 @@ struct GENPYBIND(visible) NetworkGraphStatistics
 	    SYMBOL_VISIBLE;
 
 private:
-	std::map<common::ExecutionInstanceID, ExecutionInstance> m_execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> m_execution_instances;
 
 	std::chrono::microseconds m_abstract_network_construction_duration{0};
 	std::chrono::microseconds m_hardware_network_construction_duration{0};

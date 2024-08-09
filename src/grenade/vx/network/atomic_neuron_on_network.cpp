@@ -17,7 +17,7 @@ AtomicNeuronOnNetwork::AtomicNeuronOnNetwork(
 
 AtomicNeuronOnNetwork::AtomicNeuronOnNetwork(
     AtomicNeuronOnExecutionInstance const& atomic_neuron_on_execution_instance,
-    common::ExecutionInstanceID const& execution_instance) :
+    grenade::common::ExecutionInstanceID const& execution_instance) :
     population(atomic_neuron_on_execution_instance.population, execution_instance),
     neuron_on_population(atomic_neuron_on_execution_instance.neuron_on_population),
     compartment_on_neuron(atomic_neuron_on_execution_instance.compartment_on_neuron),

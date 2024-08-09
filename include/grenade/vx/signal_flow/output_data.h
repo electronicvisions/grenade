@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
@@ -36,7 +36,7 @@ struct GENPYBIND(visible) OutputData : public Data
 	std::optional<ExecutionHealthInfo> execution_health_info;
 
 	typedef std::vector<std::map<
-	    common::ExecutionInstanceID,
+	    grenade::common::ExecutionInstanceID,
 	    std::map<
 	        std::string,
 	        std::variant<
@@ -51,7 +51,7 @@ struct GENPYBIND(visible) OutputData : public Data
 	 */
 	ReadPPUSymbols read_ppu_symbols;
 
-	typedef std::map<common::ExecutionInstanceID, lola::vx::v3::Chip> Chips;
+	typedef std::map<grenade::common::ExecutionInstanceID, lola::vx::v3::Chip> Chips;
 
 	/**
 	 * Pre-execution chip configuration including execution instance's static configuration.

@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_heap_array.h"
 #include "halco/hicann-dls/vx/v3/highspeed_link.h"
@@ -53,7 +53,7 @@ struct GENPYBIND(visible) ExecutionHealthInfo
 		    SYMBOL_VISIBLE;
 	};
 
-	std::map<common::ExecutionInstanceID, ExecutionInstance> execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 
 	/**
 	 * Merge other execution health info.

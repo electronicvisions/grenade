@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/population_on_execution_instance.h"
 
@@ -8,13 +8,15 @@ namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a population on a network. */
 struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PopulationOnNetwork
-    : public common::ExecutionInstanceIDMixin<PopulationOnNetwork, PopulationOnExecutionInstance>
+    : public grenade::common::
+          ExecutionInstanceIDMixin<PopulationOnNetwork, PopulationOnExecutionInstance>
 {
 	PopulationOnNetwork() = default;
 
 	explicit PopulationOnNetwork(
 	    PopulationOnExecutionInstance const& population,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID()) :
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) :
 	    mixin_t(population, execution_instance)
 	{}
 

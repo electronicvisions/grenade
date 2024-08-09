@@ -1,6 +1,6 @@
 #include "grenade/vx/compute/conv1d.h"
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/event.h"

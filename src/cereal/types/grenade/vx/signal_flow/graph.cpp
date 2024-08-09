@@ -16,8 +16,7 @@ void CEREAL_SAVE_FUNCTION_NAME(
     Archive& ar, grenade::vx::signal_flow::Graph::execution_instance_map_type const& data)
 {
 	std::vector<std::pair<
-	    grenade::vx::signal_flow::Graph::vertex_descriptor,
-	    grenade::vx::common::ExecutionInstanceID>>
+	    grenade::vx::signal_flow::Graph::vertex_descriptor, grenade::common::ExecutionInstanceID>>
 	    values;
 	for (auto const& p : data.left) {
 		values.push_back(std::pair{p.first, p.second});
@@ -30,8 +29,7 @@ void CEREAL_LOAD_FUNCTION_NAME(
     Archive& ar, grenade::vx::signal_flow::Graph::execution_instance_map_type& data)
 {
 	std::vector<std::pair<
-	    grenade::vx::signal_flow::Graph::vertex_descriptor,
-	    grenade::vx::common::ExecutionInstanceID>>
+	    grenade::vx::signal_flow::Graph::vertex_descriptor, grenade::common::ExecutionInstanceID>>
 	    values;
 	ar(CEREAL_NVP(values));
 	for (auto const& p : values) {

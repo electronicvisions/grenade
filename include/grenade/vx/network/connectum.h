@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/projection_on_network.h"
@@ -45,7 +45,8 @@ struct ConnectumConnection
 
 struct Connectum
 {
-	std::map<common::ExecutionInstanceID, std::vector<ConnectumConnection>> execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, std::vector<ConnectumConnection>>
+	    execution_instances;
 
 	bool operator==(Connectum const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Connectum const& other) const SYMBOL_VISIBLE;

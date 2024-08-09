@@ -1,6 +1,6 @@
 #include "grenade/vx/compute/mac.h"
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/compute/detail/range_split.h"
 #include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -42,7 +42,7 @@ std::pair<
 MAC::insert_synram(
     signal_flow::Graph& graph,
     Weights&& weights,
-    common::ExecutionInstanceID const& instance,
+    grenade::common::ExecutionInstanceID const& instance,
     halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
     std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& madc_recording_neuron,
     signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
@@ -175,9 +175,10 @@ auto get_hemisphere_placement(
     std::vector<detail::RangeSplit::SubRange> const& x_split_ranges,
     std::vector<detail::RangeSplit::SubRange> const& y_split_ranges)
 {
-	auto instance = common::ExecutionInstanceID();
+	auto instance = grenade::common::ExecutionInstanceID();
 
-	std::vector<std::pair<common::ExecutionInstanceID, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
+	std::vector<
+	    std::pair<grenade::common::ExecutionInstanceID, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
 	    hemispheres;
 	for ([[maybe_unused]] auto const& x_range : x_split_ranges) {
 		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
@@ -191,12 +192,13 @@ auto get_hemisphere_placement(
 auto get_placed_ranges(
     std::vector<detail::RangeSplit::SubRange> const& x_split_ranges,
     std::vector<detail::RangeSplit::SubRange> const& y_split_ranges,
-    std::vector<std::pair<common::ExecutionInstanceID, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
+    std::vector<
+        std::pair<grenade::common::ExecutionInstanceID, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
         hemispheres)
 {
 	typedef std::pair<detail::RangeSplit::SubRange, detail::RangeSplit::SubRange> XYSubRange;
 	std::map<
-	    common::ExecutionInstanceID,
+	    grenade::common::ExecutionInstanceID,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, XYSubRange>>
 	    placed_ranges;
 	size_t i = 0;
@@ -215,7 +217,7 @@ auto get_placed_ranges(
 void set_enable_loopback(
     signal_flow::Graph& graph,
     bool const enable,
-    common::ExecutionInstanceID const& instance,
+    grenade::common::ExecutionInstanceID const& instance,
     signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
 {
 	using namespace halco::hicann_dls::vx::v3;
@@ -266,7 +268,7 @@ void MAC::build_graph()
 	auto const external_instance = execution_instance_manager.next_index();
 	m_input_vertex = m_graph.add(external_input, external_instance, {});
 
-	std::map<common::ExecutionInstanceID, std::map<HemisphereOnDLS, signal_flow::Input>>
+	std::map<grenade::common::ExecutionInstanceID, std::map<HemisphereOnDLS, signal_flow::Input>>
 	    hemisphere_outputs;
 	for (auto const& [instance, hs] : placed_ranges) {
 		halco::common::typed_array<size_t, HemisphereOnDLS> sizes;

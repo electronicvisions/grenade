@@ -34,11 +34,19 @@ def build(bld):
         bld.fatal('building pygrenade requires pybind')
 
     bld(
+        target='pygrenade_common',
+        source='../include/grenade/common/python_bindings.h',
+        genpybind_tags='grenade_common',
+        features='genpybind cxx cxxshlib pyext',
+        use=['grenade_common'],
+    )
+
+    bld(
         target='_pygrenade_vx_common',
         source='../include/grenade/vx/common/python_bindings.h',
         genpybind_tags='grenade_vx_common',
         features='genpybind cxx cxxshlib pyext',
-        use=['grenade_vx', 'pyhaldls_vx_v3'],
+        use=['grenade_vx', 'pygrenade_common', 'pyhaldls_vx_v3'],
     )
 
     bld(

@@ -29,7 +29,7 @@ TEST(NetworkGraph_valid, synapse_exchange)
 {
 	NetworkBuilder builder;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	auto pre_descriptor = builder.add(ExternalSourcePopulation(
 	    {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()}));
@@ -80,7 +80,7 @@ TEST(NetworkGraph_valid, synapse_count)
 {
 	NetworkBuilder builder;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	auto pre_descriptor =
 	    builder.add(ExternalSourcePopulation({ExternalSourcePopulation::Neuron()}));

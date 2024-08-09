@@ -1,4 +1,4 @@
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
@@ -27,7 +27,7 @@ using namespace grenade::vx::network;
 
 TEST(PlasticityRule, RawRecording)
 {
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -122,7 +122,7 @@ TEST(PlasticityRule, RawRecording)
 
 TEST(PlasticityRule, TimedRecording)
 {
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -595,7 +595,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	using namespace grenade::vx;
 	using namespace grenade::vx::network;
 
-	common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -711,7 +711,7 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	using namespace grenade::vx;
 	using namespace grenade::vx::network;
 
-	common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -790,7 +790,7 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	using namespace grenade::vx;
 	using namespace grenade::vx::network;
 
-	common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -884,7 +884,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	using namespace grenade::vx;
 	using namespace grenade::vx::network;
 
-	common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
@@ -953,17 +953,21 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	haldls::vx::v3::PPUMemoryBlock expectation(halco::hicann_dls::vx::v3::PPUMemoryBlockSize(1));
 	expectation.at(0) =
 	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
-	hooks[common::ExecutionInstanceID()] = std::make_shared<signal_flow::ExecutionInstanceHooks>();
-	hooks[common::ExecutionInstanceID()]->write_ppu_symbols["test"] =
+	hooks[grenade::common::ExecutionInstanceID()] =
+	    std::make_shared<signal_flow::ExecutionInstanceHooks>();
+	hooks[grenade::common::ExecutionInstanceID()]->write_ppu_symbols["test"] =
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::top, expectation},
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom, expectation},
 	    };
-	hooks[common::ExecutionInstanceID()]->read_ppu_symbols.insert("test");
+	hooks[grenade::common::ExecutionInstanceID()]->read_ppu_symbols.insert("test");
 
-	auto const expectation_symbols = hooks.at(common::ExecutionInstanceID())->write_ppu_symbols;
+	auto const expectation_symbols =
+	    hooks.at(grenade::common::ExecutionInstanceID())->write_ppu_symbols;
 
 	auto const result = run(executor, network_graph, chip_configs, inputs, std::move(hooks));
 
-	EXPECT_EQ(result.read_ppu_symbols.at(0).at(common::ExecutionInstanceID()), expectation_symbols);
+	EXPECT_EQ(
+	    result.read_ppu_symbols.at(0).at(grenade::common::ExecutionInstanceID()),
+	    expectation_symbols);
 }

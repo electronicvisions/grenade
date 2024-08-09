@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
@@ -31,7 +31,7 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	 * each batch entry. It is equivalent to the accumulated duration of the intervals during which
 	 * event recording is enabled for each batch entry.
 	 */
-	std::map<common::ExecutionInstanceID, std::chrono::nanoseconds>
+	std::map<grenade::common::ExecutionInstanceID, std::chrono::nanoseconds>
 	    realtime_duration_per_execution_instance{};
 
 	/**

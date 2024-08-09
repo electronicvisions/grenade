@@ -191,7 +191,7 @@ TEST(build_routing, EmptyProjection)
 	auto network = builder.done();
 	auto const routing_result = routing::PortfolioRouter()(network);
 
-	EXPECT_TRUE(routing_result.execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	EXPECT_TRUE(routing_result.execution_instances.at(grenade::common::ExecutionInstanceID())
 	                .connections.contains(projection_descriptor));
 }
 

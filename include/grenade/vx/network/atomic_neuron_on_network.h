@@ -22,7 +22,7 @@ struct GENPYBIND(visible) AtomicNeuronOnNetwork
 	AtomicNeuronOnNetwork() = default;
 	AtomicNeuronOnNetwork(
 	    AtomicNeuronOnExecutionInstance const& atomic_neuron_on_execution_instance,
-	    common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
 	AtomicNeuronOnNetwork(
 	    PopulationOnNetwork population,

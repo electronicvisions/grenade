@@ -139,7 +139,7 @@ std::ostream& operator<<(std::ostream& os, NetworkGraphStatistics::ExecutionInst
 }
 
 
-std::map<common::ExecutionInstanceID, NetworkGraphStatistics::ExecutionInstance> const&
+std::map<grenade::common::ExecutionInstanceID, NetworkGraphStatistics::ExecutionInstance> const&
 NetworkGraphStatistics::get_execution_instances() const
 {
 	return m_execution_instances;

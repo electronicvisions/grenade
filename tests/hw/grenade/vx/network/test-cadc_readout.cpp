@@ -1,4 +1,4 @@
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -40,7 +40,7 @@ TEST(CADCRecording, General)
 	// Construct connection to HW
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	// CADC sampling shall take between one and {2.5, 7.0} us depending on placement of recording
 	// data

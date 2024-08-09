@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "grenade/build-config.h"
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"

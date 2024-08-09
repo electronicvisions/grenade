@@ -50,8 +50,8 @@ struct ExecutionInstanceData
 	/**
 	 * Get runtime from input data with batch entry as outer dimension.
 	 */
-	std::vector<std::map<common::ExecutionInstanceID, common::Time>> const& get_runtime() const
-	    SYMBOL_VISIBLE;
+	std::vector<std::map<grenade::common::ExecutionInstanceID, common::Time>> const& get_runtime()
+	    const SYMBOL_VISIBLE;
 
 	size_t batch_size() const SYMBOL_VISIBLE;
 

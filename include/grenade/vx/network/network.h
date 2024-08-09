@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/background_source_population.h"
 #include "grenade/vx/network/cadc_recording.h"
@@ -56,12 +56,13 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 		    std::ostream& os, ExecutionInstance const& execution_instance) SYMBOL_VISIBLE;
 	};
 
-	std::map<common::ExecutionInstanceID, ExecutionInstance> const execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> const execution_instances;
 
 	std::map<InterExecutionInstanceProjectionOnNetwork, InterExecutionInstanceProjection> const
 	    inter_execution_instance_projections;
 
-	std::vector<common::ExecutionInstanceID> const topologically_sorted_execution_instance_ids;
+	std::vector<grenade::common::ExecutionInstanceID> const
+	    topologically_sorted_execution_instance_ids;
 
 	/**
 	 * Duration spent during construction of network.

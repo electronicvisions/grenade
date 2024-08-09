@@ -1,4 +1,4 @@
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
@@ -26,7 +26,7 @@ using namespace grenade::vx::network;
 
 TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 {
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();

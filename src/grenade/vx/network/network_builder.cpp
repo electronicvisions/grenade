@@ -1,6 +1,6 @@
 #include "grenade/vx/network/network_builder.h"
 
-#include "grenade/vx/common/detail/null_output_iterator.h"
+#include "grenade/common/detail/null_output_iterator.h"
 #include "hate/algorithm.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
@@ -21,7 +21,7 @@ NetworkBuilder::NetworkBuilder() :
 {}
 
 PopulationOnNetwork NetworkBuilder::add(
-    Population const& population, common::ExecutionInstanceID const& execution_instance)
+    Population const& population, grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	// check population is valid
@@ -64,7 +64,7 @@ PopulationOnNetwork NetworkBuilder::add(
 
 PopulationOnNetwork NetworkBuilder::add(
     ExternalSourcePopulation const& population,
-    common::ExecutionInstanceID const& execution_instance)
+    grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	PopulationOnNetwork descriptor(
@@ -85,7 +85,7 @@ PopulationOnNetwork NetworkBuilder::add(
 
 PopulationOnNetwork NetworkBuilder::add(
     BackgroundSourcePopulation const& population,
-    common::ExecutionInstanceID const& execution_instance)
+    grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	// check that supplied coordinate doesn't overlap with already added populations
@@ -138,7 +138,7 @@ PopulationOnNetwork NetworkBuilder::add(
 }
 
 ProjectionOnNetwork NetworkBuilder::add(
-    Projection const& projection, common::ExecutionInstanceID const& execution_instance)
+    Projection const& projection, grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	auto const& population_pre =
@@ -263,7 +263,8 @@ ProjectionOnNetwork NetworkBuilder::add(
 }
 
 void NetworkBuilder::add(
-    MADCRecording const& madc_recording, common::ExecutionInstanceID const& execution_instance)
+    MADCRecording const& madc_recording,
+    grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	if (!m_execution_instances.contains(execution_instance)) {
@@ -375,7 +376,8 @@ void NetworkBuilder::add(
 }
 
 void NetworkBuilder::add(
-    CADCRecording const& cadc_recording, common::ExecutionInstanceID const& execution_instance)
+    CADCRecording const& cadc_recording,
+    grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	if (!m_execution_instances.contains(execution_instance)) {
@@ -435,7 +437,8 @@ void NetworkBuilder::add(
 }
 
 void NetworkBuilder::add(
-    PadRecording const& pad_recording, common::ExecutionInstanceID const& execution_instance)
+    PadRecording const& pad_recording,
+    grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 	if (m_execution_instances.at(execution_instance).pad_recording) {
@@ -553,7 +556,8 @@ void NetworkBuilder::add(
 }
 
 PlasticityRuleOnNetwork NetworkBuilder::add(
-    PlasticityRule const& plasticity_rule, common::ExecutionInstanceID const& execution_instance)
+    PlasticityRule const& plasticity_rule,
+    grenade::common::ExecutionInstanceID const& execution_instance)
 {
 	hate::Timer timer;
 
@@ -800,8 +804,8 @@ InterExecutionInstanceProjectionOnNetwork NetworkBuilder::add(
 	// check that insertion of projection doesn't yield a cyclic execution instance graph
 	try {
 		boost::topological_sort(
-		    m_execution_instance_graph,
-		    common::detail::NullOutputIterator<ExecutionInstanceGraph::vertex_descriptor>{});
+		    m_execution_instance_graph, grenade::common::detail::NullOutputIterator<
+		                                    ExecutionInstanceGraph::vertex_descriptor>{});
 	} catch (boost::not_a_dag const&) {
 		throw std::runtime_error("Execution instance graph is cyclic.");
 	}
@@ -826,7 +830,7 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	boost::topological_sort(
 	    m_execution_instance_graph,
 	    std::back_inserter(topologically_reverse_sorted_execution_instance_vertices));
-	std::vector<common::ExecutionInstanceID> topologically_sorted_execution_instance_ids;
+	std::vector<grenade::common::ExecutionInstanceID> topologically_sorted_execution_instance_ids;
 	for (auto it = topologically_reverse_sorted_execution_instance_vertices.rbegin();
 	     it != topologically_reverse_sorted_execution_instance_vertices.rend(); ++it) {
 		auto const ei_it = std::find_if(

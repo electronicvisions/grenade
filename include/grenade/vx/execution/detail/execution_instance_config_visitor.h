@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -59,7 +59,7 @@ public:
 	 */
 	ExecutionInstanceConfigVisitor(
 	    signal_flow::Graph const& graph,
-	    common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    lola::vx::v3::Chip& config,
 	    size_t realtime_column_index) SYMBOL_VISIBLE;
 
@@ -74,7 +74,7 @@ public:
 
 private:
 	signal_flow::Graph const& m_graph;
-	common::ExecutionInstanceID m_execution_instance;
+	grenade::common::ExecutionInstanceID m_execution_instance;
 
 	lola::vx::v3::Chip& m_config;
 

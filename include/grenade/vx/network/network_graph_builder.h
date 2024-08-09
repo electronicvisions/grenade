@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/madc_recording.h"
@@ -96,7 +96,7 @@ public:
 			NetworkGraph::GraphTranslation::ExecutionInstance graph_translation;
 		};
 
-		std::map<common::ExecutionInstanceID, ExecutionInstance> execution_instances;
+		std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 	};
 
 	static std::vector<signal_flow::Input> get_inputs(
@@ -105,46 +105,46 @@ public:
 	void add_external_input(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_background_spike_sources(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    common::ExecutionInstanceID const& instance,
+	    grenade::common::ExecutionInstanceID const& instance,
 	    RoutingResult const& routing_result) const;
 
 	void add_padi_bus(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::PADIBusOnDLS const& coordinate,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_crossbar_node(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::CrossbarNodeOnDLS const& coordinate,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_synapse_driver(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::SynapseDriverOnDLS const& coordinate,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_neuron_event_output(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    halco::hicann_dls::vx::NeuronEventOutputOnDLS const& coordinate,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_synapse_array_view_sparse(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    ProjectionOnExecutionInstance descriptor,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_population(
 	    signal_flow::Graph& graph,
@@ -153,7 +153,7 @@ public:
 	        input,
 	    PopulationOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, signal_flow::Input>
 	add_projection_from_external_input(
@@ -161,7 +161,7 @@ public:
 	    Resources& resources,
 	    ProjectionOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, signal_flow::Input>
 	add_projection_from_background_spike_source(
@@ -169,7 +169,7 @@ public:
 	    Resources& resources,
 	    ProjectionOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, signal_flow::Input>
 	add_projection_from_internal_input(
@@ -177,55 +177,55 @@ public:
 	    Resources& resources,
 	    ProjectionOnExecutionInstance const& descriptor,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_populations(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_neuron_event_outputs(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_external_output(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_madc_recording(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    MADCRecording const& madc_recording,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_cadc_recording(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    CADCRecording const& cadc_recording,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_pad_recording(
 	    signal_flow::Graph& graph,
 	    Resources const& resources,
 	    PadRecording const& cadc_recording,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void add_plasticity_rules(
 	    signal_flow::Graph& graph,
 	    Resources& resources,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	void calculate_spike_labels(
 	    Resources& resources,
 	    RoutingResult const& connection_result,
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 	common::EntityOnChip::ChipCoordinate get_chip_coordinate(
-	    common::ExecutionInstanceID const& instance) const;
+	    grenade::common::ExecutionInstanceID const& instance) const;
 
 private:
 	Network const& m_network;

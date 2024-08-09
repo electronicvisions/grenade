@@ -1,6 +1,6 @@
 #include "grenade/vx/compute/relu.h"
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -14,7 +14,7 @@ ReLU::ReLU(size_t size) : m_graph(), m_input_vertex(), m_output_vertex()
 {
 	using namespace halco::hicann_dls::vx;
 
-	auto const instance = common::ExecutionInstanceID();
+	auto const instance = grenade::common::ExecutionInstanceID();
 
 	m_input_vertex = m_graph.add(
 	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
@@ -37,8 +37,8 @@ std::vector<std::vector<signal_flow::Int8>> ReLU::run(
 	using namespace halco::hicann_dls::vx;
 
 	execution::JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<common::ExecutionInstanceID, lola::vx::v3::Chip>(
-	    common::ExecutionInstanceID(), config));
+	configs.insert(std::pair<grenade::common::ExecutionInstanceID, lola::vx::v3::Chip>(
+	    grenade::common::ExecutionInstanceID(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

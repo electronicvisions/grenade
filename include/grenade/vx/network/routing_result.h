@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/connection_routing_result.h"
 #include "grenade/vx/network/population_on_execution_instance.h"
@@ -128,7 +128,7 @@ struct GENPYBIND(visible) RoutingResult
 		friend std::ostream& operator<<(std::ostream&, ExecutionInstance const&) SYMBOL_VISIBLE;
 	};
 
-	std::map<common::ExecutionInstanceID, ExecutionInstance> execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 
 	struct TimingStatistics
 	{

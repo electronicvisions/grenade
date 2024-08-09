@@ -1,7 +1,7 @@
 #pragma once
 #include <iterator>
 
-namespace grenade::vx::common::detail {
+namespace grenade::common::detail {
 
 /**
  * Output iterator dropping all mutable operations.
@@ -28,4 +28,4 @@ public:
 	}
 };
 
-} // namespace grenade::vx::common::detail
+} // namespace grenade::common::detail

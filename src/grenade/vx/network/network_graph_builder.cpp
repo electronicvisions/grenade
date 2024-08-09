@@ -204,7 +204,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	auto const update_weights = [](NetworkGraph& network_graph,
 	                               std::shared_ptr<Network> const& network,
 	                               ProjectionOnExecutionInstance const descriptor,
-	                               common::ExecutionInstanceID const id) {
+	                               grenade::common::ExecutionInstanceID const id) {
 		std::map<
 		    signal_flow::Graph::vertex_descriptor,
 		    signal_flow::vertex::SynapseArrayViewSparse::Synapses>
@@ -260,7 +260,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	auto const update_plasticity_rule = [](NetworkGraph& network_graph,
 	                                       PlasticityRule const& new_rule,
 	                                       PlasticityRuleOnExecutionInstance descriptor,
-	                                       common::ExecutionInstanceID const& id) {
+	                                       grenade::common::ExecutionInstanceID const& id) {
 		if (!network_graph.m_network->execution_instances.at(id).plasticity_rules.contains(
 		        descriptor)) {
 			throw std::runtime_error("Updating network graph only possible, if plasticity rule is "
@@ -308,7 +308,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update external input to reflect new inter-execution-instance input
 	auto const update_external_input = [network](
 	                                       NetworkGraph& network_graph,
-	                                       common::ExecutionInstanceID const& instance) {
+	                                       grenade::common::ExecutionInstanceID const& instance) {
 		if (network->inter_execution_instance_projections.empty()) {
 			return;
 		}
@@ -327,7 +327,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		// extract inter-execution-instance projection spike label translations
 		// [pre, translation]
 		std::map<
-		    common::ExecutionInstanceID,
+		    grenade::common::ExecutionInstanceID,
 		    vertex::transformation::ExternalSourceMerger::InterExecutionInstanceInput>
 		    inter_execution_instance_translations;
 		for (auto const& [_, projection] : network->inter_execution_instance_projections) {
@@ -394,7 +394,8 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update background source population config
 	// update external input to reflect new inter-execution-instance input
 	auto const update_background_source_configs =
-	    [network](NetworkGraph& network_graph, common::ExecutionInstanceID const& instance) {
+	    [network](
+	        NetworkGraph& network_graph, grenade::common::ExecutionInstanceID const& instance) {
 		    for (auto const& [descriptor, population] :
 		         network->execution_instances.at(instance).populations) {
 			    if (!std::holds_alternative<BackgroundSourcePopulation>(population)) {
@@ -476,7 +477,7 @@ std::vector<signal_flow::Input> NetworkGraphBuilder::get_inputs(
 void NetworkGraphBuilder::add_external_input(
     signal_flow::Graph& graph,
     Resources& resources,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// only continue if any external population exists
@@ -501,7 +502,7 @@ void NetworkGraphBuilder::add_external_input(
 	// extract inter-execution-instance projection spike label translations
 	// [pre, translation]
 	std::map<
-	    common::ExecutionInstanceID,
+	    grenade::common::ExecutionInstanceID,
 	    vertex::transformation::ExternalSourceMerger::InterExecutionInstanceInput>
 	    inter_execution_instance_translations;
 	for (auto const& [_, projection] : m_network.inter_execution_instance_projections) {
@@ -586,7 +587,7 @@ void NetworkGraphBuilder::add_external_input(
 void NetworkGraphBuilder::add_background_spike_sources(
     signal_flow::Graph& graph,
     Resources& resources,
-    common::ExecutionInstanceID const& instance,
+    grenade::common::ExecutionInstanceID const& instance,
     RoutingResult const& routing_result) const
 {
 	hate::Timer timer;
@@ -660,7 +661,7 @@ void NetworkGraphBuilder::add_population(
     std::map<HemisphereOnDLS, std::vector<signal_flow::Input>> const& input,
     PopulationOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	if (resources.execution_instances.at(instance).populations.contains(
@@ -792,7 +793,7 @@ void NetworkGraphBuilder::add_padi_bus(
     signal_flow::Graph& graph,
     Resources& resources,
     halco::hicann_dls::vx::PADIBusOnDLS const& coordinate,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get incoming crossbar nodes via lookup in the resources
@@ -823,7 +824,7 @@ void NetworkGraphBuilder::add_crossbar_node(
     Resources& resources,
     halco::hicann_dls::vx::CrossbarNodeOnDLS const& coordinate,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get inputs
@@ -879,7 +880,7 @@ void NetworkGraphBuilder::add_synapse_driver(
     Resources& resources,
     halco::hicann_dls::vx::SynapseDriverOnDLS const& coordinate,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get inputs (incoming padi bus)
@@ -928,7 +929,7 @@ void NetworkGraphBuilder::add_neuron_event_output(
     signal_flow::Graph& graph,
     Resources& resources,
     halco::hicann_dls::vx::NeuronEventOutputOnDLS const& coordinate,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get inputs (incoming neuron views)
@@ -1013,7 +1014,7 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
     Resources& resources,
     ProjectionOnExecutionInstance descriptor,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor) ||
 	    connection_result.execution_instances.at(instance).connections.at(descriptor).empty()) {
@@ -1192,7 +1193,7 @@ NetworkGraphBuilder::add_projection_from_external_input(
     Resources& resources,
     ProjectionOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	auto const population_pre =
@@ -1293,7 +1294,7 @@ NetworkGraphBuilder::add_projection_from_background_spike_source(
     Resources& resources,
     ProjectionOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	auto const population_pre =
@@ -1382,7 +1383,7 @@ NetworkGraphBuilder::add_projection_from_internal_input(
     Resources& resources,
     ProjectionOnExecutionInstance const& descriptor,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	if (!std::holds_alternative<Population>(
@@ -1463,7 +1464,7 @@ void NetworkGraphBuilder::add_populations(
     signal_flow::Graph& graph,
     Resources& resources,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	// place all populations without input
 	for (auto const& [descriptor, population] :
@@ -1478,7 +1479,7 @@ void NetworkGraphBuilder::add_populations(
 void NetworkGraphBuilder::add_neuron_event_outputs(
     signal_flow::Graph& graph,
     Resources& resources,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	for (auto const coord : iter_all<NeuronEventOutputOnDLS>()) {
 		add_neuron_event_output(graph, resources, coord, instance);
@@ -1489,7 +1490,7 @@ void NetworkGraphBuilder::add_external_output(
     signal_flow::Graph& graph,
     Resources& resources,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	// get set of neuron event outputs from to be recorded populations
@@ -1597,7 +1598,7 @@ void NetworkGraphBuilder::add_external_output(
 void NetworkGraphBuilder::add_plasticity_rules(
     signal_flow::Graph& graph,
     Resources& resources,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	for (auto const& [descriptor, plasticity_rule] :
@@ -1680,7 +1681,7 @@ void NetworkGraphBuilder::add_plasticity_rules(
 void NetworkGraphBuilder::calculate_spike_labels(
     Resources& resources,
     RoutingResult const& connection_result,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	auto& spike_labels = resources.execution_instances.at(instance).graph_translation.spike_labels;
@@ -1807,7 +1808,7 @@ void NetworkGraphBuilder::add_madc_recording(
     signal_flow::Graph& graph,
     Resources& resources,
     MADCRecording const& madc_recording,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	std::vector<signal_flow::Input> inputs;
@@ -1884,7 +1885,7 @@ void NetworkGraphBuilder::add_cadc_recording(
     signal_flow::Graph& graph,
     Resources& resources,
     CADCRecording const& cadc_recording,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	halco::common::typed_array<
@@ -1954,7 +1955,7 @@ void NetworkGraphBuilder::add_pad_recording(
     signal_flow::Graph& graph,
     Resources const& resources,
     PadRecording const& pad_recording,
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	hate::Timer timer;
 	for (auto const& [pad, pad_recording_source] : pad_recording.recordings) {
@@ -1993,7 +1994,7 @@ void NetworkGraphBuilder::add_pad_recording(
 }
 
 common::EntityOnChip::ChipCoordinate NetworkGraphBuilder::get_chip_coordinate(
-    common::ExecutionInstanceID const& instance) const
+    grenade::common::ExecutionInstanceID const& instance) const
 {
 	std::set<common::EntityOnChip::ChipCoordinate> chip_coordinates;
 	auto const& execution_instance = m_network.execution_instances.at(instance);

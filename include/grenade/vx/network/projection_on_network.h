@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/projection_on_execution_instance.h"
 
@@ -8,13 +8,15 @@ namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a projection on a network. */
 struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) ProjectionOnNetwork
-    : public common::ExecutionInstanceIDMixin<ProjectionOnNetwork, ProjectionOnExecutionInstance>
+    : public grenade::common::
+          ExecutionInstanceIDMixin<ProjectionOnNetwork, ProjectionOnExecutionInstance>
 {
 	ProjectionOnNetwork() = default;
 
 	explicit ProjectionOnNetwork(
 	    ProjectionOnExecutionInstance const& projection,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID()) :
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) :
 	    mixin_t(projection, execution_instance)
 	{}
 

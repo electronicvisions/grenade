@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -52,7 +52,7 @@ void test_background_spike_source_regular(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -99,7 +99,7 @@ void test_background_spike_source_regular(
 
 	// generate input
 	grenade::vx::signal_flow::InputData inputs;
-	inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
+	inputs.runtime.push_back({{grenade::common::ExecutionInstanceID(), running_period}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
@@ -172,7 +172,7 @@ void test_background_spike_source_poisson(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	std::vector<BackgroundSourcePopulation::Neuron> background_neurons(64, record_directly);
 	BackgroundSourcePopulation population_background_spike_source{
@@ -225,7 +225,7 @@ void test_background_spike_source_poisson(
 
 		// generate input
 		grenade::vx::signal_flow::InputData inputs;
-		inputs.runtime.push_back({{grenade::vx::common::ExecutionInstanceID(), running_period}});
+		inputs.runtime.push_back({{grenade::common::ExecutionInstanceID(), running_period}});
 
 		// run graph with given inputs and return results
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);
@@ -245,7 +245,7 @@ void test_background_spike_source_poisson(
 			} else {
 				auto const& neuron =
 				    std::get<Population>(
-				        network->execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+				        network->execution_instances.at(grenade::common::ExecutionInstanceID())
 				            .populations.at(descriptor))
 				        .neurons.at(neuron_on_population);
 				auto const an = neuron.coordinate.get_placed_compartments()

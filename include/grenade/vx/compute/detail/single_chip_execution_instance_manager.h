@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 
@@ -17,7 +17,7 @@ public:
 	/**
 	 * Get next execution instance.
 	 */
-	common::ExecutionInstanceID next() SYMBOL_VISIBLE;
+	grenade::common::ExecutionInstanceID next() SYMBOL_VISIBLE;
 
 	/**
 	 * Get current hemisphere.
@@ -27,11 +27,11 @@ public:
 	/**
 	 * Get next execution instance forcing a change of the execution index.
 	 */
-	common::ExecutionInstanceID next_index() SYMBOL_VISIBLE;
+	grenade::common::ExecutionInstanceID next_index() SYMBOL_VISIBLE;
 
 private:
 	halco::hicann_dls::vx::v3::HemisphereOnDLS m_current_hemisphere;
-	common::ExecutionInstanceID m_current_instance;
+	grenade::common::ExecutionInstanceID m_current_instance;
 };
 
 } // namespace grenade::vx::compute::detail

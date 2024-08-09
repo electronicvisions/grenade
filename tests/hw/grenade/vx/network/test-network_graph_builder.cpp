@@ -1,4 +1,4 @@
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
@@ -42,7 +42,7 @@ TEST(NetworkGraphBuilder, ExternalSourcePopulationRecord)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -110,7 +110,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -170,7 +170,7 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
 	    inputs.batch_size(),
-	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
+	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
@@ -212,7 +212,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	// build network
 	NetworkBuilder network_builder;
@@ -278,7 +278,7 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
 	    inputs.batch_size(),
-	    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
+	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
@@ -320,7 +320,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 	auto chip_configs = get_chip_configs_bypass_excitatory();
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	// construct shuffled list of neurons
 	Population::Neurons all_neurons;
@@ -411,7 +411,7 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		auto inputs = input_generator.done();
 		inputs.runtime.resize(
 		    inputs.batch_size(),
-		    {{grenade::vx::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
+		    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 		// run graph with given inputs and return results
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);
@@ -447,8 +447,8 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 {
 	// Construct connection to HW
 	auto chip_configs = get_chip_configs_bypass_excitatory();
-	chip_configs[grenade::vx::common::ExecutionInstanceID(1)] =
-	    chip_configs.at(grenade::vx::common::ExecutionInstanceID(0));
+	chip_configs[grenade::common::ExecutionInstanceID(1)] =
+	    chip_configs.at(grenade::common::ExecutionInstanceID(0));
 
 	grenade::vx::execution::JITGraphExecutor executor;
 
@@ -457,7 +457,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 
 	ExternalSourcePopulation population_0({ExternalSourcePopulation::Neuron()});
 	auto const population_0_descriptor =
-	    network_builder.add(population_0, grenade::vx::common::ExecutionInstanceID(0));
+	    network_builder.add(population_0, grenade::common::ExecutionInstanceID(0));
 
 	Population::Neurons neurons_1{Population::Neuron(
 	    LogicalNeuronOnDLS(
@@ -490,7 +490,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	ExternalSourcePopulation population_2(
 	    {ExternalSourcePopulation::Neuron(), ExternalSourcePopulation::Neuron()});
 	auto const population_2_descriptor =
-	    network_builder.add(population_2, grenade::vx::common::ExecutionInstanceID(1));
+	    network_builder.add(population_2, grenade::common::ExecutionInstanceID(1));
 
 	grenade::vx::common::Time delay(100000);
 	{
@@ -527,7 +527,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	                 {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
 	Population population_3{std::move(neurons_3)};
 	auto const population_3_descriptor =
-	    network_builder.add(population_3, grenade::vx::common::ExecutionInstanceID(1));
+	    network_builder.add(population_3, grenade::common::ExecutionInstanceID(1));
 
 	{
 		Projection::Connections projection_connections;
@@ -541,7 +541,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 		    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
 		    population_2_descriptor.toPopulationOnExecutionInstance(),
 		    population_3_descriptor.toPopulationOnExecutionInstance()};
-		network_builder.add(projection, grenade::vx::common::ExecutionInstanceID(1));
+		network_builder.add(projection, grenade::common::ExecutionInstanceID(1));
 	}
 
 	// build network graph
@@ -580,10 +580,9 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	}
 	auto inputs = input_generator.done();
 	inputs.runtime.resize(
-	    inputs.batch_size(), {{grenade::vx::common::ExecutionInstanceID(0),
-	                           grenade::vx::common::Time(num * isi + delay)},
-	                          {grenade::vx::common::ExecutionInstanceID(1),
-	                           grenade::vx::common::Time(num * isi + delay)}});
+	    inputs.batch_size(),
+	    {{grenade::common::ExecutionInstanceID(0), grenade::vx::common::Time(num * isi + delay)},
+	     {grenade::common::ExecutionInstanceID(1), grenade::vx::common::Time(num * isi + delay)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);

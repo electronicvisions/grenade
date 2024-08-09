@@ -54,7 +54,7 @@ signal_flow::Data::Entry const& ExecutionInstanceData::at(
 	    ".");
 }
 
-std::vector<std::map<common::ExecutionInstanceID, common::Time>> const&
+std::vector<std::map<grenade::common::ExecutionInstanceID, common::Time>> const&
 ExecutionInstanceData::get_runtime() const
 {
 	return m_input_data.runtime;

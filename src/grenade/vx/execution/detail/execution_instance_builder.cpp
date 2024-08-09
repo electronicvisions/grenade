@@ -1,6 +1,6 @@
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
@@ -50,7 +50,7 @@ std::string name()
 
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::Graph const& graph,
-    common::ExecutionInstanceID const& execution_instance,
+    grenade::common::ExecutionInstanceID const& execution_instance,
     signal_flow::InputData const& input_list,
     signal_flow::Data const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,

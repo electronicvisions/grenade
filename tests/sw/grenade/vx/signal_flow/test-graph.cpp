@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
@@ -16,6 +16,7 @@
 #include <cereal/cereal.hpp>
 
 using namespace halco::hicann_dls::vx::v3;
+using namespace grenade::common;
 using namespace grenade::vx::common;
 using namespace grenade::vx::signal_flow;
 using namespace grenade::vx::signal_flow::vertex;

@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/common/timed_data.h"
 #include "grenade/vx/genpybind.h"

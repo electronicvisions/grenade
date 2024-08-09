@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
@@ -15,7 +15,7 @@
 TEST(Reconfiguration, CADC)
 {
 	using namespace grenade::vx::signal_flow;
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 	Graph cadc_using_graph;
 	vertex::NeuronView neuron(
 	    vertex::NeuronView::Columns(1), vertex::NeuronView::Configs(1), vertex::NeuronView::Row());

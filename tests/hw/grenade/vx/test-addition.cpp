@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
@@ -42,7 +42,7 @@ TEST(Addition, Single)
 
 	grenade::vx::signal_flow::Graph g;
 
-	grenade::vx::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceID instance;
 
 	auto const v1 = g.add(external_input, instance, {});
 	auto const v2 = g.add(data_input, instance, {v1});

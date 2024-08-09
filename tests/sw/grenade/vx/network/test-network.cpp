@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/external_source_population.h"
 #include "grenade/vx/network/madc_recording.h"
@@ -10,6 +10,7 @@
 #include <chrono>
 
 using namespace grenade::vx::network;
+using namespace grenade::common;
 using namespace grenade::vx::common;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;

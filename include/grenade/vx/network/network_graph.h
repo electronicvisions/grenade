@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph_statistics.h"
@@ -127,7 +127,7 @@ struct GENPYBIND(visible) NetworkGraph
 			Populations populations;
 		};
 
-		std::map<common::ExecutionInstanceID, ExecutionInstance> execution_instances;
+		std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 	};
 	/** Translation between unrouted and routed graph representation. */
 	GENPYBIND(getter_for(graph_translation))

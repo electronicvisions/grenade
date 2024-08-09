@@ -1,6 +1,6 @@
 #include "grenade/vx/compute/addition.h"
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -15,7 +15,7 @@ Addition::Addition(std::vector<signal_flow::Int8> const& other) :
 {
 	using namespace halco::hicann_dls::vx;
 
-	auto const instance = common::ExecutionInstanceID();
+	auto const instance = grenade::common::ExecutionInstanceID();
 
 	auto const size = other.size();
 
@@ -56,8 +56,8 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 	using namespace halco::hicann_dls::vx;
 
 	execution::JITGraphExecutor::ChipConfigs configs;
-	configs.insert(std::pair<common::ExecutionInstanceID, lola::vx::v3::Chip>(
-	    common::ExecutionInstanceID(), config));
+	configs.insert(std::pair<grenade::common::ExecutionInstanceID, lola::vx::v3::Chip>(
+	    grenade::common::ExecutionInstanceID(), config));
 
 	if (inputs.size() == 0) {
 		throw std::runtime_error("Provided inputs are empty.");

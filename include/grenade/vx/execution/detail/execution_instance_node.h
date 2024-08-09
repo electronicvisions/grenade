@@ -35,7 +35,7 @@ struct ExecutionInstanceNode
 	    std::vector<signal_flow::OutputData>& data_maps,
 	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
 	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
 	    backend::Connection& connection,
@@ -64,7 +64,7 @@ private:
 	std::vector<signal_flow::OutputData>& data_maps;
 	std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps;
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs;
-	common::ExecutionInstanceID execution_instance;
+	grenade::common::ExecutionInstanceID execution_instance;
 	halco::hicann_dls::vx::v3::DLSGlobal dls_global;
 	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> configs;
 	backend::Connection& connection;

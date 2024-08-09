@@ -1,11 +1,11 @@
 #pragma once
-#include "grenade/vx/genpybind.h"
+#include "grenade/common/genpybind.h"
 #include "halco/common/geometry.h"
 #include "halco/common/mixin.h"
 #include <cstddef>
 
-namespace grenade::vx {
-namespace common GENPYBIND_TAG_GRENADE_VX_COMMON {
+namespace grenade {
+namespace common GENPYBIND_TAG_GRENADE_COMMON {
 
 /**
  * Execution instance identifier.
@@ -21,10 +21,10 @@ struct GENPYBIND(inline_base("*")) ExecutionInstanceID
 HALCO_COORDINATE_MIXIN(ExecutionInstanceIDMixin, ExecutionInstanceID, execution_instance_id)
 
 } // namespace common
-} // namespace grenade::vx
+} // namespace grenade
 
 namespace std {
 
-HALCO_GEOMETRY_HASH_CLASS(grenade::vx::common::ExecutionInstanceID)
+HALCO_GEOMETRY_HASH_CLASS(grenade::common::ExecutionInstanceID)
 
 } // namespace std

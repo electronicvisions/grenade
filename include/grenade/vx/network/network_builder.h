@@ -34,8 +34,8 @@ public:
 	 */
 	PopulationOnNetwork add(
 	    Population const& population,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add off-chip population.
@@ -43,8 +43,8 @@ public:
 	 */
 	PopulationOnNetwork add(
 	    ExternalSourcePopulation const& population,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add on-chip background spike source population.
@@ -52,8 +52,8 @@ public:
 	 */
 	PopulationOnNetwork add(
 	    BackgroundSourcePopulation const& population,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add projection between already added populations.
@@ -64,8 +64,8 @@ public:
 	 */
 	ProjectionOnNetwork add(
 	    Projection const& projection,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add MADC recording of a single neuron.
@@ -76,8 +76,8 @@ public:
 	 */
 	void add(
 	    MADCRecording const& madc_recording,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add CADC recording of a collection of neurons.
@@ -88,8 +88,8 @@ public:
 	 */
 	void add(
 	    CADCRecording const& cadc_recording,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add pad recording of a collection of neurons.
@@ -100,8 +100,8 @@ public:
 	 */
 	void add(
 	    PadRecording const& pad_recording,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/*
 	 * Add plasticity rule on already added projections.
@@ -109,8 +109,8 @@ public:
 	 */
 	PlasticityRuleOnNetwork add(
 	    PlasticityRule const& plasticity_rule,
-	    common::ExecutionInstanceID const& execution_instance = common::ExecutionInstanceID())
-	    SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
 	 * Add inter-execution-instance projection between already added populations.
@@ -125,7 +125,8 @@ public:
 	std::shared_ptr<Network> done() SYMBOL_VISIBLE;
 
 private:
-	std::map<common::ExecutionInstanceID, Network::ExecutionInstance> m_execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, Network::ExecutionInstance>
+	    m_execution_instances;
 	std::map<InterExecutionInstanceProjectionOnNetwork, InterExecutionInstanceProjection>
 	    m_inter_execution_instance_projections;
 	std::chrono::microseconds m_duration;
@@ -139,7 +140,7 @@ private:
 	    boost::no_property>
 	    ExecutionInstanceGraph;
 	ExecutionInstanceGraph m_execution_instance_graph;
-	std::map<common::ExecutionInstanceID, ExecutionInstanceGraph::vertex_descriptor>
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstanceGraph::vertex_descriptor>
 	    m_execution_instance_vertices;
 };
 

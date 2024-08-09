@@ -10,8 +10,8 @@
 
 #include <log4cxx/logger.h>
 
-#include "grenade/vx/common/detail/null_output_iterator.h"
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/detail/null_output_iterator.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/input.h"
 #include "grenade/vx/signal_flow/supports_input_from.h"
 #include "hate/timer.h"
@@ -151,7 +151,7 @@ Graph& Graph::operator=(Graph&& other)
 
 Graph::vertex_descriptor Graph::add(
     vertex_descriptor const vertex_reference,
-    common::ExecutionInstanceID const execution_instance,
+    grenade::common::ExecutionInstanceID const execution_instance,
     std::vector<Input> const inputs)
 {
 	return add<>(vertex_reference, execution_instance, inputs);
@@ -159,7 +159,7 @@ Graph::vertex_descriptor Graph::add(
 
 void Graph::add_edges(
     vertex_descriptor descriptor,
-    common::ExecutionInstanceID const& execution_instance,
+    grenade::common::ExecutionInstanceID const& execution_instance,
     std::vector<Input> const& inputs)
 {
 	// add execution instance (if not already present)
@@ -223,7 +223,7 @@ void Graph::add_edges(
 
 void Graph::add_log(
     vertex_descriptor descriptor,
-    common::ExecutionInstanceID const& execution_instance,
+    grenade::common::ExecutionInstanceID const& execution_instance,
     hate::Timer const& timer)
 {
 	auto const log = [&](auto const& v) {
@@ -273,7 +273,8 @@ bool Graph::is_acyclic_execution_instance_graph() const
 	assert(m_execution_instance_graph);
 	try {
 		boost::topological_sort(
-		    *m_execution_instance_graph, common::detail::NullOutputIterator<vertex_descriptor>{});
+		    *m_execution_instance_graph,
+		    grenade::common::detail::NullOutputIterator<vertex_descriptor>{});
 	} catch (boost::not_a_dag const&) {
 		return false;
 	}
@@ -477,8 +478,8 @@ template <typename Vertex, typename InputVertex>
 void Graph::check_execution_instances(
     Vertex const&,
     InputVertex const& input_vertex,
-    common::ExecutionInstanceID const& vertex_execution_instance,
-    common::ExecutionInstanceID const& input_vertex_execution_instance)
+    grenade::common::ExecutionInstanceID const& vertex_execution_instance,
+    grenade::common::ExecutionInstanceID const& input_vertex_execution_instance)
 {
 	auto const connection_type = input_vertex.output().type;
 	auto const connection_type_can_connect =
@@ -505,7 +506,7 @@ void Graph::check_execution_instances(
 
 void Graph::check_inputs(
     Vertex const& vertex,
-    common::ExecutionInstanceID const& execution_instance,
+    grenade::common::ExecutionInstanceID const& execution_instance,
     std::vector<Input> const& inputs)
 {
 	auto const checker = [&](auto const& v) {

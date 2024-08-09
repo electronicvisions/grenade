@@ -17,7 +17,7 @@ using namespace haldls::vx::v3;
 TEST(network_InputGenerator, General)
 {
 	auto const network = std::make_shared<Network>(Network{
-	    {{common::ExecutionInstanceID(),
+	    {{grenade::common::ExecutionInstanceID(),
 	      Network::ExecutionInstance{
 	          {{PopulationOnExecutionInstance(0),
 	            ExternalSourcePopulation(
@@ -63,7 +63,7 @@ TEST(network_InputGenerator, General)
 	          std::nullopt,
 	          {}}}},
 	    {},
-	    {common::ExecutionInstanceID()},
+	    {grenade::common::ExecutionInstanceID()},
 	    {}});
 
 	auto const routing = routing::PortfolioRouter()(network);
@@ -132,46 +132,48 @@ TEST(network_InputGenerator, General)
 
 		EXPECT_EQ(data.batch_size(), batch_size);
 		EXPECT_TRUE(network_graph.get_graph_translation()
-		                .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		                .execution_instances.at(grenade::common::ExecutionInstanceID())
 		                .event_input_vertex);
-		EXPECT_TRUE(data.data.contains(
-		    *network_graph.get_graph_translation()
-		         .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
-		         .event_input_vertex));
+		EXPECT_TRUE(
+		    data.data.contains(*network_graph.get_graph_translation()
+		                            .execution_instances.at(grenade::common::ExecutionInstanceID())
+		                            .event_input_vertex));
 		EXPECT_TRUE(std::holds_alternative<std::vector<signal_flow::TimedSpikeToChipSequence>>(
 		    data.data.at(*network_graph.get_graph_translation()
-		                      .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		                      .execution_instances.at(grenade::common::ExecutionInstanceID())
 		                      .event_input_vertex)));
 		auto const& spikes = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
 		    data.data.at(*network_graph.get_graph_translation()
-		                      .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		                      .execution_instances.at(grenade::common::ExecutionInstanceID())
 		                      .event_input_vertex));
 		EXPECT_EQ(spikes.size(), batch_size);
 
 		assert(network_graph.get_graph_translation()
-		           .execution_instances.at(common::ExecutionInstanceID())
+		           .execution_instances.at(grenade::common::ExecutionInstanceID())
 		           .spike_labels.at(PopulationOnExecutionInstance(0))
 		           .at(0)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
-		auto const spike_label_0 = *(network_graph.get_graph_translation()
-		                                 .execution_instances.at(common::ExecutionInstanceID())
-		                                 .spike_labels.at(PopulationOnExecutionInstance(0))
-		                                 .at(0)
-		                                 .at(CompartmentOnLogicalNeuron())
-		                                 .at(0));
+		auto const spike_label_0 =
+		    *(network_graph.get_graph_translation()
+		          .execution_instances.at(grenade::common::ExecutionInstanceID())
+		          .spike_labels.at(PopulationOnExecutionInstance(0))
+		          .at(0)
+		          .at(CompartmentOnLogicalNeuron())
+		          .at(0));
 		assert(network_graph.get_graph_translation()
-		           .execution_instances.at(common::ExecutionInstanceID())
+		           .execution_instances.at(grenade::common::ExecutionInstanceID())
 		           .spike_labels.at(PopulationOnExecutionInstance(0))
 		           .at(1)
 		           .at(CompartmentOnLogicalNeuron())
 		           .at(0));
-		auto const spike_label_1 = *(network_graph.get_graph_translation()
-		                                 .execution_instances.at(common::ExecutionInstanceID())
-		                                 .spike_labels.at(PopulationOnExecutionInstance(0))
-		                                 .at(1)
-		                                 .at(CompartmentOnLogicalNeuron())
-		                                 .at(0));
+		auto const spike_label_1 =
+		    *(network_graph.get_graph_translation()
+		          .execution_instances.at(grenade::common::ExecutionInstanceID())
+		          .spike_labels.at(PopulationOnExecutionInstance(0))
+		          .at(1)
+		          .at(CompartmentOnLogicalNeuron())
+		          .at(0));
 		std::vector<signal_flow::TimedSpikeToChipSequence> expectation{
 		    {
 		        signal_flow::TimedSpikeToChip(

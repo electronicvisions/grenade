@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/signal_flow/data.h"
@@ -22,14 +22,14 @@ struct GENPYBIND(visible) InputData : public Data
 	 * Event data is only recorded during the runtime.
 	 * If the runtime data is empty it is ignored.
 	 */
-	std::vector<std::map<common::ExecutionInstanceID, common::Time>> runtime;
+	std::vector<std::map<grenade::common::ExecutionInstanceID, common::Time>> runtime;
 
 	/**
 	 * Minimal waiting time between batch entries.
 	 * For the case of multiple realtime columns (multiple snippets per batch entry),
 	 * only the `inter_batch_entry_wait` of the last realtime column will be processed.
 	 */
-	std::map<common::ExecutionInstanceID, common::Time> inter_batch_entry_wait;
+	std::map<grenade::common::ExecutionInstanceID, common::Time> inter_batch_entry_wait;
 
 	InputData() SYMBOL_VISIBLE;
 

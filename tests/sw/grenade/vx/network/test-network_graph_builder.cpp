@@ -66,28 +66,28 @@ TEST(logical_network_build_network_graph, Multapses)
 
 	EXPECT_EQ(
 	    network_graph.get_graph_translation()
-	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .execution_instances.at(grenade::common::ExecutionInstanceID())
 	        .projections.at(projection_descriptor)
 	        .at(0)
 	        .size(),
 	    1);
 	EXPECT_EQ(
 	    network_graph.get_graph_translation()
-	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .execution_instances.at(grenade::common::ExecutionInstanceID())
 	        .projections.at(projection_descriptor)
 	        .at(1)
 	        .size(),
 	    2);
 	EXPECT_EQ(
 	    network_graph.get_graph_translation()
-	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .execution_instances.at(grenade::common::ExecutionInstanceID())
 	        .projections.at(projection_descriptor)
 	        .at(2)
 	        .size(),
 	    1);
 	EXPECT_EQ(
 	    network_graph.get_graph_translation()
-	        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	        .execution_instances.at(grenade::common::ExecutionInstanceID())
 	        .projections.at(projection_descriptor)
 	        .at(3)
 	        .size(),
@@ -95,7 +95,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	{
 		auto const& local_translation =
 		    network_graph.get_graph_translation()
-		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .execution_instances.at(grenade::common::ExecutionInstanceID())
 		        .projections.at(projection_descriptor)
 		        .at(0);
 		EXPECT_EQ(
@@ -108,7 +108,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	{
 		auto const& local_translation =
 		    network_graph.get_graph_translation()
-		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .execution_instances.at(grenade::common::ExecutionInstanceID())
 		        .projections.at(projection_descriptor)
 		        .at(1);
 		EXPECT_EQ(
@@ -127,7 +127,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	{
 		auto const& local_translation =
 		    network_graph.get_graph_translation()
-		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .execution_instances.at(grenade::common::ExecutionInstanceID())
 		        .projections.at(projection_descriptor)
 		        .at(2);
 		EXPECT_EQ(
@@ -140,7 +140,7 @@ TEST(logical_network_build_network_graph, Multapses)
 	{
 		auto const& local_translation =
 		    network_graph.get_graph_translation()
-		        .execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+		        .execution_instances.at(grenade::common::ExecutionInstanceID())
 		        .projections.at(projection_descriptor)
 		        .at(3);
 		EXPECT_EQ(
@@ -189,7 +189,7 @@ TEST(build_network_graph, EmptyProjection)
 	auto network = builder.done();
 	auto const routing_result = routing::PortfolioRouter()(network);
 
-	EXPECT_TRUE(routing_result.execution_instances.at(grenade::vx::common::ExecutionInstanceID())
+	EXPECT_TRUE(routing_result.execution_instances.at(grenade::common::ExecutionInstanceID())
 	                .connections.contains(projection_descriptor));
 
 	[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
@@ -316,7 +316,7 @@ TEST(build_network_graph, GranularitySweep)
 
 TEST(build_network_graph, ExecutionInstance)
 {
-	grenade::vx::common::ExecutionInstanceID execution_instance(1);
+	grenade::common::ExecutionInstanceID execution_instance(1);
 
 	NetworkBuilder builder;
 

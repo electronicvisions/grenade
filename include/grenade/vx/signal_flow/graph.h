@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
 #include "grenade/vx/signal_flow/port_restriction.h"
@@ -59,8 +59,9 @@ public:
 	typedef std::map<edge_descriptor, std::optional<PortRestriction>> edge_property_map_type;
 
 	/** Map between execution instance graph vertex descriptor and execution instance. */
-	typedef boost::bimap<vertex_descriptor, boost::bimaps::set_of<common::ExecutionInstanceID>>
-	    execution_instance_map_type;
+	typedef boost::
+	    bimap<vertex_descriptor, boost::bimaps::set_of<grenade::common::ExecutionInstanceID>>
+	        execution_instance_map_type;
 
 	/**
 	 * Map between descriptors of vertices and descriptor of execution instance graph vertex.
@@ -103,8 +104,9 @@ public:
 	 */
 	template <typename VertexT>
 	vertex_descriptor add(
-	    VertexT&& vertex, common::ExecutionInstanceID execution_instance, std::vector<Input> inputs)
-	    GENPYBIND(hidden);
+	    VertexT&& vertex,
+	    grenade::common::ExecutionInstanceID execution_instance,
+	    std::vector<Input> inputs) GENPYBIND(hidden);
 
 	/**
 	 * Add vertex by reference on specified execution instance with specified inputs.
@@ -122,7 +124,7 @@ public:
 	 */
 	vertex_descriptor add(
 	    vertex_descriptor vertex_reference,
-	    common::ExecutionInstanceID execution_instance,
+	    grenade::common::ExecutionInstanceID execution_instance,
 	    std::vector<Input> inputs) GENPYBIND(hidden) SYMBOL_VISIBLE;
 
 	/**
@@ -220,11 +222,11 @@ private:
 
 	void add_edges(
 	    vertex_descriptor descriptor,
-	    common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    std::vector<Input> const& inputs) SYMBOL_VISIBLE;
 	void add_log(
 	    vertex_descriptor descriptor,
-	    common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    hate::Timer const& timer) SYMBOL_VISIBLE;
 
 	template <bool VariadicInput>
@@ -246,12 +248,12 @@ private:
 	void check_execution_instances(
 	    Vertex const& vertex,
 	    InputVertex const& input_vertex,
-	    common::ExecutionInstanceID const& vertex_execution_instance,
-	    common::ExecutionInstanceID const& input_vertex_execution_instance);
+	    grenade::common::ExecutionInstanceID const& vertex_execution_instance,
+	    grenade::common::ExecutionInstanceID const& input_vertex_execution_instance);
 
 	void check_inputs(
 	    Vertex const& vertex,
-	    common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    std::vector<Input> const& inputs) SYMBOL_VISIBLE;
 
 	void update(vertex_descriptor vertex_reference, Vertex&& vertex) SYMBOL_VISIBLE;

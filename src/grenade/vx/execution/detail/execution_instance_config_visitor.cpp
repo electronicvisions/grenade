@@ -1,6 +1,6 @@
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
 
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
@@ -55,7 +55,7 @@ ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsa
 
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     signal_flow::Graph const& graph,
-    common::ExecutionInstanceID const& execution_instance,
+    grenade::common::ExecutionInstanceID const& execution_instance,
     lola::vx::v3::Chip& chip_config,
     size_t realtime_column_index) :
     m_graph(graph),

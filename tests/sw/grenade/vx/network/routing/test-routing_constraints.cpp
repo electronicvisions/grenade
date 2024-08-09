@@ -41,9 +41,9 @@ TEST(RoutingConstraints, check)
 
 		assert(network);
 		auto const connection_routing_result = build_connection_routing(
-		    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+		    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 		RoutingConstraints constraints(
-		    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+		    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 		    connection_routing_result);
 		EXPECT_THROW(constraints.check(), std::runtime_error);
 	}
@@ -74,9 +74,9 @@ TEST(RoutingConstraints, check)
 
 		assert(network);
 		auto const connection_routing_result = build_connection_routing(
-		    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+		    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 		RoutingConstraints constraints(
-		    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+		    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 		    connection_routing_result);
 		EXPECT_THROW(constraints.check(), std::runtime_error);
 	}
@@ -124,9 +124,9 @@ TEST(RoutingConstraints, check)
 
 		assert(network);
 		auto const connection_routing_result = build_connection_routing(
-		    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+		    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 		RoutingConstraints constraints(
-		    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+		    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 		    connection_routing_result);
 
 		EXPECT_THROW(constraints.check(), std::runtime_error);
@@ -207,9 +207,9 @@ TEST(RoutingConstraints, get_internal_connections)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const internal_connections = constraints.get_internal_connections();
@@ -290,9 +290,9 @@ TEST(RoutingConstraints, get_background_connections)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const background_connections = constraints.get_background_connections();
@@ -371,9 +371,9 @@ TEST(RoutingConstraints, get_external_connections)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const external_connections = constraints.get_external_connections();
@@ -444,9 +444,9 @@ TEST(RoutingConstraints, get_external_connections_per_hemisphere)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const external_connections = constraints.get_external_connections_per_hemisphere();
@@ -529,9 +529,9 @@ TEST(RoutingConstraints, get_external_sources_to_hemisphere)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const external_sources = constraints.get_external_sources_to_hemisphere();
@@ -621,9 +621,9 @@ TEST(RoutingConstraints, get_neuron_in_degree)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neuron_in_degree = constraints.get_neuron_in_degree();
@@ -709,9 +709,9 @@ TEST(RoutingConstraints, get_neuron_in_degree_per_padi_bus)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neuron_in_degree = constraints.get_neuron_in_degree_per_padi_bus();
@@ -802,9 +802,9 @@ TEST(RoutingConstraints, get_neuron_in_degree_per_receptor_type)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neuron_in_degree = constraints.get_neuron_in_degree_per_receptor_type();
@@ -891,9 +891,9 @@ TEST(RoutingConstraints, get_neuron_in_degree_per_receptor_type_per_padi_bus)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neuron_in_degree = constraints.get_neuron_in_degree_per_receptor_type_per_padi_bus();
@@ -993,9 +993,9 @@ TEST(RoutingConstraints, get_num_synapse_rows_per_padi_bus_per_receptor_type)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const num_synapse_rows = constraints.get_num_synapse_rows_per_padi_bus_per_receptor_type();
@@ -1095,9 +1095,9 @@ TEST(RoutingConstraints, get_num_synapse_rows_per_padi_bus)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const num_synapse_rows = constraints.get_num_synapse_rows_per_padi_bus();
@@ -1155,9 +1155,9 @@ TEST(RoutingConstraints, get_neurons_on_event_output)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neurons_on_event_output = constraints.get_neurons_on_event_output();
@@ -1218,9 +1218,9 @@ TEST(RoutingConstraints, get_neurons_on_padi_bus)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neurons_on_padi_bus = constraints.get_neurons_on_padi_bus();
@@ -1307,9 +1307,9 @@ TEST(RoutingConstraints, get_num_background_sources_on_padi_bus)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const num_background_sources = constraints.get_num_background_sources_on_padi_bus();
@@ -1396,9 +1396,9 @@ TEST(RoutingConstraints, get_neuron_event_outputs_on_padi_bus)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const neuron_event_outputs = constraints.get_neuron_event_outputs_on_padi_bus();
@@ -1493,9 +1493,9 @@ TEST(RoutingConstraints, get_padi_bus_constraints)
 
 	assert(network);
 	auto const connection_routing_result = build_connection_routing(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()));
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()));
 	RoutingConstraints constraints(
-	    network->execution_instances.at(grenade::vx::common::ExecutionInstanceID()),
+	    network->execution_instances.at(grenade::common::ExecutionInstanceID()),
 	    connection_routing_result);
 
 	auto const padi_bus_constraints = constraints.get_padi_bus_constraints();

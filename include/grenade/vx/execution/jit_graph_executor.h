@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/detail/connection_state_storage.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
@@ -37,11 +37,12 @@ public:
 
 	static constexpr char name[] = "JITGraphExecutor";
 
-	typedef std::map<common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
+	typedef std::map<grenade::common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
 
-	typedef std::
-	    map<common::ExecutionInstanceID, std::shared_ptr<signal_flow::ExecutionInstanceHooks>>
-	        Hooks;
+	typedef std::map<
+	    grenade::common::ExecutionInstanceID,
+	    std::shared_ptr<signal_flow::ExecutionInstanceHooks>>
+	    Hooks;
 
 	/**
 	 * Construct executor with active connections from environment.
