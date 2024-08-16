@@ -398,7 +398,7 @@ void NetworkGraphBuilder::add_external_input(
 			        .at(projection.population_pre.toPopulationOnExecutionInstance())
 			        .at(connection.index_pre.first)
 			        .at(connection.index_pre.second);
-			assert(spike_labels_pre.size() == 1);
+			// use first label to generate forwarded spikes
 			auto const& spike_label_pre = spike_labels_pre.at(0);
 			assert(spike_label_pre);
 
