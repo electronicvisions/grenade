@@ -29,6 +29,7 @@ std::ostream& operator<<(std::ostream& os, Network::ExecutionInstance const& exe
 	for (auto const& [descriptor, population] : execution_instance.populations) {
 		ios << descriptor << ": ";
 		std::visit([&ios](auto const& pop) { ios << pop; }, population);
+		ios << "projections:\n";
 	}
 	ios << hate::Indentation("\t") << "projections:\n";
 	ios << hate::Indentation("\t\t");
