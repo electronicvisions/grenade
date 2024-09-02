@@ -363,7 +363,6 @@ void ExecutionInstanceBuilder::process(
 				size_t offset = ppu_vector_alignment;
 				// get samples
 				auto& samples = sample_batches.at(batch_index);
-				common::Time time_0;
 				for (size_t i = 0; i < num_samples; ++i) {
 					common::TimedData<std::vector<signal_flow::Int8>> local_samples;
 					uint64_t time = 0;
@@ -374,12 +373,9 @@ void ExecutionInstanceBuilder::process(
 					local_samples.time =
 					    common::Time(time / 2); // FPGA clock 125MHz vs. PPU clock 250MHz
 					// Since there's no time synchronisation between PPUs and ChipTime, we assume
-					// the first received sample happens at time 0 and calculate the time of later
-					// samples from that reference point via the given PPU-local counter value.
-					if (i == 0) {
-						time_0 = local_samples.time;
-					}
-					local_samples.time -= time_0;
+					// the first received sample happens at time 0 offsetted by the wait duration
+					// between starting the CADC and the beginning of the realtime section.
+					local_samples.time -= common::Time(periodic_cadc_fpga_wait_clock_cycles);
 					offset += ppu_vector_alignment;
 					auto const get_index = [](auto const& column) {
 						size_t const j = column / 2;
@@ -1043,7 +1039,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
 			builder.merge(ppu_command_builder += current_time);
 			current_time += ppu_command_result.duration;
-			current_time += Timer::Value(6 * Timer::Value::fpga_clock_cycles_per_us);
+			current_time += periodic_cadc_fpga_wait_clock_cycles;
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {

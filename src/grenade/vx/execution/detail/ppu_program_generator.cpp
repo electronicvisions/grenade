@@ -354,9 +354,9 @@ auto& local_periodic_cadc_samples = std::get<0>(grenade::vx::ppu::detail::uninit
 
 uint32_t periodic_cadc_readout_memory_offset = 0;
 
-void perform_periodic_read_recording(size_t const offset) ATTRIB_LINK_TO_INTERNAL;
+void perform_periodic_read_recording(size_t const offset, uint64_t time_origin) ATTRIB_LINK_TO_INTERNAL;
 
-void perform_periodic_read_recording(size_t const offset)
+void perform_periodic_read_recording(size_t const offset, uint64_t time_origin)
 {
 	using namespace libnux::vx;
 
@@ -389,7 +389,7 @@ void perform_periodic_read_recording(size_t const offset)
 	);
 	// clang-format on
 
-	local_periodic_cadc_samples[offset].first = time;
+	local_periodic_cadc_samples[offset].first = time - time_origin;
 }
 
 void perform_periodic_read() ATTRIB_LINK_TO_INTERNAL;
@@ -399,10 +399,12 @@ void perform_periodic_read()
 	using namespace libnux::vx;
 
 	// instruction cache warming
-	perform_periodic_read_recording(periodic_cadc_readout_memory_offset);
+	auto const time_before_cache_warming = libnux::vx::now();
+	perform_periodic_read_recording(periodic_cadc_readout_memory_offset, time_before_cache_warming);
 	status = grenade::vx::ppu::detail::Status::inside_periodic_read;
+	while (libnux::vx::now() < time_before_cache_warming + {{periodic_cadc_ppu_wait_clock_cycles}}) {}
 	while (status != grenade::vx::ppu::detail::Status::stop_periodic_read) {
-		perform_periodic_read_recording(periodic_cadc_readout_memory_offset);
+		perform_periodic_read_recording(periodic_cadc_readout_memory_offset, time_before_cache_warming);
 		periodic_cadc_readout_memory_offset++;
 	}
 
@@ -422,6 +424,8 @@ void perform_periodic_read()
 		    has_periodic_cadc_readout_on_dram ? std::string("ext_dram") : std::string("ext");
 		parameters["recording_global_address"] =
 		    has_periodic_cadc_readout_on_dram ? std::string("extmem_dram") : std::string("extmem");
+		parameters["periodic_cadc_ppu_wait_clock_cycles"] =
+		    periodic_cadc_ppu_wait_clock_cycles.value();
 		sources.push_back(inja::render(source_template, parameters));
 	} else {
 		sources.push_back("void perform_periodic_read() {}");

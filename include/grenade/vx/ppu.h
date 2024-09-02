@@ -2,6 +2,7 @@
 #include "halco/common/typed_array.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/ppu.h"
+#include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/ppu.h"
 #include <cstdint>
@@ -17,6 +18,11 @@ namespace grenade::vx {
 constexpr static size_t num_cadc_samples_in_extmem = 100;
 constexpr static size_t num_cadc_samples_in_extmem_dram = 2048 * 100;
 constexpr static size_t ppu_vector_alignment = 128;
+static haldls::vx::v3::Timer::Value const periodic_cadc_fpga_wait_clock_cycles(
+    10 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us);
+static haldls::vx::v3::Timer::Value const periodic_cadc_ppu_wait_clock_cycles(
+    5 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us *
+    2 /* 250MHz PPU clock vs. 125 MHz FPGA clock. */);
 
 /**
  * Convert column byte values to PPUMemoryBlock.
