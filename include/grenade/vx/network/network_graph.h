@@ -40,6 +40,9 @@ struct GENPYBIND(visible) NetworkGraph
 			/** Vertex descriptor at which to insert external spike data. */
 			std::optional<signal_flow::Graph::vertex_descriptor> event_input_vertex;
 
+			/** Vertex descriptor which merges external spike data. */
+			std::optional<signal_flow::Graph::vertex_descriptor> event_merger_vertex;
+
 			/** Vertex descriptor from which to extract recorded spike data. */
 			std::optional<signal_flow::Graph::vertex_descriptor> event_output_vertex;
 

@@ -1,6 +1,7 @@
 #include "grenade/vx/network/requires_routing.h"
 
 #include "grenade/vx/network/build_connection_routing.h"
+#include "grenade/vx/network/inter_execution_instance_projection.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
 
@@ -110,6 +111,23 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 				return true;
 			}
 		}
+	}
+
+	// check if inter execution instance projection collection changed
+	auto const get_inter_execution_instance_targets = [](Network const& network) {
+		std::set<
+		    std::tuple<PopulationOnNetwork, InterExecutionInstanceProjection::Connection::Index>>
+		    inter_execution_instance_targets;
+		for (auto const& [_, proj] : network.inter_execution_instance_projections) {
+			for (auto const& conn : proj.connections) {
+				inter_execution_instance_targets.insert({proj.population_post, conn.index_post});
+			}
+		}
+		return inter_execution_instance_targets;
+	};
+	if (get_inter_execution_instance_targets(*current) !=
+	    get_inter_execution_instance_targets(*old)) {
+		return false;
 	}
 	return false;
 }

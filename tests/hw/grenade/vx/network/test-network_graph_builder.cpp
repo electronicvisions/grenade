@@ -547,7 +547,9 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	// build network graph
 	auto const network = network_builder.done();
 	auto const routing_result = routing::PortfolioRouter()(network);
-	auto const network_graph = build_network_graph(network, routing_result);
+	auto network_graph = build_network_graph(network, routing_result);
+	// ensure update_network_graph yields same config
+	update_network_graph(network_graph, network);
 
 	// generate input
 	constexpr size_t num = 100;
