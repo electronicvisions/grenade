@@ -1,6 +1,7 @@
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/ppu/detail/stopped.h"
+#include "libnux/vx/attrib.h"
 #include "libnux/vx/v3/correlation.h"
 #include "libnux/vx/v3/dls.h"
 #include "libnux/vx/v3/mailbox.h"
@@ -26,7 +27,9 @@ volatile Stopped stopped = Stopped::no;
 
 void scheduling();
 
-void perform_periodic_read();
+void perform_periodic_read() ATTRIB_LINK_TO_INTERNAL;
+
+int start() ATTRIB_LINK_TO_INTERNAL;
 
 int start()
 {

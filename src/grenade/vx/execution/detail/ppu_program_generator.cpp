@@ -354,6 +354,8 @@ auto& local_periodic_cadc_samples = std::get<0>(grenade::vx::ppu::detail::uninit
 
 uint32_t periodic_cadc_readout_memory_offset = 0;
 
+void perform_periodic_read_recording(size_t const offset) ATTRIB_LINK_TO_INTERNAL;
+
 void perform_periodic_read_recording(size_t const offset)
 {
 	using namespace libnux::vx;
@@ -389,6 +391,8 @@ void perform_periodic_read_recording(size_t const offset)
 
 	local_periodic_cadc_samples[offset].first = time;
 }
+
+void perform_periodic_read() ATTRIB_LINK_TO_INTERNAL;
 
 void perform_periodic_read()
 {
