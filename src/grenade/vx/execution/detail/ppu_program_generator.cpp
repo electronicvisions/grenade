@@ -333,6 +333,7 @@ void scheduling()
 		// clang-format off
 		std::string source_template = R"grenadeTemplate(
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/ppu/detail/uninitialized.h"
 #include "libnux/vx/dls.h"
 #include "libnux/vx/vector.h"
 #include "libnux/vx/globaladdress.h"
@@ -342,13 +343,14 @@ void scheduling()
 
 extern volatile libnux::vx::PPUOnDLS ppu;
 extern volatile grenade::vx::ppu::detail::Status status;
-std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t>
-    periodic_cadc_samples_top __attribute__((section("{{recording_placement}}.data")));
-std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t>
-    periodic_cadc_samples_bot __attribute__((section("{{recording_placement}}.data")));
 
-auto& local_periodic_cadc_samples = std::get<0>(ppu == libnux::vx::PPUOnDLS::bottom ?
-    periodic_cadc_samples_bot : periodic_cadc_samples_top);
+typedef std::tuple<std::array<std::pair<uint64_t, libnux::vx::vector_row_t>, {{num_samples}}>, uint32_t> PeriodicCADCSamples;
+
+grenade::vx::ppu::detail::uninitialized<PeriodicCADCSamples> periodic_cadc_samples_top __attribute__((section("{{recording_placement}}.data")));
+grenade::vx::ppu::detail::uninitialized<PeriodicCADCSamples> periodic_cadc_samples_bot __attribute__((section("{{recording_placement}}.data")));
+
+auto& local_periodic_cadc_samples = std::get<0>(grenade::vx::ppu::detail::uninitialized_cast<PeriodicCADCSamples>(ppu == libnux::vx::PPUOnDLS::bottom ?
+    periodic_cadc_samples_bot : periodic_cadc_samples_top));
 
 uint32_t periodic_cadc_readout_memory_offset = 0;
 
@@ -400,7 +402,7 @@ void perform_periodic_read()
 		periodic_cadc_readout_memory_offset++;
 	}
 
-	std::get<1>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : periodic_cadc_samples_top) = periodic_cadc_readout_memory_offset;
+	std::get<1>(grenade::vx::ppu::detail::uninitialized_cast<PeriodicCADCSamples>(ppu == libnux::vx::PPUOnDLS::bottom ? periodic_cadc_samples_bot : periodic_cadc_samples_top)) = periodic_cadc_readout_memory_offset;
 	asm volatile(
 	    "fxvinx 0, %[b0], %[i]\n"
 	    "sync\n"
