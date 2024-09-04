@@ -31,6 +31,7 @@ public:
 
 	bool has_periodic_cadc_readout = false;
 	bool has_periodic_cadc_readout_on_dram = false;
+	size_t num_periodic_cadc_samples = 0;
 
 private:
 	std::vector<std::tuple<

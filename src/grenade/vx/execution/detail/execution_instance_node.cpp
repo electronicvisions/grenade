@@ -73,13 +73,32 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
 
 	ExecutionInstanceConfigVisitor::PpuUsage overall_ppu_usage;
+	std::vector<ExecutionInstanceConfigVisitor::PpuUsage> ppu_usages;
 	std::vector<typed_array<bool, NeuronResetOnDLS>> enabled_neuron_resets;
 	for (size_t i = 0; i < realtime_column_count; i++) {
 		std::tuple<ExecutionInstanceConfigVisitor::PpuUsage, typed_array<bool, NeuronResetOnDLS>>
 		    ppu_information = ExecutionInstanceConfigVisitor(
 		        graphs[i], execution_instance, configs_visited[i], i)();
+		ppu_usages.push_back(std::get<0>(ppu_information));
 		overall_ppu_usage += std::move(std::get<0>(ppu_information));
 		enabled_neuron_resets.push_back(std::get<1>(ppu_information));
+	}
+
+	std::vector<common::Time> maximal_periodic_cadc_runtimes(
+	    input_data_maps.at(0).get().batch_size());
+	for (size_t i = 0; i < realtime_column_count; ++i) {
+		if (ppu_usages.at(i).has_periodic_cadc_readout ||
+		    ppu_usages.at(i).has_periodic_cadc_readout_on_dram) {
+			for (size_t b = 0; b < maximal_periodic_cadc_runtimes.size(); ++b) {
+				maximal_periodic_cadc_runtimes.at(b) +=
+				    input_data_maps.at(i).get().runtime.at(b).at(execution_instance);
+			}
+		}
+	}
+	common::Time maximal_periodic_cadc_runtime(0);
+	if (!maximal_periodic_cadc_runtimes.empty()) {
+		maximal_periodic_cadc_runtime = *std::max_element(
+		    maximal_periodic_cadc_runtimes.begin(), maximal_periodic_cadc_runtimes.end());
 	}
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
@@ -100,6 +119,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			    overall_ppu_usage.has_periodic_cadc_readout;
 			ppu_program_generator.has_periodic_cadc_readout_on_dram =
 			    overall_ppu_usage.has_periodic_cadc_readout_on_dram;
+			// calculate aproximate number of expected samples
+			size_t estimated_size = 0;
+			// lower bound on sample duration -> upper bound on sample rate
+			size_t const approx_sample_duration =
+			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
+			estimated_size = maximal_periodic_cadc_runtime / approx_sample_duration;
+			ppu_program_generator.num_periodic_cadc_samples = estimated_size;
 			CachingCompiler compiler;
 			auto program = compiler.compile(ppu_program_generator.done());
 			ppu_program = std::move(program.memory);
@@ -367,14 +393,15 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			// add a sample as constant margin for error
 			estimated_size += 1;
 			// cap at maximal possible amount of samples
-			if (estimated_size > (has_periodic_cadc_dram_recording ? static_cast<size_t>(100 * 2048)
-			                                                       : static_cast<size_t>(100))) {
+			size_t const maximal_size = has_periodic_cadc_dram_recording
+			                                ? num_cadc_samples_in_extmem_dram
+			                                : num_cadc_samples_in_extmem;
+			if (estimated_size > maximal_size) {
 				LOG4CXX_WARN(
 				    logger, "It is estimated, that the CADC will measure "
 				                << estimated_size << " samples in batch entry " << i
-				                << ", but only the first 100 can be recorded.");
-				estimated_size = has_periodic_cadc_dram_recording ? static_cast<size_t>(100 * 2048)
-				                                                  : static_cast<size_t>(100);
+				                << ", but only the first " << maximal_size << " can be recorded.");
+				estimated_size = maximal_size;
 			}
 			if (has_periodic_cadc_recording) {
 				if (uses_top_cadc) {

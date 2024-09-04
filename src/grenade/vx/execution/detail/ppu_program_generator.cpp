@@ -413,10 +413,7 @@ void perform_periodic_read()
 		// clang-format on
 
 		inja::json parameters;
-		size_t const num_samples = (has_periodic_cadc_readout || has_periodic_cadc_readout_on_dram)
-		                               ? num_cadc_samples_in_extmem
-		                               : 0;
-		parameters["num_samples"] = num_samples;
+		parameters["num_samples"] = num_periodic_cadc_samples;
 		parameters["recording_placement"] =
 		    has_periodic_cadc_readout_on_dram ? std::string("ext_dram") : std::string("ext");
 		parameters["recording_global_address"] =

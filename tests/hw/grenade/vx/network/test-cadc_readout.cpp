@@ -97,10 +97,12 @@ TEST(CADCRecording, General)
 		grenade::vx::signal_flow::InputData inputs;
 		inputs.runtime.push_back(
 		    {{instance, grenade::vx::common::Time(
-		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 100)}});
+		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 100 *
+		                    (placement_on_dram ? 10 : 1))}});
 		inputs.runtime.push_back(
 		    {{instance, grenade::vx::common::Time(
-		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 150)}});
+		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 150 *
+		                    (placement_on_dram ? 10 : 1))}});
 
 		// run graph with given inputs and return results
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);

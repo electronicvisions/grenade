@@ -40,8 +40,10 @@ public:
 		    plasticity_rules;
 
 		PpuUsage() = default;
+		PpuUsage(PpuUsage const& other) = default;
 		PpuUsage(PpuUsage&& other);
 		PpuUsage& operator=(PpuUsage&& other);
+		PpuUsage& operator=(PpuUsage& other) = default;
 
 		/**
 		 * Order has_periodic_cadc_readout and concatenate plasticity_rules
