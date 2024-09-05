@@ -12,3 +12,5 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("_pygrenade_vx_signal_flow");
 	parent->py::module::import("_pygrenade_vx_network");
 })
+
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
