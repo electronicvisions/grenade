@@ -438,6 +438,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 				        ppu),
 				    PPUMemoryWord(PPUMemoryWord::Value(static_cast<uint32_t>(0))));
 			}
+			// wait for response data
+			cadc_finalize_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 			cadc_finalize_builders.push_back(std::move(cadc_finalize_builder));
 		}
 	}
