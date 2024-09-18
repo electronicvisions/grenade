@@ -721,6 +721,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::chrono::nanoseconds connection_execution_duration_before{0};
 	std::chrono::nanoseconds connection_execution_duration_after{0};
 
+	bool runs_successful = true;
+
 	if (!programs.empty() || !base_program.empty()) {
 		// only lock execution section for non-differential config mode
 		if (!connection_state_storage.enable_differential_config) {
@@ -756,13 +758,27 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 		// Execute realtime sections
 		for (auto& p : programs) {
-			backend::run(connection, p);
+			try {
+				backend::run(connection, p);
+			} catch (std::runtime_error const& error) {
+				LOG4CXX_ERROR(
+				    logger,
+				    "operator(): Run of playback program not sucecssful: " << error.what() << ".");
+				runs_successful = false;
+			}
 		}
 
 		// If the PPUs (can) alter state, read it back to update current_config accordingly to
 		// represent the actual hardware state.
 		if (!get_state_program.empty()) {
-			backend::run(connection, get_state_program);
+			try {
+				backend::run(connection, get_state_program);
+			} catch (std::runtime_error const& error) {
+				LOG4CXX_ERROR(
+				    logger,
+				    "operator(): Run of playback program not sucecssful: " << error.what() << ".");
+				runs_successful = false;
+			}
 		}
 
 		// unlock execution section for non-differential config mode
@@ -781,7 +797,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		if (get_state_result) {
 			get_state_result->apply(current_config);
 		}
-		connection_state_storage.config.set_chip(current_config, false);
+		if (runs_successful) {
+			connection_state_storage.config.set_chip(current_config, false);
+		} else {
+			// reset connection state storage since no assumptions can be made after failure
+			connection_state_storage.config = ConnectionConfig();
+			connection_state_storage.config.set_enable_differential_config(
+			    connection_state_storage.enable_differential_config);
+		}
 		LOG4CXX_TRACE(
 		    logger,
 		    "operator(): Updated connection state in " << update_state_timer.print() << ".");
@@ -830,7 +853,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		result_data_map.pre_execution_chips[execution_instance] = configs_visited[i];
 
 		// merge local data map into global data map
-		data_maps[i].merge(result_data_map);
+		if (runs_successful) {
+			data_maps[i].merge(result_data_map);
+		}
+	}
+
+	// throw exception if any run was not successful
+	// typically another post-processing operation above will fail before this exception is
+	// triggered
+	if (!runs_successful) {
+		throw std::runtime_error("At least one playback program execution was not successful.");
 	}
 }
 
