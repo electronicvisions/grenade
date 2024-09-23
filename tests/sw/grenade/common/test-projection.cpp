@@ -481,7 +481,7 @@ struct DummyConnector : public Projection::Connector
 		return m_num_synapses;
 	}
 
-	virtual std::unique_ptr<MultiIndexSequence> get_synapse_parameterizations(
+	virtual std::unique_ptr<MultiIndexSequence> get_synapse_parameterization_indices(
 	    MultiIndexSequence const&) const override
 	{
 		return nullptr;

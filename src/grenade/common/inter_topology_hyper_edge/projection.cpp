@@ -82,7 +82,7 @@ ProjectionInterTopologyHyperEdge::map_input_data(
 				            &reference_input_data.at(0).at(j).value().get());
 				    reference_synapse_input_data) {
 					ret.at(i).at(j) = reference_synapse_input_data->get_section(
-					    *reference_projection.get_connector().get_synapse_parameterizations(
+					    *reference_projection.get_connector().get_synapse_parameterization_indices(
 					        *link_shape));
 				} else if (auto const reference_connector_input_data =
 				               dynamic_cast<Projection::Connector::Dynamics const*>(
@@ -94,7 +94,7 @@ ProjectionInterTopologyHyperEdge::map_input_data(
 				               &reference_input_data.at(0).at(j).value().get());
 				           reference_synapse_input_data) {
 					ret.at(i).at(j) = reference_synapse_input_data->get_section(
-					    *reference_projection.get_connector().get_synapse_parameterizations(
+					    *reference_projection.get_connector().get_synapse_parameterization_indices(
 					        *link_shape));
 				} else if (auto const reference_connector_input_data =
 				               dynamic_cast<Projection::Connector::Parameterization const*>(

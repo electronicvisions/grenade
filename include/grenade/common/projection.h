@@ -204,11 +204,13 @@ struct SYMBOL_VISIBLE GENPYBIND(
 		virtual size_t get_num_synapses(MultiIndexSequence const& sequence) const = 0;
 
 		/**
-		 * Get sequence of synapse parameterizations required by connector.
-		 * This sequence describes the position in the 1d space of synapse parameterizations.
+		 * Get sequence of indices of synapse parameterizations required by connector.
+		 * This sequence describes the indices in the 1d space of synapse parameterizations.
+		 * There might be cases, where multiple synapses share the same parameterization (e.g. for
+		 * convolutions).
 		 * @param sequence MultiIndexSequence for which to get synapse parameterizations
 		 */
-		virtual std::unique_ptr<MultiIndexSequence> get_synapse_parameterizations(
+		virtual std::unique_ptr<MultiIndexSequence> get_synapse_parameterization_indices(
 		    MultiIndexSequence const& sequence) const = 0;
 
 		/**

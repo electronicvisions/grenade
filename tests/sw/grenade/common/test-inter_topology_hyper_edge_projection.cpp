@@ -426,7 +426,7 @@ struct DummyConnector : public Projection::Connector
 		return 0;
 	}
 
-	virtual std::unique_ptr<MultiIndexSequence> get_synapse_parameterizations(
+	virtual std::unique_ptr<MultiIndexSequence> get_synapse_parameterization_indices(
 	    MultiIndexSequence const& sequence) const override
 	{
 		return CuboidMultiIndexSequence(
@@ -439,7 +439,7 @@ struct DummyConnector : public Projection::Connector
 	virtual size_t get_num_synapse_parameterizations(
 	    MultiIndexSequence const& sequence) const override
 	{
-		return get_synapse_parameterizations(sequence)->size();
+		return get_synapse_parameterization_indices(sequence)->size();
 	}
 
 	virtual std::unique_ptr<Connector> get_section(
