@@ -121,6 +121,11 @@ bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 	return std::all_of(vertices.begin(), vertices.end(), find_chip_of_vertex_descriptor);
 }
 
+bool JITGraphExecutor::get_enable_differential_config() const
+{
+	return m_enable_differential_config;
+}
+
 void JITGraphExecutor::check(signal_flow::Graph const& graph)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");

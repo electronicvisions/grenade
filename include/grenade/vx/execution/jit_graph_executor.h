@@ -85,6 +85,8 @@ public:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_remote_repo_state() const
 	    SYMBOL_VISIBLE;
 
+	bool get_enable_differential_config() const;
+
 private:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> m_connections;
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, detail::ConnectionStateStorage>
