@@ -177,6 +177,7 @@ void ExecutionInstanceBuilder::process(
 	} else {
 		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
 
+		hate::Timer timer;
 		std::vector<stadls::vx::PlaybackProgram::spikes_type> spikes(m_batch_entries.size());
 		for (auto const& program : m_chunked_program) {
 			auto local_spikes = program.get_spikes();
@@ -196,6 +197,7 @@ void ExecutionInstanceBuilder::process(
 			}
 		}
 		m_data.insert(vertex, std::move(transformed_spikes));
+		LOG4CXX_TRACE(logger, "process(): post-processed spikes in " << timer.print() << ".");
 	}
 }
 
@@ -297,6 +299,7 @@ void ExecutionInstanceBuilder::process(
 		// results need hardware execution
 		m_post_vertices.push_back(vertex);
 	} else { // post-hw-run processing
+		hate::Timer timer;
 		// extract signal_flow::Int8 values
 		std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> sample_batches(
 		    m_batch_entries.size());
@@ -324,6 +327,7 @@ void ExecutionInstanceBuilder::process(
 				}
 			}
 		} else {
+			size_t total_num_samples = 0;
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 				assert(m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]);
 				std::vector<uint8_t> local_bytes;
@@ -404,10 +408,15 @@ void ExecutionInstanceBuilder::process(
 							}
 						}
 						samples.push_back(local_samples);
+						total_num_samples++;
 					}
 					offset += 256;
 				}
 			}
+			auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+			LOG4CXX_TRACE(
+			    logger, "process(): post-processed " << total_num_samples << " CADC samples in "
+			                                         << timer.print() << ".");
 		}
 		m_data.insert(vertex, std::move(sample_batches));
 	}

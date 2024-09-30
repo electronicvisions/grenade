@@ -753,7 +753,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// Execute realtime sections
 		for (auto& p : programs) {
 			try {
-				backend::run(connection, p);
+				auto time_info = backend::run(connection, p);
+				LOG4CXX_TRACE(
+				    logger, "operator(): Executed playback program in " << time_info << ".");
 			} catch (std::runtime_error const& error) {
 				LOG4CXX_ERROR(
 				    logger,
@@ -766,7 +768,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// represent the actual hardware state.
 		if (!get_state_program.empty()) {
 			try {
-				backend::run(connection, get_state_program);
+				auto time_info = backend::run(connection, get_state_program);
+				LOG4CXX_TRACE(
+				    logger, "operator(): Executed playback program in " << time_info << ".");
 			} catch (std::runtime_error const& error) {
 				LOG4CXX_ERROR(
 				    logger,

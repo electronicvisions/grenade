@@ -1,9 +1,11 @@
 #include "grenade/vx/network/vertex/transformation/external_source_merger.h"
 
 #include "grenade/vx/signal_flow/event.h"
+#include "hate/timer.h"
 #include "hate/variant.h"
 #include <algorithm>
 #include <stdexcept>
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::network::vertex::transformation {
 
@@ -47,6 +49,8 @@ ExternalSourceMerger::Function::Value ExternalSourceMerger::apply(
 
 	std::vector<signal_flow::TimedSpikeToChipSequence> ret(batch_size);
 
+	std::chrono::microseconds log_inter_execution_instance_input_duration{0};
+
 	for (size_t b = 0; b < batch_size; ++b) {
 		auto& local_ret = ret.at(b);
 		for (size_t i = 0; i < m_inputs.size(); ++i) {
@@ -59,7 +63,9 @@ ExternalSourceMerger::Function::Value ExternalSourceMerger::apply(
 			};
 
 			auto const add_inter_execution_instance_input =
-			    [b, local_value, &local_ret](InterExecutionInstanceInput const& input) {
+			    [b, local_value, &local_ret, &log_inter_execution_instance_input_duration](
+			        InterExecutionInstanceInput const& input) {
+				    hate::Timer timer;
 				    auto const& local_input_events =
 				        std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(local_value)
 				            .at(b);
@@ -72,6 +78,8 @@ ExternalSourceMerger::Function::Value ExternalSourceMerger::apply(
 							        haldls::vx::v3::SpikePack1ToChip({label})));
 						    }
 				    }
+				    log_inter_execution_instance_input_duration +=
+				        std::chrono::microseconds{timer.get_us()};
 			    };
 
 			std::visit(
@@ -79,11 +87,20 @@ ExternalSourceMerger::Function::Value ExternalSourceMerger::apply(
 			    m_inputs.at(i));
 		}
 		if (m_inputs.size() > 1) {
+			hate::Timer timer;
 			std::stable_sort(local_ret.begin(), local_ret.end(), [](auto const& a, auto const& b) {
 				return a.time < b.time;
 			});
+			// only triggered if we have such an input
+			log_inter_execution_instance_input_duration +=
+			    std::chrono::microseconds{timer.get_us()};
 		}
 	}
+
+	auto logger = log4cxx::Logger::getLogger("grenade.network.ExternalSourceMerger");
+	LOG4CXX_TRACE(
+	    logger, "apply(): Merging of inter-execution-instance events performed in "
+	                << hate::to_string(log_inter_execution_instance_input_duration) << ".");
 	return ret;
 }
 
