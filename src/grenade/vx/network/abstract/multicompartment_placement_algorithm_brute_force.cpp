@@ -1,7 +1,17 @@
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm_brute_force.h"
+#include <sstream>
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::network::abstract {
 
+PlacementAlgorithmBruteForce::PlacementAlgorithmBruteForce() :
+    m_logger(log4cxx::Logger::getLogger("grenade.MC.Placement.BruteForce"))
+{
+}
+PlacementAlgorithmBruteForce::PlacementAlgorithmBruteForce(size_t timeout) :
+    m_timeout(timeout), m_logger(log4cxx::Logger::getLogger("grenade.MC.Placement.BruteForce"))
+{
+}
 
 bool PlacementAlgorithmBruteForce::valid(
     size_t result_index, size_t x_max, Neuron const& neuron, ResourceManager const& resources)
@@ -110,6 +120,7 @@ AlgorithmResult PlacementAlgorithmBruteForce::run(
     Neuron const& neuron,
     ResourceManager const& resources)
 {
+	LOG4CXX_INFO(m_logger, "Starting Brute Force Algorithm Run");
 	hate::Timer timer_total;
 	m_results.push_back(AlgorithmResult());
 	m_results_temp.push_back(AlgorithmResult());
@@ -119,27 +130,29 @@ AlgorithmResult PlacementAlgorithmBruteForce::run(
 
 	// If Parallel Runs requested
 	if (parallel_runs != 0) {
-		std::cout << "Parallel Run" << std::endl;
+		LOG4CXX_DEBUG(m_logger, "Parallel Run");
 		run_parallel(neuron, resources, parallel_runs, x_limit, 5);
 		for (auto temp_result : m_results) {
 			if (temp_result.finished) {
-				std::cout << "Final Result" << std::endl;
+				std::stringstream msg;
+				msg << "Final Result";
 				for (size_t x = 0; x < 20; x++) {
-					std::cout << temp_result.coordinate_system.coordinate_system[0][x].get_status()
-					          << ",";
+					msg << temp_result.coordinate_system.coordinate_system[0][x].get_status()
+					    << ",";
 				}
-				std::cout << std::endl;
+				msg << "\n";
 				for (size_t x = 0; x < 20; x++) {
-					std::cout << temp_result.coordinate_system.coordinate_system[1][x].get_status()
-					          << ",";
+					msg << temp_result.coordinate_system.coordinate_system[1][x].get_status()
+					    << ",";
 				}
-				std::cout << std::endl;
+				msg << "\n";
+				LOG4CXX_TRACE(m_logger, msg.str());
 				return temp_result;
 			}
 		}
 		return result;
 	}
-	std::cout << "Single Thread Run" << std::endl;
+	LOG4CXX_DEBUG(m_logger, "Single Thread Run");
 
 	// Hard Coded Case: 1 compartment with 1 neuron circuit
 	if (neuron.num_compartments() == 1 &&
@@ -180,36 +193,47 @@ AlgorithmResult PlacementAlgorithmBruteForce::run(
 				}
 			}
 		}
-		if ((size_t) timer_total.get_s() > time_limit_single_thread) {
-			std::cout << "Time Limit reached: Brute Force Terminated" << std::endl;
+		if (static_cast<size_t>(timer_total.get_s()) > m_timeout) {
+			LOG4CXX_INFO(m_logger, "Time limit reached: Brute Force Terminated");
 			result.finished = true;
 			result.coordinate_system = CoordinateSystem();
 			break;
 		}
 	}
 
-	std::cout << "____________________Finished: Number of Iterations:" << loop_counter
+	std::stringstream msg_final;
+	msg_final << "____________________Finished: Number of Iterations:" << loop_counter
 	          << " in Time: " << timer_total.get_ms() << "[ms]____________________" << std::endl;
 
-	/*Write Timers to file
-	std::ofstream file;
-	file.open("Timers_Brute_Force.csv"); //, std::ios_base::app);
-	for (size_t i = 0; i < timers.size(); i++) {
-	    file << timers.at(i).validation << ";" << timers.at(i).empty << ";"
-	         << timers.at(i).construction << ";" << timers.at(i).num_compartments << ";"
-	         << timers.at(i).num_connections << ";" << timers.at(i).isomorphism << ";"
-	         << timers.at(i).resources << "\n";
-	}
-	file.close();
-	*/
 
 	if (!m_results.back().finished) {
 		m_results.back().coordinate_system = CoordinateSystem();
+		msg_final << "\nFail" << std::endl;
+	} else {
+		msg_final << "\nSuccess" << std::endl;
 	}
+
+	LOG4CXX_INFO(m_logger, msg_final.str());
 
 	return m_results.back();
 }
 
+std::unique_ptr<PlacementAlgorithm> PlacementAlgorithmBruteForce::clone() const
+{
+	auto new_algorithm = std::make_unique<PlacementAlgorithmBruteForce>();
+	new_algorithm->parallel_runs = this->parallel_runs;
+	new_algorithm->x_limit = this->x_limit;
+	new_algorithm->m_timeout = this->m_timeout;
+	new_algorithm->reset();
+	return new_algorithm;
+}
+
+void PlacementAlgorithmBruteForce::reset()
+{
+	m_results.clear();
+	m_results_temp.clear();
+	m_termintate_parallel = false;
+}
 
 AlgorithmResult PlacementAlgorithmBruteForce::run_parallel(
     Neuron const& neuron,
@@ -243,19 +267,24 @@ AlgorithmResult PlacementAlgorithmBruteForce::run_parallel(
 	 */
 	hate::Timer timer_outer_loop;
 	while (!m_termintate_parallel) {
-		std::cout << "----------------------------------------Loop "
-		             "Iteration----------------------------------------"
-		          << outer_loop_counter << std::endl;
+		std::stringstream msg;
+		msg << "----------------------------------------Loop "
+		       "Iteration----------------------------------------"
+		    << outer_loop_counter << std::endl;
+		LOG4CXX_DEBUG(m_logger, msg.str());
 		// Loop over all starting configurations
 		for (size_t i = 0; i < parallel; i++) {
-			std::cout << "Building starting State " << i << std::endl;
+			std::stringstream msg_outer;
+			msg_outer << "Building starting State " << i;
+			LOG4CXX_DEBUG(m_logger, msg_outer.str());
+
 			// Iterate Starting State
-
-
 			size_t index = index_min;
 			while ((index < x_max * 2 + 1) && (index < config_pointers.size())) {
 				if (++(*(config_pointers.at(index)))) {
-					std::cout << "Iterate at index: " << index << std::endl;
+					std::stringstream msg_inner;
+					msg_inner << "Iterate at index: " << index << "\n";
+					LOG4CXX_TRACE(m_logger, msg_inner.str());
 					index = index_min;
 					break;
 				} else {
@@ -264,23 +293,12 @@ AlgorithmResult PlacementAlgorithmBruteForce::run_parallel(
 					if (index >= index_max) {
 						index_max++;
 					}
-					std::cout << "Increment Index" << std::endl;
+					LOG4CXX_TRACE(m_logger, "Increment Index");
 				}
 			}
 			if (result.coordinate_system == m_results.back().coordinate_system) {
 				throw std::invalid_argument("No new coordinate system created: Duplicate");
 			}
-
-			// TESTING: Output Configuration of Coordinate System
-			std::cout << "Push Back Starting State" << std::endl;
-			for (size_t x = 0; x < 20; x++) {
-				std::cout << result.coordinate_system.coordinate_system[0][x].get_status() << ",";
-			}
-			std::cout << std::endl;
-			for (size_t x = 0; x < 20; x++) {
-				std::cout << result.coordinate_system.coordinate_system[1][x].get_status() << ",";
-			}
-			std::cout << std::endl;
 
 			// Put starting states in result vector
 			if (outer_loop_counter == 0) {
@@ -313,7 +331,7 @@ AlgorithmResult PlacementAlgorithmBruteForce::run_parallel(
 
 
 		// Time Limit
-		if ((size_t) timer_outer_loop.get_s() > time_limit_multi_thread) {
+		if (static_cast<size_t>(timer_outer_loop.get_s()) > m_timeout) {
 			m_termintate_parallel = true;
 			break;
 		}
@@ -332,7 +350,6 @@ AlgorithmResult PlacementAlgorithmBruteForce::run_parallel(
 void PlacementAlgorithmBruteForce::run_partial(
     Neuron const& neuron, ResourceManager const& resources, size_t result_index, size_t loop_limit)
 {
-	// std::cout << "Thread " << result_index << " started" << std::endl;
 	AlgorithmResult& result = m_results.at(result_index);
 
 	// Put pointer to SwitchConfigs in iterable order
@@ -375,14 +392,15 @@ void PlacementAlgorithmBruteForce::run_partial(
 
 
 		if (loop_counter > loop_limit) {
-			// std::cout << "Limit reached: Thread " << result_index << " terminated" << std::endl;
 			result.finished = false;
 			result.coordinate_system = CoordinateSystem();
 			break;
 		}
 	}
 	if (m_results.at(result_index).finished) {
-		std::cout << "Thread: " << result_index << " found valid result" << std::endl;
+		std::stringstream msg;
+		msg << "Thread: " << result_index << " found valid result";
+		LOG4CXX_DEBUG(m_logger, msg.str());
 	}
 }
 

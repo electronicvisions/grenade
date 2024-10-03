@@ -35,6 +35,24 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmEvolutionary : public
 
 	PlacementAlgorithmEvolutionary(EvolutionaryParameters run_parameters);
 
+	/**
+	 * Clone the algorithm. Only clones the initial configuration not the current state of the
+	 * algorithm. New algorithm is in state as after reset(). Since PlacementAlgorithm is the
+	 * abstract base class the algorithm is passed as a pointer. This allows to pass the algorithm
+	 * polymorphically to functions.
+	 * @return Unique pointer to copy of the algorithm.
+	 */
+	std::unique_ptr<PlacementAlgorithm> clone() const;
+
+	/**
+	 * Reset all members of the algorithm. Used during testing.
+	 */
+	void reset();
+
+	// Convenience functions for testing
+	std::vector<CoordinateSystem> get_best_in_pops() const;
+	AlgorithmResult get_final_result() const;
+
 private:
 	/**
 	 * Construct a neuron based on the state of the coordinate-system represented by the genome of
@@ -131,9 +149,6 @@ private:
 
 	EvolutionaryParameters m_run_parameters;
 
-	// Testing
-	std::vector<CoordinateSystem> get_best_in_pops() const;
-	AlgorithmResult get_final_result() const;
 
 	std::atomic<bool> m_terminate_parallel;
 

@@ -22,6 +22,19 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmRuleset : public Plac
 	    Neuron const& neuron,
 	    ResourceManager const& resources);
 
+	/**
+	 * Clone the algorithm. Only clones the initial state of the algorithm. New algorithm is in
+	 * state as after reset(). Since PlacementAlgorithm is the abstract base class the algorithm is
+	 * passed as a pointer. This allows to pass the algorithm polymorphically to functions.
+	 * @return Unique pointer to copy of the algorithm.
+	 */
+	std::unique_ptr<PlacementAlgorithm> clone() const;
+
+	/**
+	 * Reset all members of the algorithm. Used during testing.
+	 */
+	void reset();
+
 private:
 	/**
 	 * Advances the algorithm one step.

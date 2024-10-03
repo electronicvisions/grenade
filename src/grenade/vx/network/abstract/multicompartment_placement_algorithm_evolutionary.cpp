@@ -115,6 +115,14 @@ void PlacementAlgorithmEvolutionary::construct_neuron(
 				            .compartment.value())) {
 					continue;
 				}
+				// Check for connection with itself
+				if (result_temp.coordinate_system.coordinate_system[y][x].compartment ==
+				    result_temp.coordinate_system
+				        .coordinate_system[neighbour_coordinates.second]
+				                          [neighbour_coordinates.first]
+				        .compartment) {
+					continue;
+				}
 				// Add connection
 				neuron_constructed.add_compartment_connection(
 				    result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
@@ -441,6 +449,24 @@ AlgorithmResult PlacementAlgorithmEvolutionary::run(
 	LOG4CXX_DEBUG(m_logger, ss.str());
 
 	return m_result_final;
+}
+
+std::unique_ptr<PlacementAlgorithm> PlacementAlgorithmEvolutionary::clone() const
+{
+	auto new_algorithm = std::make_unique<PlacementAlgorithmEvolutionary>();
+	new_algorithm->m_run_parameters = m_run_parameters;
+	new_algorithm->reset();
+	return new_algorithm;
+}
+
+void PlacementAlgorithmEvolutionary::reset()
+{
+	m_terminate_parallel = false;
+	m_best_in_pop.clear();
+	m_fitness_best_in_pop.clear();
+	m_result_final = AlgorithmResult();
+	m_placement_results.clear();
+	m_placement_results.resize(m_run_parameters.population_size);
 }
 
 

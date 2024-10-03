@@ -17,7 +17,7 @@ struct EvolutionaryParameters
 	size_t x_max;
 
 	// Number of runs which are executed in parallel.
-	size_t parallel_threads;
+	size_t parallel_threads = 1;
 
 	// Population size
 	size_t population_size;

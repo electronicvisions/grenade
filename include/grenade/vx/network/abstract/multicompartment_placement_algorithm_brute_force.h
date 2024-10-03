@@ -8,24 +8,43 @@
 #include <iostream>
 #include <math.h>
 
+namespace log4cxx {
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+} // namespace log4cxx
+
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmBruteForce : public PlacementAlgorithm
 {
+	PlacementAlgorithmBruteForce();
+	PlacementAlgorithmBruteForce(size_t timeout);
+
 	AlgorithmResult run(
 	    CoordinateSystem const& coordinate_system,
 	    Neuron const& neuron,
 	    ResourceManager const& resources);
+
+	/**
+	 * Clone the algorithm. Only clones the initial configuration not the current state of the
+	 * algorithm. New algorithm is in state as after reset(). Since PlacementAlgorithm is the
+	 * abstract base class the algorithm is passed as a pointer. This allows to pass the algorithm
+	 * polymorphically to functions.
+	 * @return Unique pointer to copy of the algorithm.
+	 */
+	std::unique_ptr<PlacementAlgorithm> clone() const;
+
+	/**
+	 * Reset all members of the algorithm. Used during testing.
+	 */
+	void reset();
 
 	// Parameters for run
 	// Number of configurations checked in parallel.
 	size_t parallel_runs = 0;
 	// Highest iterated neuron circuits x coordinate.
 	size_t x_limit = 10;
-
-	size_t time_limit_single_thread = 60 * 30; //[s]
-	size_t time_limit_multi_thread = 60 * 20;  //[s]
 
 private:
 	AlgorithmResult run_parallel(
@@ -57,6 +76,10 @@ private:
 
 	// Termination variable for parallelisation
 	std::atomic<bool> m_termintate_parallel;
+
+	size_t m_timeout = 60; //[s]
+
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace abstract

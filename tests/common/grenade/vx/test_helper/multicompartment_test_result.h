@@ -4,6 +4,7 @@ namespace grenade::vx::network::abstract {
 
 struct TestResult
 {
+	size_t num_compartments;
 	bool success;
 	double time_total;
 	double time_generation;

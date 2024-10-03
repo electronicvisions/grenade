@@ -20,4 +20,15 @@ AlgorithmResult PlacementAlgorithmDummy::run(
 	return result;
 }
 
+std::unique_ptr<PlacementAlgorithm> PlacementAlgorithmDummy::clone() const
+{
+	auto new_algorithm = std::make_unique<PlacementAlgorithmDummy>();
+	return new_algorithm;
+}
+
+void PlacementAlgorithmDummy::reset()
+{
+	coordinate_system = CoordinateSystem();
+}
+
 } // namespace grenade::vx::network::abstract

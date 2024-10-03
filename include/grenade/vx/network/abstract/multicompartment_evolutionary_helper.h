@@ -3,6 +3,7 @@
 #include "grenade/vx/network/abstract/evolutionary/multicompartment_evolutionary_chromosome.h"
 #include "grenade/vx/network/abstract/evolutionary/multicompartment_evolutionary_population.h"
 #include <algorithm>
+#include <optional>
 #include <random>
 #include <set>
 #include <sstream>
@@ -189,6 +190,17 @@ struct MutationShiftRound
 	 */
 	void operator()(EoPopulation<EOT>& pop);
 
+	/**
+	 * Determine if and how far the genome is shifted.
+	 * @return Number of steps to shift the genome for.
+	 */
+	std::optional<size_t> get_random_shift();
+
+	/**
+	 * Perfoms a shift of the genome.
+	 */
+	void shift(EOT& chrom, size_t x_shift);
+
 private:
 	/*Specific to representation of population. Interpretation as 2d grid.
 	a b c
@@ -238,6 +250,17 @@ struct MutationAddColumns
 	 */
 	void operator()(EoPopulation<EOT>& pop);
 
+	/**
+	 * Decide if columns are added and where.
+	 * @return Vector of positions at which a column should be added.
+	 */
+	std::optional<std::vector<size_t>> get_random_add();
+
+	/**
+	 * Add columns to genome.
+	 */
+	void add_columns(EOT& chrom, std::vector<size_t> x_positions);
+
 private:
 	bool m_together;
 	size_t m_number_columns;
@@ -280,6 +303,17 @@ struct MutationRemoveColumns
 	 * @param pop Population on which the columns are removed.
 	 */
 	void operator()(EoPopulation<EOT>& pop);
+
+	/**
+	 * Decide if columns are removed and where.
+	 * @return Vector of positions at which a column should be removed.
+	 */
+	std::optional<std::vector<size_t>> get_random_remove();
+
+	/**
+	 * Remove columns to genome.
+	 */
+	void remove_columns(EOT& chrom, std::vector<size_t> x_positions);
 
 private:
 	bool m_together;

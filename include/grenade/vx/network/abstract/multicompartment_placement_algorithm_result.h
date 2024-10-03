@@ -7,10 +7,6 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) AlgorithmResult
 {
-	// Constructor
-	AlgorithmResult() = default;
-
-	// Member: CoordinateSystem configuration and bool set when terminated
 	CoordinateSystem coordinate_system;
 	std::vector<CompartmentOnNeuron> placed_compartments;
 	bool finished = false;

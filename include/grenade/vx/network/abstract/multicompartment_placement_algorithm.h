@@ -41,6 +41,19 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithm
 	    Neuron const& neuron,
 	    ResourceManager const& resources);
 
+	/**
+	 * Clone the algorithm.
+	 * Since PlacementAlgorithm is an abstract class it can not be passed by value. Therefore a
+	 * pointer is returned.
+	 * @return Unique pointer to copy of the algorithm.
+	 */
+	virtual std::unique_ptr<PlacementAlgorithm> clone() const = 0;
+
+	/**
+	 * Reset all members of the algorithm. Used during testing.
+	 */
+	virtual void reset() = 0;
+
 protected:
 	/**
 	 * Return resource efficiency of a given placement configuration.

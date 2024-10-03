@@ -15,7 +15,7 @@ NeuronCircuit CoordinateSystem::get(size_t x, size_t y) const
 
 void CoordinateSystem::set_compartment(size_t x, size_t y, CompartmentOnNeuron const& compartment)
 {
-	coordinate_system[y][x].compartment = compartment;
+	coordinate_system[y][x].compartment = std::make_optional<CompartmentOnNeuron>(compartment);
 }
 
 void CoordinateSystem::set_config(
@@ -58,7 +58,7 @@ std::vector<std::pair<int, int>> CoordinateSystem::find_compartment(
 		for (size_t j = 0; j < coordinate_system[i].size(); j++) {
 			const std::optional<CompartmentOnNeuron> temp_compartment_on_neuron =
 			    coordinate_system[i][j].compartment;
-			if (temp_compartment_on_neuron == compartment) {
+			if (temp_compartment_on_neuron && temp_compartment_on_neuron.value() == compartment) {
 				results.push_back(std::pair<int, int>(j, i));
 			}
 		}
@@ -256,10 +256,14 @@ bool CoordinateSystem::short_circuit(size_t x_max) const
 	for (size_t y = 0; y < 2; y++) {
 		for (size_t x = 0; x < x_max; x++) {
 			if (coordinate_system[y][x].switch_circuit_shared) {
+				if (!coordinate_system[y][x].compartment) {
+					continue;
+				}
 				CompartmentOnNeuron temp_compartment = coordinate_system[y][x].compartment.value();
 				size_t x_temp = x;
 				while (coordinate_system[y][x_temp].switch_shared_right) {
 					if (coordinate_system[y][x_temp].switch_circuit_shared &&
+					    coordinate_system[y][x_temp].compartment &&
 					    coordinate_system[y][x_temp].compartment.value() != temp_compartment) {
 						return true;
 					}
@@ -337,11 +341,11 @@ std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conduc
 NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
     size_t x, size_t y, CompartmentOnNeuron compartment)
 {
-	if (coordinate_system[y][x].compartment != CompartmentOnNeuron()) {
+	if (coordinate_system[y][x].compartment) {
 		return NumberTopBottom();
 	}
 
-	coordinate_system[y][x].compartment = compartment;
+	coordinate_system[y][x].compartment = std::make_optional<CompartmentOnNeuron>(compartment);
 	NumberTopBottom number_neuron_circuits = NumberTopBottom(1, 1 - y, y);
 
 	if (connected_right(x, y)) {

@@ -23,6 +23,20 @@ AlgorithmResult PlacementAlgorithmRuleset::run(
 	return result;
 }
 
+std::unique_ptr<PlacementAlgorithm> PlacementAlgorithmRuleset::clone() const
+{
+	return std::make_unique<PlacementAlgorithmRuleset>();
+}
+
+void PlacementAlgorithmRuleset::reset()
+{
+	placed_compartments.clear();
+	m_results.clear();
+	additional_resources.clear();
+	additional_resources_compartments.clear();
+}
+
+
 // Find Compartment with largest number of connections
 CompartmentOnNeuron PlacementAlgorithmRuleset::find_max_deg(Neuron const& neuron) const
 {
