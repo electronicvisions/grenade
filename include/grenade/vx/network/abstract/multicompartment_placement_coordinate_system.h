@@ -115,7 +115,21 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 * @return Number of neuron circuits assigned to the compartment.
 	 */
 	NumberTopBottom assign_compartment_adjacent(
-	    size_t x, size_t y, CompartmentOnNeuron compartment);
+	    size_t x, size_t y, CompartmentOnNeuron const& compartment);
+
+	/**
+	 * Check for compartment wether it has neuron circuits of each parity.
+	 */
+	std::pair<bool, bool> parity(CompartmentOnNeuron const& compartment) const;
+
+	/**
+	 * Return set of all compartments with neuron circuits in even columns.
+	 */
+	std::set<CompartmentOnNeuron> even_parity() const;
+	/**
+	 * Returns set of all compartments with neuron circuits in odd columns.
+	 */
+	std::set<CompartmentOnNeuron> odd_parity() const;
 
 
 	// Constructor

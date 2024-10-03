@@ -100,6 +100,8 @@ void ResourceManager::add_config(Neuron const& neuron, Environment const& enviro
 	     i++) {
 		add_config(*i, neuron, environment);
 	}
+
+	m_recordable_pairs = environment.get_recordable_pairs();
 }
 
 NumberTopBottom const& ResourceManager::get_total() const
@@ -118,6 +120,12 @@ void ResourceManager::write_graphviz(std::ostream& file, Neuron const& neuron, s
 		     << "\n";
 	}
 	file << "}\n";
+}
+
+std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>>
+ResourceManager::get_recordable_pairs() const
+{
+	return m_recordable_pairs;
 }
 
 std::ostream& operator<<(std::ostream& os, ResourceManager const& resources)

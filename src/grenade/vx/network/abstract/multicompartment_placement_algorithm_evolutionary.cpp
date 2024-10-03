@@ -235,6 +235,29 @@ double PlacementAlgorithmEvolutionary::fitness_isomorphism(
 
 	return (1 - (number_difference / neuron.num_compartments()));
 }
+double PlacementAlgorithmEvolutionary::fitness_recording(
+    PlacementResult const& parallel_result, ResourceManager const& resources) const
+{
+	std::set<CompartmentOnNeuron> even_parity =
+	    parallel_result.result.coordinate_system.even_parity();
+	std::set<CompartmentOnNeuron> odd_parity =
+	    parallel_result.result.coordinate_system.odd_parity();
+
+	double recordable = 0;
+	double not_recordable = 0;
+
+	for (auto record_pair : resources.get_recordable_pairs()) {
+		if ((even_parity.contains(record_pair.first) && odd_parity.contains(record_pair.second)) ||
+		    (even_parity.contains(record_pair.second) && odd_parity.contains(record_pair.first))) {
+			recordable++;
+		} else {
+			not_recordable++;
+		}
+	}
+
+	return (recordable) / (recordable + not_recordable);
+}
+
 
 void PlacementAlgorithmEvolutionary::build_coordinate_system(
     PlacementResult& parallel_result, size_t x_max, std::vector<bool> switch_configuration)
@@ -300,8 +323,10 @@ double PlacementAlgorithmEvolutionary::fitness(
 
 	double fitness_isomorphic = fitness_isomorphism(parallel_result, neuron, resources);
 
+	double fitness_recordable = fitness_recording(parallel_result, resources);
+
 	double fitness = 100 * fitness_num_compartments + 100 * fitness_num_compartments_connections +
-	                 50 * fitness_resources + 200 * fitness_isomorphic;
+	                 50 * fitness_resources + 200 * fitness_isomorphic + 10 * fitness_recordable;
 
 	return fitness;
 }
@@ -546,6 +571,18 @@ bool PlacementAlgorithmEvolutionary::valid(
 		return false;
 	}
 	LOG4CXX_TRACE(m_logger, "Validation: Isomorphism valid.");
+
+	// Check for MADC-recordable pairs
+	std::set<CompartmentOnNeuron> even_parity = best_result.coordinate_system.even_parity();
+	std::set<CompartmentOnNeuron> odd_parity = best_result.coordinate_system.odd_parity();
+	for (auto record_pair : resources.get_recordable_pairs()) {
+		if (!(even_parity.contains(record_pair.first) && odd_parity.contains(record_pair.second)) &&
+		    !(even_parity.contains(record_pair.second) && odd_parity.contains(record_pair.first))) {
+			return false;
+		}
+	}
+
+
 	// Assinging correct compartment-IDs to coordinate system
 	for (size_t x = 0; x < x_max + 2; x++) {
 		for (size_t y = 0; y < 2; y++) {

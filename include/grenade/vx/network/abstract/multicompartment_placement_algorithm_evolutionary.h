@@ -110,6 +110,8 @@ private:
 	    PlacementResult const& placement_result,
 	    Neuron const& neuron,
 	    ResourceManager const& resources) const;
+	double fitness_recording(
+	    PlacementResult const& parallel_result, ResourceManager const& resources) const;
 
 	/**
 	 * Construct coordinate system out of boolean vector retrieved by evolutionary algorithm.

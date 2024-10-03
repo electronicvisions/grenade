@@ -14,6 +14,33 @@ void Environment::add(
 	}
 }
 
+void Environment::add_recordable(
+    CompartmentOnNeuron const& compartment_a, CompartmentOnNeuron const& compartment_b)
+{
+	recordable_pairs.emplace(std::make_pair(compartment_a, compartment_b));
+}
+
+std::vector<CompartmentOnNeuron> Environment::get_recordable(
+    CompartmentOnNeuron const& compartment) const
+{
+	std::vector<CompartmentOnNeuron> recordables;
+	for (auto record_pair : recordable_pairs) {
+		if (record_pair.first == compartment) {
+			recordables.push_back(record_pair.second);
+		} else if (record_pair.second == compartment) {
+			recordables.push_back(record_pair.first);
+		}
+	}
+
+	return recordables;
+}
+
+std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> Environment::get_recordable_pairs()
+    const
+{
+	return recordable_pairs;
+}
+
 void Environment::add(
     CompartmentOnNeuron const& compartment,
     std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> const& synaptic_inputs)

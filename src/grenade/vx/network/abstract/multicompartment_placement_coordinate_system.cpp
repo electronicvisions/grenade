@@ -339,7 +339,7 @@ std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conduc
 }
 
 NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
-    size_t x, size_t y, CompartmentOnNeuron compartment)
+    size_t x, size_t y, CompartmentOnNeuron const& compartment)
 {
 	if (coordinate_system[y][x].compartment) {
 		return NumberTopBottom();
@@ -360,6 +360,65 @@ NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
 
 	return number_neuron_circuits;
 }
+
+std::pair<bool, bool> CoordinateSystem::parity(CompartmentOnNeuron const& compartment) const
+{
+	std::pair<bool, bool> parity_compartment;
+
+	for (size_t x = 0; x < 256; x += 2) {
+		for (size_t y = 0; y < 2; y++) {
+			if (coordinate_system[y][x].compartment &&
+			    coordinate_system[y][x].compartment.value() == compartment) {
+				parity_compartment.first = true;
+			}
+		}
+	}
+
+	for (size_t x = 1; x < 256; x += 2) {
+		for (size_t y = 0; y < 2; y++) {
+			if (coordinate_system[y][x].compartment &&
+			    coordinate_system[y][x].compartment.value() == compartment) {
+				parity_compartment.second = true;
+			}
+		}
+	}
+
+	return parity_compartment;
+}
+
+
+std::set<CompartmentOnNeuron> CoordinateSystem::even_parity() const
+{
+	std::set<CompartmentOnNeuron> compartments;
+
+	for (size_t x = 0; x < 256; x += 2) {
+		for (size_t y = 0; y < 2; y++) {
+			if (coordinate_system[y][x].compartment &&
+			    !compartments.contains(coordinate_system[y][x].compartment.value())) {
+				compartments.emplace(coordinate_system[y][x].compartment.value());
+			}
+		}
+	}
+
+	return compartments;
+}
+
+std::set<CompartmentOnNeuron> CoordinateSystem::odd_parity() const
+{
+	std::set<CompartmentOnNeuron> compartments;
+
+	for (size_t x = 1; x < 256; x += 2) {
+		for (size_t y = 0; y < 2; y++) {
+			if (coordinate_system[y][x].compartment &&
+			    !compartments.contains(coordinate_system[y][x].compartment.value())) {
+				compartments.emplace(coordinate_system[y][x].compartment.value());
+			}
+		}
+	}
+
+	return compartments;
+}
+
 
 void CoordinateSystem::clear()
 {

@@ -64,8 +64,12 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	 */
 	void write_graphviz(std::ostream& file, Neuron const& neuron, std::string name);
 
+	// Returns list of required MADC-recordable pairs.
+	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> get_recordable_pairs() const;
 
 private:
+	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> m_recordable_pairs;
+
 	std::map<CompartmentOnNeuron, dapr::PropertyHolder<NumberTopBottom>> resource_map;
 	NumberTopBottom m_total;
 };
