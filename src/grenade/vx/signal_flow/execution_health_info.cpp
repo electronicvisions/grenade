@@ -42,8 +42,11 @@ ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::
 	}
 	for (auto const coord : halco::common::iter_all<CrossbarOutputOnDLS>()) {
 		crossbar_output_event_counter[coord].set_value(
-		    crossbar_output_event_counter[coord].get_value() -
-		    rhs.crossbar_output_event_counter[coord].get_value());
+		    haldls::vx::v3::CrossbarOutputEventCounter::Value(
+		        ((crossbar_output_event_counter[coord].get_value() +
+		          haldls::vx::v3::CrossbarOutputEventCounter::Value::size) -
+		         rhs.crossbar_output_event_counter[coord].get_value()) %
+		        haldls::vx::v3::CrossbarOutputEventCounter::Value::size));
 	}
 
 	return *this;
