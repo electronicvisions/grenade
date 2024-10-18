@@ -94,7 +94,8 @@ extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& n
 						    execution_instance.spike_labels.at(descriptor)
 						        .at(i)
 						        .at(compartment_on_neuron);
-						for (auto const& label : compartment_labels) {
+						if (!compartment_labels.empty()) {
+							auto const& label = compartment_labels.at(0);
 							assert(label);
 							auto const [_, success] = label_lookup.emplace(
 							    *label, std::tuple{descriptor, i, compartment_on_neuron});
