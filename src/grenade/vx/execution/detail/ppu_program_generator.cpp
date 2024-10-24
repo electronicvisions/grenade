@@ -401,7 +401,6 @@ void perform_periodic_read()
 	// instruction cache warming
 	auto const time_before_cache_warming = libnux::vx::now();
 	perform_periodic_read_recording(periodic_cadc_readout_memory_offset, time_before_cache_warming);
-	status = grenade::vx::ppu::detail::Status::inside_periodic_read;
 	while (libnux::vx::now() < time_before_cache_warming + {{periodic_cadc_ppu_wait_clock_cycles}}) {}
 	while (status != grenade::vx::ppu::detail::Status::stop_periodic_read) {
 		perform_periodic_read_recording(periodic_cadc_readout_memory_offset, time_before_cache_warming);

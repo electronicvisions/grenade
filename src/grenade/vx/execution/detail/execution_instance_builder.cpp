@@ -1121,7 +1121,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 			auto [ppu_command_builder, ppu_command_result] =
 			    stadls::vx::generate(generator::PPUCommand(
 			        ppu_status_coord, ppu::detail::Status::stop_periodic_read,
-			        ppu::detail::Status::inside_periodic_read));
+			        ppu::detail::Status::periodic_read));
 			m_batch_entries.at(b).ppu_command_results.push_back(ppu_command_result);
 			builder.merge(ppu_command_builder += current_time);
 			current_time += ppu_command_result.duration;
