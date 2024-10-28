@@ -2,6 +2,8 @@
 #include "grenade/vx/network/abstract/multicompartment_placement_coordinate_system.h"
 #include <gtest/gtest.h>
 
+#include <iostream>
+
 using namespace grenade::vx::network::abstract;
 
 
@@ -16,22 +18,27 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	|
 	0-0 x x x x
 	*/
-	coordinates.coordinate_system[0][0].switch_right = 1;
-	coordinates.coordinate_system[0][0].switch_top_bottom = 1;
 
-	coordinates.coordinate_system[1][0].switch_right = 1;
-	coordinates.coordinate_system[1][0].switch_top_bottom = 1;
+	coordinates[0][0].switch_right = 1;
+	coordinates[0][0].switch_top_bottom = 1;
 
-	coordinates.coordinate_system[0][1].switch_right = 1;
+	coordinates[1][0].switch_right = 1;
+	coordinates[1][0].switch_top_bottom = 1;
 
-	coordinates.coordinate_system[0][2].switch_circuit_shared = 1;
-	coordinates.coordinate_system[0][2].switch_shared_right = 1;
+	coordinates[0][1].switch_right = 1;
 
-	coordinates.coordinate_system[0][3].switch_circuit_shared = 1;
+	coordinates[1][1].switch_right = 1;
 
-	coordinates.coordinate_system[0][4].switch_circuit_shared = 1;
-	coordinates.coordinate_system[0][4].switch_shared_right = 1;
-	coordinates.coordinate_system[0][5].switch_circuit_shared_conductance = 1;
+	coordinates[0][2].switch_circuit_shared = 1;
+	coordinates[0][2].switch_shared_right = 1;
+
+	coordinates[0][3].switch_circuit_shared = 1;
+	coordinates[0][3].switch_shared_right = 1;
+
+	coordinates[0][4].switch_circuit_shared_conductance = 1;
+	coordinates[0][4].switch_shared_right = 1;
+
+	coordinates[0][5].switch_circuit_shared_conductance = 1;
 
 	// Testing connection detection
 	EXPECT_TRUE(coordinates.connected(0, 0));
@@ -41,13 +48,10 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_TRUE(coordinates.connected(4, 0));
 	EXPECT_TRUE(coordinates.connected(5, 0));
 
-
-	// Testing directed connections
+	// Testing direct connections
 	EXPECT_TRUE(coordinates.connected_right(0, 0));
 	EXPECT_FALSE(coordinates.connected_top_bottom(1, 1));
 	EXPECT_TRUE(coordinates.connected_left(1, 0));
-	EXPECT_TRUE(coordinates.connected_right_shared(4, 0));
-	EXPECT_TRUE(coordinates.connected_left_shared(5, 0));
 
 	// Testing direct connection over shared line
 	EXPECT_EQ(coordinates.connected_shared_short(2, 0).size(), 1);
@@ -55,6 +59,8 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_EQ(coordinates.connected_shared_short(2, 0)[0].second, 0);
 
 	// Testing for invalid connections
+	EXPECT_FALSE(coordinates.has_empty_connections(255));
+	EXPECT_FALSE(coordinates.has_double_connections(255));
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
 	EXPECT_FALSE(coordinates.has_double_connections(255));
 	EXPECT_FALSE(coordinates.short_circuit(255));
@@ -78,26 +84,30 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_EQ(coordinates.get_compartment(2, 0).value(), compartment_a_on_neuron);
 
 	// Detect and clear empty connection
-	coordinates.coordinate_system[0][10].switch_circuit_shared = 1;
+	coordinates[0][10].switch_circuit_shared = 1;
 	EXPECT_TRUE(coordinates.has_empty_connections(255));
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
+	EXPECT_FALSE(coordinates.has_empty_connections(255));
 
-	/* Connection between non adjacent neuron circuits
+	// New coordinate system to test connection to not adjacent neuron circuits
+	coordinates.clear();
+
+	coordinates[0][0].switch_circuit_shared = 1;
+	coordinates[0][0].switch_shared_right = 1;
+
+	coordinates[0][1].switch_shared_right = 1;
+
+	coordinates[0][2].switch_circuit_shared_conductance = 1;
+
+	/*
 	 _ _
 	|   &
 	0 x 1 x x x x
 	x x x x x x x
 	*/
-	coordinates.clear();
 
-	coordinates.coordinate_system[0][0].switch_circuit_shared = 1;
-	coordinates.coordinate_system[0][0].switch_shared_right = 1;
-
-	coordinates.coordinate_system[0][1].switch_shared_right = 1;
-
-	coordinates.coordinate_system[0][2].switch_circuit_shared_conductance = 1;
-
+	EXPECT_FALSE(coordinates.has_empty_connections(255));
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
 	EXPECT_EQ(coordinates.connected_shared_short(0, 0).size(), 0);
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).size(), 1);
@@ -110,11 +120,11 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	0 x 1 x 2 x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][2].switch_shared_right = 1;
+	coordinates[0][2].switch_shared_right = 1;
 
-	coordinates.coordinate_system[0][3].switch_shared_right = 1;
+	coordinates[0][3].switch_shared_right = 1;
 
-	coordinates.coordinate_system[0][4].switch_circuit_shared_conductance = 1;
+	coordinates[0][4].switch_circuit_shared_conductance = 1;
 
 	EXPECT_EQ(coordinates.connected_shared_short(0, 0).size(), 0);
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).size(), 2);
@@ -130,7 +140,7 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	0 0 1 x 2 x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][1].switch_circuit_shared = 1;
+	coordinates[0][1].switch_circuit_shared = 1;
 	EXPECT_EQ(coordinates.connected_shared_short(0, 0).size(), 1);
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).size(), 2);
 
@@ -152,7 +162,7 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	0 x x x x x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][0].switch_shared_right = 1;
+	coordinates[0][0].switch_shared_right = 1;
 	EXPECT_TRUE(coordinates.has_empty_connections(255));
 
 	/* Detection of empty connection. Checking case where only shared line is closed but
@@ -162,7 +172,7 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	0 x x x x x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][0].switch_circuit_shared = 1;
+	coordinates[0][0].switch_circuit_shared = 1;
 	EXPECT_TRUE(coordinates.has_empty_connections(255));
 
 	/* Detection of empty connections. Checking case where no empty connection exists.
@@ -171,7 +181,7 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	0 1 x x x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][1].switch_circuit_shared_conductance = 1;
+	coordinates[0][1].switch_circuit_shared_conductance = 1;
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
 
 	/* Clearing of empty connections.
@@ -180,28 +190,28 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	0 1 x x x x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][1].switch_shared_right = 1;
+	coordinates[0][1].switch_shared_right = 1;
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
-	EXPECT_EQ(coordinates.coordinate_system[0][0].switch_circuit_shared, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][0].switch_shared_right, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_shared_right, 0);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][0].switch_circuit_shared, 1);
+	EXPECT_EQ(coordinates[0][0].switch_shared_right, 1);
+	EXPECT_EQ(coordinates[0][1].switch_shared_right, 0);
+	EXPECT_EQ(coordinates[0][1].switch_circuit_shared_conductance, 1);
 
-	/* Clearing of empty connetions. Empty connection spans over multiple neuron circuits in
-	x-Direction. All of these open end connections are cleared.
+
+	/*
 	 _ _ _
 	| &
 	0 1 x x x x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][1].switch_shared_right = 1;
-	coordinates.coordinate_system[0][2].switch_shared_right = 1;
+	coordinates[0][1].switch_shared_right = 1;
+	coordinates[0][2].switch_shared_right = 1;
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_shared_right, 0);
-	EXPECT_EQ(coordinates.coordinate_system[0][2].switch_shared_right, 0);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][1].switch_shared_right, 0);
+	EXPECT_EQ(coordinates[0][2].switch_shared_right, 0);
+	EXPECT_EQ(coordinates[0][1].switch_circuit_shared_conductance, 1);
 
 	/* Clearing of empty connections in the presence of another valid connection.
 	 _     _
@@ -209,13 +219,13 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	0 1 x x x x x
 	x x x x x x x
 	*/
-	coordinates.coordinate_system[0][3].switch_circuit_shared = 1;
-	coordinates.coordinate_system[0][3].switch_shared_right = 1;
+	coordinates[0][3].switch_circuit_shared = 1;
+	coordinates[0][3].switch_shared_right = 1;
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
-	EXPECT_EQ(coordinates.coordinate_system[0][3].switch_circuit_shared, 0);
-	EXPECT_EQ(coordinates.coordinate_system[0][3].switch_shared_right, 0);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][3].switch_circuit_shared, 0);
+	EXPECT_EQ(coordinates[0][3].switch_shared_right, 0);
+	EXPECT_EQ(coordinates[0][1].switch_circuit_shared_conductance, 1);
 
 	/* Clearing of empty connections should do nothing.
 	 _ _ _
@@ -224,23 +234,24 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	x x x x x x x
 	*/
 	coordinates.clear();
-	coordinates.coordinate_system[0][0].switch_shared_right = 1;
-	coordinates.coordinate_system[0][1].switch_shared_right = 1;
-	coordinates.coordinate_system[0][2].switch_shared_right = 1;
-	coordinates.coordinate_system[0][0].switch_circuit_shared = 1;
-	coordinates.coordinate_system[0][1].switch_circuit_shared_conductance = 1;
-	coordinates.coordinate_system[0][2].switch_circuit_shared_conductance = 1;
-	coordinates.coordinate_system[0][3].switch_circuit_shared_conductance = 1;
+	coordinates[0][0].switch_shared_right = 1;
+	coordinates[0][1].switch_shared_right = 1;
+	coordinates[0][2].switch_shared_right = 1;
+	coordinates[0][0].switch_circuit_shared = 1;
+	coordinates[0][1].switch_circuit_shared_conductance = 1;
+	coordinates[0][2].switch_circuit_shared_conductance = 1;
+	coordinates[0][3].switch_circuit_shared_conductance = 1;
+
 
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
-	EXPECT_EQ(coordinates.coordinate_system[0][0].switch_shared_right, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_shared_right, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][2].switch_shared_right, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][0].switch_circuit_shared, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_circuit_shared_conductance, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][2].switch_circuit_shared_conductance, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][3].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][0].switch_shared_right, 1);
+	EXPECT_EQ(coordinates[0][1].switch_shared_right, 1);
+	EXPECT_EQ(coordinates[0][2].switch_shared_right, 1);
+	EXPECT_EQ(coordinates[0][0].switch_circuit_shared, 1);
+	EXPECT_EQ(coordinates[0][1].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][2].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][3].switch_circuit_shared_conductance, 1);
 
 
 	/* Clearing empty connections in combination with valid connection at left limit of
@@ -251,19 +262,20 @@ TEST(MulticompartmentPlacementCoordiantes, EmptyConnections)
 	x x x x x x x
 	*/
 	coordinates.clear();
-	coordinates.coordinate_system[0][0].switch_shared_right = 1;
-	coordinates.coordinate_system[0][1].switch_shared_right = 1;
-	coordinates.coordinate_system[0][2].switch_shared_right = 1;
-	coordinates.coordinate_system[0][1].switch_circuit_shared_conductance = 1;
-	coordinates.coordinate_system[0][2].switch_circuit_shared = 1;
-	coordinates.coordinate_system[0][3].switch_circuit_shared_conductance = 1;
+	coordinates[0][0].switch_shared_right = 1;
+	coordinates[0][1].switch_shared_right = 1;
+	coordinates[0][2].switch_shared_right = 1;
+	coordinates[0][1].switch_circuit_shared_conductance = 1;
+	coordinates[0][2].switch_circuit_shared = 1;
+	coordinates[0][3].switch_circuit_shared_conductance = 1;
+
 
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
-	EXPECT_EQ(coordinates.coordinate_system[0][0].switch_shared_right, 0);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_shared_right, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][2].switch_shared_right, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][1].switch_circuit_shared_conductance, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][2].switch_circuit_shared, 1);
-	EXPECT_EQ(coordinates.coordinate_system[0][3].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][0].switch_shared_right, 0);
+	EXPECT_EQ(coordinates[0][1].switch_shared_right, 1);
+	EXPECT_EQ(coordinates[0][2].switch_shared_right, 1);
+	EXPECT_EQ(coordinates[0][1].switch_circuit_shared_conductance, 1);
+	EXPECT_EQ(coordinates[0][2].switch_circuit_shared, 1);
+	EXPECT_EQ(coordinates[0][3].switch_circuit_shared_conductance, 1);
 }

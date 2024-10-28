@@ -23,6 +23,15 @@ namespace grenade::vx::network::abstract {
  */
 struct SYMBOL_VISIBLE NeuronWithEnvironment
 {
+	NeuronWithEnvironment() = default;
+
+	// Deleted copy constructors since the neuron is not copyable.
+	NeuronWithEnvironment(NeuronWithEnvironment const& other) = delete;
+	NeuronWithEnvironment& operator=(NeuronWithEnvironment const& other) = delete;
+
+	NeuronWithEnvironment(NeuronWithEnvironment&& other) = default;
+	NeuronWithEnvironment& operator=(NeuronWithEnvironment&& other) = default;
+
 	Neuron neuron;
 	Environment environment;
 };

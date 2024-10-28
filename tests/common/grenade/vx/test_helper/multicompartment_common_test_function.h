@@ -42,6 +42,7 @@ inline auto test_neuron_placement = [](std::string file_name,
 		        "placement\n";
 	}
 
+
 	auto test_neuron_placement_run =
 	    [&neuron_generator](
 	        log4cxx::LoggerPtr logger, size_t max_num_compartments, size_t max_num_synaptic_inputs,
@@ -107,6 +108,7 @@ inline auto test_neuron_placement = [](std::string file_name,
 		    std::launch::async, test_neuron_placement_run, logger, max_num_compartments,
 		    max_num_synaptic_inputs, algorithm.clone()));
 	}
+
 	if (file_name != "") {
 		for (auto& future : run_results) {
 			std::vector<TestResult> results = future.get();

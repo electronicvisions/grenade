@@ -1,5 +1,5 @@
 #include "grenade/vx/network/abstract/multicompartment_resource_manager.h"
-
+#include <fstream>
 
 namespace grenade::vx::network::abstract {
 
@@ -96,9 +96,8 @@ std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const
 
 void ResourceManager::add_config(Neuron const& neuron, Environment const& environment)
 {
-	for (auto i = neuron.compartment_iterators().first; i != neuron.compartment_iterators().second;
-	     i++) {
-		add_config(*i, neuron, environment);
+	for (auto compartment : boost::make_iterator_range(neuron.compartments())) {
+		add_config(compartment, neuron, environment);
 	}
 
 	m_recordable_pairs = environment.get_recordable_pairs();
@@ -109,10 +108,19 @@ NumberTopBottom const& ResourceManager::get_total() const
 	return m_total;
 }
 
-void ResourceManager::write_graphviz(std::ostream& file, Neuron const& neuron, std::string name)
+void ResourceManager::write_graphviz(
+    std::string filename, Neuron const& neuron, std::string name, bool append)
 {
+	std::ofstream file;
+	if (append) {
+		file.open(filename, std::ofstream::app);
+	} else {
+		file.open(filename);
+	}
+
+
 	file << "graph " << name << " {\n";
-	for (auto connection : boost::make_iterator_range(neuron.compartment_connection_iterators())) {
+	for (auto connection : boost::make_iterator_range(neuron.compartment_connections())) {
 		auto compartment_a = neuron.source(connection);
 		auto compartment_b = neuron.target(connection);
 		file << compartment_a << "(" << get_config(compartment_a) << ")"
@@ -120,6 +128,8 @@ void ResourceManager::write_graphviz(std::ostream& file, Neuron const& neuron, s
 		     << "\n";
 	}
 	file << "}\n";
+
+	file.close();
 }
 
 std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>>

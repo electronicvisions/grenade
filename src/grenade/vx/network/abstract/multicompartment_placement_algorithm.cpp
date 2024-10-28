@@ -1,145 +1,165 @@
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm.h"
+#include <log4cxx/logger.h>
 
 
 namespace grenade::vx::network::abstract {
 
-// Validation of a configuration with given target neuron and required resources
+PlacementAlgorithm::PlacementAlgorithm() :
+    logger(log4cxx::Logger::getLogger("grenade.MC.Placement.Algorithm"))
+{
+}
+
+
 bool PlacementAlgorithm::valid(
     CoordinateSystem const& configuration, Neuron const& neuron, ResourceManager const& resources)
 {
-	/*std::cout << "\n______________________________Validation______________________________\n\n";*/
 	Neuron neuron_constructed;
-	std::map<CompartmentOnNeuron, NumberTopBottom> configuration_compartments;
 
-	// Iterate over CoordinateSystem
-	for (int y = 0; y < 2; y++) {
-		for (int x = 0; x < 255; x++) {
-			if (!configuration.coordinate_system[y][x].compartment) {
+	// Check for dead end connections (only connected on one side or not connected to compartments)
+	if (configuration.has_empty_connections(255)) {
+		LOG4CXX_INFO(logger, "Validation failed: Empty connections.");
+		return false;
+	}
+	// Check for double connections
+	if (configuration.double_switch(255)) {
+		LOG4CXX_INFO(logger, "Validation failed: Double switches set.");
+		return false;
+	}
+
+	// Add compartments to neuron
+	std::optional<CompartmentOnNeuron> compartment_temp;
+	std::map<CompartmentOnNeuron, NumberTopBottom> resources_allocated;
+	for (size_t y = 0; y < 2; y++) {
+		for (size_t x = 0; x < 255; x++) {
+			compartment_temp = configuration.coordinate_system[y][x].compartment;
+			if (!compartment_temp) {
 				continue;
 			}
-			if (configuration_compartments.find(
-			        configuration.coordinate_system[y][x].compartment.value()) !=
-			    configuration_compartments.end()) {
-				configuration_compartments[configuration.coordinate_system[y][x]
-				                               .compartment.value()] +=
-				    NumberTopBottom(1, 1 - y, y);
-			} else if (configuration.coordinate_system[y][x].compartment) {
-				configuration_compartments.emplace(
-				    configuration.coordinate_system[y][x].compartment.value(),
-				    NumberTopBottom(1, 1 - y, y));
+			if (resources_allocated.contains(compartment_temp.value())) {
+				resources_allocated[compartment_temp.value()] += NumberTopBottom(1, 1 - y, y);
+			} else {
+				resources_allocated.emplace(compartment_temp.value(), NumberTopBottom(1, 1 - y, y));
 			}
 		}
 	}
 
-
-	// Check if Resource Requirements are met
-	for (auto [key, value] : configuration_compartments) {
-		if (resources.get_config(key).number_total > value.number_total ||
-		    resources.get_config(key).number_top > value.number_top ||
-		    resources.get_config(key).number_bottom > value.number_bottom) {
-			std::cout << "Not Valid: Resource Requriments not met" << std::endl;
+	// Check for resource requirements
+	for (auto [compartment, neuron_circuits] : resources_allocated) {
+		if (resources.get_config(compartment) > neuron_circuits) {
+			LOG4CXX_INFO(logger, "Validation failed: Wrong number of resources.");
 			return false;
 		}
 	}
-	// std::cout << "Valid: resource Requirements" << std::endl;
 
-	// Check inner connections
-	for (auto [key, value] : configuration_compartments) {
-		std::vector<std::pair<int, int>> coordinates = configuration.find_compartment(key);
-		for (auto i : coordinates) {
-			if (configuration.coordinate_system[i.second][i.first + 1].compartment == key &&
-			    configuration.coordinate_system[i.second][i.first].switch_right == false) {
-				std::cout << "Not Valid: Inner Connections missing" << std::endl;
-				return false;
-			}
-			if (configuration.coordinate_system[1 - i.second][i.first].compartment == key &&
-			    (configuration.coordinate_system[1 - i.second][i.first].switch_top_bottom ==
-			         false ||
-			     configuration.coordinate_system[i.second][i.first].switch_top_bottom == false)) {
-				std::cout << "Not Valid: Inner Connections missing" << std::endl;
-				return false;
-			}
-		}
+	// Create Compartment-ID-Mapping
+	std::map<CompartmentOnNeuron, CompartmentOnNeuron> compartment_mapping;
+	for (auto [compartment, _] : resources_allocated) {
+		compartment_mapping.emplace(
+		    compartment, neuron_constructed.add_compartment(neuron.get(compartment)));
 	}
-	// std::cout << "Valid: inner Connections" << std::endl;
 
-
-	// Build Neuron and compare with Input Neuron
-	// Add Compartments
-	std::map<CompartmentOnNeuron, CompartmentOnNeuron> id_map;
-	for (auto [key, value] : configuration_compartments) {
-		id_map.emplace(key, neuron_constructed.add_compartment(neuron.get(key)));
-	}
-	// std::cout << "TEST: Compartemnts number" << id_map.size() << std::endl;
-	// Add CompartmentConnections
-	for (auto [key, value] : configuration_compartments) {
-		std::vector<std::pair<int, int>> coordinates = configuration.find_compartment(key);
-		for (auto i : coordinates) {
-			// Check for connection right
-			if ((configuration.coordinate_system[i.second][i.first].switch_circuit_shared &&
-			     configuration.coordinate_system[i.second][i.first].switch_shared_right &&
-			     configuration.coordinate_system[i.second][i.first + 1]
-			         .switch_circuit_shared_conductance) ||
-			    (configuration.coordinate_system[i.second][i.first]
-			         .switch_circuit_shared_conductance &&
-			     configuration.coordinate_system[i.second][i.first].switch_shared_right &&
-			     configuration.coordinate_system[i.second][i.first + 1].switch_circuit_shared)) {
-				bool connected = false;
-				for (auto j = neuron_constructed.adjacent_compartments(id_map[key]).first;
-				     j != neuron_constructed.adjacent_compartments(id_map[key]).second; j++) {
-					if (*j == id_map[configuration.coordinate_system[i.second][i.first + 1]
-					                     .compartment.value()]) {
-						connected = true;
-						break;
-					}
-				}
-				if (!connected) {
-					CompartmentConnectionConductance connection;
-					neuron_constructed.add_compartment_connection(
-					    id_map[key],
-					    id_map[configuration.coordinate_system[i.second][i.first + 1]
-					               .compartment.value()],
-					    connection);
-				}
-			}
-			// Check for connection left
-			else if (
-			    (configuration.coordinate_system[i.second][i.first].switch_circuit_shared &&
-			     configuration.coordinate_system[i.second][i.first - 1].switch_shared_right &&
-			     configuration.coordinate_system[i.second][i.first - 1]
-			         .switch_circuit_shared_conductance) ||
-			    (configuration.coordinate_system[i.second][i.first]
-			         .switch_circuit_shared_conductance &&
-			     configuration.coordinate_system[i.second][i.first - 1].switch_shared_right &&
-			     configuration.coordinate_system[i.second][i.first - 1].switch_circuit_shared)) {
-				// Add CompartmentConnection if not already connected
-				bool connected = false;
-				for (auto j = neuron_constructed.adjacent_compartments(id_map[key]).first;
-				     j != neuron_constructed.adjacent_compartments(id_map[key]).second; j++) {
-					if (*j == id_map[configuration.coordinate_system[i.second][i.first - 1]
-					                     .compartment.value()]) {
-						connected = true;
-						break;
-					}
-				}
-				if (!connected) {
-					CompartmentConnectionConductance connection;
-					neuron_constructed.add_compartment_connection(
-					    id_map[key],
-					    id_map[configuration.coordinate_system[i.second][i.first - 1]
-					               .compartment.value()],
-					    connection);
-				}
-			}
-		}
-	}
-	if (neuron.num_compartment_connections() != neuron_constructed.num_compartment_connections() ||
-	    neuron.num_compartments() != neuron_constructed.num_compartments()) {
-		std::cout << "Not Valid: Number Compartments/CompartmentConnections wrong" << std::endl;
+	// Check for correct number of compartments
+	if (neuron_constructed.num_compartments() != neuron.num_compartments()) {
+		LOG4CXX_INFO(logger, "Validation failed: Wrong number of compartments.");
 		return false;
 	}
-	// std::cout << "Valid: Numbers Compartments/CompartmentConnections" << std::endl;
-	return neuron.isomorphism(neuron_constructed).size() == neuron.num_compartments();
+	LOG4CXX_TRACE(logger, "Neuron :\n" << neuron);
+	LOG4CXX_TRACE(logger, "Neuron constructed:\n" << neuron_constructed);
+
+
+	// Check inner connections
+	for (size_t y = 0; y < 2; y++) {
+		for (size_t x = 0; x < 255 - 1; x++) {
+			if (configuration.get_compartment(x, y) != CompartmentOnNeuron() &&
+			    (configuration.get_compartment(x, y) == configuration.get_compartment(x + 1, y)) &&
+			    !configuration.connected_right(x, y)) {
+				LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
+				return false;
+			}
+			if (configuration.get_compartment(x, y) != CompartmentOnNeuron() &&
+			    (configuration.get_compartment(x, y) == configuration.get_compartment(x, 1 - y)) &&
+			    !configuration.connected_top_bottom(x, y)) {
+				LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
+				return false;
+			}
+			/*
+			if (configuration.connected_right(x, y) &&
+			        (configuration.get_compartment(x, y) == CompartmentOnNeuron()) ||
+			    configuration.get_compartment(x + 1, y) == CompartmentOnNeuron()) {
+			    LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
+			    return false;
+			}
+			if (configuration.connected_top_bottom(x, y) &&
+			        (configuration.get_compartment(x, y) == CompartmentOnNeuron()) ||
+			    configuration.get_compartment(x, 1 - y) == CompartmentOnNeuron()) {
+			    LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
+			    return false;
+			}
+			*/
+		}
+	}
+
+	// Add connections to neuron
+	CompartmentOnNeuron compartment_temp_a, compartment_temp_b;
+	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> connections_found;
+	CompartmentConnectionConductance connection_dummy;
+	std::vector<std::pair<size_t, size_t>> connected_coordinates;
+	for (size_t y = 0; y < 2; y++) {
+		for (size_t x = 0; x < 255; x++) {
+			if (!configuration.coordinate_system[y][x].compartment) {
+				continue; // TO-DO: Throw here?
+			}
+			connected_coordinates = configuration.connected_shared_conductance(x, y);
+			compartment_temp_a =
+			    compartment_mapping[configuration.coordinate_system[y][x].compartment.value()];
+			for (auto [x_connect, y_connect] : connected_coordinates) {
+				if (!configuration.coordinate_system[y_connect][x_connect].compartment) {
+					continue; // TO-DO: Throw here?
+				}
+				compartment_temp_b =
+				    compartment_mapping[configuration.coordinate_system[y_connect][x_connect]
+				                            .compartment.value()];
+				LOG4CXX_TRACE(
+				    logger,
+				    configuration.coordinate_system[y][x].compartment.value()
+				        << "(y=" << y << "x=" << x << ")"
+				        << " and "
+				        << configuration.coordinate_system[y_connect][x_connect].compartment.value()
+				        << "(y=" << y_connect << "x=" << x_connect << ")"
+				        << "-> Connection found.");
+				if (connections_found.contains(
+				        std::make_pair(compartment_temp_a, compartment_temp_b)) ||
+				    connections_found.contains(
+				        std::make_pair(compartment_temp_b, compartment_temp_a))) {
+					LOG4CXX_TRACE(logger, "Connection already on neuron.");
+					continue;
+				}
+				neuron_constructed.add_compartment_connection(
+				    compartment_temp_a, compartment_temp_b, connection_dummy);
+				connections_found.emplace(std::make_pair(compartment_temp_a, compartment_temp_b));
+			}
+		}
+	}
+
+	LOG4CXX_TRACE(logger, "Neuron :\n" << neuron);
+	LOG4CXX_TRACE(logger, "Neuron constructed:\n" << neuron_constructed);
+
+
+	// Check for correct number of connections
+	if (neuron_constructed.num_compartment_connections() != neuron.num_compartment_connections()) {
+		LOG4CXX_INFO(logger, "Validation failed: Wrong number of connections.");
+		LOG4CXX_DEBUG(
+		    logger, "Found " << neuron_constructed.num_compartment_connections()
+		                     << " connections instead of " << neuron.num_compartment_connections());
+		return false;
+	}
+
+	// Check for isomorphism
+	if (neuron.isomorphism(neuron_constructed).size() != neuron.num_compartments()) {
+		LOG4CXX_INFO(logger, "Validation failed: Not isomorphic.");
+		return false;
+	}
+	return true;
 }
 
 double PlacementAlgorithm::resource_efficient(
@@ -149,20 +169,22 @@ double PlacementAlgorithm::resource_efficient(
 {
 	// Calculate overall hardware requirements
 	double required_counter = 0;
-	for (auto it = neuron.compartment_iterators().first;
-	     it != neuron.compartment_iterators().second; it++) {
+	for (auto it = neuron.compartments().first; it != neuron.compartments().second; it++) {
 		required_counter += resources.get_config(*it).number_total;
 	}
 
 	// Find all neuron circuits with an assigned compartment
 	double allocated_counter = 0;
-	for (int y = 0; y < 2; y++) {
-		for (int x = 0; x < 256; x++) {
-			if (configuration.coordinate_system[y][x].compartment != CompartmentOnNeuron()) {
-				allocated_counter++;
-			}
+	size_t lower_limit = 256;
+	size_t upper_limit = 0;
+	for (size_t x = 0; x < 255; x++) {
+		if (configuration.coordinate_system[0][x].compartment != CompartmentOnNeuron()) {
+			lower_limit = x;
+		} else if (lower_limit != 256) {
+			upper_limit = x;
 		}
 	}
+	allocated_counter = 2 * (upper_limit - lower_limit);
 	return allocated_counter / required_counter;
 }
 
@@ -248,8 +270,7 @@ PlacementAlgorithm::convert_to_logical_compartments(
 {
 	// All CompartmentIDs
 	std::vector<CompartmentOnNeuron> compartment_ids;
-	for (auto i = neuron.compartment_iterators().first; i != neuron.compartment_iterators().second;
-	     i++) {
+	for (auto i = neuron.compartments().first; i != neuron.compartments().second; i++) {
 		compartment_ids.push_back(*i);
 	}
 
@@ -262,7 +283,7 @@ PlacementAlgorithm::convert_to_logical_compartments(
 	// Iterate over all Compartment-IDs
 	int keyCounter = 0;
 	for (auto i : compartment_ids) {
-		std::vector<std::pair<int, int>> coordinates = coordinate_system.find_compartment(i);
+		std::vector<std::pair<int, int>> coordinates = coordinate_system.find_neuron_circuits(i);
 
 		std::vector<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron> atomic_neurons;
 		// Iterate over all Locations of Compartment

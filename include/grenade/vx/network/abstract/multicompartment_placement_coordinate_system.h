@@ -17,16 +17,16 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 {
 	/**
-	 * Check for any connection to neuron-circuit at (x,y).
-	 * @param x x-coordinate of the neuron-circuit.
-	 * @param y y-coordinate of the neuron-circuit.
+	 * Check for any connection of the given neuron circuit either direct and via conductance.
+	 * @param x x coordinate of the neuron circuit.
+	 * @param y y coordinate of the neuron circuit.
 	 */
 	bool connected(size_t x, size_t y) const;
 
 	/**
-	 * Check for connection to left neighbor via conductance.
-	 * @param x x-coordinate of the neuron-circuit.
-	 * @param y y-coordinate of the neuron-circuit.
+	 * Check if neuron circuit is connected to its left neighbor circuit via conductance.
+	 * @param x x coordinate of the neuron circuit.
+	 * @param y y coordinate of the neuron circuit.
 	 */
 	bool connected_left_shared(size_t x, size_t y) const;
 
@@ -65,14 +65,20 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	bool has_empty_connections(size_t x_max) const;
 
 	/**
-	 * Check for connections to shared line both direct and via conductance.
-	 * @param x_xmax Upper limit to check.
+	 * Check for connection both directly and via shared line.
+	 * @param x_max Upper x limit for search.
 	 */
 	bool has_double_connections(size_t x_max) const;
 
 	/**
+	 * Check if any neuron circuit is connected via a conductance and directly to the shared line.
+	 * @param x_max Upper x limit for search.
+	 */
+	bool double_switch(size_t x_max) const;
+
+	/**
 	 * Clear connections with open ends.
-	 * @param x_xmax Upper limit to check.
+	 * @param x_max Upper x limit for clearing.
 	 */
 	void clear_empty_connections(size_t x_max);
 
@@ -80,7 +86,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 * Clear empty and double connections in given part of coordinate system.
 	 * Double connections occur if a neuron circuit connects to the shared line directly and via a
 	 * resistor at the same time. Both connections are deleted then.
-	 * @param x_max Upper limit to check.
+	 * @param x_max Upper x-limit for clearing.
 	 */
 	void clear_invalid_connections(size_t x_max);
 
@@ -100,37 +106,56 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 
 	/**
 	 * Return coordinates of all neuron circuits connected to the given one via the shared
-	 * line. The check only includes those connections starting from the given neuron circuit with a
-	 * direct connection to the shared line and ending at another neuron circuit with a resistor.
+	 * line. The check includes those connections starting from the given neuron circuit with a
+	 * direct connection to the shared line and ending at another neuron circuit with a resistor and
+	 * vice versa.
 	 * @param x X-coordinate of the neuron circuit to check for connections.
 	 * @param y Y-coordinate of the neuron circuit to check for connections.
 	 */
 	std::vector<std::pair<size_t, size_t>> connected_shared_conductance(size_t x, size_t y) const;
 
 	/**
-	 * Assign Compartment ID to connected(via switches) neuron-circuits.
-	 * @param x x-coordinate of the neuron-circuit to assign compartment to.
-	 * @param y y-coordinate of the neuron-circuit to assign compartment to.
-	 * @param compartment Compartment to assign to neuron-circuit and connected circuits.
-	 * @return Number of neuron circuits assigned to the compartment.
+	 * Assign compartment descriptor to the neuron circuit and to all directly connected neuron
+	 * circuits.
+	 * @param x x coordinate of the neuron circuit.
+	 * @param y y coordinate of the neuron circuit.
+	 * @param compartment Compartment descriptor.
 	 */
 	NumberTopBottom assign_compartment_adjacent(
 	    size_t x, size_t y, CompartmentOnNeuron const& compartment);
 
 	/**
-	 * Check for compartment wether it has neuron circuits of each parity.
+	 * Check if the compartment has neuron circuits of even and odd parity.
+	 * @param compartment Compartment descriptor.
 	 */
 	std::pair<bool, bool> parity(CompartmentOnNeuron const& compartment) const;
 
 	/**
-	 * Return set of all compartments with neuron circuits in even columns.
+	 * Return set of all compartments that have neuron circuits in columns with even parity.
 	 */
 	std::set<CompartmentOnNeuron> even_parity() const;
+
 	/**
-	 * Returns set of all compartments with neuron circuits in odd columns.
+	 * Return set of all compartments that have neuron circuits in columns with odd parity.
 	 */
 	std::set<CompartmentOnNeuron> odd_parity() const;
 
+	/**
+	 * Connects two neuron circuits in the same row via a conductance.
+	 * Connection to shared line directly for neuron circuit as x_source and via conductance for
+	 * neuron circuit at x_target.
+	 * @param x_source x coordinate of the source neuron circuit.
+	 * @param x_target x coordinate ot the target neuron circuit.
+	 * @param y Row coordinat of the neuron circuits.
+	 */
+	void connect_shared(size_t x_source, size_t x_target, size_t y);
+
+	/**
+	 * Return coordinates of all neuron circuits with the given compartment descriptor assigned.
+	 * @param compartment Compartment descriptor.
+	 */
+	std::vector<std::pair<int, int>> find_neuron_circuits(
+	    CompartmentOnNeuron const compartment) const;
 
 	// Constructor
 	CoordinateSystem() = default;
@@ -148,8 +173,6 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	// Clears coordiante system to empty coordinate system
 	void clear();
 
-	// Find coordinates of compartment
-	std::vector<std::pair<int, int>> find_compartment(CompartmentOnNeuron const compartment) const;
 
 	bool operator==(CoordinateSystem const& other) const;
 	bool operator!=(CoordinateSystem const& other) const;

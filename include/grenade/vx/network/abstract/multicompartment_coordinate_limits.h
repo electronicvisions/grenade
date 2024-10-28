@@ -5,12 +5,12 @@
 namespace grenade::vx::network::abstract {
 
 /**
- *Holds limits of placements spots of a compartment.
+ * Holds limits of placements spots of a compartment.
  */
 struct CoordinateLimit
 {
-	int lower;
-	int upper;
+	size_t lower;
+	size_t upper;
 };
 
 /**

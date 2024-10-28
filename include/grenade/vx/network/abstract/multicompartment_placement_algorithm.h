@@ -8,6 +8,11 @@
 #include <utility>
 #include <boost/graph/vf2_sub_graph_iso.hpp>
 
+namespace log4cxx {
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+} // namespace log4cxx
+
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
@@ -19,6 +24,8 @@ struct Neuron;
 // PlacementAlgorithm Base Class
 struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithm
 {
+	PlacementAlgorithm();
+
 	/**
 	 * Execute Placement Algorithm.
 	 * @param coordinate_system Initial state of coordinate system.
@@ -102,6 +109,9 @@ protected:
 	// Convert Configuration CoordinateSystem into logical Compartments
 	halco::hicann_dls::vx::LogicalNeuronCompartments convert_to_logical_compartments(
 	    CoordinateSystem const& coordinate_system, Neuron const& neuron);
+
+private:
+	log4cxx::LoggerPtr logger;
 };
 
 } // namespace abstract

@@ -156,9 +156,9 @@ AlgorithmResult PlacementAlgorithmBruteForce::run(
 
 	// Hard Coded Case: 1 compartment with 1 neuron circuit
 	if (neuron.num_compartments() == 1 &&
-	    resources.get_config(*(neuron.compartment_iterators().first)).number_total == 1) {
+	    resources.get_config(*(neuron.compartments().first)).number_total == 1) {
 		result.coordinate_system.coordinate_system[0][0].compartment =
-		    *(neuron.compartment_iterators().first);
+		    *(neuron.compartments().first);
 		result.finished = true;
 		m_results.push_back(result);
 		m_results_temp.push_back(result);
@@ -362,9 +362,9 @@ void PlacementAlgorithmBruteForce::run_partial(
 
 	// Hard Coded Case: 1 compartment with 1 neuron circuit
 	if (neuron.num_compartments() == 1 &&
-	    resources.get_config(*(neuron.compartment_iterators().first)).number_total == 1) {
+	    resources.get_config(*(neuron.compartments().first)).number_total == 1) {
 		result.coordinate_system.coordinate_system[0][0].compartment =
-		    *(neuron.compartment_iterators().first);
+		    *(neuron.compartments().first);
 		result.finished = true;
 		m_results.push_back(result); // TO-DO Remove?
 	}

@@ -13,9 +13,9 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) NumberTopBottom
 {
 	NumberTopBottom();
 	NumberTopBottom(size_t number_total_in, size_t number_top_in, size_t number_bottom_in);
-	size_t number_total;
-	size_t number_top;
-	size_t number_bottom;
+	size_t number_total = 0;
+	size_t number_top = 0;
+	size_t number_bottom = 0;
 
 	bool operator==(NumberTopBottom const& other) const;
 	bool operator<(NumberTopBottom const& other) const;

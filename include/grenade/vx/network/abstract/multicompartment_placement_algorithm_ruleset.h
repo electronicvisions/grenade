@@ -1,7 +1,14 @@
 #pragma once
 
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm.h"
+#include "grenade/vx/network/abstract/multicompartment_placement_spot.h"
+#include <algorithm>
 #include <set>
+
+namespace log4cxx {
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+} // namespace log4cxx
 
 
 namespace grenade::vx::network {
@@ -12,13 +19,21 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmRuleset : public Plac
 	PlacementAlgorithmRuleset();
 
 	/**
+	 * Constructs Placement-Algorithm with specified placement pattern.
+	 * For depth_search_first enabled the neuron is placed in depth first starting from the
+	 * largest compartment. Elsewise the neuron is placed in breadth first.
+	 * @param depth_search_first Wether the neuron should be placed in depth first.
+	 */
+	PlacementAlgorithmRuleset(bool depth_search_first);
+
+	/**
 	 * Executes placement algorithm.
 	 * @param coordinate_system Initial state of coordinate system.
 	 * @param neuron Target neuron to be placed.
 	 * @param resources Resource requirements of the target neuron.
 	 */
 	AlgorithmResult run(
-	    CoordinateSystem const& coordinate_system,
+	    CoordinateSystem const& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources);
 
@@ -45,10 +60,57 @@ private:
 	 * @param step Step number.
 	 */
 	AlgorithmResult run_one_step(
-	    CoordinateSystem const& coordinate_system,
-	    Neuron const& neuron,
-	    ResourceManager const& resources,
-	    size_t step);
+	    Neuron const& neuron, ResourceManager const& resources, size_t step);
+
+	/**
+	 * Finds all lower and upper limits of a placed compartment.
+	 * @param coordinates Current configuration.
+	 * @param compartment Compartment for which limits are searched.
+	 */
+	CoordinateLimits find_limits(
+	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
+
+	/**
+	 * Finds all free spots.
+	 * @param coordiantes Current configuration.
+	 * @param x_start Column to start search at.
+	 * @param y Row to search in.
+	 * @param direction Direction to search in.
+	 */
+	std::vector<PlacementSpot> find_free_spots(
+	    CoordinateSystem const& coordinates, size_t x_start, size_t y, int direction = 1);
+
+	/**
+	 * Finds all free spots next to a placed compartment.
+	 * @param coordiantes Current configuration.
+	 * @param compartment Compartment to search free spots for.
+	 */
+	std::vector<PlacementSpot> find_free_spots(
+	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment);
+
+
+	/**
+	 * Selects a sufficiently large free spot.
+	 * @param spots Free spots.
+	 * @param min_spot_size Spot size required.
+	 * @param closest Prioritize closer spots.
+	 * @param largest Prioritize larger spots.
+	 * @param block Only consider rectangluar spots.
+	 */
+	PlacementSpot select_free_spot(
+	    std::vector<PlacementSpot> spots,
+	    NumberTopBottom const& min_spot_size,
+	    bool closest = true,
+	    bool largest = false,
+	    bool block = false);
+
+	/**
+	 * Determine unplaced neighbours
+	 * @param neuron Neuron to be placed.
+	 * @param compartment Compartment whichs neighbours are to be determined.
+	 */
+	std::set<CompartmentOnNeuron> unplaced_neighbours(
+	    Neuron const& neuron, CompartmentOnNeuron const& compartment) const;
 
 	/**
 	 * Return compartment descriptor of compartment with largest number of connections.
@@ -57,169 +119,208 @@ private:
 	CompartmentOnNeuron find_max_deg(Neuron const& neuron) const;
 
 	/**
-	 * Find limits of placement spots of a placed compartment.
-	 * @param coordinate_system Current configuration of the coordinate system.
-	 * @param compartment Compartment descriptor of the compartment to search for.
-	 */
-	CoordinateLimits find_limits(
-	    CoordinateSystem const& coordinate_system, CompartmentOnNeuron const& compartment) const;
-
-	/**
-	 * Recursively iterates a chain of compartments and returns the lenght of the chain.
-	 * @param neuron Neuron over which compartments is iterated.
-	 * @param resources Resource requirements of the neuron.
-	 * @param target Compartment where search starts.
-	 * @param marked_compartments Set of compartments already visited.
-	 */
-	int iterate_compartments_rec(
-	    Neuron const& neuron,
-	    ResourceManager const& resources,
-	    CompartmentOnNeuron const& target,
-	    std::set<CompartmentOnNeuron>& marked_compartments) const;
-
-	/**
-	 * Adds resource requirements additional to the requirements of the compartments defined by
-	 their mechanisms. Is triggered if during the placement more space neeeds to be occupied by the
-	 compartment to allow all its connections to be formed.
-	 * @param coordinates Current coordinate system configuration.
-	 * @param x x-coordiante of the compartment for which a additional requirement should be added.
-	 * @param y y-coordiante of the compartment for which a additional requirement should be added.
-	 */
-	void add_additional_resources(CoordinateSystem const& coordinates, int x, int y);
-
-	/**
-	 * Places a single neuron compartments neuron circuits in one row to the right from the starting
-	 * coordinate. If the synaptic inputs on the compartment require the cirucits in either the
-	 * top or the bottom row the requested row is ignored.
-	 * @param coordinate_system Current state of the coordinate system.
-	 * @param neuron Target neuron.
-	 * @param resources Resource reqirements of the target neuron.
-	 * @param x_start The compartment is placed to the right of this x-coordinate.
-	 * @param y The compartment is placed at this y-coordinate.
+	 * Simple placement. Place in one row if other row is not explicitly requested.
+	 * @param coordiantes Current configuration. (Or empty for virutal placement)
+	 * @param neuron Neuron to be placed.
+	 * @param resources Requried resources by compartments of neuron.
+	 * @param x_start Column to start placement.
+	 * @param y Row to start placement.
 	 * @param compartment Compartment to be placed.
+	 * @param direction Direction of placement.
+	 * @param virtually Dummy placement to determine required spot size.
+	 * @return Number of allocated neuron circuits.
 	 */
-	void place_simple_right(
-	    CoordinateSystem& coordinate_system,
+	NumberTopBottom place_simple(
+	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    int x_start,
-	    int y,
-	    CompartmentOnNeuron const& compartment);
+	    size_t x_start,
+	    size_t y,
+	    CompartmentOnNeuron const& compartment,
+	    int direction = 1,
+	    bool virtually = false);
 
 	/**
-	 * Places a single neuron compartments neuron circuits in one row to the left from the starting
-	 * coordinate. If the synaptic inputs on the compartment require the cirucits in either the
-	 * top or the bottom row the requested row is ignored.
-	 * @param coordinate_system Current state of the coordinate system.
-	 * @param neuron Target neuron.
-	 * @param resources Resource reqirements of the target neuron.
-	 * @param x_start The compartment is placed to the left of this x-coordinate.
-	 * @param y The compartment is placed at this y-coordinate.
-	 * @param compartment Compartment to be placed.
-	 */
-	void place_simple_left(
-	    CoordinateSystem& coordinate_system,
+	 *  Use simple placement to place compartment to the right. See place_right for more
+	 * information.
+	 * */
+	NumberTopBottom place_simple_right(
+	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    int x_start,
-	    int y,
-	    CompartmentOnNeuron const& compartment);
+	    size_t x_start,
+	    size_t y,
+	    CompartmentOnNeuron const& compartment,
+	    bool virtually = false);
+
+	/**
+	 *  Use simple placement to place compartment to the left. See place_right for more
+	 * information.
+	 * */
+	NumberTopBottom place_simple_left(
+	    CoordinateSystem& coordinates,
+	    Neuron const& neuron,
+	    ResourceManager const& resources,
+	    size_t x_start,
+	    size_t y,
+	    CompartmentOnNeuron const& compartment,
+	    bool virtually = false);
 
 	/**
 	 * Place a bridge like structure which can interconnect a large number of compartments.
-	 * The structure is placed from the given start x-coordiante to the right.
 	 *
 	 * At the given x-coordinate neuron circuits are assigned in the top row.
 	 * At the left-most and right-most circuits neuron circuits in the bottom
 	 * row are also assigned. This resembles a bridge like structure. For example:
 	 *
-	 * top:    x-x-x-x-x-x
-	 * bottom: x         x
-	 * @param coordinate_system Configuration of the coordinate system.
-	 * @param neuron Target neuron.
-	 * @param resources Resource requirements of the target neuron.
-	 * @param x_start x-coordinate where bridge structure starts to be placed.
-	 * @param compartment Compartment to be placed as a bridge structure.
+	 * top    x-x-x-x-x-x
+	 * bottom x         x
+	 * @param coordinates Current configuration. (Or empty for virutal placement)
+	 * @param neuron Neuron to be placed.
+	 * @param resources Required resources by compartments of neuron.
+	 * @param x_start Column to start placement from.
+	 * @param compartment Compartment to be placed as a bridge.
+	 * @param direction Direction of placement.
+	 * @param virtually Dummy placement to determine required spot size.
+	 * @return Number of allocated neuron circuits.
 	 */
-	void place_bridge_right(
-	    CoordinateSystem& coordinate_system,
+	NumberTopBottom place_bridge(
+	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    int x_start,
-	    CompartmentOnNeuron const& compartment);
+	    size_t x_start,
+	    CompartmentOnNeuron const& compartment,
+	    int direction = 1,
+	    bool virtually = false);
 
 	/**
-	 * Place a bridge like structure which can interconnect a large number of compartments.
-	 * The structure is placed from the given start x-coordinate to the left.
-	 *
-	 * At the given x-coordinate neuron circuits are assigned in the top row.
-	 * At the left-most and right-most circuits neuron circuits in the bottom
-	 * row are also assigned. This resembles a bridge like structure. For example:
-	 *
-	 * top:    x-x-x-x-x-x
-	 * bottom: x         x
-	 * @param coordinate_system Configuration of the coordinate system.
-	 * @param neuron Target neuron.
-	 * @param resources Resource requirements of the target neuron.
-	 * @param x_start x-coordinate where bridge structure starts to be placed.
-	 * @param compartment Compartment to be placed as a bridge structure.
+	 * Place a bridge structure to the right. See place_bridge for more information.
 	 */
-	void place_bridge_left(
-	    CoordinateSystem& coordinate_system,
+	NumberTopBottom place_bridge_right(
+	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    int x_start,
-	    CompartmentOnNeuron const& compartment);
+	    size_t x_start,
+	    CompartmentOnNeuron const& compartment,
+	    bool virtually = false);
 
 	/**
-	 * Interconnect all neuron circuits that belong to the specified compartment.
-	 * @param coordianate_system Coordinate system on which to perform the connections.
-	 * @param compartment Compartment whichs circuits should be connected.
+	 * Place a bridge structure to the left. See place_bridge for more information.
 	 */
-	void connect_self(CoordinateSystem& coordinate_system, CompartmentOnNeuron const& compartment);
-
-	/**
-	 * Connect two adjacently placed compartments with each other via conductance.
-	 * @param coordinate_system Coordinate system on which to perform the connection.
-	 * @param neuron Target neuron.
-	 * @param y y-coordiante of the coordinate system in which the connection should be established.
-	 * @param compartment_a Source compartment of the connection.
-	 * @param compartment_b Target compartment of the connection.
-	 */
-	void connect_next(
-	    CoordinateSystem& coordinate_system,
+	NumberTopBottom place_bridge_left(
+	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
-	    int y,
+	    ResourceManager const& resources,
+	    size_t x_start,
+	    CompartmentOnNeuron const& compartment,
+	    bool virtually = false);
+
+
+	/**
+	 * Place multiple leafs.
+	 * @param coordinates Current configuration. (Or empty for virutal placement)
+	 * @param neuron Neuron to be placed.
+	 * @param resources Resources required by comaprtment of neuron.
+	 * @param x Column to start placement.
+	 * @param y Row to start placement.
+	 * @param compartment Compartment whichs leafs are placed.
+	 * @param leafs List of leaf compartments.
+	 * @param direction Direction of placement.
+	 * @param virtually Dummy placement to determine required spot size.
+	 */
+	NumberTopBottom place_leafs(
+	    CoordinateSystem& coordinates,
+	    Neuron const& neuron,
+	    ResourceManager const& resources,
+	    size_t x,
+	    size_t y,
+	    CompartmentOnNeuron compartment,
+	    std::vector<CompartmentOnNeuron> const& leafs,
+	    int direction = 1,
+	    bool virtually = false);
+
+	/**
+	 * Place multiple compartment that are connected as a chain.
+	 * @param coordinates Current configuration. (Or empty for virtual placement)
+	 * @param neuron Neuron to be placed.
+	 * @param resources Resources required by compartments of neuron.
+	 * @param x Column to start placement from.
+	 * @param y Row to start placement from.
+	 * @param chain List of chain compartments.
+	 * @param direction Direction of placement.
+	 * @param virtually Dummy placement to determine required spot size.
+	 */
+	NumberTopBottom place_chain(
+	    CoordinateSystem& coordinates,
+	    Neuron const& neuron,
+	    ResourceManager const& resources,
+	    size_t x,
+	    size_t y,
+	    std::vector<CompartmentOnNeuron> const& chain,
+	    int direction = 1,
+	    bool virtually = false);
+
+	/**
+	 * Connect all neuron circuits belonging to one compartment directly.
+	 * @param coordinates Current configuration.
+	 * @param compartment Compartment to be connected.
+	 */
+	void connect_self(CoordinateSystem& coordinates, CompartmentOnNeuron const& compartment);
+
+	/**
+	 * Connect two compartments that are directly adjacent.
+	 * @param coordinates Current configuration.
+	 * @param neuron Neuron to be placed.
+	 * @param compartment_a One compartment to be connected.
+	 * @param compartment_b Other compartment to be connected.
+	 */
+	void connect_adjacent(
+	    CoordinateSystem& coordinates,
+	    Neuron const& neuron,
 	    CompartmentOnNeuron const& compartment_a,
 	    CompartmentOnNeuron const& compartment_b);
 
 	/**
-	 * Interconnect a leaf connected to a compartment.
-	 * @param coordinate_system Current configuration of the coordinate system.
-	 * @param neuron Target neuron.
-	 * @param compartment_leaf Leaf compartment to connect to node compartment.
-	 * @param compartment_node Node compartment to which leaf is connected.
+	 * Connect two compartment that are not directly adjacent.
+	 * @param coordinates Current configuration.
+	 * @param neuron Neuron to be placed.
+	 * @param compartment_a One compartment to be connected.
+	 * @param comaprmtent_b Other compartment to be connected.
 	 */
-	AlgorithmResult connect_leafs(
-	    CoordinateSystem& coordinate_system,
+	void connect_distant(
+	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
-	    CompartmentOnNeuron const& compartment_leaf,
-	    CompartmentOnNeuron const& compartment_node);
+	    CompartmentOnNeuron const& compartment_a,
+	    CompartmentOnNeuron const& compartment_b);
 
 	/**
-	 * Connect all compartments placed on the coordinate system.
-	 * @param coordinate_system Configuration of the coordinate system.
-	 * @param neuron Target neuron.
+	 * Connect all compartments placed in this step to all placed neighbours.
+	 * @param coordinates Current configuration.
+	 * @param neuron Neuron to be placed.
 	 */
-	void connect_all(CoordinateSystem& coordinate_system, Neuron const& neuron);
+	void connect_placed(CoordinateSystem& coordinates, Neuron const& neuron);
+
+	/**
+	 * Logs information about latest placement.
+	 * @param coordinates Current configuration.
+	 * @param compartment Compartment to log placement information about.
+	 */
+	void output_placed(
+	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
+
 
 	// List of IDs of placed compartments
-	std::vector<CompartmentOnNeuron> placed_compartments;
-	// List of additional required resources
-	std::map<std::optional<CompartmentOnNeuron>, NumberTopBottom> additional_resources;
-	std::vector<std::optional<CompartmentOnNeuron>> additional_resources_compartments;
+	std::vector<CompartmentOnNeuron> m_placed_compartments;
+	// Set of fully connected compartments
+	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> m_placed_connections;
 	// Results
 	std::vector<AlgorithmResult> m_results;
+
+
+	log4cxx::LoggerPtr m_logger;
+
+	// Wether algorithm should search first in breadth or depth.
+	bool m_breadth_first_search = true;
 };
 
 } // namespace abstract

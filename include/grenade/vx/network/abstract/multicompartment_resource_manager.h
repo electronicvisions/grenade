@@ -61,8 +61,13 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	/**
 	 * Writes neuron topology in graphviz format.
 	 * Contains information about the resources required by each compartment of the neuron.
+	 * @param filename File to write graph to.
+	 * @param neuron Neuron to be written as graph.
+	 * @param name Name of the neuron graph.
+	 * @param append Whether to append the neuron to the file or erase all other contents.
 	 */
-	void write_graphviz(std::ostream& file, Neuron const& neuron, std::string name);
+	void write_graphviz(
+	    std::string filename, Neuron const& neuron, std::string name, bool append = false);
 
 	// Returns list of required MADC-recordable pairs.
 	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> get_recordable_pairs() const;

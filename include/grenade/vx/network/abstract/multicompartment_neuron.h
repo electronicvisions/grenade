@@ -6,6 +6,7 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection/conductance.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment_on_neuron.h"
+#include "grenade/vx/network/abstract/multicompartment_neighbours.h"
 #include <memory>
 
 namespace grenade::vx::network {
@@ -80,18 +81,21 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	int in_degree(CompartmentOnNeuron const& descriptor) const;
 	int out_degree(CompartmentOnNeuron const& descriptor) const;
 
+	// Returns compartment with largest outdegree
+	CompartmentOnNeuron get_max_degree_compartment() const;
+
 	// Source and Target of CompartmentConnection via CompartmentConnection-ID
 	CompartmentOnNeuron source(CompartmentConnectionOnNeuron const& descriptor) const;
 	CompartmentOnNeuron target(CompartmentConnectionOnNeuron const& descriptor) const;
 
 	// Return Iterator to begin and end of all compartments.
 	typedef VertexIterator CompartmentIterator;
-	std::pair<CompartmentIterator, CompartmentIterator> compartment_iterators() const;
+	std::pair<CompartmentIterator, CompartmentIterator> compartments() const;
 
 	// Return Iterator to begin and end of all compartment-connections
 	typedef EdgeIterator CompartmentConnectionIterator;
 	std::pair<CompartmentConnectionIterator, CompartmentConnectionIterator>
-	compartment_connection_iterators() const;
+	compartment_connections() const;
 
 	// Return Iterator to begin and end of adjecent compartments to given compartment
 	std::pair<AdjacencyIterator, AdjacencyIterator> adjacent_compartments(
@@ -132,11 +136,43 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	    Callback&& callback,
 	    CompartmentEquivalent&& compartment_equivalent) const;
 
-	// Return a map of each compartment-descriptor to an index.
+	/**
+	 * Return a map of each compartment-descriptor to an index.
+	 * */
 	std::map<CompartmentOnNeuron::Value, size_t> get_compartment_index_map() const;
 
-	// Check if two compartments are neighbours.
+	/**
+	 *  Check if two compartments are neighbours.
+	 */
 	bool neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const;
+
+	/**
+	 *  Check if compartment is part of a chain and return chain length if it is part of one.
+	 * @param compartment Compartment to check.
+	 * @param marked_compartments Visited compartments in chain.
+	 * @return Length of chain. -1 if not in chain.
+	 */
+	int chain_length(
+	    CompartmentOnNeuron const& compartment,
+	    std::set<CompartmentOnNeuron>& marked_compartments) const;
+	/**
+	 * Return ordered list of compartments inside a chain.
+	 * @param compartment Arbitrary compartment inside a chain.
+	 * @param blacklist_compartment compartment not to consider for chain to prevent looping.
+	 */
+	std::vector<CompartmentOnNeuron> chain_compartments(
+	    CompartmentOnNeuron const& compartment,
+	    CompartmentOnNeuron const& blacklist_compartment = CompartmentOnNeuron()) const;
+	/**
+	 * Classify neighbours into parts of branches, chains or as a leaf.
+	 * @param compartment Compartment whichs neighbours are beeing classified.
+	 * @param neighbours_whitelist If vector is given only those compartments are classified.
+	 * @return Object with compartments classified to a category.
+	 */
+	CompartmentNeighbours classify_neighbours(
+	    CompartmentOnNeuron const& compartment,
+	    std::set<CompartmentOnNeuron> neighbours_whitelist =
+	        std::set<grenade::vx::network::abstract::CompartmentOnNeuron>()) const;
 
 	// Check if all compartments are interconnected.
 	bool compartments_connected() const;
@@ -146,10 +182,10 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 
 	/**
 	 * Writes neuron topology in graphviz format.
-	 * @param file File to write graphviz-graph to.
+	 * @param filename File to write graphviz-graph to.
 	 * @param name Name of the graph.
 	 */
-	void write_graphviz(std::ostream& file, std::string name);
+	void write_graphviz(std::string filename, std::string name);
 };
 
 std::ostream& operator<<(std::ostream& os, Neuron const& neuron);

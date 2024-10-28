@@ -16,8 +16,8 @@ NeuronWithEnvironment NeuronGenerator::generate()
 
 bool NeuronGenerator::cyclic(Neuron const& neuron) const
 {
-	LOG4CXX_DEBUG(m_logger, "Checking for Cycle: " << *(neuron.compartment_iterators().first));
-	CompartmentOnNeuron root = *(neuron.compartment_iterators().first);
+	LOG4CXX_TRACE(m_logger, "Checking for Cycle: " << *(neuron.compartments().first));
+	CompartmentOnNeuron root = *(neuron.compartments().first);
 	std::queue<CompartmentOnNeuron> compartment_queue;
 	std::set<CompartmentOnNeuron> visited;
 	compartment_queue.push(root);
@@ -26,7 +26,7 @@ bool NeuronGenerator::cyclic(Neuron const& neuron) const
 		CompartmentOnNeuron temp_compartment = compartment_queue.front();
 		compartment_queue.pop();
 		if (visited.contains(temp_compartment)) {
-			LOG4CXX_DEBUG(m_logger, "Cycle Detected.");
+			LOG4CXX_TRACE(m_logger, "Cycle Detected.");
 			return true;
 		}
 		visited.emplace(temp_compartment);
@@ -40,7 +40,7 @@ bool NeuronGenerator::cyclic(Neuron const& neuron) const
 		}
 	}
 
-	LOG4CXX_DEBUG(m_logger, "No Cycle Detected.");
+	LOG4CXX_TRACE(m_logger, "No Cycle Detected.");
 	return false;
 }
 
