@@ -4,6 +4,7 @@
 #include "halco/hicann-dls/vx/v3/quad.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/join.h"
+#include "hate/timer.h"
 #include <cstdlib>
 #include <fstream>
 #include <mutex>
@@ -364,7 +365,9 @@ Compiler::Objectfile Compiler::compile_objectfile(std::vector<std::string> sourc
 	   << "compile_log"
 	   << " 2>&1";
 	LOG4CXX_DEBUG(logger, "compile(): Command: " << ss.str());
+	hate::Timer compile_timer;
 	auto ret = std::system(ss.str().c_str());
+	LOG4CXX_DEBUG(logger, "compile(): Compilation finished in " << compile_timer.print() << ".");
 	std::stringstream log;
 	{
 		log << std::ifstream(temporary.get_path() / "compile_log").rdbuf();
