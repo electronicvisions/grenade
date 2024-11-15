@@ -364,10 +364,11 @@ Compiler::Objectfile Compiler::compile_objectfile(std::vector<std::string> sourc
 	ss << " > "
 	   << "compile_log"
 	   << " 2>&1";
-	LOG4CXX_DEBUG(logger, "compile(): Command: " << ss.str());
+	LOG4CXX_DEBUG(logger, "compile_objectfile(): Command: " << ss.str());
 	hate::Timer compile_timer;
 	auto ret = std::system(ss.str().c_str());
-	LOG4CXX_DEBUG(logger, "compile(): Compilation finished in " << compile_timer.print() << ".");
+	LOG4CXX_DEBUG(
+	    logger, "compile_objectfile(): Compilation finished in " << compile_timer.print() << ".");
 	std::stringstream log;
 	{
 		log << std::ifstream(temporary.get_path() / "compile_log").rdbuf();
@@ -375,7 +376,7 @@ Compiler::Objectfile Compiler::compile_objectfile(std::vector<std::string> sourc
 	if (ret != 0) {
 		throw std::runtime_error("Compilation failed:\n" + log.str());
 	}
-	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
+	LOG4CXX_DEBUG(logger, "compile_objectfile(): Output:\n" << log.str());
 	Objectfile objectfile;
 	if (logger->isDebugEnabled()) {
 		ret = std::system(("powerpc-ppu-readelf -a " +
@@ -391,14 +392,14 @@ Compiler::Objectfile Compiler::compile_objectfile(std::vector<std::string> sourc
 				throw std::runtime_error("Readelf failed:\n" + log.str());
 			}
 			objectfile.readelf = log.str();
-			LOG4CXX_DEBUG(logger, "compile(): Readelf:\n" << log.str());
+			LOG4CXX_DEBUG(logger, "compile_objectfile(): Readelf:\n" << log.str());
 		}
 		{
 			std::stringstream log;
 			auto path = temporary.get_path() / "objectfile.su";
 			log << std::ifstream(path).rdbuf();
 			objectfile.stack_sizes = log.str();
-			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
+			LOG4CXX_DEBUG(logger, "compile_objectfile(): Stack usage:\n" << log.str());
 		}
 	}
 	if (logger->isTraceEnabled()) {
@@ -415,7 +416,7 @@ Compiler::Objectfile Compiler::compile_objectfile(std::vector<std::string> sourc
 				throw std::runtime_error("Objdump failed:\n" + log.str());
 			}
 			objectfile.objdump = log.str();
-			LOG4CXX_TRACE(logger, "compile(): Objdump:\n" << log.str());
+			LOG4CXX_TRACE(logger, "compile_objectfile(): Objdump:\n" << log.str());
 		}
 	}
 	{
@@ -463,8 +464,11 @@ Compiler::Program Compiler::link_from_objectfiles(std::vector<Objectfile> object
 	ss << " > "
 	   << "compile_log"
 	   << " 2>&1";
-	LOG4CXX_DEBUG(logger, "compile(): Command: " << ss.str());
+	LOG4CXX_DEBUG(logger, "link_from_objectfiles(): Command: " << ss.str());
+	hate::Timer timer;
 	auto ret = std::system(ss.str().c_str());
+	LOG4CXX_TRACE(
+	    logger, "link_from_objectfiles(): Linked objectfiles in " << timer.print() << ".");
 	std::stringstream log;
 	{
 		log << std::ifstream(temporary.get_path() / "compile_log").rdbuf();
@@ -472,7 +476,7 @@ Compiler::Program Compiler::link_from_objectfiles(std::vector<Objectfile> object
 	if (ret != 0) {
 		throw std::runtime_error("Compilation failed:\n" + log.str());
 	}
-	LOG4CXX_DEBUG(logger, "compile(): Output:\n" << log.str());
+	LOG4CXX_DEBUG(logger, "link_from_objectfiles(): Output:\n" << log.str());
 	Program program;
 	if (logger->isDebugEnabled()) {
 		ret = std::system(("powerpc-ppu-readelf -a " +
@@ -488,7 +492,7 @@ Compiler::Program Compiler::link_from_objectfiles(std::vector<Objectfile> object
 				throw std::runtime_error("Readelf failed:\n" + log.str());
 			}
 			program.readelf = log.str();
-			LOG4CXX_DEBUG(logger, "compile(): Readelf:\n" << log.str());
+			LOG4CXX_DEBUG(logger, "link_from_objectfiles(): Readelf:\n" << log.str());
 		}
 		{
 			std::stringstream log;
@@ -497,7 +501,7 @@ Compiler::Program Compiler::link_from_objectfiles(std::vector<Objectfile> object
 				log << std::ifstream(path).rdbuf();
 			}
 			program.stack_sizes = log.str();
-			LOG4CXX_DEBUG(logger, "compile(): Stack usage:\n" << log.str());
+			LOG4CXX_DEBUG(logger, "link_from_objectfiles(): Stack usage:\n" << log.str());
 		}
 	}
 	if (logger->isTraceEnabled()) {
@@ -514,7 +518,7 @@ Compiler::Program Compiler::link_from_objectfiles(std::vector<Objectfile> object
 				throw std::runtime_error("Objdump failed:\n" + log.str());
 			}
 			program.objdump = log.str();
-			LOG4CXX_TRACE(logger, "compile(): Objdump:\n" << log.str());
+			LOG4CXX_TRACE(logger, "link_from_objectfiles(): Objdump:\n" << log.str());
 		}
 	}
 	lola::vx::v3::PPUElfFile elf_file(temporary.get_path() / "program.bin");

@@ -5,6 +5,7 @@
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/math.h"
+#include "hate/timer.h"
 #include "hate/variant.h"
 
 #include <algorithm>
@@ -790,6 +791,7 @@ PlasticityRule::get_recorded_memory_timed_data_intervals() const
 PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
     std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data) const
 {
+	hate::Timer timer;
 	if (!m_recording) {
 		throw std::runtime_error("Observable extraction only possible when recording is present.");
 	}
@@ -1240,9 +1242,11 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 	}
 
 	LOG4CXX_TRACE(
-	    log4cxx::Logger::getLogger(
-	        "grenade.signal_flow.vertex.PlasticityRule.extract_recording_data"),
-	    observable_data);
+	    log4cxx::Logger::getLogger("grenade.signal_flow.vertex.PlasticityRule"),
+	    "extract_recording_data(): " << observable_data);
+	LOG4CXX_TRACE(
+	    log4cxx::Logger::getLogger("grenade.signal_flow.vertex.PlasticityRule"),
+	    "extract_recording_data(): Extracted recording in " << timer.print());
 	return observable_data;
 }
 
