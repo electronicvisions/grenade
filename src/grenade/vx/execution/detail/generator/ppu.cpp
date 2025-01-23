@@ -95,11 +95,11 @@ stadls::vx::PlaybackGeneratorReturn<PPUStop::Builder, PPUStop::Result> PPUStop::
 		    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::stop)));
 		builder.write(PPUMemoryWordOnDLS(m_coord, ppu), config);
 	}
-	// poll for completion by waiting until PPU is asleep
+	// poll for completion by waiting until PPU has stopped state
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
 		PollingOmnibusBlockConfig config;
-		config.set_address(PPUStatusRegister::read_addresses<PollingOmnibusBlockConfig::Address>(
-		                       ppu.toPPUStatusRegisterOnDLS())
+		config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+		                       PPUMemoryWordOnDLS(m_stopped_coord, ppu))
 		                       .at(0));
 		config.set_target(PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(true)));
 		config.set_mask(PollingOmnibusBlockConfig::Value(0x00000001));

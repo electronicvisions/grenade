@@ -104,6 +104,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	std::optional<PPUElfFile::symbols_type> ppu_symbols;
 	PPUMemoryBlockOnPPU ppu_status_coord;
+	PPUMemoryBlockOnPPU ppu_stopped_coord;
 	if (overall_ppu_usage.has_cadc_readout || !overall_ppu_usage.plasticity_rules.empty()) {
 		hate::Timer ppu_timer;
 		PPUElfFile::Memory ppu_program;
@@ -136,6 +137,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			ppu_location_coord =
 			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("ppu").coordinate).toMin();
 			ppu_status_coord = std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate);
+			ppu_stopped_coord =
+			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("stopped").coordinate);
 		}
 		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
 
@@ -570,7 +573,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// for the last batch entry, stop the PPU
 		if (i == realtime_columns[0].realtimes.size() - 1 && ppu_symbols) {
 			assemble_builder.merge_back(
-			    generate(generator::PPUStop(ppu_status_coord.toMin())).builder);
+			    generate(generator::PPUStop(ppu_status_coord.toMin(), ppu_stopped_coord.toMin()))
+			        .builder);
 		}
 		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
 		if (input_data_maps[input_data_maps.size() - 1].get().inter_batch_entry_wait.contains(
@@ -618,7 +622,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	PlaybackProgramBuilder schedule_out_replacement_builder;
 	if (ppu_symbols) {
 		schedule_out_replacement_builder.merge_back(
-		    generate(generator::PPUStop(ppu_status_coord.toMin())).builder);
+		    generate(generator::PPUStop(ppu_status_coord.toMin(), ppu_stopped_coord.toMin()))
+		        .builder);
 		schedule_out_replacement_builder.merge_back(
 		    generate(generator::GetState{ppu_symbols.has_value()}).builder);
 	}

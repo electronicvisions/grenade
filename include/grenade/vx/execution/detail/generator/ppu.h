@@ -103,7 +103,11 @@ struct PPUStop
 	 * Construct blocking PPU command.
 	 * @param coord PPU memory location at which to place the command
 	 */
-	PPUStop(halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& coord) : m_coord(coord) {}
+	PPUStop(
+	    halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& coord,
+	    halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& stopped_coord) :
+	    m_coord(coord), m_stopped_coord(stopped_coord)
+	{}
 
 protected:
 	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
@@ -112,6 +116,7 @@ protected:
 
 private:
 	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_coord;
+	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_stopped_coord;
 };
 
 
