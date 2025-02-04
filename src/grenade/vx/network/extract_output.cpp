@@ -59,8 +59,8 @@ extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& n
 								static_cast<void>(success);
 								assert(success);
 							}
-							i++;
 						}
+						i++;
 					}
 				};
 				auto const extract_external_source_population = [&](ExternalSourcePopulation const&
