@@ -15,3 +15,8 @@ GENPYBIND_MANUAL({
 
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/atomic_neuron_on_compartment.h"
+#include "grenade/vx/network/abstract/projection_synapse/uncalibrated.h"
+#include "grenade/vx/network/abstract/vertex_port_type/spike.h"
+#include "grenade/vx/network/abstract/vertex_port_type/synapse_observable.h"
+#include "grenade/vx/network/abstract/vertex_port_type/synaptic_input.h"
+#include "grenade/vx/network/abstract/vertex_port_type/weight.h"
