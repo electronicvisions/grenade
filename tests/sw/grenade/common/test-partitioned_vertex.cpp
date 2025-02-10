@@ -4,6 +4,7 @@
 #include "grenade/common/edge.h"
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/vertex_port_type/empty.h"
 #include <stdexcept>
 #include <cereal/archives/json.hpp>
@@ -42,10 +43,15 @@ struct DummyDefaultVertex : public PartitionedVertex
 {
 	Port input_port;
 	Port output_port;
+	std::optional<TimeDomainOnTopology> time_domain;
 
 	DummyDefaultVertex() = default;
-	DummyDefaultVertex(Port in, Port out, std::optional<ExecutionInstanceOnExecutor> id) :
-	    PartitionedVertex(), input_port(in), output_port(out)
+	DummyDefaultVertex(
+	    Port in,
+	    Port out,
+	    std::optional<TimeDomainOnTopology> time_domain,
+	    std::optional<ExecutionInstanceOnExecutor> id) :
+	    PartitionedVertex(), input_port(in), output_port(out), time_domain(time_domain)
 	{
 		set_execution_instance_on_executor(id);
 	}
@@ -58,6 +64,11 @@ struct DummyDefaultVertex : public PartitionedVertex
 	virtual std::vector<Port> get_output_ports() const override
 	{
 		return {output_port};
+	}
+
+	virtual std::optional<TimeDomainOnTopology> get_time_domain() const override
+	{
+		return time_domain;
 	}
 
 	virtual std::unique_ptr<Vertex> copy() const override
@@ -108,18 +119,24 @@ TEST(PartitionedVertex, General)
 	    Vertex::Port::RequiresOrGeneratesData::no, channels_0);
 
 	DummyDefaultVertex default_vertex{
-	    port_0, port_0,
+	    port_0, port_0, std::nullopt,
 	    ExecutionInstanceOnExecutor(ExecutionInstanceID(1), ConnectionOnExecutor())};
 
 	auto strong_component_invariant = default_vertex.get_strong_component_invariant();
 	assert(strong_component_invariant);
-	EXPECT_EQ(*strong_component_invariant, *strong_component_invariant);
+	EXPECT_NE(*strong_component_invariant, *strong_component_invariant);
 	EXPECT_EQ(
 	    default_vertex.get_execution_instance_on_executor(),
 	    ExecutionInstanceOnExecutor(ExecutionInstanceID(1), ConnectionOnExecutor()));
+	EXPECT_EQ(default_vertex.time_domain, std::nullopt);
 	dynamic_cast<PartitionedVertex::StrongComponentInvariant&>(*strong_component_invariant)
 	    .execution_instance_on_executor = ExecutionInstanceOnExecutor();
+	strong_component_invariant->time_domain = TimeDomainOnTopology(0);
 	auto strong_component_invariant_1 = strong_component_invariant->copy();
+	strong_component_invariant_1->time_domain = TimeDomainOnTopology(1);
+	EXPECT_NE(*strong_component_invariant, *strong_component_invariant_1);
+	strong_component_invariant_1->time_domain = TimeDomainOnTopology(0);
+	EXPECT_EQ(*strong_component_invariant, *strong_component_invariant_1);
 	dynamic_cast<PartitionedVertex::StrongComponentInvariant&>(*strong_component_invariant_1)
 	    .execution_instance_on_executor =
 	    ExecutionInstanceOnExecutor(ExecutionInstanceID(2), ConnectionOnExecutor());
@@ -129,7 +146,7 @@ TEST(PartitionedVertex, General)
 	EXPECT_EQ(*strong_component_invariant, *strong_component_invariant_1);
 
 	DummyDefaultVertex default_vertex_1{
-	    port_0, port_0,
+	    port_0, port_0, std::nullopt,
 	    ExecutionInstanceOnExecutor(ExecutionInstanceID(2), ConnectionOnExecutor())};
 
 	// vertex not valid (target port index out of range)
@@ -210,7 +227,7 @@ TEST(PartitionedVertex, Cerealization)
 	    Vertex::Port::RequiresOrGeneratesData::yes, channels_0);
 
 	DummyDefaultVertex obj{
-	    port_0, port_0,
+	    port_0, port_0, TimeDomainOnTopology(42),
 	    ExecutionInstanceOnExecutor(ExecutionInstanceID(12), ConnectionOnExecutor())};
 
 	DummyDefaultVertex obj2;

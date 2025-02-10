@@ -2,13 +2,16 @@
 
 #include "grenade/common/edge.h"
 #include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include <stdexcept>
 #include <log4cxx/logger.h>
 
 namespace grenade::common {
 
 PartitionedVertex::StrongComponentInvariant::StrongComponentInvariant(
-    std::optional<ExecutionInstanceOnExecutor> execution_instance_on_executor) :
+    std::optional<ExecutionInstanceOnExecutor> execution_instance_on_executor,
+    std::optional<TimeDomainOnTopology> time_domain) :
+    Vertex::StrongComponentInvariant(std::move(time_domain)),
     execution_instance_on_executor(std::move(execution_instance_on_executor))
 {
 }
@@ -29,11 +32,8 @@ bool PartitionedVertex::StrongComponentInvariant::is_equal_to(
     Vertex::StrongComponentInvariant const& other) const
 {
 	auto const& other_invariant = static_cast<StrongComponentInvariant const&>(other);
-	// if neither is set, we are also unequal to default to unique invariants
-	if (!execution_instance_on_executor && !other_invariant.execution_instance_on_executor) {
-		return false;
-	}
-	return execution_instance_on_executor == other_invariant.execution_instance_on_executor;
+	return Vertex::StrongComponentInvariant::is_equal_to(other) &&
+	       (execution_instance_on_executor == other_invariant.execution_instance_on_executor);
 }
 
 std::ostream& PartitionedVertex::StrongComponentInvariant::print(std::ostream& os) const
@@ -41,6 +41,12 @@ std::ostream& PartitionedVertex::StrongComponentInvariant::print(std::ostream& o
 	os << "StrongComponentInvariant(";
 	if (execution_instance_on_executor) {
 		os << *execution_instance_on_executor;
+	} else {
+		os << "unique";
+	}
+	os << ", ";
+	if (time_domain) {
+		os << *time_domain;
 	} else {
 		os << "unique";
 	}
@@ -70,7 +76,8 @@ void PartitionedVertex::set_execution_instance_on_executor(
 std::unique_ptr<Vertex::StrongComponentInvariant>
 PartitionedVertex::get_strong_component_invariant() const
 {
-	return std::make_unique<StrongComponentInvariant>(m_execution_instance_on_executor);
+	return std::make_unique<StrongComponentInvariant>(
+	    m_execution_instance_on_executor, get_time_domain());
 }
 
 #define GRENADE_PARTITIONED_VERTEX_VALID_EDGE_FROM_LOG_ERROR(...)                                  \

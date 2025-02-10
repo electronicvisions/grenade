@@ -1,10 +1,13 @@
 #include "grenade/common/vertex.h"
 
+#include "cereal/types/halco/common/geometry.h"
 #include "grenade/common/edge.h"
 #include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/vertex_port_type/empty.h"
 #include <stdexcept>
 #include <cereal/archives/json.hpp>
+#include <cereal/types/optional.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <gtest/gtest.h>
 
@@ -110,9 +113,13 @@ struct DummyDefaultVertex : public Vertex
 {
 	Port input_port;
 	Port output_port;
+	std::optional<TimeDomainOnTopology> time_domain;
 
 	DummyDefaultVertex() = default;
-	DummyDefaultVertex(Port in, Port out) : input_port(in), output_port(out) {}
+	DummyDefaultVertex(Port in, Port out, std::optional<TimeDomainOnTopology> time_domain) :
+	    input_port(in), output_port(out), time_domain(time_domain)
+	{
+	}
 
 	virtual std::vector<Port> get_input_ports() const override
 	{
@@ -122,6 +129,11 @@ struct DummyDefaultVertex : public Vertex
 	virtual std::vector<Port> get_output_ports() const override
 	{
 		return {output_port};
+	}
+
+	virtual std::optional<TimeDomainOnTopology> get_time_domain() const override
+	{
+		return time_domain;
 	}
 
 	virtual std::unique_ptr<Vertex> copy() const override
@@ -153,6 +165,7 @@ private:
 		ar(cereal::base_class<Vertex>(this));
 		ar(input_port);
 		ar(output_port);
+		ar(time_domain);
 	}
 };
 
@@ -169,11 +182,18 @@ TEST(Vertex, Default)
 	    Vertex::Port::ExecutionInstanceTransitionConstraint::required,
 	    Vertex::Port::RequiresOrGeneratesData::no, channels_0);
 
-	DummyDefaultVertex default_vertex{port_0, port_0};
+	DummyDefaultVertex default_vertex{port_0, port_0, std::nullopt};
 
 	auto strong_component_invariant = default_vertex.get_strong_component_invariant();
 	assert(strong_component_invariant);
 	EXPECT_NE(*strong_component_invariant, *strong_component_invariant);
+	EXPECT_EQ(strong_component_invariant->time_domain, std::nullopt);
+	strong_component_invariant->time_domain = TimeDomainOnTopology(0);
+	auto strong_component_invariant_1 = strong_component_invariant->copy();
+	EXPECT_EQ(*strong_component_invariant, *strong_component_invariant_1);
+	strong_component_invariant_1->time_domain = TimeDomainOnTopology(1);
+	EXPECT_NE(*strong_component_invariant, *strong_component_invariant_1);
+	EXPECT_EQ(default_vertex.get_time_domain(), std::nullopt);
 
 	ListMultiIndexSequence channels_1({MultiIndex({3}), MultiIndex({4})});
 
@@ -182,7 +202,7 @@ TEST(Vertex, Default)
 	    Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
 	    Vertex::Port::RequiresOrGeneratesData::no, channels_0);
 
-	DummyDefaultVertex default_vertex_1{port_1, port_1};
+	DummyDefaultVertex default_vertex_1{port_1, port_1, std::nullopt};
 
 	// target port index out of range
 	EXPECT_FALSE((default_vertex.valid_edge_from(
@@ -205,7 +225,26 @@ TEST(Vertex, Default)
 	    default_vertex_1, Edge(
 	                          ListMultiIndexSequence({MultiIndex({3})}),
 	                          ListMultiIndexSequence({MultiIndex({3})})))));
+	// time domain transition doesn't match execution instance transition requirements
+	default_vertex.time_domain = TimeDomainOnTopology(0);
+	default_vertex_1.time_domain = TimeDomainOnTopology(1);
+	default_vertex.input_port.execution_instance_transition_constraint =
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported;
+	EXPECT_FALSE((default_vertex.valid_edge_from(
+	    default_vertex_1, Edge(
+	                          ListMultiIndexSequence({MultiIndex({1})}),
+	                          ListMultiIndexSequence({MultiIndex({1})})))));
+	// time domain transition doesn't match execution instance transition requirements
+	default_vertex_1.time_domain = TimeDomainOnTopology(0);
+	default_vertex.input_port.execution_instance_transition_constraint =
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::required;
+	EXPECT_FALSE((default_vertex.valid_edge_from(
+	    default_vertex_1, Edge(
+	                          ListMultiIndexSequence({MultiIndex({1})}),
+	                          ListMultiIndexSequence({MultiIndex({1})})))));
 
+	default_vertex.input_port.execution_instance_transition_constraint =
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported;
 	EXPECT_TRUE((default_vertex.valid_edge_from(
 	    default_vertex_1, Edge(
 	                          ListMultiIndexSequence({MultiIndex({1})}),
@@ -232,6 +271,26 @@ TEST(Vertex, Default)
 	                          ListMultiIndexSequence({MultiIndex({3})}),
 	                          ListMultiIndexSequence({MultiIndex({3})})))));
 
+	// time domain transition doesn't match execution instance transition requirements
+	default_vertex.time_domain = TimeDomainOnTopology(0);
+	default_vertex_1.time_domain = TimeDomainOnTopology(1);
+	default_vertex.output_port.execution_instance_transition_constraint =
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported;
+	EXPECT_FALSE((default_vertex.valid_edge_from(
+	    default_vertex_1, Edge(
+	                          ListMultiIndexSequence({MultiIndex({1})}),
+	                          ListMultiIndexSequence({MultiIndex({1})})))));
+	// time domain transition doesn't match execution instance transition requirements
+	default_vertex_1.time_domain = TimeDomainOnTopology(0);
+	default_vertex.output_port.execution_instance_transition_constraint =
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::required;
+	EXPECT_FALSE((default_vertex_1.valid_edge_from(
+	    default_vertex, Edge(
+	                        ListMultiIndexSequence({MultiIndex({1})}),
+	                        ListMultiIndexSequence({MultiIndex({1})})))));
+
+	default_vertex.output_port.execution_instance_transition_constraint =
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported;
 	EXPECT_TRUE((default_vertex.valid_edge_from(
 	    default_vertex_1, Edge(
 	                          ListMultiIndexSequence({MultiIndex({1})}),
@@ -257,7 +316,7 @@ TEST(Vertex, Cerealization)
 	    Vertex::Port::ExecutionInstanceTransitionConstraint::required,
 	    Vertex::Port::RequiresOrGeneratesData::yes, channels_0);
 
-	DummyDefaultVertex obj{port_0, port_0};
+	DummyDefaultVertex obj{port_0, port_0, TimeDomainOnTopology(42)};
 
 	DummyDefaultVertex obj2;
 

@@ -2,6 +2,7 @@
 
 #include "grenade/common/edge.h"
 #include "grenade/common/port_data.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "hate/join.h"
 #include <memory>
 #include <ostream>
@@ -153,6 +154,12 @@ std::ostream& operator<<(std::ostream& os, Vertex::Port const& value)
 
 Vertex::StrongComponentInvariant::~StrongComponentInvariant() {}
 
+Vertex::StrongComponentInvariant::StrongComponentInvariant(
+    std::optional<TimeDomainOnTopology> time_domain) :
+    time_domain(time_domain)
+{
+}
+
 std::unique_ptr<Vertex::StrongComponentInvariant> Vertex::StrongComponentInvariant::copy() const
 {
 	return std::make_unique<StrongComponentInvariant>(*this);
@@ -165,13 +172,24 @@ std::unique_ptr<Vertex::StrongComponentInvariant> Vertex::StrongComponentInvaria
 
 std::ostream& Vertex::StrongComponentInvariant::print(std::ostream& os) const
 {
-	return os << "StrongComponentInvariant(unique)";
+	os << "StrongComponentInvariant(";
+	if (time_domain) {
+		os << *time_domain;
+	} else {
+		os << "unique";
+	}
+	os << ")";
+	return os;
 }
 
-bool Vertex::StrongComponentInvariant::is_equal_to(
-    StrongComponentInvariant const& /* other */) const
+bool Vertex::StrongComponentInvariant::is_equal_to(StrongComponentInvariant const& other) const
 {
-	return false;
+	// if neither is set, we are also unequal to default to unique invariants.
+	// checking this->time_domain suffices.
+	if (!time_domain) {
+		return false;
+	}
+	return time_domain == other.time_domain;
 }
 
 
@@ -179,13 +197,18 @@ Vertex::~Vertex() {}
 
 std::unique_ptr<Vertex::StrongComponentInvariant> Vertex::get_strong_component_invariant() const
 {
-	return std::make_unique<StrongComponentInvariant>();
+	return std::make_unique<StrongComponentInvariant>(get_time_domain());
 }
 
 bool Vertex::valid_input_port_data(
     size_t /* input_port_on_vertex */, PortData const& /* data */) const
 {
 	return false;
+}
+
+std::optional<TimeDomainOnTopology> Vertex::get_time_domain() const
+{
+	return std::nullopt;
 }
 
 #define GRENADE_VERTEX_VALID_EDGE_FROM_LOG_ERROR(...)                                              \
@@ -281,6 +304,30 @@ bool Vertex::valid_edge_from(Vertex const& source, Edge const& edge) const
 		    << channels_on_source << " vs. " << source_output_port.get_channels() << ".");
 		return false;
 	}
+	// check time domains match execution instance transition requirements
+	if (auto const time_domain = get_time_domain(); time_domain) {
+		if (auto const source_time_domain = source.get_time_domain(); source_time_domain) {
+			if ((time_domain != source_time_domain &&
+			     ((target_input_port.execution_instance_transition_constraint ==
+			       Port::ExecutionInstanceTransitionConstraint::not_supported) ||
+			      source_output_port.execution_instance_transition_constraint ==
+			          Port::ExecutionInstanceTransitionConstraint::not_supported)) ||
+			    (time_domain == source_time_domain &&
+			     (target_input_port.execution_instance_transition_constraint ==
+			          Port::ExecutionInstanceTransitionConstraint::required ||
+			      source_output_port.execution_instance_transition_constraint ==
+			          Port::ExecutionInstanceTransitionConstraint::required))) {
+				GRENADE_VERTEX_VALID_EDGE_FROM_LOG_ERROR(
+				    "Time domains are incompatible to instance transition support: source("
+				    << source_output_port.execution_instance_transition_constraint << ", "
+				    << *source_time_domain << ") vs. target("
+				    << target_input_port.execution_instance_transition_constraint << ", "
+				    << *time_domain << ").");
+				return false;
+			}
+		}
+	}
+
 	return true;
 }
 

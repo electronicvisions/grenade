@@ -4,6 +4,7 @@
 #include "grenade/common/genpybind.h"
 #include "grenade/common/multi_index_sequence.h"
 #include "grenade/common/port_data.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/vertex_port_type.h"
 #include "hate/visibility.h"
 #include <memory>
@@ -151,12 +152,26 @@ struct SYMBOL_VISIBLE GENPYBIND(
 
 	/**
 	 * Invariant of vertex which is required to be equal across its strong component.
-	 * The default implementation compares unequal to everything including itself.
+	 * The default implementation compares unequal to everything including itself if no time domain
+	 * is specified and compares the equality of the time domain otherwise.
+	 * For a vertex residing on a time domain, all vertices in a strong component are required to be
+	 * in the same time domain.
 	 */
 	struct GENPYBIND(inline_base("*")) StrongComponentInvariant
 	    : public dapr::Property<StrongComponentInvariant>
 	{
 		virtual ~StrongComponentInvariant();
+
+		/**
+		 * Construct strong component invariant with optional time domain.
+		 */
+		StrongComponentInvariant(std::optional<TimeDomainOnTopology> time_domain);
+
+		/**
+		 * Time domain on topology.
+		 * In a strong component, all vertices are required to be part of the same time domain.
+		 */
+		std::optional<TimeDomainOnTopology> time_domain;
 
 		virtual std::unique_ptr<StrongComponentInvariant> copy() const override;
 		virtual std::unique_ptr<StrongComponentInvariant> move() override;
@@ -193,6 +208,14 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 * @returns Validity of data
 	 */
 	virtual bool valid_input_port_data(size_t input_port_on_vertex, PortData const& data) const;
+
+	/**
+	 * Get identifier of time domain of vertex.
+	 * All vertices onto the same time domain are expected to share the time dimension and are
+	 * allowed to interact instantaneously with each other.
+	 * If no time domain is returned, the vertices is offline without time dimension.
+	 */
+	virtual std::optional<TimeDomainOnTopology> get_time_domain() const;
 
 	/**
 	 * Get whether the edge from the source vertex to this vertex is valid.

@@ -3,6 +3,7 @@
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/execution_instance_on_executor.h"
 #include "grenade/common/genpybind.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/vertex.h"
 #include <memory>
 
@@ -19,11 +20,14 @@ struct SYMBOL_VISIBLE GENPYBIND(holder_type("std::shared_ptr<grenade::common::Pa
 	/**
 	 * For a partitioned vertex, all vertices in a strong component are required to
 	 * be in the same execution instance on the executor.
+	 * For an vertices residing on a time domain, all vertices in a strong component are
+	 * additionally required to be in the same time domain.
 	 */
 	struct StrongComponentInvariant : public Vertex::StrongComponentInvariant
 	{
 		StrongComponentInvariant(
-		    std::optional<ExecutionInstanceOnExecutor> execution_instance_on_executor);
+		    std::optional<ExecutionInstanceOnExecutor> execution_instance_on_executor,
+		    std::optional<TimeDomainOnTopology> time_domain);
 
 		std::optional<ExecutionInstanceOnExecutor> execution_instance_on_executor;
 
