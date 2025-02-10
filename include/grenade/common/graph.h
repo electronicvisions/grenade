@@ -339,6 +339,12 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
 	bool contains(EdgeDescriptor const& descriptor) const;
 
 	/**
+	 * Get strong components of graph.
+	 * For each vertex, the component ID is returned.
+	 */
+	std::map<VertexDescriptor, size_t> strong_components() const;
+
+	/**
 	 * Get whether graphs are equal.
 	 * This is the case exactly if all vertex descriptors and properties as well as all edge
 	 * properties match in order and the edges connect the same vertices.

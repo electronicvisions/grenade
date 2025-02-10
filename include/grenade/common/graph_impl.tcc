@@ -5,6 +5,11 @@
 #include "hate/type_index.h"
 #include <ostream>
 #include <set>
+#include <stdexcept>
+#include <boost/graph/named_function_params.hpp>
+#include <boost/graph/strong_components.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/range/iterator_range_core.hpp>
 
 namespace grenade::common {
 
@@ -669,6 +674,40 @@ bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
     EdgeDescriptor const& descriptor) const
 {
 	return m_edges.contains(descriptor);
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+std::map<VertexDescriptor, size_t>
+Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::strong_components()
+    const
+{
+	if constexpr (Backend::directed_selector::is_directed) {
+		std::map<typename VertexDescriptor::Value, size_t> strongly_connected_component_coloring;
+		std::map<typename VertexDescriptor::Value, size_t> vertex_index_map;
+		for (size_t vertex_index = 0;
+		     auto const vertex_descriptor : boost::make_iterator_range(vertices())) {
+			vertex_index_map.emplace(vertex_descriptor.value(), vertex_index);
+			vertex_index++;
+		}
+		boost::strong_components(
+		    m_graph, boost::make_assoc_property_map(strongly_connected_component_coloring),
+		    boost::vertex_index_map(boost::make_assoc_property_map(vertex_index_map)));
+		std::map<VertexDescriptor, size_t> ret;
+		for (auto const& [key, value] : strongly_connected_component_coloring) {
+			ret.emplace(VertexDescriptor(key), value);
+		}
+		return ret;
+	} else {
+		throw std::runtime_error("Strong components not accessible on undirected graph.");
+	}
 }
 
 template <
