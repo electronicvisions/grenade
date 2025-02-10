@@ -5,6 +5,7 @@
 #include "grenade/common/multi_index_sequence.h"
 #include "grenade/common/port_data.h"
 #include "grenade/common/time_domain_on_topology.h"
+#include "grenade/common/time_domain_runtimes.h"
 #include "grenade/common/vertex_port_type.h"
 #include "hate/visibility.h"
 #include <memory>
@@ -208,6 +209,12 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 * @returns Validity of data
 	 */
 	virtual bool valid_input_port_data(size_t input_port_on_vertex, PortData const& data) const;
+
+	/*
+	 * Get whether given time domain runtimes are valid for vertex.
+	 * @returns Validity of time domain runtimes
+	 */
+	virtual bool valid(TimeDomainRuntimes const& time_domain_runtimes) const;
 
 	/**
 	 * Get whether given data is valid for output port on vertex.

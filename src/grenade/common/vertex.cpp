@@ -3,6 +3,7 @@
 #include "grenade/common/edge.h"
 #include "grenade/common/port_data.h"
 #include "grenade/common/time_domain_on_topology.h"
+#include "grenade/common/time_domain_runtimes.h"
 #include "hate/join.h"
 #include <memory>
 #include <ostream>
@@ -208,6 +209,11 @@ bool Vertex::valid_input_port_data(
 
 bool Vertex::valid_output_port_data(
     size_t /* output_port_on_vertex */, PortData const& /* data */) const
+{
+	return false;
+}
+
+bool Vertex::valid(TimeDomainRuntimes const& /* time_domain_runtimes */) const
 {
 	return false;
 }
