@@ -24,6 +24,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/population.h"
 #include "grenade/common/port_data.h"
 #include "grenade/common/port_data/batched.h"
+#include "grenade/common/projection.h"
 #include "grenade/common/receptor_on_compartment.h"
 #include "grenade/common/resource_estimator.h"
 #include "grenade/common/time_domain_on_topology.h"
