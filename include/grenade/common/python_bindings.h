@@ -7,4 +7,5 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/multi_index.h"
 #include "grenade/common/multi_index_sequence.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/common/multi_index_sequence/list.h"
