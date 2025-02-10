@@ -56,19 +56,18 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 		    std::ostream& os, ExecutionInstance const& execution_instance) SYMBOL_VISIBLE;
 	};
 
-	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> const execution_instances;
+	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> execution_instances;
 
-	std::map<InterExecutionInstanceProjectionOnNetwork, InterExecutionInstanceProjection> const
+	std::map<InterExecutionInstanceProjectionOnNetwork, InterExecutionInstanceProjection>
 	    inter_execution_instance_projections;
 
-	std::vector<grenade::common::ExecutionInstanceID> const
-	    topologically_sorted_execution_instance_ids;
+	std::vector<grenade::common::ExecutionInstanceID> topologically_sorted_execution_instance_ids;
 
 	/**
 	 * Duration spent during construction of network.
 	 * This value is not compared in operator{==,!=}.
 	 */
-	std::chrono::microseconds const construction_duration;
+	std::chrono::microseconds construction_duration;
 
 	bool operator==(Network const& other) const SYMBOL_VISIBLE;
 	bool operator!=(Network const& other) const SYMBOL_VISIBLE;
