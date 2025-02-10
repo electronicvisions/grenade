@@ -1,6 +1,7 @@
 #include "grenade/common/vertex.h"
 
 #include "grenade/common/edge.h"
+#include "grenade/common/port_data.h"
 #include "hate/join.h"
 #include <memory>
 #include <ostream>
@@ -179,6 +180,12 @@ Vertex::~Vertex() {}
 std::unique_ptr<Vertex::StrongComponentInvariant> Vertex::get_strong_component_invariant() const
 {
 	return std::make_unique<StrongComponentInvariant>();
+}
+
+bool Vertex::valid_input_port_data(
+    size_t /* input_port_on_vertex */, PortData const& /* data */) const
+{
+	return false;
 }
 
 #define GRENADE_VERTEX_VALID_EDGE_FROM_LOG_ERROR(...)                                              \

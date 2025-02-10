@@ -3,6 +3,7 @@
 #include "dapr/property_holder.h"
 #include "grenade/common/genpybind.h"
 #include "grenade/common/multi_index_sequence.h"
+#include "grenade/common/port_data.h"
 #include "grenade/common/vertex_port_type.h"
 #include "hate/visibility.h"
 #include <memory>
@@ -185,6 +186,13 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 * Get invariant of vertex which is required to be equal across its strong component.
 	 */
 	virtual std::unique_ptr<StrongComponentInvariant> get_strong_component_invariant() const;
+
+	/**
+	 * Get whether given data is valid for input port on vertex.
+	 * @param data Data to check
+	 * @returns Validity of data
+	 */
+	virtual bool valid_input_port_data(size_t input_port_on_vertex, PortData const& data) const;
 
 	/**
 	 * Get whether the edge from the source vertex to this vertex is valid.
