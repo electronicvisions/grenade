@@ -34,6 +34,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/time_domain_runtimes.h"
 #include "grenade/common/topology.h"
 #include "grenade/common/topology_rewrite.h"
+#include "grenade/common/topology_rewrite/execution_instance.h"
 #include "grenade/common/topology_rewrite/identity_replacement.h"
 #include "grenade/common/topology_rewrite/population.h"
 #include "grenade/common/topology_rewrite/projection.h"
