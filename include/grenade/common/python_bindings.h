@@ -8,6 +8,8 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/edge_on_topology.h"
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/input_data.h"
+#include "grenade/common/inter_topology_hyper_edge.h"
+#include "grenade/common/linked_topology.h"
 #include "grenade/common/multi_index.h"
 #include "grenade/common/multi_index_sequence.h"
 #include "grenade/common/multi_index_sequence/cartesian_product.h"
