@@ -12,6 +12,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/multi_index_sequence/cartesian_product.h"
 #include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/partitioned_vertex.h"
 #include "grenade/common/topology.h"
 #include "grenade/common/vertex.h"
 #include "grenade/common/vertex_on_topology.h"
