@@ -368,7 +368,7 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::ostream& GENPYBIND(stringstream) operator<<(
+std::ostream& operator<<(
     std::ostream& os,
     Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder> const& value)
     SYMBOL_VISIBLE;
