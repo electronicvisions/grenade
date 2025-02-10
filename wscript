@@ -100,6 +100,14 @@ def build(bld):
     )
 
     bld(
+        target = 'grenade_common_serialization',
+        features = 'cxx cxxshlib',
+        source = bld.path.ant_glob('src/cereal/types/grenade/common/**/*.cpp'),
+        install_path = '${PREFIX}/lib',
+        use = ['grenade_common', 'haldls_inc']
+    )
+
+    bld(
         target = 'grenade_vx',
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
@@ -124,7 +132,7 @@ def build(bld):
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/sw/grenade/common/**/test-*.cpp'),
         test_main = 'tests/common/grenade/main.cpp',
-        use = ['grenade_common', 'GTEST', 'grenade_test_common_inc', 'logger'],
+        use = ['grenade_common', 'GTEST', 'grenade_test_common_inc', 'logger', 'grenade_common_serialization'],
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=240,
         install_path = '${PREFIX}/bin',

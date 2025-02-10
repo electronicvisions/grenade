@@ -2,8 +2,13 @@
 #include "grenade/common/genpybind.h"
 #include "hate/visibility.h"
 #include <cstddef>
+#include <cstdint>
 #include <iosfwd>
 #include <vector>
+
+namespace cereal {
+struct access;
+} // namespace cereal
 
 namespace grenade {
 namespace common GENPYBIND_TAG_GRENADE_COMMON {
@@ -30,6 +35,11 @@ struct GENPYBIND(visible) MultiIndex
 	auto operator<=>(MultiIndex const& other) const = default;
 
 	friend std::ostream& operator<<(std::ostream& os, MultiIndex const& value) SYMBOL_VISIBLE;
+
+private:
+	friend struct cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // namespace common
