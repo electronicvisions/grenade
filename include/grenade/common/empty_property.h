@@ -15,9 +15,9 @@ struct EmptyProperty : public Base
 {
 	virtual std::unique_ptr<Base> copy() const override;
 	virtual std::unique_ptr<Base> move() override;
-	virtual std::ostream& print(std::ostream& os) const override;
 
 protected:
+	virtual std::ostream& print(std::ostream& os) const override;
 	virtual bool is_equal_to(Base const& other) const override;
 
 private:
