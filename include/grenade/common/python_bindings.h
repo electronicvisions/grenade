@@ -19,6 +19,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/partitioned_vertex.h"
 #include "grenade/common/port_data.h"
 #include "grenade/common/port_data/batched.h"
+#include "grenade/common/resource_estimator.h"
 #include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/time_domain_runtimes.h"
 #include "grenade/common/topology.h"
