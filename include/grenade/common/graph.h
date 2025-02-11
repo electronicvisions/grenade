@@ -345,6 +345,12 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
 	std::map<VertexDescriptor, size_t> strong_components() const;
 
 	/**
+	 * Checks whether graph is valid.
+	 * Defaults to true.
+	 */
+	virtual bool valid() const;
+
+	/**
 	 * Get whether graphs are equal.
 	 * This is the case exactly if all vertex descriptors and properties as well as all edge
 	 * properties match in order and the edges connect the same vertices.

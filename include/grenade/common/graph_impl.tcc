@@ -719,6 +719,20 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
+bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::valid() const
+{
+	return true;
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
 bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::operator==(
     Graph const& other) const
 {
