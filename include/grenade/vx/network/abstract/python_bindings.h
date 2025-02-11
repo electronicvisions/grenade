@@ -18,6 +18,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/population_cell/calibrated.h"
 #include "grenade/vx/network/abstract/population_cell/external_source.h"
 #include "grenade/vx/network/abstract/population_cell/locally_placed.h"
+#include "grenade/vx/network/abstract/population_cell/poisson_source.h"
 #include "grenade/vx/network/abstract/population_cell/uncalibrated.h"
 #include "grenade/vx/network/abstract/projection_synapse/uncalibrated.h"
 #include "grenade/vx/network/abstract/projection_synapse/uncalibrated_signed.h"
