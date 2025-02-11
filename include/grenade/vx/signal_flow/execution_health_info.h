@@ -51,6 +51,9 @@ struct GENPYBIND(visible) ExecutionHealthInfo
 			 */
 			Chip& operator+=(Chip const& rhs) SYMBOL_VISIBLE;
 
+			bool operator==(Chip const& other) const = default;
+			bool operator!=(Chip const& other) const = default;
+
 			GENPYBIND(stringstream)
 			friend std::ostream& operator<<(std::ostream& os, Chip const& data) SYMBOL_VISIBLE;
 		};
@@ -66,6 +69,9 @@ struct GENPYBIND(visible) ExecutionHealthInfo
 		 * Calculates sum of counter values.
 		 */
 		ExecutionInstance& operator+=(ExecutionInstance const& rhs) SYMBOL_VISIBLE;
+
+		bool operator==(ExecutionInstance const& other) const = default;
+		bool operator!=(ExecutionInstance const& other) const = default;
 
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream& os, ExecutionInstance const& data)
