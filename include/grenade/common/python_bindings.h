@@ -35,6 +35,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/topology.h"
 #include "grenade/common/topology_rewrite.h"
 #include "grenade/common/topology_rewrite/population.h"
+#include "grenade/common/topology_rewrite/projection.h"
 #include "grenade/common/vertex.h"
 #include "grenade/common/vertex_on_topology.h"
 #include "grenade/common/vertex_port_type.h"
