@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/common/property.h"
+#include "hate/visibility.h"
 #include <cstddef>
 #include <iosfwd>
 #include <memory>
@@ -11,7 +12,7 @@ namespace grenade::common {
  * Property type without content for using when the type information alone suffices.
  */
 template <typename Derived, typename Base>
-struct EmptyProperty : public Base
+struct SYMBOL_VISIBLE EmptyProperty : public Base
 {
 	virtual std::unique_ptr<Base> copy() const override;
 	virtual std::unique_ptr<Base> move() override;

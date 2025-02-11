@@ -88,12 +88,23 @@ def build(bld):
     )
 
     bld(
+        target='_pygrenade_vx_network_abstract',
+        source='../include/grenade/vx/network/abstract/python_bindings.h',
+        genpybind_tags='grenade_vx_network_abstract',
+        features='genpybind cxx cxxshlib pyext',
+        use=['grenade_vx', 'pyhaldls_vx_v3', 'pylola_vx_v3',
+             'pyhalco_hicann_dls_vx_v3', '_pygrenade_vx_execution',
+             '_pygrenade_vx_signal_flow', '_pygrenade_vx_network'],
+    )
+
+    bld(
         target='pygrenade_vx',
         features='py use pylint pycodestyle',
         use=['_pygrenade_vx_common',
              '_pygrenade_vx_execution',
              '_pygrenade_vx_signal_flow',
              '_pygrenade_vx_network',
+             '_pygrenade_vx_network_abstract',
              '_pygrenade_vx_network_routing',
              'pylogging'],
         relative_trick=True,

@@ -35,12 +35,13 @@ template <
     typename EdgeDescriptorT,
     template <typename...>
     typename Holder>
-struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
+struct SYMBOL_VISIBLE Graph
 {
 	typedef VertexT Vertex;
 	typedef EdgeT Edge;
 	typedef VertexDescriptorT VertexDescriptor;
 	typedef EdgeDescriptorT EdgeDescriptor;
+	typedef Graph BaseGraph;
 
 	/**
 	 * Construct graph without elements.
@@ -161,7 +162,18 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
 	 * @param descriptor Vertex descriptor
 	 * @throws std::out_of_range On vertex not being present in graph
 	 */
-	Vertex const& get(VertexDescriptor const& descriptor) const;
+	Vertex const& get(VertexDescriptor const& descriptor) const GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		typedef typename decltype(parent)::type self_type;
+		parent.def(
+		    "get",
+		    [](GENPYBIND_PARENT_TYPE const& self,
+		       typename self_type::VertexDescriptor const& descriptor)
+		        -> std::shared_ptr<typename self_type::Vertex const> {
+			    return self.get(descriptor).shared_from_this();
+		    });
+	})
 
 	/**
 	 * Set vertex property.
@@ -277,6 +289,17 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
 	 */
 	std::pair<InEdgeIterator, InEdgeIterator> in_edges(VertexDescriptor const& descriptor) const
 	    GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		typedef typename decltype(parent)::type self_type;
+		parent.def(
+		    "in_edges", [](GENPYBIND_PARENT_TYPE const& self,
+		                   typename self_type::VertexDescriptor const& descriptor) {
+			    auto const in_edges = self.in_edges(descriptor);
+			    return std::vector<typename self_type::EdgeDescriptor>(
+			        in_edges.first, in_edges.second);
+		    });
+	})
 
 	/**
 	 * Get source vertex of given edge.
