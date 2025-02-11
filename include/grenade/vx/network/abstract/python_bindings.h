@@ -15,6 +15,7 @@ GENPYBIND_MANUAL({
 
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/atomic_neuron_on_compartment.h"
+#include "grenade/vx/network/abstract/population_cell/calibrated.h"
 #include "grenade/vx/network/abstract/population_cell/locally_placed.h"
 #include "grenade/vx/network/abstract/population_cell/uncalibrated.h"
 #include "grenade/vx/network/abstract/projection_synapse/uncalibrated.h"

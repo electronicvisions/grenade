@@ -15,6 +15,7 @@ def depends(ctx):
     ctx('libnux')
     ctx('fisch')
     ctx('hxcomm')
+    ctx('calix')
 
     if getattr(ctx.options, 'with_grenade_python_bindings', True):
         ctx('grenade', 'pygrenade')
@@ -112,8 +113,8 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'grenade_common', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB'],
-        depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'grenade_ppu_vx', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3'] if bld.env.have_ppu_toolchain else [],
+        use = ['grenade_inc', 'grenade_common', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB', 'ccalix'],
+        depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'grenade_ppu_vx', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3', 'ccalix_includes'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
 
