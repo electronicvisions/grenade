@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment/current.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 SynapticInputEnvironmentCurrent::SynapticInputEnvironmentCurrent(bool exitatory_in, int number_in) :
     SynapticInputEnvironment(exitatory_in, number_in)

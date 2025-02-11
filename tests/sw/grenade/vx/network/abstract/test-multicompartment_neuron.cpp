@@ -7,7 +7,7 @@
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"
 #include <gtest/gtest.h>
 
-using namespace grenade::vx::network;
+using namespace grenade::vx::network::abstract;
 
 TEST(multicompartment_neuron, General)
 {

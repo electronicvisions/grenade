@@ -5,7 +5,7 @@
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource.h"
 #include <vector>
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourcesWithConstraints
 {
@@ -14,4 +14,4 @@ struct SYMBOL_VISIBLE HardwareResourcesWithConstraints
 };
 
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

@@ -1,7 +1,7 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment.h"
 
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 
 // Adds Mechanism to Compartment
@@ -93,4 +93,4 @@ bool Compartment::valid() const
 	return true;
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

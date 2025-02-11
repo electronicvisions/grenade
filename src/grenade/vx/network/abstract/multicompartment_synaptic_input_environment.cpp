@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 SynapticInputEnvironment::SynapticInputEnvironment(bool exitatory_in, int number_in) :
     exitatory(exitatory_in), number_of_inputs(number_in, 0, 0)
@@ -28,4 +28,4 @@ bool SynapticInputEnvironment::is_equal_to(SynapticInputEnvironment const& other
 	return (number_of_inputs == other.number_of_inputs && exitatory == other.exitatory);
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

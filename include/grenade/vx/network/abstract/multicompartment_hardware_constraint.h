@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareConstraint : common::Property<HardwareConstraint>
 {
@@ -21,4 +21,4 @@ protected:
 	bool is_equal_to(HardwareConstraint const& other) const;
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection/conductance.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 // Constructor CompartmentConnectionConductance
 CompartmentConnectionConductance::CompartmentConnectionConductance(double value)
@@ -44,4 +44,4 @@ bool CompartmentConnectionConductance::ParameterSpace::contains(
 	return (conductance_interval.contains(parameterization.conductance));
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

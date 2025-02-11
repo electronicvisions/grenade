@@ -3,19 +3,19 @@
 #include "grenade/common/edge_on_graph.h"
 #include "grenade/vx/genpybind.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 struct CompartmentConnectionOnNeuron;
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract
 
 namespace grenade::common {
 
 extern template struct SYMBOL_VISIBLE
-    EdgeOnGraph<vx::network::CompartmentConnectionOnNeuron, detail::UndirectedGraph>;
+    EdgeOnGraph<vx::network::abstract::CompartmentConnectionOnNeuron, detail::UndirectedGraph>;
 
 } // namespace grenade::common
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) CompartmentConnectionOnNeuron
     : public common::EdgeOnGraph<CompartmentConnectionOnNeuron, common::detail::UndirectedGraph>
@@ -23,18 +23,19 @@ struct GENPYBIND(visible) CompartmentConnectionOnNeuron
 	using EdgeOnGraph::EdgeOnGraph;
 };
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace abstract
+} // namespace grenade::vx::network
 
 namespace std {
 
 template <>
-struct hash<grenade::vx::network::CompartmentConnectionOnNeuron>
+struct hash<grenade::vx::network::abstract::CompartmentConnectionOnNeuron>
 {
-	size_t operator()(grenade::vx::network::CompartmentConnectionOnNeuron const& value) const
+	size_t operator()(
+	    grenade::vx::network::abstract::CompartmentConnectionOnNeuron const& value) const
 	{
-		return std::hash<typename grenade::vx::network::CompartmentConnectionOnNeuron::Base>{}(
-		    value);
+		return std::hash<
+		    typename grenade::vx::network::abstract::CompartmentConnectionOnNeuron::Base>{}(value);
 	}
 };
 

@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_mechanism/synaptic_current.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 int MechanismSynapticInputCurrent::round(int i) const
 {
@@ -176,4 +176,4 @@ bool MechanismSynapticInputCurrent::is_equal_to(Mechanism const& other) const
 }
 
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

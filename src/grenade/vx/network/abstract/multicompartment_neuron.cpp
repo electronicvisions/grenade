@@ -4,16 +4,16 @@
 
 namespace grenade::common {
 template class Graph<
-    vx::network::Neuron,
+    vx::network::abstract::Neuron,
     detail::UndirectedGraph,
-    vx::network::Compartment,
-    vx::network::CompartmentConnection,
-    vx::network::CompartmentOnNeuron,
-    vx::network::CompartmentConnectionOnNeuron,
+    vx::network::abstract::Compartment,
+    vx::network::abstract::CompartmentConnection,
+    vx::network::abstract::CompartmentOnNeuron,
+    vx::network::abstract::CompartmentConnectionOnNeuron,
     std::unique_ptr>;
 } // namespace grenade::common
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 // Check Neuron Structur for Rulebreaks
 bool Neuron::valid()
@@ -118,4 +118,4 @@ bool Neuron::contains(CompartmentOnNeuron const& descriptor) const
 {
 	return Graph::contains(descriptor);
 }
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

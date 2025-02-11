@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_mechanism/synaptic_conductance.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 // Convert Number of Inputs to number of synaptical input circuits
 int MechanismSynapticInputConductance::round(int i) const
@@ -182,4 +182,4 @@ bool MechanismSynapticInputConductance::ParameterSpace::valid() const
 	    time_constant_interval.contains(parameterization.time_constant));
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

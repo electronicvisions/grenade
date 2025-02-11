@@ -1,7 +1,7 @@
 #pragma once
 #include <iosfwd>
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 template <class T>
 struct ParameterInterval
 {
@@ -29,6 +29,6 @@ private:
 template <typename T>
 std::ostream& operator<<(std::ostream& os, ParameterInterval<T> const& interval);
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract
 
 #include "grenade/vx/network/abstract/parameter_interval.tcc"

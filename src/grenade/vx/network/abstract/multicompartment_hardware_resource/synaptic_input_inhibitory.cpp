@@ -5,7 +5,7 @@
 namespace grenade::common {
 
 template struct EmptyProperty<
-    vx::network::HardwareResourceSynapticInputInhibitory,
-    vx::network::HardwareResource>;
+    vx::network::abstract::HardwareResourceSynapticInputInhibitory,
+    vx::network::abstract::HardwareResource>;
 
 } // namespace::grenade::common

@@ -4,7 +4,7 @@
 #include "grenade/common/empty_property.h"
 #include "grenade/common/property.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResource : public common::Property<HardwareResource>
 {

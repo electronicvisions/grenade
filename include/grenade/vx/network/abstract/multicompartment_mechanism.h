@@ -4,8 +4,8 @@
 #include "grenade/vx/network/abstract/multicompartment_hardware_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource.h"
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct Environment;
 struct CompartmentOnNeuron;
@@ -20,5 +20,5 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Mechanism : public common::Property<Mec
 };
 
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace abstract
+} // namespace grenade::vx::network

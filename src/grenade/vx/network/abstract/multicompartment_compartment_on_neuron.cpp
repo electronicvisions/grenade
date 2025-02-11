@@ -4,6 +4,6 @@
 
 namespace grenade::common {
 
-template class VertexOnGraph<vx::network::CompartmentOnNeuron, detail::UndirectedGraph>;
+template class VertexOnGraph<vx::network::abstract::CompartmentOnNeuron, detail::UndirectedGraph>;
 
 } // namespace grenade::common

@@ -8,7 +8,7 @@
 #include <iostream>
 #include <gtest/gtest.h>
 
-using namespace grenade::vx::network;
+using namespace grenade::vx::network::abstract;
 
 TEST(multicompartment_neuron, Resources)
 {

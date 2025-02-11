@@ -8,8 +8,8 @@
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment/conductance.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 
 // Mechanism for Synaptic Conductance
@@ -88,5 +88,5 @@ private:
 };
 
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace abstract
+} // namespace grenade::vx::network

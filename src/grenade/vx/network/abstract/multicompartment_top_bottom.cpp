@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_top_bottom.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 NumberTopBottom::NumberTopBottom() : number_total(0), number_top(0), number_bottom(0) {}
 
@@ -74,4 +74,4 @@ std::ostream& NumberTopBottom::print(std::ostream& os) const
 }
 
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

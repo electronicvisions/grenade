@@ -5,8 +5,8 @@
 #include <ostream>
 #include <stdexcept>
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) NumberTopBottom
     : public common::Property<NumberTopBottom>
@@ -32,5 +32,5 @@ protected:
 	std::ostream& print(std::ostream& os) const;
 };
 
-} // namespace network
-} // namespace greande::vx
+} // namespace abstract
+} // namespace greande::vx::network

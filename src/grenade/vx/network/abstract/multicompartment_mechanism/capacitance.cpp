@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_mechanism/capacitance.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 
 // Constructor MechanismCapacitance
@@ -96,4 +96,4 @@ bool MechanismCapacitance::ParameterSpace::valid() const
 }
 
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

@@ -7,8 +7,8 @@
 #include "grenade/vx/network/abstract/parameter_interval.h"
 #include <cmath>
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 
 // Mechanism for Membrane Capacitance
@@ -74,5 +74,5 @@ protected:
 };
 
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace abstract
+} // namespace grenade::vx::network

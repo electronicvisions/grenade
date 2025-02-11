@@ -8,31 +8,31 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment_on_neuron.h"
 #include <memory>
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // forward declaration
 struct Neuron;
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace abstract
+} // namespace grenade::vx::network
 
 namespace grenade::common {
 
 // Make Graph visible for linker
 extern template class SYMBOL_VISIBLE Graph<
-    vx::network::Neuron,
+    vx::network::abstract::Neuron,
     detail::UndirectedGraph,
-    vx::network::Compartment,
-    vx::network::CompartmentConnection,
-    vx::network::CompartmentOnNeuron,
-    vx::network::CompartmentConnectionOnNeuron,
+    vx::network::abstract::Compartment,
+    vx::network::abstract::CompartmentConnection,
+    vx::network::abstract::CompartmentOnNeuron,
+    vx::network::abstract::CompartmentConnectionOnNeuron,
     std::unique_ptr>;
 
 } // namespace grenade::common
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // Neuron uses Graph-Representation
 struct GENPYBIND(visible) SYMBOL_VISIBLE Neuron
@@ -89,5 +89,5 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Neuron
 	bool contains(CompartmentOnNeuron const& descriptor) const;
 };
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace abstract
+} // namespace grenade::vx::network

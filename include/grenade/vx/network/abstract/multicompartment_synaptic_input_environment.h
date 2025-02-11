@@ -5,7 +5,7 @@
 #include <utility>
 
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE SynapticInputEnvironment : public common::Property<SynapticInputEnvironment>
 {
@@ -25,4 +25,4 @@ protected:
 	virtual bool is_equal_to(SynapticInputEnvironment const& other) const;
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

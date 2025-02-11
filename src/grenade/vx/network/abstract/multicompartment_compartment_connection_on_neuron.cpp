@@ -3,6 +3,7 @@
 #include "grenade/common/edge_on_graph_impl.tcc"
 
 namespace grenade::common {
-
-template class EdgeOnGraph<vx::network::CompartmentConnectionOnNeuron, detail::UndirectedGraph>;
+template class EdgeOnGraph<
+    vx::network::abstract::CompartmentConnectionOnNeuron,
+    detail::UndirectedGraph>;
 } // namespace grenade::common

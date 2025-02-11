@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment/conductance.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 SynapticInputEnvironmentConductance::SynapticInputEnvironmentConductance(
     bool exitatory_in, int number_in) :
@@ -31,4 +31,4 @@ bool SynapticInputEnvironmentConductance::is_equal_to(
 	return (number_of_inputs == other.number_of_inputs && exitatory == other.exitatory);
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

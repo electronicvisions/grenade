@@ -4,6 +4,8 @@
 
 namespace grenade::common {
 
-template struct EmptyProperty<vx::network::HardwareResourceCapacity, vx::network::HardwareResource>;
+template struct EmptyProperty<
+    vx::network::abstract::HardwareResourceCapacity,
+    vx::network::abstract::HardwareResource>;
 
 } // namespace::grenade::common

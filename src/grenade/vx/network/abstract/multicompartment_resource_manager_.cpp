@@ -1,7 +1,7 @@
 #include "grenade/vx/network/abstract/multicompartment_resource_manager.h"
 
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 CompartmentOnNeuron ResourceManager::add_config(
     CompartmentOnNeuron const& compartment, Neuron const& neuron, Environment const& environment)
@@ -87,4 +87,4 @@ NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& co
 	return *(resource_map.at(compartment));
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

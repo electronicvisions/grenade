@@ -1,6 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment_hardware_constraint.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 // Property Methods
 std::unique_ptr<HardwareConstraint> HardwareConstraint::copy() const
@@ -21,4 +21,4 @@ bool HardwareConstraint::is_equal_to(HardwareConstraint const& other) const
 }
 
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

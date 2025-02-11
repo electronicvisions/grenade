@@ -2,7 +2,7 @@
 
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 // CompartmentConnectionConductance
 struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnectionConductance
@@ -32,4 +32,4 @@ protected:
 	bool is_equal_to(CompartmentConnection const& other) const;
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

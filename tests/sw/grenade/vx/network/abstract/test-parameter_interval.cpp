@@ -1,7 +1,7 @@
 #include "grenade/vx/network/abstract/parameter_interval.h"
 #include <gtest/gtest.h>
 
-using namespace grenade::vx::network;
+using namespace grenade::vx::network::abstract;
 
 TEST(multicompartment_neuron, parameter_interval)
 {

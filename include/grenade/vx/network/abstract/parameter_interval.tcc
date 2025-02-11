@@ -2,7 +2,7 @@
 #include "grenade/vx/network/abstract/parameter_interval.h"
 #include <ostream>
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 // Constructor
 template <class T>
 ParameterInterval<T>::ParameterInterval(T lower_limit, T upper_limit)
@@ -39,4 +39,4 @@ std::ostream& operator<<(std::ostream& os, ParameterInterval<T> const& interval)
 {
 	return os << "[" << interval.get_lower() << ", " << interval.get_upper() << "]";
 }
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract

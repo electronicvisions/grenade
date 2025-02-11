@@ -2,7 +2,7 @@
 
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"
 
-namespace grenade::vx::network {
+namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE SynapticInputEnvironmentConductance : public SynapticInputEnvironment
 {
@@ -19,4 +19,4 @@ protected:
 	bool is_equal_to(SynapticInputEnvironmentConductance const& other) const;
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::vx::network::abstract
