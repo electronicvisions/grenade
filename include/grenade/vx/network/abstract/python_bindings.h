@@ -27,6 +27,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/recorder.h"
 #include "grenade/vx/network/abstract/recorder/cadc.h"
 #include "grenade/vx/network/abstract/recorder/madc.h"
+#include "grenade/vx/network/abstract/recorder/pad.h"
 #include "grenade/vx/network/abstract/recorder/spike.h"
 #include "grenade/vx/network/abstract/vertex_port_type/analog_observable.h"
 #include "grenade/vx/network/abstract/vertex_port_type/cadc_samples.h"
