@@ -63,7 +63,7 @@ struct PlasticityRule : public EntityOnChip
 		/**
 		 * Get last execution time.
 		 */
-		Value get_last() const;
+		Value get_last() const SYMBOL_VISIBLE;
 
 		bool operator==(Timer const& other) const SYMBOL_VISIBLE;
 		bool operator!=(Timer const& other) const SYMBOL_VISIBLE;
@@ -373,6 +373,9 @@ struct PlasticityRule : public EntityOnChip
 		 * batch entry.
 		 */
 		std::vector<std::vector<signal_flow::Int8>> data;
+
+		bool operator==(RawRecordingData const& other) const = default;
+		bool operator!=(RawRecordingData const& other) const = default;
 
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream& os, RawRecordingData const& data)
