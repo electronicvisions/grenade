@@ -1,10 +1,10 @@
 #pragma once
 #include "grenade/common/detail/constructor_transform.h"
 #include "grenade/common/detail/graph.h"
-#include "grenade/common/detail/property_holder.h"
 #include "grenade/common/edge_on_graph.h"
 #include "grenade/common/genpybind.h"
 #include "grenade/common/property.h"
+#include "grenade/common/property_holder.h"
 #include "grenade/common/vertex_on_graph.h"
 #include "hate/visibility.h"
 #include <memory>
@@ -360,8 +360,8 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) Graph
 
 private:
 	Backend m_graph;
-	std::unordered_map<VertexDescriptor, detail::PropertyHolder<Vertex, Holder>> m_vertices;
-	std::unordered_map<EdgeDescriptor, detail::PropertyHolder<Edge, Holder>> m_edges;
+	std::unordered_map<VertexDescriptor, PropertyHolder<Vertex, Holder>> m_vertices;
+	std::unordered_map<EdgeDescriptor, PropertyHolder<Edge, Holder>> m_edges;
 
 	void check_contains(VertexDescriptor const& descriptor, char const* description) const;
 	void check_contains(EdgeDescriptor const& descriptor, char const* description) const;

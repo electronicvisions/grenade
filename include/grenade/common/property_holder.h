@@ -4,7 +4,7 @@
 #include <memory>
 #include <type_traits>
 
-namespace grenade::common::detail {
+namespace grenade::common {
 
 /**
  * Holder type for polymorphic property.
@@ -108,6 +108,6 @@ private:
 template <typename T, template <typename...> typename Backend>
 std::ostream& operator<<(std::ostream& os, PropertyHolder<T, Backend> const& value);
 
-} // namespace grenade::common::detail
+} // namespace grenade::common
 
-#include "grenade/common/detail/property_holder.tcc"
+#include "grenade/common/property_holder.tcc"

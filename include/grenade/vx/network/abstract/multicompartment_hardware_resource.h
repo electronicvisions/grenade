@@ -1,8 +1,8 @@
 #pragma once
 
-#include "grenade/common/detail/property_holder.h"
 #include "grenade/common/empty_property.h"
 #include "grenade/common/property.h"
+#include "grenade/common/property_holder.h"
 
 namespace grenade::vx::network::abstract {
 

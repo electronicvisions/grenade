@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grenade/common/detail/property_holder.h"
+#include "grenade/common/property_holder.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment_environment.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource/capacitance.h"
@@ -24,7 +24,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	NumberTopBottom const& get_config(CompartmentOnNeuron const& compartment) const;
 
 private:
-	std::map<CompartmentOnNeuron, common::detail::PropertyHolder<NumberTopBottom>> resource_map;
+	std::map<CompartmentOnNeuron, common::PropertyHolder<NumberTopBottom>> resource_map;
 };
 
 

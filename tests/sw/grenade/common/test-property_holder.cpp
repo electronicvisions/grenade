@@ -1,4 +1,4 @@
-#include "grenade/common/detail/property_holder.h"
+#include "grenade/common/property_holder.h"
 
 #include "grenade/common/empty_property.h"
 #include "grenade/common/property.h"
@@ -42,7 +42,7 @@ protected:
 TEST(PropertyHolder, General)
 {
 	DerivedDummyProperty derived_dummy_5{5};
-	grenade::common::detail::PropertyHolder<DummyProperty> holder_5(derived_dummy_5);
+	grenade::common::PropertyHolder<DummyProperty> holder_5(derived_dummy_5);
 
 	EXPECT_TRUE(holder_5);
 	EXPECT_NO_THROW(*holder_5);
@@ -63,7 +63,7 @@ TEST(PropertyHolder, General)
 	EXPECT_EQ(holder_5, holder_5);
 
 	DerivedDummyProperty derived_dummy_7{7};
-	grenade::common::detail::PropertyHolder<DummyProperty> holder_7(std::move(derived_dummy_7));
+	grenade::common::PropertyHolder<DummyProperty> holder_7(std::move(derived_dummy_7));
 
 	auto const holder_7_copy = holder_7;
 

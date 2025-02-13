@@ -10,7 +10,7 @@ namespace grenade::vx::network::abstract {
 struct SYMBOL_VISIBLE HardwareConstraint : common::Property<HardwareConstraint>
 {
 	NumberTopBottom numbers;
-	common::detail::PropertyHolder<HardwareResource> resource;
+	common::PropertyHolder<HardwareResource> resource;
 
 	// Property Methods
 	std::unique_ptr<HardwareConstraint> copy() const;

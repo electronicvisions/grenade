@@ -15,10 +15,9 @@ CompartmentOnNeuron ResourceManager::add_config(
 	NumberTopBottom neuron_circuit_config;
 	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
 	// PropertyHolder is neither comparable nor hashable)
-	std::vector<common::detail::PropertyHolder<HardwareResource>>
-	    resource_request_counter_hardware = {
-	        HardwareResourceCapacity(), HardwareResourceSynapticInputExitatory(),
-	        HardwareResourceSynapticInputInhibitory()};
+	std::vector<common::PropertyHolder<HardwareResource>> resource_request_counter_hardware = {
+	    HardwareResourceCapacity(), HardwareResourceSynapticInputExitatory(),
+	    HardwareResourceSynapticInputInhibitory()};
 	std::vector<NumberTopBottom> resource_request_counter_numbers = {
 	    NumberTopBottom(0, 0, 0), NumberTopBottom(0, 0, 0), NumberTopBottom(0, 0, 0)};
 

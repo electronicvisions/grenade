@@ -38,13 +38,13 @@ HardwareResourcesWithConstraints MechanismSynapticInputConductance::get_hardware
 {
 	// Return Object and Input
 	HardwareResourcesWithConstraints resources_with_constraints;
-	std::vector<common::detail::PropertyHolder<HardwareResource>> resource_list;
-	std::vector<common::detail::PropertyHolder<HardwareConstraint>> constraint_list;
+	std::vector<common::PropertyHolder<HardwareResource>> resource_list;
+	std::vector<common::PropertyHolder<HardwareConstraint>> constraint_list;
 	if (environment.synaptic_connections.find(compartment) ==
 	    environment.synaptic_connections.end()) {
 		throw std::invalid_argument(" No information about this compartment in environment");
 	}
-	std::vector<common::detail::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
+	std::vector<common::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
 	    environment.synaptic_connections.at(compartment);
 
 	// Loop over all Synaptic Inputs of Compartment

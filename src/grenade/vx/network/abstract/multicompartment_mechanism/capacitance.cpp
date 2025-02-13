@@ -25,7 +25,7 @@ HardwareResourcesWithConstraints MechanismCapacitance::get_hardware(
 {
 	double capacity_convert = 5; // TO-DO
 	HardwareResourcesWithConstraints resources_with_constraints;
-	std::vector<common::detail::PropertyHolder<HardwareResource>> resource_list;
+	std::vector<common::PropertyHolder<HardwareResource>> resource_list;
 
 	double capacitance_model = parameter_space.capacitance_interval.get_upper();
 	int num_of_hardware_resources;
