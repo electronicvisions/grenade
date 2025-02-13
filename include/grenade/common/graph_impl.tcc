@@ -1,12 +1,12 @@
 #pragma once
-#include "grenade/vx/network/abstract/graph.h"
+#include "grenade/common/graph.h"
 
 #include "hate/indent.h"
 #include "hate/type_index.h"
 #include <ostream>
 #include <set>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 template <
     typename Derived,
@@ -778,4 +778,4 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 	}
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

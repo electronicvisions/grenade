@@ -1,10 +1,10 @@
 #pragma once
-#include "grenade/vx/network/abstract/property.h"
+#include "grenade/common/property.h"
 #include <iosfwd>
 #include <memory>
 #include <type_traits>
 
-namespace grenade::vx::network::detail {
+namespace grenade::common::detail {
 
 /**
  * Holder type for polymorphic property.
@@ -108,6 +108,6 @@ private:
 template <typename T, template <typename...> typename Backend>
 std::ostream& operator<<(std::ostream& os, PropertyHolder<T, Backend> const& value);
 
-} // namespace grenade::vx::network::detail
+} // namespace grenade::common::detail
 
-#include "grenade/vx/network/abstract/detail/property_holder.tcc"
+#include "grenade/common/detail/property_holder.tcc"

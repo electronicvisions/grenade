@@ -1,9 +1,9 @@
 #pragma once
-#include "grenade/vx/network/abstract/equality_comparable.h"
+#include "grenade/common/equality_comparable.h"
 
 #include <typeinfo>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 template <typename T>
 bool EqualityComparable<T>::operator==(EqualityComparable const& other) const
@@ -20,4 +20,4 @@ bool EqualityComparable<T>::operator!=(EqualityComparable const& other) const
 	return !operator==(other);
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

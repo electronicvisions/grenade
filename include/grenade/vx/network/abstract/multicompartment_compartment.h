@@ -1,12 +1,13 @@
 #pragma once
 
-#include "grenade/vx/network/abstract/detail/graph.h"
-#include "grenade/vx/network/abstract/detail/property_holder.h"
-#include "grenade/vx/network/abstract/graph.h"
+#include "grenade/common/detail/graph.h"
+#include "grenade/common/detail/property_holder.h"
+#include "grenade/common/graph.h"
+#include "grenade/common/property.h"
+#include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource_with_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment_mechanism.h"
 #include "grenade/vx/network/abstract/multicompartment_mechanism_on_compartment.h"
-#include "grenade/vx/network/abstract/property.h"
 #include <map>
 #include <memory>
 #include <vector>
@@ -15,7 +16,7 @@ namespace grenade::vx {
 namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 
-struct SYMBOL_VISIBLE GENPYBIND(visible) Compartment : public Property<Compartment>
+struct SYMBOL_VISIBLE GENPYBIND(visible) Compartment : public common::Property<Compartment>
 {
 	virtual MechanismOnCompartment add(Mechanism const& mechanism);
 	virtual void remove(MechanismOnCompartment const& descriptor);
@@ -42,7 +43,7 @@ protected:
 private:
 	size_t m_mechanism_key_counter = 0;
 	// Map over all Mechanisms on a Compartment
-	std::map<MechanismOnCompartment, detail::PropertyHolder<Mechanism>> m_mechanisms;
+	std::map<MechanismOnCompartment, common::detail::PropertyHolder<Mechanism>> m_mechanisms;
 };
 
 } // namespace network

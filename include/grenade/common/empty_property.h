@@ -1,11 +1,11 @@
 #pragma once
-#include "grenade/vx/network/abstract/property.h"
+#include "grenade/common/property.h"
 #include <cstddef>
 #include <iosfwd>
 #include <memory>
 #include <type_traits>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 /**
  * Property type without content for using when the type information alone suffices.
@@ -26,4 +26,4 @@ private:
 	    "EmptyProperty expects Base to be derived from Property<Base>.");
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

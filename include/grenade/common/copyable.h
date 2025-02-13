@@ -1,9 +1,9 @@
 #pragma once
-#include "grenade/vx/genpybind.h"
+#include "grenade/common/genpybind.h"
 #include "hate/visibility.h"
 #include <memory>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 /**
  * Object which is copyable.
@@ -18,4 +18,4 @@ struct SYMBOL_VISIBLE Copyable
 	virtual std::unique_ptr<T> copy() const GENPYBIND(hidden) = 0;
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

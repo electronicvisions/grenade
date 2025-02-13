@@ -1,9 +1,9 @@
-#include "grenade/vx/network/abstract/edge_on_graph.h"
+#include "grenade/common/edge_on_graph.h"
 
 #include "hate/type_index.h"
 #include <ostream>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 template <typename Derived, typename Backend>
 EdgeOnGraph<Derived, Backend>::EdgeOnGraph(Value const& value) : m_value(value)
@@ -21,4 +21,4 @@ std::ostream& EdgeOnGraph<Derived, Backend>::print(std::ostream& os) const
 	return (os << hate::name<Derived>() << "(" << value() << ")");
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

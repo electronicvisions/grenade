@@ -1,13 +1,13 @@
 #pragma once
-
+#include "grenade/common/property.h"
+#include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/multicompartment_top_bottom.h"
-#include "grenade/vx/network/abstract/property.h"
 #include <utility>
 
 
 namespace grenade::vx::network {
 
-struct SYMBOL_VISIBLE SynapticInputEnvironment : public Property<SynapticInputEnvironment>
+struct SYMBOL_VISIBLE SynapticInputEnvironment : public common::Property<SynapticInputEnvironment>
 {
 	SynapticInputEnvironment() = default;
 	SynapticInputEnvironment(bool exitatory, int number);

@@ -1,14 +1,14 @@
 #pragma once
-
+#include "grenade/common/property.h"
+#include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
-#include "grenade/vx/network/abstract/property.h"
 
 namespace grenade::vx {
 namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // CompartmentConnection
 struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnection
-    : public Property<CompartmentConnection>
+    : public common::Property<CompartmentConnection>
 {
 	CompartmentConnection() = default;
 	struct ParameterSpace

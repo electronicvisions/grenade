@@ -1,11 +1,10 @@
-#include "grenade/vx/network/abstract/equality_comparable.h"
+#include "grenade/common/equality_comparable.h"
 
 #include <vector>
 #include <gtest/gtest.h>
 
 
-struct DummyEqualityComparable
-    : public grenade::vx::network::EqualityComparable<DummyEqualityComparable>
+struct DummyEqualityComparable : public grenade::common::EqualityComparable<DummyEqualityComparable>
 {
 	int value;
 

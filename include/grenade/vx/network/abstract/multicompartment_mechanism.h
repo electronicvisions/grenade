@@ -1,8 +1,8 @@
 #pragma once
 
+#include "grenade/common/property.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource.h"
-#include "grenade/vx/network/abstract/property.h"
 
 namespace grenade::vx {
 namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
@@ -11,7 +11,7 @@ struct Environment;
 struct CompartmentOnNeuron;
 
 // Mechanism Base-Class
-struct GENPYBIND(visible) SYMBOL_VISIBLE Mechanism : public Property<Mechanism>
+struct GENPYBIND(visible) SYMBOL_VISIBLE Mechanism : public common::Property<Mechanism>
 {
 	virtual bool conflict(Mechanism const& other) const = 0;
 	virtual HardwareResourcesWithConstraints get_hardware(

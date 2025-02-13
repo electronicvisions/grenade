@@ -1,15 +1,19 @@
 #include "grenade/vx/network/abstract/multicompartment_neuron.h"
 
-#include "grenade/vx/network/abstract/graph_impl.tcc"
-namespace grenade::vx::network {
+#include "grenade/common/graph_impl.tcc"
+
+namespace grenade::common {
 template class Graph<
-    Neuron,
+    vx::network::Neuron,
     detail::UndirectedGraph,
-    Compartment,
-    CompartmentConnection,
-    CompartmentOnNeuron,
-    CompartmentConnectionOnNeuron,
+    vx::network::Compartment,
+    vx::network::CompartmentConnection,
+    vx::network::CompartmentOnNeuron,
+    vx::network::CompartmentConnectionOnNeuron,
     std::unique_ptr>;
+} // namespace grenade::common
+
+namespace grenade::vx::network {
 
 // Check Neuron Structur for Rulebreaks
 bool Neuron::valid()
@@ -95,9 +99,9 @@ CompartmentOnNeuron Neuron::target(CompartmentConnectionOnNeuron const& descript
 }
 
 // Iterators over Compartments
-typedef Graph<
+typedef common::Graph<
     Neuron,
-    detail::UndirectedGraph,
+    common::detail::UndirectedGraph,
     Compartment,
     CompartmentConnection,
     CompartmentOnNeuron,

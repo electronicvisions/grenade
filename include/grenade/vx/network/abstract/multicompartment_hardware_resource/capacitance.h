@@ -3,12 +3,20 @@
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource.h"
 
 namespace grenade::vx::network {
-
 struct HardwareResourceCapacity;
-extern template struct SYMBOL_VISIBLE EmptyProperty<HardwareResourceCapacity, HardwareResource>;
+} // namespace grenade::vx::network
+
+namespace grenade::common {
+
+extern template struct SYMBOL_VISIBLE
+    common::EmptyProperty<vx::network::HardwareResourceCapacity, vx::network::HardwareResource>;
+
+} // namespace grenade::common
+
+namespace grenade::vx::network {
 
 struct SYMBOL_VISIBLE HardwareResourceCapacity
-    : public EmptyProperty<HardwareResourceCapacity, HardwareResource>
+    : public common::EmptyProperty<HardwareResourceCapacity, HardwareResource>
 {
 	HardwareResourceCapacity() = default;
 };

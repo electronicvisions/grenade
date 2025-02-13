@@ -1,8 +1,8 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection_on_neuron.h"
 
-#include "grenade/vx/network/abstract/edge_on_graph_impl.tcc"
+#include "grenade/common/edge_on_graph_impl.tcc"
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
-template class EdgeOnGraph<CompartmentConnectionOnNeuron, detail::UndirectedGraph>;
-} // namespace grenade::vx::network
+template class EdgeOnGraph<vx::network::CompartmentConnectionOnNeuron, detail::UndirectedGraph>;
+} // namespace grenade::common

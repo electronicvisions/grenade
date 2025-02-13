@@ -1,10 +1,10 @@
-#include "grenade/vx/network/abstract/copyable.h"
+#include "grenade/common/copyable.h"
 #include <memory>
 
 #include <gtest/gtest.h>
 
 
-struct DummyCopyable : public grenade::vx::network::Copyable<DummyCopyable>
+struct DummyCopyable : public grenade::common::Copyable<DummyCopyable>
 {
 	int value;
 

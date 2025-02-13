@@ -1,9 +1,9 @@
 #pragma once
-#include "grenade/vx/network/abstract/empty_property.h"
+#include "grenade/common/empty_property.h"
 #include "hate/type_index.h"
 #include <ostream>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 template <typename Derived, typename Base>
 std::unique_ptr<Base> EmptyProperty<Derived, Base>::copy() const
@@ -29,4 +29,4 @@ bool EmptyProperty<Derived, Base>::is_equal_to(Base const& /* other */) const
 	return true;
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

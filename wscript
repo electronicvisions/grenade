@@ -94,7 +94,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/common/**/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'halco_common'],
+        use = ['grenade_inc', 'halco_common', 'hate'],
         uselib = 'GRENADE_LIBRARIES',
     )
 
@@ -119,10 +119,21 @@ def build(bld):
     )
 
     bld(
+        target = 'grenade_swtest_common',
+        features = 'gtest cxx cxxprogram',
+        source = bld.path.ant_glob('tests/sw/grenade/common/**/test-*.cpp'),
+        test_main = 'tests/common/grenade/main.cpp',
+        use = ['grenade_common', 'GTEST', 'grenade_test_common_inc', 'logger_obj'],
+        linkflags = ['-lboost_program_options-mt'],
+        test_timeout=240,
+        install_path = '${PREFIX}/bin',
+    )
+
+    bld(
         target = 'grenade_swtest_vx',
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/sw/grenade/vx/**/test-*.cpp'),
-        test_main = 'tests/common/grenade/vx/main.cpp',
+        test_main = 'tests/common/grenade/main.cpp',
         use = ['grenade_vx', 'GTEST', 'grenade_test_common_inc', 'grenade_vx_serialization'],
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=240,
@@ -142,7 +153,7 @@ def build(bld):
         target = 'grenade_hwtest_vx',
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/hw/grenade/vx/**/test-*.cpp'),
-        test_main = 'tests/common/grenade/vx/main.cpp',
+        test_main = 'tests/common/grenade/main.cpp',
         use = ['grenade_vx', 'stadls_vx_v3', 'GTEST', 'haldls_vx_v3', 'lola_vx_v3', 'grenade_hwtest_helper_vx'],
         install_path = '${PREFIX}/bin',
         linkflags = ['-lboost_program_options-mt'],

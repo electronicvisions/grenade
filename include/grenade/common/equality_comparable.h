@@ -1,7 +1,7 @@
 #pragma once
 #include "hate/visibility.h"
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 /**
  * Object which is equality comparable.
@@ -32,6 +32,6 @@ protected:
 	virtual bool is_equal_to(T const& other) const = 0;
 };
 
-} // namespace grenade::vx::network
+} // namespace grenade::common
 
-#include "grenade/vx/network/abstract/equality_comparable.tcc"
+#include "grenade/common/equality_comparable.tcc"

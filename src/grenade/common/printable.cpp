@@ -1,8 +1,8 @@
-#include "grenade/vx/network/abstract/printable.h"
+#include "grenade/common/printable.h"
 
 #include <ostream>
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
 Printable::~Printable() {}
 
@@ -11,4 +11,4 @@ std::ostream& operator<<(std::ostream& os, Printable const& printable)
 	return printable.print(os);
 }
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

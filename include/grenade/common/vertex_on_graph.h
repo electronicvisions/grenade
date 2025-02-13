@@ -1,13 +1,13 @@
 #pragma once
-#include "grenade/vx/genpybind.h"
+#include "grenade/common/genpybind.h"
 #include "hate/type_index.h"
 #include "hate/visibility.h"
 #include <iosfwd>
 #include <ostream>
 #include <utility>
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade {
+namespace common GENPYBIND_TAG_GRENADE_COMMON {
 
 /**
  * Identifier of vertex on graph.
@@ -46,8 +46,8 @@ template <typename Derived, typename Backend>
 std::ostream& GENPYBIND(stringstream) operator<<(
     std::ostream& os, VertexOnGraph<Derived, Backend> const& value);
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace common
+} // namespace grenade
 
 namespace std {
 
@@ -55,11 +55,11 @@ template <typename T>
 struct hash;
 
 template <typename Derived, typename Backend>
-struct hash<grenade::vx::network::VertexOnGraph<Derived, Backend>>
+struct hash<grenade::common::VertexOnGraph<Derived, Backend>>
 {
-	size_t operator()(grenade::vx::network::VertexOnGraph<Derived, Backend> const& value) const
+	size_t operator()(grenade::common::VertexOnGraph<Derived, Backend> const& value) const
 	{
-		return std::hash<typename grenade::vx::network::VertexOnGraph<Derived, Backend>::Value>{}(
+		return std::hash<typename grenade::common::VertexOnGraph<Derived, Backend>::Value>{}(
 		    value.value());
 	}
 };

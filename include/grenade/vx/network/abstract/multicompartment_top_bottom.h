@@ -1,13 +1,15 @@
 #pragma once
-
-#include "grenade/vx/network/abstract/property.h"
+#include "grenade/common/property.h"
+#include "grenade/vx/genpybind.h"
 #include <cstddef>
 #include <ostream>
 #include <stdexcept>
 
 namespace grenade::vx {
 namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
-struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) NumberTopBottom : public Property<NumberTopBottom>
+
+struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) NumberTopBottom
+    : public common::Property<NumberTopBottom>
 {
 	NumberTopBottom();
 	NumberTopBottom(size_t number_total_in, size_t number_top_in, size_t number_bottom_in);

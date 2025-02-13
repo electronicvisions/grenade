@@ -1,7 +1,7 @@
 #pragma once
 #include <utility>
 
-namespace grenade::vx::network::detail {
+namespace grenade::common::detail {
 
 template <typename T>
 struct ConstructorTransform
@@ -13,4 +13,4 @@ struct ConstructorTransform
 	}
 };
 
-} // namespace grenade::vx::network::detail
+} // namespace grenade::common::detail

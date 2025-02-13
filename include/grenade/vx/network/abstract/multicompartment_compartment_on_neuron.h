@@ -1,16 +1,22 @@
 #pragma once
+#include "grenade/common/detail/graph.h"
+#include "grenade/common/vertex_on_graph.h"
+#include "grenade/vx/genpybind.h"
 
-#include "grenade/vx/network/abstract/detail/graph.h"
-#include "grenade/vx/network/abstract/vertex_on_graph.h"
+namespace grenade::vx::network {
+struct CompartmentOnNeuron;
+} // namespace grenade::vx::network
+
+namespace grenade::common {
+extern template struct SYMBOL_VISIBLE
+    VertexOnGraph<vx::network::CompartmentOnNeuron, detail::UndirectedGraph>;
+} // namespace grenade::common
 
 namespace grenade::vx {
 namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-struct CompartmentOnNeuron;
-extern template struct SYMBOL_VISIBLE VertexOnGraph<CompartmentOnNeuron, detail::UndirectedGraph>;
-
 struct GENPYBIND(visible) CompartmentOnNeuron
-    : public VertexOnGraph<CompartmentOnNeuron, detail::UndirectedGraph>
+    : public common::VertexOnGraph<CompartmentOnNeuron, common::detail::UndirectedGraph>
 {
 	using VertexOnGraph::VertexOnGraph;
 };

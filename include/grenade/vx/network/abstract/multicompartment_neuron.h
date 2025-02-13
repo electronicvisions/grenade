@@ -1,7 +1,7 @@
 #pragma once
 
-#include "grenade/vx/network/abstract/detail/graph.h"
-#include "grenade/vx/network/abstract/graph.h"
+#include "grenade/common/detail/graph.h"
+#include "grenade/common/graph.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection/conductance.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment_connection_on_neuron.h"
@@ -14,22 +14,31 @@ namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 // forward declaration
 struct Neuron;
 
+} // namespace network
+} // namespace grenade::vx
+
+namespace grenade::common {
+
 // Make Graph visible for linker
 extern template class SYMBOL_VISIBLE Graph<
-    Neuron,
+    vx::network::Neuron,
     detail::UndirectedGraph,
-    Compartment,
-    CompartmentConnection,
-    CompartmentOnNeuron,
-    CompartmentConnectionOnNeuron,
+    vx::network::Compartment,
+    vx::network::CompartmentConnection,
+    vx::network::CompartmentOnNeuron,
+    vx::network::CompartmentConnectionOnNeuron,
     std::unique_ptr>;
 
+} // namespace grenade::common
+
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // Neuron uses Graph-Representation
 struct GENPYBIND(visible) SYMBOL_VISIBLE Neuron
-    : private Graph<
+    : private common::Graph<
           Neuron,
-          detail::UndirectedGraph,
+          common::detail::UndirectedGraph,
           Compartment,
           CompartmentConnection,
           CompartmentOnNeuron,

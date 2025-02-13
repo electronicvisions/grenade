@@ -3,7 +3,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graph_selectors.hpp>
 
-namespace grenade::vx::network::detail {
+namespace grenade::common::detail {
 
 /**
  * Bidirectional (multi-)graph.
@@ -63,31 +63,30 @@ struct IsSupportedGraph<boost::adjacency_list<EdgeCollection, VertexCollection, 
 	// clang-format on
 };
 
-} // namespace grenade::vx::network::detail
+} // namespace grenade::common::detail
 
 namespace std {
 
 static_assert(std::is_same_v<
-              grenade::vx::network::detail::BidirectionalMultiGraph::edge_descriptor,
-              grenade::vx::network::detail::BidirectionalGraph::edge_descriptor>);
+              grenade::common::detail::BidirectionalMultiGraph::edge_descriptor,
+              grenade::common::detail::BidirectionalGraph::edge_descriptor>);
 
 template <>
-struct hash<grenade::vx::network::detail::BidirectionalMultiGraph::edge_descriptor>
+struct hash<grenade::common::detail::BidirectionalMultiGraph::edge_descriptor>
 {
 	size_t operator()(
-	    grenade::vx::network::detail::BidirectionalMultiGraph::edge_descriptor const& e) const
+	    grenade::common::detail::BidirectionalMultiGraph::edge_descriptor const& e) const
 	{
-		return boost::hash<
-		    grenade::vx::network::detail::BidirectionalMultiGraph::edge_descriptor>{}(e);
+		return boost::hash<grenade::common::detail::BidirectionalMultiGraph::edge_descriptor>{}(e);
 	}
 };
 
 template <>
-struct hash<grenade::vx::network::detail::UndirectedGraph::edge_descriptor>
+struct hash<grenade::common::detail::UndirectedGraph::edge_descriptor>
 {
-	size_t operator()(grenade::vx::network::detail::UndirectedGraph::edge_descriptor const& e) const
+	size_t operator()(grenade::common::detail::UndirectedGraph::edge_descriptor const& e) const
 	{
-		return boost::hash<grenade::vx::network::detail::UndirectedGraph::edge_descriptor>{}(e);
+		return boost::hash<grenade::common::detail::UndirectedGraph::edge_descriptor>{}(e);
 	}
 };
 

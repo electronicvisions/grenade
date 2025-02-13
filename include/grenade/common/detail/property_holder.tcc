@@ -1,9 +1,9 @@
 #pragma once
-#include "grenade/vx/network/abstract/detail/property_holder.h"
+#include "grenade/common/detail/property_holder.h"
 #include <ostream>
 #include <stdexcept>
 
-namespace grenade::vx::network::detail {
+namespace grenade::common::detail {
 
 template <typename T, template <typename...> typename Backend>
 PropertyHolder<T, Backend>::PropertyHolder(T const& value) : m_backend(value.copy())
@@ -86,4 +86,4 @@ std::ostream& operator<<(std::ostream& os, PropertyHolder<T, Backend> const& val
 	return os << *value;
 }
 
-} // namespace grenade::vx::network::detail
+} // namespace grenade::common::detail

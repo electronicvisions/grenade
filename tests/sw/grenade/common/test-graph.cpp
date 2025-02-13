@@ -1,16 +1,16 @@
-#include "grenade/vx/network/abstract/graph.h"
+#include "grenade/common/graph.h"
 
-#include "grenade/vx/network/abstract/detail/graph.h"
-#include "grenade/vx/network/abstract/edge_on_graph.h"
-#include "grenade/vx/network/abstract/edge_on_graph_impl.tcc"
-#include "grenade/vx/network/abstract/graph_impl.tcc"
-#include "grenade/vx/network/abstract/property.h"
-#include "grenade/vx/network/abstract/vertex_on_graph.h"
-#include "grenade/vx/network/abstract/vertex_on_graph_impl.tcc"
+#include "grenade/common/detail/graph.h"
+#include "grenade/common/edge_on_graph.h"
+#include "grenade/common/edge_on_graph_impl.tcc"
+#include "grenade/common/graph_impl.tcc"
+#include "grenade/common/property.h"
+#include "grenade/common/vertex_on_graph.h"
+#include "grenade/common/vertex_on_graph_impl.tcc"
 #include <memory>
 #include <gtest/gtest.h>
 
-using namespace grenade::vx::network;
+using namespace grenade::common;
 
 
 struct DummyVertex : public Property<DummyVertex>

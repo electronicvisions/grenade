@@ -1,10 +1,10 @@
-#include "grenade/vx/network/abstract/printable.h"
+#include "grenade/common/printable.h"
 
 #include <sstream>
 #include <gtest/gtest.h>
 
 
-struct DummyPrintable : public grenade::vx::network::Printable
+struct DummyPrintable : public grenade::common::Printable
 {
 	int value;
 

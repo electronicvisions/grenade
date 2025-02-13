@@ -1,8 +1,11 @@
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource/synaptic_input_excitatory.h"
-#include "grenade/vx/network/abstract/empty_property_impl.tcc"
 
-namespace grenade::vx::network {
+#include "grenade/common/empty_property_impl.tcc"
 
-template struct EmptyProperty<HardwareResourceSynapticInputExitatory, HardwareResource>;
+namespace grenade::common {
 
-} // namespace::grenade::vx::network
+template struct EmptyProperty<
+    vx::network::HardwareResourceSynapticInputExitatory,
+    vx::network::HardwareResource>;
+
+} // namespace::grenade::common

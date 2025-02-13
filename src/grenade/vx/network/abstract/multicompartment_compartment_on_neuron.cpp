@@ -1,9 +1,9 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment_on_neuron.h"
 
-#include "grenade/vx/network/abstract/vertex_on_graph_impl.tcc"
+#include "grenade/common/vertex_on_graph_impl.tcc"
 
-namespace grenade::vx::network {
+namespace grenade::common {
 
-template class VertexOnGraph<CompartmentOnNeuron, detail::UndirectedGraph>;
+template class VertexOnGraph<vx::network::CompartmentOnNeuron, detail::UndirectedGraph>;
 
-} // namespace grenade::vx::network
+} // namespace grenade::common

@@ -1,10 +1,10 @@
-#include "grenade/vx/network/abstract/movable.h"
+#include "grenade/common/movable.h"
 
 #include <vector>
 #include <gtest/gtest.h>
 
 
-struct DummyMovable : public grenade::vx::network::Movable<DummyMovable>
+struct DummyMovable : public grenade::common::Movable<DummyMovable>
 {
 	std::vector<int> value;
 

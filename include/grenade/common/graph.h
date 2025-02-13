@@ -1,18 +1,18 @@
 #pragma once
-#include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/abstract/detail/constructor_transform.h"
-#include "grenade/vx/network/abstract/detail/graph.h"
-#include "grenade/vx/network/abstract/detail/property_holder.h"
-#include "grenade/vx/network/abstract/edge_on_graph.h"
-#include "grenade/vx/network/abstract/property.h"
-#include "grenade/vx/network/abstract/vertex_on_graph.h"
+#include "grenade/common/detail/constructor_transform.h"
+#include "grenade/common/detail/graph.h"
+#include "grenade/common/detail/property_holder.h"
+#include "grenade/common/edge_on_graph.h"
+#include "grenade/common/genpybind.h"
+#include "grenade/common/property.h"
+#include "grenade/common/vertex_on_graph.h"
 #include "hate/visibility.h"
 #include <memory>
 #include <unordered_map>
 #include <boost/iterator/transform_iterator.hpp>
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade {
+namespace common GENPYBIND_TAG_GRENADE_COMMON {
 
 /**
  * Graph containing storage for element properties.
@@ -373,5 +373,5 @@ std::ostream& GENPYBIND(stringstream) operator<<(
     Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder> const& value)
     SYMBOL_VISIBLE;
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace common
+} // namespace grenade

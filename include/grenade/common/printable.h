@@ -1,10 +1,10 @@
 #pragma once
-#include "grenade/vx/genpybind.h"
+#include "grenade/common/genpybind.h"
 #include "hate/visibility.h"
 #include <iosfwd>
 
-namespace grenade::vx {
-namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade {
+namespace common GENPYBIND_TAG_GRENADE_COMMON {
 
 /**
  * Object which is printable.
@@ -27,5 +27,5 @@ protected:
 	virtual std::ostream& print(std::ostream& os) const GENPYBIND(hidden) = 0;
 };
 
-} // namespace network
-} // namespace grenade::vx
+} // namespace common
+} // namespace grenade
