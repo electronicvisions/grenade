@@ -3,6 +3,7 @@
 #include "dapr/empty_property.h"
 #include "dapr/property.h"
 #include "grenade/common/multi_index.h"
+#include "grenade/common/multi_index_sequence/cartesian_product.h"
 #include <memory>
 #include <stdexcept>
 #include <cereal/archives/json.hpp>
@@ -142,7 +143,9 @@ TEST(ListMultiIndexSequence, General)
 	EXPECT_EQ(
 	    (*ListMultiIndexSequence({MultiIndex({0, 1})})
 	          .cartesian_product(ListMultiIndexSequence({MultiIndex({2, 3})}))),
-	    (ListMultiIndexSequence({MultiIndex({0, 1, 2, 3})})));
+	    (CartesianProductMultiIndexSequence(
+	        ListMultiIndexSequence({MultiIndex({0, 1})}),
+	        ListMultiIndexSequence({MultiIndex({2, 3})}))));
 
 	auto slices =
 	    ListMultiIndexSequence({MultiIndex({0}), MultiIndex({1}), MultiIndex({2}), MultiIndex({3})})

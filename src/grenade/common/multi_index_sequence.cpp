@@ -1,5 +1,6 @@
 #include "grenade/common/multi_index_sequence.h"
 
+#include "grenade/common/multi_index_sequence/cartesian_product.h"
 #include "grenade/common/multi_index_sequence/list.h"
 #include "hate/join.h"
 #include <algorithm>
@@ -170,26 +171,19 @@ std::unique_ptr<MultiIndexSequence> MultiIndexSequence::distinct_projection(
 std::unique_ptr<MultiIndexSequence> MultiIndexSequence::cartesian_product(
     MultiIndexSequence const& other) const
 {
-	std::vector<MultiIndex> ret;
-	auto const elements = get_elements();
-	auto const other_elements = other.get_elements();
-	for (auto const& element : elements) {
-		for (auto const& other_element : other_elements) {
-			auto new_element_value = element.value;
-			new_element_value.insert(
-			    new_element_value.end(), other_element.value.begin(), other_element.value.end());
-			ret.push_back(MultiIndex(std::move(new_element_value)));
+	if (size() == 0) {
+		if (dimensionality() != 0) {
+			throw std::invalid_argument("Product of empty and non-empty sequence not possible.");
 		}
+		return other.copy();
 	}
-	if (get_dimension_units().empty() != other.get_dimension_units().empty()) {
-		throw std::invalid_argument(
-		    "Product of sequences with differing optionality of dimension units not supported.");
+	if (other.size() == 0) {
+		if (other.dimensionality() != 0) {
+			throw std::invalid_argument("Product of empty and non-empty sequence not possible.");
+		}
+		return copy();
 	}
-	auto new_dimension_units = get_dimension_units();
-	auto other_dimension_units = other.get_dimension_units();
-	new_dimension_units.insert(
-	    new_dimension_units.end(), other_dimension_units.begin(), other_dimension_units.end());
-	return std::make_unique<ListMultiIndexSequence>(std::move(ret), new_dimension_units);
+	return std::make_unique<CartesianProductMultiIndexSequence>(*this, other);
 }
 
 std::vector<std::unique_ptr<MultiIndexSequence>> MultiIndexSequence::slice(
