@@ -3,6 +3,7 @@
 GENPYBIND_TAG_GRENADE_COMMON
 GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 
+#include "grenade/common/compartment_on_cell.h"
 #include "grenade/common/connection_on_executor.h"
 #include "grenade/common/edge.h"
 #include "grenade/common/edge_on_topology.h"
@@ -16,6 +17,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/common/multi_index_sequence/list.h"
 #include "grenade/common/multi_index_sequence_dimension_unit/cell_on_population.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/compartment_on_cell.h"
 #include "grenade/common/output_data.h"
 #include "grenade/common/partitioned_vertex.h"
 #include "grenade/common/population.h"
