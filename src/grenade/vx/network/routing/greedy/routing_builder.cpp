@@ -226,7 +226,8 @@ RoutingBuilder::get_external_sources(
     halco::common::typed_array<
         RoutingConstraints::PADIBusConstraints,
         halco::hicann_dls::vx::v3::PADIBusOnDLS> const& /*padi_bus_constraints*/,
-    Network::ExecutionInstance const& network) const
+    grenade::common::ExecutionInstanceID const& id,
+    Network const& network) const
 {
 	// All external sources act as sources.
 	// External sources which don't act as sources to any connection and are not recorded are
@@ -236,15 +237,18 @@ RoutingBuilder::get_external_sources(
 	std::set<std::tuple<PopulationOnExecutionInstance, size_t, CompartmentOnLogicalNeuron>>
 	    external_source_descriptors;
 	for (auto const& connection : external_connections) {
-		auto const source_pop = network.projections.at(connection.descriptor.first).population_pre;
-		auto const source_index = network.projections.at(connection.descriptor.first)
+		auto const source_pop = network.execution_instances.at(id)
+		                            .projections.at(connection.descriptor.first)
+		                            .population_pre;
+		auto const source_index = network.execution_instances.at(id)
+		                              .projections.at(connection.descriptor.first)
 		                              .connections.at(connection.descriptor.second)
 		                              .index_pre.first;
 		external_source_descriptors.insert(
 		    std::tuple{source_pop, source_index, CompartmentOnLogicalNeuron()});
 	}
 	// add recorded sources
-	for (auto const& [descriptor, pop] : network.populations) {
+	for (auto const& [descriptor, pop] : network.execution_instances.at(id).populations) {
 		if (!std::holds_alternative<ExternalSourcePopulation>(pop)) {
 			continue;
 		}
@@ -256,10 +260,27 @@ RoutingBuilder::get_external_sources(
 			}
 		}
 	}
+	// add inter-execution-instance sources
+	for (auto const& [_, inter_ei_proj] : network.inter_execution_instance_projections) {
+		if (inter_ei_proj.population_pre.toExecutionInstanceID() != id) {
+			continue;
+		}
+		if (!std::holds_alternative<ExternalSourcePopulation>(
+		        network.execution_instances.at(id).populations.at(inter_ei_proj.population_pre))) {
+			continue;
+		}
+		for (auto const& conn : inter_ei_proj.connections) {
+			external_source_descriptors.insert(std::tuple{
+			    inter_ei_proj.population_pre, conn.index_pre.first, conn.index_pre.second});
+		}
+	}
 	external_sources.resize(external_source_descriptors.size());
 	for (auto const& connection : external_connections) {
-		auto const source_pop = network.projections.at(connection.descriptor.first).population_pre;
-		auto const source_pop_index = network.projections.at(connection.descriptor.first)
+		auto const source_pop = network.execution_instances.at(id)
+		                            .projections.at(connection.descriptor.first)
+		                            .population_pre;
+		auto const source_pop_index = network.execution_instances.at(id)
+		                                  .projections.at(connection.descriptor.first)
 		                                  .connections.at(connection.descriptor.second)
 		                                  .index_pre.first;
 		auto const source_descriptor =
@@ -966,7 +987,8 @@ void RoutingBuilder::apply_crossbar_nodes_from_l2_to_l2(Result& result) const
 }
 
 RoutingBuilder::Result RoutingBuilder::route(
-    Network::ExecutionInstance const& network,
+    grenade::common::ExecutionInstanceID const& id,
+    Network const& network,
     ConnectionRoutingResult const& connection_routing_result,
     std::optional<GreedyRouter::Options> const& options) const
 {
@@ -979,7 +1001,8 @@ RoutingBuilder::Result RoutingBuilder::route(
 
 	Result result;
 	result.connection_routing_result = connection_routing_result;
-	RoutingConstraints const constraints(network, result.connection_routing_result);
+	RoutingConstraints const constraints(
+	    network.execution_instances.at(id), result.connection_routing_result);
 	auto padi_bus_constraints = constraints.get_padi_bus_constraints();
 
 	// route internal crossbar nodes between neurons
@@ -988,11 +1011,11 @@ RoutingBuilder::Result RoutingBuilder::route(
 
 	// get sources
 	auto const [internal_sources, internal_descriptors] =
-	    get_internal_sources(constraints, padi_bus_constraints, network);
-	auto const [background_sources, background_descriptors] =
-	    get_background_sources(constraints, padi_bus_constraints, network);
+	    get_internal_sources(constraints, padi_bus_constraints, network.execution_instances.at(id));
+	auto const [background_sources, background_descriptors] = get_background_sources(
+	    constraints, padi_bus_constraints, network.execution_instances.at(id));
 	auto const [external_sources, external_descriptors] =
-	    get_external_sources(constraints, padi_bus_constraints, network);
+	    get_external_sources(constraints, padi_bus_constraints, id, network);
 
 	// partition sources on PADI-busses
 	SourceOnPADIBusManager source_manager(disabled_internal_routes);
@@ -1036,23 +1059,26 @@ RoutingBuilder::Result RoutingBuilder::route(
 	    get_internal_labels(internal_descriptors, source_partition, *synapse_driver_allocations);
 	auto const background_labels = get_background_labels(
 	    background_descriptors, background_sources, source_partition, *synapse_driver_allocations,
-	    network);
+	    network.execution_instances.at(id));
 	auto const external_labels = get_external_labels(
-	    external_descriptors, source_partition, *synapse_driver_allocations, network);
+	    external_descriptors, source_partition, *synapse_driver_allocations,
+	    network.execution_instances.at(id));
 
 	// add source labels to result
 	apply_source_labels(
-	    constraints, internal_labels, background_labels, external_labels, network, result);
+	    constraints, internal_labels, background_labels, external_labels,
+	    network.execution_instances.at(id), result);
 
 	// place routed connections onto synapse matrix
 	auto const placed_connections = place_routed_connections(
 	    source_partition, internal_descriptors, background_descriptors, external_descriptors,
 	    internal_sources, background_sources, external_sources, *synapse_driver_allocations,
-	    constraints, network, result);
+	    constraints, network.execution_instances.at(id), result);
 
 	// apply routed connections to result
 	apply_routed_connections(
-	    placed_connections, internal_labels, background_labels, external_labels, network, result);
+	    placed_connections, internal_labels, background_labels, external_labels,
+	    network.execution_instances.at(id), result);
 
 	// calculate (remaining) crossbar node config
 	apply_crossbar_nodes_internal(result);

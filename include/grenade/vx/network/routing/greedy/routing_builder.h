@@ -42,7 +42,8 @@ struct RoutingBuilder
 	typedef RoutingResult::ExecutionInstance Result;
 
 	Result route(
-	    Network::ExecutionInstance const& network,
+	    grenade::common::ExecutionInstanceID const& id,
+	    Network const& network,
 	    ConnectionRoutingResult const& connection_routing_result,
 	    std::optional<GreedyRouter::Options> const& options = std::nullopt) const SYMBOL_VISIBLE;
 
@@ -92,7 +93,8 @@ private:
 	    halco::common::typed_array<
 	        RoutingConstraints::PADIBusConstraints,
 	        halco::hicann_dls::vx::v3::PADIBusOnDLS> const& padi_bus_constraints,
-	    Network::ExecutionInstance const& network) const;
+	    grenade::common::ExecutionInstanceID const& id,
+	    Network const& network) const;
 
 	std::map<
 	    std::tuple<
