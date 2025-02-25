@@ -44,6 +44,7 @@ public:
 	 * @param input_list Input list to use for input data lookup
 	 * @param data_output Data output from depended-on executions to use for data lookup
 	 * @param chip_config Chip configuration to use
+	 * @param realtime_column_index Index of realtime column this builder generates
 	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
 	 * which the builder generates
 	 */
