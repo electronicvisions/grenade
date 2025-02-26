@@ -3,7 +3,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/projection_on_execution_instance.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a projection on a network. */
 struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) ProjectionOnNetwork
@@ -25,7 +25,8 @@ struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) ProjectionOnNetwork
 	}
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
 
 namespace std {
 

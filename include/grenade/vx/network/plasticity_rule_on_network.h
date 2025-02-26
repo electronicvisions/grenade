@@ -3,7 +3,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/plasticity_rule_on_execution_instance.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a plasticity rule on a network. */
 struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PlasticityRuleOnNetwork
@@ -26,7 +26,8 @@ struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PlasticityRuleOnNetw
 	}
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
 
 namespace std {
 

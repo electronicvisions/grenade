@@ -8,7 +8,7 @@ namespace cereal {
 struct access;
 } // namespace cereal
 
-namespace grenade::vx::common GENPYBIND_TAG_GRENADE_VX_COMMON {
+namespace grenade::vx { namespace common GENPYBIND_TAG_GRENADE_VX_COMMON {
 
 /**
  * Entity on chip mixin carrying chip id information.
@@ -32,4 +32,5 @@ private:
 	void serialize(Archive& ar, std::uint32_t);
 };
 
-} // namespace grenade::vx::common
+} // namespace common
+} // namespace grenade::vx

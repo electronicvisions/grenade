@@ -21,7 +21,7 @@ class Logger;
 typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 class GENPYBIND(visible) NetworkBuilder
 {
@@ -142,4 +142,5 @@ private:
 	    m_execution_instance_vertices;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

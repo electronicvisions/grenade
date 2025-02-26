@@ -16,7 +16,7 @@
 #include <optional>
 #include <variant>
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace grenade::vx { namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Data map used for output data in graph execution.
@@ -102,4 +102,5 @@ private:
 	std::unique_ptr<std::mutex> mutex;
 };
 
-} // namespace grenade::vx::signal_flow
+} // namespace signal_flow
+} // namespace grenade::vx

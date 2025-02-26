@@ -5,7 +5,7 @@
 #include "hate/visibility.h"
 #include <memory>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Build a connection routing for a given network.
@@ -15,4 +15,5 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 ConnectionRoutingResult GENPYBIND(visible)
     build_connection_routing(Network::ExecutionInstance const& network) SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

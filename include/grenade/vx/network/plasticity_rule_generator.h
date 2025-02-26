@@ -8,7 +8,7 @@
 #endif
 
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) OnlyRecordingPlasticityRuleGenerator
 {
@@ -34,4 +34,5 @@ private:
 	std::set<Observable> m_observables;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

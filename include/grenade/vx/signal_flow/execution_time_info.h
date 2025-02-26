@@ -11,7 +11,7 @@
 #include <pybind11/chrono.h>
 #endif
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace grenade::vx { namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 struct GENPYBIND(visible) ExecutionTimeInfo
 {
@@ -60,4 +60,5 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	friend std::ostream& operator<<(std::ostream& os, ExecutionTimeInfo const& data) SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::signal_flow
+} // namespace signal_flow
+} // namespace grenade::vx

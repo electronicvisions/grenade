@@ -5,7 +5,7 @@
 #include "haldls/vx/v3/timer.h"
 #include "hate/visibility.h"
 
-namespace grenade::vx::common GENPYBIND_TAG_GRENADE_VX_COMMON {
+namespace grenade::vx { namespace common GENPYBIND_TAG_GRENADE_VX_COMMON {
 
 /**
  * Arithmetic type used for time measurements both to and from the hardware.
@@ -25,4 +25,5 @@ struct GENPYBIND(inline_base("*")) Time : public halco::common::detail::BaseType
 	haldls::vx::v3::Timer::Value toTimerOnFPGAValue() const SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::common
+} // namespace common
+} // namespace grenade::vx

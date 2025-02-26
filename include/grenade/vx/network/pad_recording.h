@@ -6,7 +6,7 @@
 #include "hate/visibility.h"
 #include <map>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Pad recording of neuron source(s).
@@ -46,4 +46,5 @@ struct GENPYBIND(visible) PadRecording : public common::EntityOnChip
 	bool operator!=(PadRecording const& other) const SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

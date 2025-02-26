@@ -10,7 +10,7 @@
 #include <pybind11/numpy.h>
 #endif
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * InterExecutionInstanceProjection between populations.
@@ -108,4 +108,5 @@ struct GENPYBIND(visible) InterExecutionInstanceProjection
 	    std::ostream& os, InterExecutionInstanceProjection const& projection) SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

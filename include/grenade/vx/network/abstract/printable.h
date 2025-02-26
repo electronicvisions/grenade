@@ -3,7 +3,7 @@
 #include "hate/visibility.h"
 #include <iosfwd>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Object which is printable.
@@ -26,4 +26,5 @@ protected:
 	virtual std::ostream& print(std::ostream& os) const GENPYBIND(hidden) = 0;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <boost/iterator/transform_iterator.hpp>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Graph containing storage for element properties.
@@ -372,4 +372,5 @@ std::ostream& GENPYBIND(stringstream) operator<<(
     Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder> const& value)
     SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

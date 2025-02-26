@@ -7,7 +7,7 @@
 #include <map>
 #include <vector>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Translation of a single connection to a collection of hardware synapse routes to an atomic neuron
@@ -36,4 +36,5 @@ struct GENPYBIND(visible) ConnectionToHardwareRoutes
 typedef std::map<ProjectionOnExecutionInstance, std::vector<ConnectionToHardwareRoutes>>
     ConnectionRoutingResult;
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

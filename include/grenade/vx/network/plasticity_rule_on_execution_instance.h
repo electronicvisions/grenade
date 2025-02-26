@@ -2,7 +2,7 @@
 #include "grenade/vx/genpybind.h"
 #include "halco/common/geometry.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a plasticity rule on an execution instance. */
 struct GENPYBIND(inline_base("*")) PlasticityRuleOnExecutionInstance
@@ -15,7 +15,8 @@ struct GENPYBIND(inline_base("*")) PlasticityRuleOnExecutionInstance
 	constexpr explicit PlasticityRuleOnExecutionInstance(size_t const value = 0) : base_t(value) {}
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
 
 namespace std {
 

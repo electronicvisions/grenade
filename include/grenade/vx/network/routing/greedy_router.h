@@ -18,7 +18,7 @@ struct Network;
 } // namespace grenade::vx::network
 #endif
 
-namespace grenade::vx::network::routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
+namespace grenade::vx::network { namespace routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
 
 /**
  * Router using a (partially) greedy algorithm.
@@ -83,4 +83,5 @@ private:
 	std::unique_ptr<Impl> m_impl;
 };
 
-} // namespace grenade::vx::network::routing
+} // namespace routing
+} // namespace grenade::vx::network

@@ -11,7 +11,7 @@
 #include <pybind11/numpy.h>
 #endif
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Projection between populations.
@@ -129,4 +129,5 @@ struct GENPYBIND(visible) Projection : public common::EntityOnChip
 std::ostream& operator<<(std::ostream& os, Projection::Connection::Index const& index)
     SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

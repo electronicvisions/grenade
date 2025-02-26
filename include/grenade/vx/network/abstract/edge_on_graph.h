@@ -4,7 +4,7 @@
 #include <iosfwd>
 #include <utility>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx { namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Identifier of edge on graph.
@@ -35,7 +35,8 @@ private:
 	Value m_value;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
 
 namespace std {
 
