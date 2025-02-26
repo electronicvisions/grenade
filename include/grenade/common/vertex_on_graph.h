@@ -13,7 +13,7 @@ namespace common GENPYBIND_TAG_GRENADE_COMMON {
  * Identifier of vertex on graph.
  */
 template <typename Derived, typename Backend>
-struct GENPYBIND(visible) VertexOnGraph
+struct VertexOnGraph
 {
 	typedef VertexOnGraph Base;
 
@@ -24,7 +24,13 @@ struct GENPYBIND(visible) VertexOnGraph
 
 	Value const& value() const GENPYBIND(hidden);
 
-	auto operator<=>(VertexOnGraph const& other) const = default;
+	// needed explicitly for Python wrapping
+	bool operator<(Derived const&) const;
+	bool operator<=(Derived const&) const;
+	bool operator>(Derived const&) const;
+	bool operator>=(Derived const&) const;
+	bool operator==(Derived const&) const;
+	bool operator!=(Derived const&) const;
 
 	GENPYBIND(expose_as(__hash__))
 	size_t hash() const;
@@ -40,11 +46,6 @@ private:
 
 	Value m_value;
 };
-
-
-template <typename Derived, typename Backend>
-std::ostream& GENPYBIND(stringstream) operator<<(
-    std::ostream& os, VertexOnGraph<Derived, Backend> const& value);
 
 } // namespace common
 } // namespace grenade

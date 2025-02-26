@@ -10,6 +10,42 @@ VertexOnGraph<Derived, Backend>::VertexOnGraph(Value const& value) : m_value(val
 {}
 
 template <typename Derived, typename Backend>
+bool VertexOnGraph<Derived, Backend>::operator<(Derived const& other) const
+{
+	return m_value < other.m_value;
+}
+
+template <typename Derived, typename Backend>
+bool VertexOnGraph<Derived, Backend>::operator<=(Derived const& other) const
+{
+	return m_value <= other.m_value;
+}
+
+template <typename Derived, typename Backend>
+bool VertexOnGraph<Derived, Backend>::operator>(Derived const& other) const
+{
+	return m_value > other.m_value;
+}
+
+template <typename Derived, typename Backend>
+bool VertexOnGraph<Derived, Backend>::operator>=(Derived const& other) const
+{
+	return m_value >= other.m_value;
+}
+
+template <typename Derived, typename Backend>
+bool VertexOnGraph<Derived, Backend>::operator==(Derived const& other) const
+{
+	return m_value == other.m_value;
+}
+
+template <typename Derived, typename Backend>
+bool VertexOnGraph<Derived, Backend>::operator!=(Derived const& other) const
+{
+	return m_value != other.m_value;
+}
+
+template <typename Derived, typename Backend>
 typename VertexOnGraph<Derived, Backend>::Value const& VertexOnGraph<Derived, Backend>::value()
     const
 {
