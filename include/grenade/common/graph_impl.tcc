@@ -733,6 +733,69 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
+bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
+    equal_except_descriptors(Graph const& other) const
+{
+	if (num_vertices() != other.num_vertices()) {
+		return false;
+	}
+	std::unordered_map<VertexDescriptor, VertexDescriptor> vertex_descriptor_translation;
+	auto vertices_it = vertices().first;
+	auto other_vertices_it = other.vertices().first;
+	for (size_t i = 0; i < num_vertices(); ++i) {
+		vertex_descriptor_translation.emplace(*vertices_it, *other_vertices_it);
+		vertices_it++;
+		other_vertices_it++;
+	}
+
+	if (num_edges() != other.num_edges()) {
+		return false;
+	}
+	std::unordered_map<EdgeDescriptor, EdgeDescriptor> edge_descriptor_translation;
+	auto edges_it = edges().first;
+	auto other_edges_it = other.edges().first;
+	for (size_t i = 0; i < num_edges(); ++i) {
+		edge_descriptor_translation.emplace(*edges_it, *other_edges_it);
+		edges_it++;
+		other_edges_it++;
+	}
+
+	if (!std::equal(
+	        boost::edges(m_graph).first, boost::edges(m_graph).second,
+	        boost::edges(other.m_graph).first, boost::edges(other.m_graph).second,
+	        [&](auto const& aa, auto const& bb) {
+		        return (vertex_descriptor_translation.at(boost::source(aa, m_graph)) ==
+		                VertexDescriptor(boost::source(bb, other.m_graph))) &&
+		               (vertex_descriptor_translation.at(boost::target(aa, m_graph)) ==
+		                VertexDescriptor(boost::target(bb, other.m_graph)));
+	        })) {
+		return false;
+	}
+
+	for (auto const& [vertex_descriptor, vertex] : m_vertices) {
+		if (vertex != other.m_vertices.at(vertex_descriptor_translation.at(vertex_descriptor))) {
+			return false;
+		}
+	}
+
+	for (auto const& [edge_descriptor, edge] : m_edges) {
+		if (edge != other.m_edges.at(edge_descriptor_translation.at(edge_descriptor))) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
 bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::operator==(
     Graph const& other) const
 {

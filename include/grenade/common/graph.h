@@ -383,6 +383,12 @@ struct SYMBOL_VISIBLE Graph
 	virtual bool valid() const;
 
 	/**
+	 * Get whether graphs are equal except their descriptors.
+	 * This is the case exactly if all vertex and edge properties as well as the topology matches.
+	 */
+	bool equal_except_descriptors(Graph const& other) const;
+
+	/**
 	 * Get whether graphs are equal.
 	 * This is the case exactly if all vertex descriptors and properties as well as all edge
 	 * properties match in order and the edges connect the same vertices.
