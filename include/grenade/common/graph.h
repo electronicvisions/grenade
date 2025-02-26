@@ -248,6 +248,15 @@ struct SYMBOL_VISIBLE Graph
 	 */
 	std::pair<VertexIterator, VertexIterator> vertices() const GENPYBIND(hidden);
 
+	GENPYBIND_MANUAL({
+		typedef typename decltype(parent)::type self_type;
+		parent.def("vertices", [](GENPYBIND_PARENT_TYPE const& self) {
+			auto const vertices = self.vertices();
+			return std::vector<typename self_type::VertexDescriptor>(
+			    vertices.first, vertices.second);
+		});
+	})
+
 	/**
 	 * Get iterator range over edges.
 	 */
