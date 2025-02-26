@@ -3,7 +3,8 @@
 #include "grenade/vx/network/abstract/parameter_interval.h"
 #include "grenade/vx/network/abstract/property.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // CompartmentConnection
 struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnection
@@ -19,4 +20,5 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnection
 };
 
 
-} // namepsace grenade::vx::network
+} // namepsace network
+} // namepsace grenade::vx

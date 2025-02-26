@@ -26,7 +26,8 @@ class Logger;
 typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Build a hardware network representation for a given network.
@@ -231,4 +232,5 @@ private:
 	log4cxx::LoggerPtr m_logger;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

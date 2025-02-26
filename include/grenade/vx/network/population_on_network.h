@@ -3,7 +3,8 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/population_on_execution_instance.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Descriptor to be used to identify a population on a network. */
 struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PopulationOnNetwork
@@ -25,7 +26,8 @@ struct GENPYBIND(inline_base("*ExecutionInstanceIDMixin*")) PopulationOnNetwork
 	}
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
 
 namespace std {
 

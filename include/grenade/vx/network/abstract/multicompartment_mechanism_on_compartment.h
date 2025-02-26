@@ -2,7 +2,8 @@
 
 #include "halco/common/geometry.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // Mechanism-ID
 struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismOnCompartment
@@ -11,4 +12,5 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismOnCompartment
 	MechanismOnCompartment(value_type const value = 0) : base_t(value) {}
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

@@ -4,7 +4,8 @@
 #include "lola/vx/v3/synapse.h"
 #include <vector>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Split weight of connection into single hardware synapse circuit weight values.
@@ -15,4 +16,5 @@ namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 std::vector<lola::vx::v3::SynapseMatrix::Weight> GENPYBIND(visible) build_connection_weight_split(
     Projection::Connection::Weight const& weight, size_t num) SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

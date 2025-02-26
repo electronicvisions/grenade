@@ -11,7 +11,8 @@
 #include <memory>
 #include <vector>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 
 struct SYMBOL_VISIBLE GENPYBIND(visible) Compartment : public Property<Compartment>
@@ -44,4 +45,5 @@ private:
 	std::map<MechanismOnCompartment, detail::PropertyHolder<Mechanism>> m_mechanisms;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

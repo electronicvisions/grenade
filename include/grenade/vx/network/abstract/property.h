@@ -5,7 +5,8 @@
 #include "grenade/vx/network/abstract/movable.h"
 #include "grenade/vx/network/abstract/printable.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Property, which we define to have the following properties:
@@ -22,4 +23,5 @@ struct SYMBOL_VISIBLE Property
     , public EqualityComparable<Derived>
 {};
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

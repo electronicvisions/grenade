@@ -11,7 +11,8 @@
 #include <iosfwd>
 #include <map>
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace grenade::vx {
+namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Health information of hardware setups used during execution.
@@ -73,4 +74,5 @@ struct GENPYBIND(visible) ExecutionHealthInfo
 	    SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::signal_flow
+} // namespace signal_flow
+} // namespace grenade::vx

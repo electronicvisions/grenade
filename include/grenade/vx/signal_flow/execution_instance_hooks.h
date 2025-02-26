@@ -9,7 +9,8 @@
 #include <map>
 #include <variant>
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace grenade::vx {
+namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Hooks for an execution instance for complementing the graph-based experiment notation.
@@ -61,4 +62,5 @@ struct GENPYBIND(
 	ReadPPUSymbols read_ppu_symbols;
 };
 
-} // namespace grenade::vx::signal_flow
+} // namespace signal_flow
+} // namespace grenade::vx

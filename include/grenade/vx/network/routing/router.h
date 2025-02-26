@@ -12,7 +12,8 @@ struct Network;
 } // namespace grenade::vx::network
 #endif
 
-namespace grenade::vx::network::routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
+namespace grenade::vx::network {
+namespace routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
 
 struct SYMBOL_VISIBLE Router
 {
@@ -42,4 +43,5 @@ GENPYBIND_MANUAL({
 	    .def("__call__", &routing::Router::operator());
 })
 
-} // namespace grenade::vx::network::routing
+} // namespace routing
+} // namespace grenade::vx::network

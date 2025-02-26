@@ -6,7 +6,8 @@
 #include <iosfwd>
 #include <vector>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** External source population. */
 struct GENPYBIND(visible) ExternalSourcePopulation : public common::EntityOnChip
@@ -40,4 +41,5 @@ struct GENPYBIND(visible) ExternalSourcePopulation : public common::EntityOnChip
 	    SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

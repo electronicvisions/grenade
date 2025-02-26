@@ -6,7 +6,8 @@
 #include <ostream>
 #include <utility>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Identifier of vertex on graph.
@@ -45,7 +46,8 @@ template <typename Derived, typename Backend>
 std::ostream& GENPYBIND(stringstream) operator<<(
     std::ostream& os, VertexOnGraph<Derived, Backend> const& value);
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
 
 namespace std {
 

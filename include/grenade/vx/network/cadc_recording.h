@@ -3,7 +3,8 @@
 #include "grenade/vx/network/neuron_recording.h"
 #include "hate/visibility.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * CADC recording of a collection of neurons.
@@ -20,4 +21,5 @@ struct GENPYBIND(visible) CADCRecording : public NeuronRecording
 	bool placement_on_dram{false};
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

@@ -8,7 +8,8 @@
 #include "grenade/vx/network/abstract/multicompartment_compartment_on_neuron.h"
 #include <memory>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // forward declaration
 struct Neuron;
@@ -79,4 +80,5 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Neuron
 	bool contains(CompartmentOnNeuron const& descriptor) const;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

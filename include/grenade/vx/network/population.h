@@ -14,7 +14,8 @@
 #include <unordered_set>
 #include <vector>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /** Population of on-chip neurons. */
 struct GENPYBIND(visible) Population : public common::EntityOnChip
@@ -113,4 +114,5 @@ struct GENPYBIND(visible) Population : public common::EntityOnChip
 	size_t get_atomic_neurons_size() const SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

@@ -13,7 +13,8 @@
 #include <mutex>
 #include <variant>
 
-namespace grenade::vx::signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace grenade::vx {
+namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Data map used for external data exchange in graph execution.
@@ -94,4 +95,5 @@ struct GENPYBIND(visible) Data
 	bool valid() const SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::signal_flow
+} // namespace signal_flow
+} // namespace grenade::vx

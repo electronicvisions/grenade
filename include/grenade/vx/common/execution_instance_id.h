@@ -4,7 +4,8 @@
 #include "halco/common/mixin.h"
 #include <cstddef>
 
-namespace grenade::vx::common GENPYBIND_TAG_GRENADE_VX_COMMON {
+namespace grenade::vx {
+namespace common GENPYBIND_TAG_GRENADE_VX_COMMON {
 
 /**
  * Execution instance identifier.
@@ -19,7 +20,8 @@ struct GENPYBIND(inline_base("*")) ExecutionInstanceID
 
 HALCO_COORDINATE_MIXIN(ExecutionInstanceIDMixin, ExecutionInstanceID, execution_instance_id)
 
-} // namespace grenade::vx::common
+} // namespace common
+} // namespace grenade::vx
 
 namespace std {
 

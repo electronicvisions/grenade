@@ -16,7 +16,8 @@ namespace lola::vx::v3 {
 class Chip;
 } // namespace lola::vx::v3
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Execute the given network hardware graph and fetch results.
@@ -265,4 +266,5 @@ GENPYBIND_MANUAL({
 	    pybind11::arg("inputs"));
 })
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

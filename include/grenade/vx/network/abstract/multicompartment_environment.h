@@ -5,7 +5,8 @@
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"
 #include <map>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) SYMBOL_VISIBLE Environment
 {
@@ -13,4 +14,5 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Environment
 	    synaptic_connections;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

@@ -19,7 +19,8 @@ struct ExecutionInstanceHooks;
 class Graph;
 } // namespace grenade::v::signal_flowx
 
-namespace grenade::vx::execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
+namespace grenade::vx {
+namespace execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
 
 class JITGraphExecutor;
 
@@ -117,4 +118,5 @@ GENPYBIND_MANUAL({
 	    parent, BOOST_HANA_STRING("JITGraphExecutor"));
 })
 
-} // namespace grenade::vx::execution
+} // namespace execution
+} // namespace grenade::vx

@@ -4,7 +4,8 @@
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/input_data.h"
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 class GENPYBIND(visible) InputGenerator
 {
@@ -88,4 +89,5 @@ private:
 	NetworkGraph const& m_network_graph;
 };
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

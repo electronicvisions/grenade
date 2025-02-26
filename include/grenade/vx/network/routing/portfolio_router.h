@@ -13,7 +13,8 @@ struct Network;
 } // namespace grenade::vx::network
 #endif
 
-namespace grenade::vx::network::routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
+namespace grenade::vx::network {
+namespace routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
 
 /**
  * Router using a portfolio of routing algorithms.
@@ -35,4 +36,5 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) PortfolioRouter : public Router
 	virtual RoutingResult operator()(std::shared_ptr<Network> const& network) override;
 };
 
-} // namespace grenade::vx::network::routing
+} // namespace routing
+} // namespace grenade::vx::network

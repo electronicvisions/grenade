@@ -4,7 +4,8 @@
 #include <memory>
 
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct Network;
 struct NetworkGraph;
@@ -18,4 +19,5 @@ struct NetworkGraph;
 bool GENPYBIND(visible) requires_routing(
     std::shared_ptr<Network> const& current, NetworkGraph const& old_graph) SYMBOL_VISIBLE;
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

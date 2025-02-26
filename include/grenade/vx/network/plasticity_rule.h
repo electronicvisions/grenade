@@ -10,7 +10,8 @@
 #include <string>
 #include <vector>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 /**
  * Plasticity rule.
@@ -215,4 +216,5 @@ typedef common::TimedData<std::vector<
     std::map<halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron, std::vector<uint16_t>>>>
     _SingleEntryPerNeuronUInt16 GENPYBIND(opaque(false), expose_as(_SingleEntryPerNeuronUInt16));
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx

@@ -10,7 +10,8 @@
 #include "grenade/vx/network/abstract/multicompartment_top_bottom.h"
 #include <map>
 
-namespace grenade::vx::network GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace grenade::vx {
+namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // Structure to know wich Compartment needs how many Neuron-Circuits and if TopBottom is required
 struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
@@ -27,4 +28,5 @@ private:
 };
 
 
-} // namespace grenade::vx::network
+} // namespace network
+} // namespace grenade::vx
