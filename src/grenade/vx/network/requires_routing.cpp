@@ -18,11 +18,11 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 
 	// check if execution instance collection changed
 	if (current->execution_instances.size() != old->execution_instances.size()) {
-		return false;
+		return true;
 	}
 	for (auto const& [id, _] : current->execution_instances) {
 		if (!old->execution_instances.contains(id)) {
-			return false;
+			return true;
 		}
 	}
 
