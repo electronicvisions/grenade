@@ -5,6 +5,7 @@
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/requires_routing.h"
 #include "grenade/vx/network/vertex/transformation/external_source_merger.h"
+#include "grenade/vx/signal_flow/vertex/background_spike_source.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/math.h"
@@ -390,6 +391,37 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		    external_source_merger_vertex, std::move(external_source_merger_transformation));
 	};
 
+	// update background source population config
+	// update external input to reflect new inter-execution-instance input
+	auto const update_background_source_configs =
+	    [network](NetworkGraph& network_graph, common::ExecutionInstanceID const& instance) {
+		    for (auto const& [descriptor, population] :
+		         network->execution_instances.at(instance).populations) {
+			    if (!std::holds_alternative<BackgroundSourcePopulation>(population)) {
+				    continue;
+			    }
+			    auto const& pop = std::get<BackgroundSourcePopulation>(population);
+			    for (auto const& [_, vertex_descriptor] :
+			         network_graph.m_graph_translation.execution_instances.at(instance)
+			             .background_spike_source_vertices.at(descriptor)) {
+				    auto const& old_vertex = std::get<signal_flow::vertex::BackgroundSpikeSource>(
+				        network_graph.m_graph.get_vertex_property(vertex_descriptor));
+				    haldls::vx::v3::BackgroundSpikeSource config;
+				    config.set_period(pop.config.period);
+				    config.set_rate(pop.config.rate);
+				    config.set_seed(pop.config.seed);
+				    config.set_mask(old_vertex.get_config().get_mask());
+				    config.set_enable(old_vertex.get_config().get_enable());
+				    config.set_enable_random(pop.config.enable_random);
+				    config.set_neuron_label(old_vertex.get_config().get_neuron_label());
+				    network_graph.m_graph.update(
+				        vertex_descriptor,
+				        signal_flow::vertex::BackgroundSpikeSource(
+				            config, old_vertex.get_coordinate(), old_vertex.chip_coordinate));
+			    }
+		    }
+	    };
+
 	assert(network);
 	assert(network_graph.m_network);
 
@@ -411,6 +443,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			}
 		}
 		update_external_input(network_graph, id);
+		update_background_source_configs(network_graph, id);
 	}
 	network_graph.m_network = network;
 

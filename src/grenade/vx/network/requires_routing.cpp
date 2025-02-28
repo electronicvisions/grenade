@@ -4,6 +4,7 @@
 #include "grenade/vx/network/inter_execution_instance_projection.h"
 #include "grenade/vx/network/network.h"
 #include "grenade/vx/network/network_graph.h"
+#include "hate/variant.h"
 
 namespace grenade::vx::network {
 
@@ -28,9 +29,32 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 
 	for (auto const& [id, current_execution_instance] : current->execution_instances) {
 		auto const& old_execution_instance = old->execution_instances.at(id);
-		// check if populations changed
-		if (current_execution_instance.populations != old_execution_instance.populations) {
+		// check if population count changed
+		if (current_execution_instance.populations.size() !=
+		    old_execution_instance.populations.size()) {
 			return true;
+		}
+		// check if populations changed
+		for (auto const& [descriptor, population] : current_execution_instance.populations) {
+			auto const& old_population = old_execution_instance.populations.at(descriptor);
+
+			bool const pop_requires_routing = std::visit(
+			    hate::overloaded{
+			        [](Population const& pop, Population const& old_pop) { return pop != old_pop; },
+			        [](ExternalSourcePopulation const& pop,
+			           ExternalSourcePopulation const& old_pop) { return pop != old_pop; },
+			        [](BackgroundSourcePopulation const& pop,
+			           BackgroundSourcePopulation const& old_pop) {
+				        return pop.neurons != old_pop.neurons ||
+				               pop.coordinate != old_pop.coordinate ||
+				               pop.chip_coordinate != old_pop.chip_coordinate;
+			        },
+			        [](auto const&, auto const&) { return true; },
+			    },
+			    population, old_population);
+			if (pop_requires_routing) {
+				return true;
+			}
 		}
 		// check if projection count changed
 		if (current_execution_instance.projections.size() !=
