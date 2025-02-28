@@ -1,3 +1,5 @@
+#pragma once
+#include "grenade/vx/execution/detail/connection_acquisor.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/network_graph.h"
@@ -70,41 +72,6 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 {
 	using parent_t = RunUnrollPyBind11Helper<std::variant<Ts...>>;
 
-	/**
-	 * RAII extraction of connection and emplacement back into handle
-	 */
-	struct ConnectionAcquisor
-	{
-		T& handle;
-		std::unique_ptr<grenade::vx::execution::JITGraphExecutor> executor;
-
-		ConnectionAcquisor(T& t) : handle(t), executor()
-		{
-			std::map<
-			    halco::hicann_dls::vx::v3::DLSGlobal, grenade::vx::execution::backend::Connection>
-			    connections;
-			connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(t.get()));
-			executor =
-			    std::make_unique<grenade::vx::execution::JITGraphExecutor>(std::move(connections));
-
-			auto logger = log4cxx::Logger::getLogger("grenade.network.run");
-			LOG4CXX_WARN(
-			    logger, "Using run(hxcomm.Connection, ...) is deprecated, use the "
-			            "grenade.execution.JITGraphExecutor context manager and "
-			            "run(JITGraphExecutor, ...) instead. Since run(hxcomm.Connection) performs "
-			            "a hardware initialization, no state is carried-over anyways.");
-		}
-
-		~ConnectionAcquisor()
-		{
-			assert(executor);
-			handle.get() = std::move(std::get<typename T::connection_type>(
-			    executor->release_connections()
-			        .at(halco::hicann_dls::vx::v3::DLSGlobal())
-			        .release()));
-		}
-	};
-
 	RunUnrollPyBind11Helper(pybind11::module& m) : parent_t(m)
 	{
 		m.def(
@@ -113,7 +80,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		       execution::JITGraphExecutor::ChipConfigs const& config,
 		       signal_flow::InputData const& input,
 		       execution::JITGraphExecutor::Hooks& hooks) -> signal_flow::OutputData {
-			    ConnectionAcquisor acquisor(conn);
+			    execution::detail::ConnectionAcquisor<T> acquisor(conn);
 			    return run(*acquisor.executor, network_graph, config, input, std::move(hooks));
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graph"), pybind11::arg("config"),
@@ -124,7 +91,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
 		       std::vector<signal_flow::InputData*> const& inputs,
 		       execution::JITGraphExecutor::Hooks& hooks) -> std::vector<signal_flow::OutputData> {
-			    ConnectionAcquisor acquisor(conn);
+			    execution::detail::ConnectionAcquisor<T> acquisor(conn);
 			    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
 			        configs_ref;
 			    for (auto const& config : configs) {
@@ -150,7 +117,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		    [](T& conn, NetworkGraph const& network_graph,
 		       execution::JITGraphExecutor::ChipConfigs const& config,
 		       signal_flow::InputData const& input) -> signal_flow::OutputData {
-			    ConnectionAcquisor acquisor(conn);
+			    execution::detail::ConnectionAcquisor<T> acquisor(conn);
 			    return run(*acquisor.executor, network_graph, config, input);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graph"), pybind11::arg("config"),
@@ -175,7 +142,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 				    inputs_ref.push_back(*input);
 			    }
 
-			    ConnectionAcquisor acquisor(conn);
+			    execution::detail::ConnectionAcquisor<T> acquisor(conn);
 			    return run(*acquisor.executor, network_graphs_ref, configs_ref, inputs_ref);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
