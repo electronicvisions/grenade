@@ -102,6 +102,7 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 			}
 		}
 		// checker for whether if recording coordinates differ
+		// TODO: Support updating in cases where at least as many neurons are recorded as before
 		auto const neuron_recording_coordinates_differ = [](auto const& rec_1, auto const& rec_2) {
 			if (rec_1.neurons.size() != rec_2.neurons.size()) {
 				return true;
@@ -114,7 +115,6 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 			return false;
 		};
 		// check if MADC recording was added or removed
-		// TODO: Support updating in cases where at least as many neurons are recorded as before
 		if ((static_cast<bool>(current_execution_instance.madc_recording) !=
 		     static_cast<bool>(old_execution_instance.madc_recording)) ||
 		    (static_cast<bool>(current_execution_instance.madc_recording) &&
@@ -124,13 +124,39 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 			return true;
 		}
 		// check if CADC recording was changed
-		// TODO: Support updating in cases where at least as many neurons are recorded as before
 		if ((static_cast<bool>(current_execution_instance.cadc_recording) !=
 		     static_cast<bool>(old_execution_instance.cadc_recording)) ||
 		    (static_cast<bool>(current_execution_instance.cadc_recording) &&
 		     neuron_recording_coordinates_differ(
 		         *current_execution_instance.cadc_recording,
 		         *old_execution_instance.cadc_recording))) {
+			return true;
+		}
+		// checker for whether if readout coordinates differ
+		// TODO: Support updating in cases where at least as many neurons are recorded as before
+		auto const neuron_pad_readout_coordinates_differ = [](auto const& rec_1,
+		                                                      auto const& rec_2) {
+			if (rec_1.recordings.size() != rec_2.recordings.size()) {
+				return true;
+			}
+			for (auto const& [pad_on_dls, rec_1_recording] : rec_1.recordings) {
+				if (!rec_2.recordings.contains(pad_on_dls)) {
+					return true;
+				}
+				if (rec_1_recording.neuron.coordinate !=
+				    rec_2.recordings.at(pad_on_dls).neuron.coordinate) {
+					return true;
+				}
+			}
+			return false;
+		};
+		// check if pad recording was changed
+		if ((static_cast<bool>(current_execution_instance.pad_recording) !=
+		     static_cast<bool>(old_execution_instance.pad_recording)) ||
+		    (static_cast<bool>(current_execution_instance.pad_recording) &&
+		     neuron_pad_readout_coordinates_differ(
+		         *current_execution_instance.pad_recording,
+		         *old_execution_instance.pad_recording))) {
 			return true;
 		}
 		// check if plasticity rule count or the recording of a plasticity rule

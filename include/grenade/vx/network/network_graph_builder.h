@@ -210,7 +210,7 @@ public:
 
 	void add_pad_recording(
 	    signal_flow::Graph& graph,
-	    Resources const& resources,
+	    Resources& resources,
 	    PadRecording const& cadc_recording,
 	    grenade::common::ExecutionInstanceID const& instance) const;
 

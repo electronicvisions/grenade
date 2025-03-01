@@ -513,6 +513,31 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		}
 	};
 
+	// update pad readout config
+	auto const update_pad = [network](
+	                            NetworkGraph& network_graph,
+	                            grenade::common::ExecutionInstanceID const& instance) {
+		auto const& new_pad_recording = network->execution_instances.at(instance).pad_recording;
+		if (!new_pad_recording) {
+			return;
+		}
+		auto const& vertex_descriptors =
+		    network_graph.m_graph_translation.execution_instances.at(instance).pad_readout_vertex;
+		assert(new_pad_recording->recordings.size() == vertex_descriptors.size());
+		for (size_t i = 0; i < vertex_descriptors.size(); ++i) {
+			auto const& old_vertex = std::get<signal_flow::vertex::PadReadoutView>(
+			    network_graph.m_graph.get_vertex_property(vertex_descriptors.at(i)));
+			signal_flow::vertex::PadReadoutView::Source new_source{
+			    old_vertex.get_source().coord,
+			    new_pad_recording->recordings.at(old_vertex.get_coordinate()).neuron.source,
+			    new_pad_recording->recordings.at(old_vertex.get_coordinate()).enable_buffered};
+			network_graph.m_graph.update(
+			    vertex_descriptors.at(i),
+			    signal_flow::vertex::PadReadoutView(
+			        new_source, old_vertex.get_coordinate(), old_vertex.chip_coordinate));
+		}
+	};
+
 	assert(network);
 	assert(network_graph.m_network);
 
@@ -2045,7 +2070,7 @@ void NetworkGraphBuilder::add_cadc_recording(
 
 void NetworkGraphBuilder::add_pad_recording(
     signal_flow::Graph& graph,
-    Resources const& resources,
+    Resources& resources,
     PadRecording const& pad_recording,
     grenade::common::ExecutionInstanceID const& instance) const
 {
@@ -2080,7 +2105,8 @@ void NetworkGraphBuilder::add_pad_recording(
 
 		signal_flow::vertex::PadReadoutView pad_readout(
 		    vertex_source, pad, get_chip_coordinate(instance));
-		graph.add(pad_readout, instance, {input});
+		resources.execution_instances.at(instance).graph_translation.pad_readout_vertex.push_back(
+		    graph.add(pad_readout, instance, {input}));
 	}
 	LOG4CXX_TRACE(m_logger, "add_pad_recording(): Added pad recording in " << timer.print() << ".");
 }

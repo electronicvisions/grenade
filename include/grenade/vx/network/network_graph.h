@@ -52,6 +52,9 @@ struct GENPYBIND(visible) NetworkGraph
 			/** Vertex descriptor from which to extract recorded cadc sample data. */
 			std::vector<signal_flow::Graph::vertex_descriptor> cadc_sample_output_vertex;
 
+			/** Vertex descriptor of pad readouts. */
+			std::vector<signal_flow::Graph::vertex_descriptor> pad_readout_vertex;
+
 			/** Vertex descriptors of synapse views. */
 			std::map<
 			    ProjectionOnExecutionInstance,
