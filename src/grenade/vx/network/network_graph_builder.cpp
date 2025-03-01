@@ -6,6 +6,7 @@
 #include "grenade/vx/network/requires_routing.h"
 #include "grenade/vx/network/vertex/transformation/external_source_merger.h"
 #include "grenade/vx/signal_flow/vertex/background_spike_source.h"
+#include "grenade/vx/signal_flow/vertex/madc_readout.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/math.h"
@@ -423,6 +424,95 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		    }
 	    };
 
+	// update MADC recording sources
+	auto const update_madc = [network](
+	                             NetworkGraph& network_graph,
+	                             grenade::common::ExecutionInstanceID const& instance) {
+		auto const& new_madc_recording = network->execution_instances.at(instance).madc_recording;
+		if (!new_madc_recording) {
+			return;
+		}
+		auto const& output_vertex_descriptor =
+		    network_graph.m_graph_translation.execution_instances.at(instance)
+		        .madc_sample_output_vertex;
+		assert(output_vertex_descriptor);
+		auto const in_edges =
+		    boost::in_edges(*output_vertex_descriptor, network_graph.m_graph.get_graph());
+		assert(std::distance(in_edges.first, in_edges.second) == 1);
+		auto const vertex_descriptor =
+		    boost::source(*in_edges.first, network_graph.m_graph.get_graph());
+		auto const& old_vertex = std::get<signal_flow::vertex::MADCReadoutView>(
+		    network_graph.m_graph.get_vertex_property(vertex_descriptor));
+
+		signal_flow::vertex::MADCReadoutView::Source new_first_source{
+		    old_vertex.get_first_source().coord, new_madc_recording->neurons.at(0).source};
+		std::optional<signal_flow::vertex::MADCReadoutView::Source> new_second_source;
+		if (new_madc_recording->neurons.size() == 2) {
+			assert(old_vertex.get_second_source());
+			new_second_source = signal_flow::vertex::MADCReadoutView::Source{
+			    old_vertex.get_second_source()->coord, new_madc_recording->neurons.at(1).source};
+		}
+		network_graph.m_graph.update(
+		    vertex_descriptor, signal_flow::vertex::MADCReadoutView(
+		                           new_first_source, new_second_source,
+		                           old_vertex.get_source_selection(), old_vertex.chip_coordinate));
+	};
+
+	// update CADC recording sources
+	auto const update_cadc = [network](
+	                             NetworkGraph& network_graph,
+	                             grenade::common::ExecutionInstanceID const& instance) {
+		auto const& new_cadc_recording = network->execution_instances.at(instance).cadc_recording;
+		if (!new_cadc_recording) {
+			return;
+		}
+		halco::common::typed_array<
+		    signal_flow::vertex::CADCMembraneReadoutView::Sources, NeuronRowOnDLS>
+		    sources;
+		for (auto const& neuron : new_cadc_recording->neurons) {
+			auto const& population =
+			    std::get<Population>(network->execution_instances.at(instance).populations.at(
+			        neuron.coordinate.population));
+			auto const an = population.neurons.at(neuron.coordinate.neuron_on_population)
+			                    .coordinate.get_placed_compartments()
+			                    .at(neuron.coordinate.compartment_on_neuron)
+			                    .at(neuron.coordinate.atomic_neuron_on_compartment);
+			std::vector<AtomicNeuronOnDLS> sorted_neurons;
+			for (auto const& nrn : population.neurons) {
+				for (auto const& other_an : nrn.coordinate.get_atomic_neurons()) {
+					if (an.toNeuronRowOnDLS() == other_an.toNeuronRowOnDLS()) {
+						sorted_neurons.push_back(other_an);
+					}
+				}
+			}
+			std::sort(sorted_neurons.begin(), sorted_neurons.end());
+			size_t const sorted_index = std::distance(
+			    sorted_neurons.begin(),
+			    std::find(sorted_neurons.begin(), sorted_neurons.end(), an));
+			assert(sorted_index < sorted_neurons.size());
+			sources[an.toNeuronRowOnDLS()].push_back({neuron.source});
+		}
+		auto const& output_vertex_descriptors =
+		    network_graph.m_graph_translation.execution_instances.at(instance)
+		        .cadc_sample_output_vertex;
+		for (auto const& output_vertex_descriptor : output_vertex_descriptors) {
+			auto const in_edges =
+			    boost::in_edges(output_vertex_descriptor, network_graph.m_graph.get_graph());
+			assert(std::distance(in_edges.first, in_edges.second) == 1);
+			auto const vertex_descriptor =
+			    boost::source(*in_edges.first, network_graph.m_graph.get_graph());
+			auto const& old_vertex = std::get<signal_flow::vertex::CADCMembraneReadoutView>(
+			    network_graph.m_graph.get_vertex_property(vertex_descriptor));
+
+			network_graph.m_graph.update(
+			    vertex_descriptor,
+			    signal_flow::vertex::CADCMembraneReadoutView(
+			        old_vertex.get_columns(), old_vertex.get_synram(), old_vertex.get_mode(),
+			        std::move(sources[old_vertex.get_synram().toNeuronRowOnDLS()]),
+			        old_vertex.chip_coordinate));
+		}
+	};
+
 	assert(network);
 	assert(network_graph.m_network);
 
@@ -445,6 +535,8 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		}
 		update_external_input(network_graph, id);
 		update_background_source_configs(network_graph, id);
+		update_madc(network_graph, id);
+		update_cadc(network_graph, id);
 	}
 	network_graph.m_network = network;
 

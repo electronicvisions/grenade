@@ -101,13 +101,26 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 				return true;
 			}
 		}
+		// checker for whether if recording coordinates differ
+		auto const neuron_recording_coordinates_differ = [](auto const& rec_1, auto const& rec_2) {
+			if (rec_1.neurons.size() != rec_2.neurons.size()) {
+				return true;
+			}
+			for (size_t i = 0; i < rec_1.neurons.size(); ++i) {
+				if (rec_1.neurons.at(i).coordinate != rec_2.neurons.at(i).coordinate) {
+					return true;
+				}
+			}
+			return false;
+		};
 		// check if MADC recording was added or removed
 		// TODO: Support updating in cases where at least as many neurons are recorded as before
 		if ((static_cast<bool>(current_execution_instance.madc_recording) !=
 		     static_cast<bool>(old_execution_instance.madc_recording)) ||
 		    (static_cast<bool>(current_execution_instance.madc_recording) &&
-		     (current_execution_instance.madc_recording !=
-		      old_execution_instance.madc_recording))) {
+		     neuron_recording_coordinates_differ(
+		         *current_execution_instance.madc_recording,
+		         *old_execution_instance.madc_recording))) {
 			return true;
 		}
 		// check if CADC recording was changed
@@ -115,8 +128,9 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 		if ((static_cast<bool>(current_execution_instance.cadc_recording) !=
 		     static_cast<bool>(old_execution_instance.cadc_recording)) ||
 		    (static_cast<bool>(current_execution_instance.cadc_recording) &&
-		     (current_execution_instance.cadc_recording !=
-		      old_execution_instance.cadc_recording))) {
+		     neuron_recording_coordinates_differ(
+		         *current_execution_instance.cadc_recording,
+		         *old_execution_instance.cadc_recording))) {
 			return true;
 		}
 		// check if plasticity rule count or the recording of a plasticity rule
