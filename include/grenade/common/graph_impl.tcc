@@ -59,6 +59,9 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
     Graph const& other)
 {
 	if (this != &other) {
+		m_graph.clear();
+		m_vertices.clear();
+		m_edges.clear();
 		std::unordered_map<VertexDescriptor, VertexDescriptor> vertex_descriptor_translation;
 		for (auto const other_descriptor : boost::make_iterator_range(other.vertices())) {
 			auto const descriptor = Graph::add_vertex(other.get(other_descriptor));
