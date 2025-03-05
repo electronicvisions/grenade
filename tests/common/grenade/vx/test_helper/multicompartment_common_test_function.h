@@ -1,7 +1,7 @@
 #pragma once
 
-#include "grenade/vx/network/abstract/multicompartment_neuron_generator.h"
-#include "grenade/vx/network/abstract/multicompartment_placement_algorithm.h"
+#include "grenade/vx/network/abstract/multicompartment/neuron_generator.h"
+#include "grenade/vx/network/abstract/multicompartment/placement/algorithm.h"
 #include "grenade/vx/test_helper/multicompartment_test_result.h"
 #include "hate/timer.h"
 #include <fstream>
