@@ -46,7 +46,7 @@ struct SYMBOL_VISIBLE Graph
 	/**
 	 * Construct graph without elements.
 	 */
-	Graph() = default;
+	Graph();
 
 	/**
 	 * Copy graph.
@@ -398,7 +398,8 @@ struct SYMBOL_VISIBLE Graph
 	bool operator!=(Graph const& other) const;
 
 private:
-	Backend m_graph;
+	Backend& backend() const;
+	std::unique_ptr<Backend> m_backend;
 	std::unordered_map<VertexDescriptor, PropertyHolder<Vertex, Holder>> m_vertices;
 	std::unordered_map<EdgeDescriptor, PropertyHolder<Edge, Holder>> m_edges;
 

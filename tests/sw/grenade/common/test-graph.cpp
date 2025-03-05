@@ -676,3 +676,38 @@ TEST(UndirectedGraph, General)
 	EXPECT_THROW(graph.edge_range(vertex_on_graph_1, vertex_on_graph_2), std::out_of_range);
 	EXPECT_THROW(graph.edge_range(vertex_on_graph_2, vertex_on_graph_1), std::out_of_range);
 }
+
+TEST(Graph, Move)
+{
+	UndirectedDummyGraph graph;
+
+	DummyVertex vertex_1(1);
+	auto const vertex_on_graph_1 = graph.add_vertex(vertex_1);
+	DummyVertex vertex_2(2);
+	auto const vertex_on_graph_2 = graph.add_vertex(vertex_2);
+	DummyVertex vertex_3(3);
+	auto const vertex_on_graph_3 = graph.add_vertex(vertex_3);
+
+	DummyEdge edge_1(1);
+	graph.add_edge(vertex_on_graph_1, vertex_on_graph_2, edge_1);
+	DummyEdge edge_2(1);
+	graph.add_edge(vertex_on_graph_2, vertex_on_graph_3, edge_2);
+
+
+	std::unordered_set<VertexOnUndirectedDummyGraph> vertices;
+	std::unordered_set<EdgeOnUndirectedDummyGraph> edges;
+	for (auto const& vertex : boost::make_iterator_range(graph.vertices())) {
+		vertices.insert(vertex);
+	}
+	for (auto const& edge : boost::make_iterator_range(graph.edges())) {
+		edges.insert(edge);
+	}
+
+	UndirectedDummyGraph graph_moved = std::move(graph);
+	for (auto const& vertex : boost::make_iterator_range(graph_moved.vertices())) {
+		EXPECT_TRUE(vertices.contains(vertex));
+	}
+	for (auto const& edge : boost::make_iterator_range(graph_moved.edges())) {
+		EXPECT_TRUE(edges.contains(edge));
+	}
+}
