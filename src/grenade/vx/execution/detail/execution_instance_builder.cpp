@@ -48,6 +48,13 @@ std::string name()
 
 } // namespace
 
+haldls::vx::v3::Timer::Value const ExecutionInstanceBuilder::wait_before_realtime{
+    haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us};
+
+haldls::vx::v3::Timer::Value const ExecutionInstanceBuilder::wait_after_realtime{
+    haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us};
+
+
 ExecutionInstanceBuilder::ExecutionInstanceBuilder(
     signal_flow::Graph const& graph,
     grenade::common::ExecutionInstanceID const& execution_instance,
@@ -1071,7 +1078,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			current_time += Timer::Value::fpga_clock_cycles_per_us;
+			current_time += wait_before_realtime;
 		}
 		Timer::Value pre_realtime_duration = current_time;
 		// send input
@@ -1124,7 +1131,7 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		}
 		// wait for membrane to settle
 		if (!builder.empty()) {
-			current_time += Timer::Value::fpga_clock_cycles_per_us;
+			current_time += wait_after_realtime;
 		}
 		// read out neuron membranes
 		if (has_cadc_readout) {

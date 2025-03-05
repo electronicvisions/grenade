@@ -111,6 +111,9 @@ public:
 	 */
 	bool enable_cadc_baseline = true;
 
+	static haldls::vx::v3::Timer::Value const wait_before_realtime;
+	static haldls::vx::v3::Timer::Value const wait_after_realtime;
+
 private:
 	signal_flow::Graph const& m_graph;
 	grenade::common::ExecutionInstanceID m_execution_instance;

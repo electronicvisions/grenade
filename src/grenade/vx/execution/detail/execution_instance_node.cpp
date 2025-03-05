@@ -108,6 +108,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    plasticity_rule_timed_recording_start_periods(realtime_column_count);
 	PPUMemoryBlockOnPPU ppu_status_coord;
 	PPUMemoryBlockOnPPU ppu_stopped_coord;
+	size_t estimated_cadc_recording_size = 0;
 	if (overall_ppu_usage.has_cadc_readout || !overall_ppu_usage.plasticity_rules.empty()) {
 		hate::Timer ppu_timer;
 		PPUElfFile::Memory ppu_program;
@@ -139,12 +140,31 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			ppu_program_generator.has_periodic_cadc_readout_on_dram =
 			    overall_ppu_usage.has_periodic_cadc_readout_on_dram;
 			// calculate aproximate number of expected samples
-			size_t estimated_size = 0;
 			// lower bound on sample duration -> upper bound on sample rate
 			size_t const approx_sample_duration =
 			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
-			estimated_size = maximal_periodic_cadc_runtime / approx_sample_duration;
-			ppu_program_generator.num_periodic_cadc_samples = estimated_size;
+			estimated_cadc_recording_size = (maximal_periodic_cadc_runtime +
+			                                 Timer::Value::fpga_clock_cycles_per_us *
+			                                     (ExecutionInstanceBuilder::wait_before_realtime +
+			                                      ExecutionInstanceBuilder::wait_after_realtime) +
+			                                 periodic_cadc_fpga_wait_clock_cycles -
+			                                 (periodic_cadc_ppu_wait_clock_cycles /
+			                                  2 /* 250MHz vs. 125 MHz PPU vs. FPGA clock */)) /
+			                                approx_sample_duration;
+			// add one sample as constant margin for error
+			estimated_cadc_recording_size += 1;
+			// cap at maximal possible amount of samples
+			size_t const maximal_size = overall_ppu_usage.has_periodic_cadc_readout_on_dram
+			                                ? num_cadc_samples_in_extmem_dram
+			                                : num_cadc_samples_in_extmem;
+			if (estimated_cadc_recording_size > maximal_size) {
+				LOG4CXX_WARN(
+				    logger, "It is estimated, that the CADC will measure "
+				                << estimated_cadc_recording_size << " samples , but only the first "
+				                << maximal_size << " can be recorded.");
+				estimated_cadc_recording_size = maximal_size;
+			}
+			ppu_program_generator.num_periodic_cadc_samples = estimated_cadc_recording_size;
 			CachingCompiler compiler;
 			auto program = compiler.compile(ppu_program_generator.done());
 			ppu_program = std::move(program.memory);
@@ -399,32 +419,6 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			} else {
 				cadc_finalize_builder.merge_back(cadc_finalize_builder_base);
 			}
-			// calculate expected time durations where periodic_cadc_recording is enabled
-			Timer::Value expected_pcr_time = Timer::Value(0);
-			for (size_t j = 0; j < realtime_column_count; j++) {
-				if (periodic_cadc_recording[j] || periodic_cadc_dram_recording[j]) {
-					expected_pcr_time += realtime_durations[j][i];
-				}
-			}
-			// calculate aproximate number of expected samples
-			size_t estimated_size = 0;
-			// lower bound on sample duration -> upper bound on sample rate
-			size_t const approx_sample_duration =
-			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
-			estimated_size = expected_pcr_time / approx_sample_duration;
-			// add a sample as constant margin for error
-			estimated_size += 1;
-			// cap at maximal possible amount of samples
-			size_t const maximal_size = has_periodic_cadc_dram_recording
-			                                ? num_cadc_samples_in_extmem_dram
-			                                : num_cadc_samples_in_extmem;
-			if (estimated_size > maximal_size) {
-				LOG4CXX_WARN(
-				    logger, "It is estimated, that the CADC will measure "
-				                << estimated_size << " samples in batch entry " << i
-				                << ", but only the first " << maximal_size << " can be recorded.");
-				estimated_size = maximal_size;
-			}
 			if (has_periodic_cadc_recording) {
 				if (uses_top_cadc) {
 					cadc_readout_tickets[i][PPUOnDLS::top] =
@@ -436,7 +430,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 					            std::get<ExternalPPUMemoryBlockOnFPGA>(
 					                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
 					                .toMin() +
-					            128 + ((256 + 128) * estimated_size) - 1)));
+					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
 				}
 				if (uses_bot_cadc) {
 					cadc_readout_tickets[i][PPUOnDLS::bottom] =
@@ -448,7 +442,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 					            std::get<ExternalPPUMemoryBlockOnFPGA>(
 					                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
 					                .toMin() +
-					            128 + ((256 + 128) * estimated_size) - 1)));
+					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
 				}
 			}
 			if (has_periodic_cadc_dram_recording) {
@@ -462,7 +456,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 					            std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
 					                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
 					                .toMin() +
-					            128 + ((256 + 128) * estimated_size) - 1)));
+					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
 				}
 				if (uses_bot_cadc) {
 					cadc_readout_tickets[i][PPUOnDLS::bottom] =
@@ -474,7 +468,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 					            std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
 					                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
 					                .toMin() +
-					            128 + ((256 + 128) * estimated_size) - 1)));
+					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
 				}
 			}
 			// Reset the offset, from where the PPU begins to write the recorded CADC data
