@@ -21,7 +21,7 @@ uint8_t get_rate_counter(NeuronViewHandle const& handle, size_t column_index)
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 	using namespace stadls::vx::v3::ppu;
-	if (column_index >= !handle.columns.size()) {
+	if (column_index >= handle.columns.size()) {
 		exit(1);
 	}
 	NeuronColumnOnDLS const neuron_col(handle.columns[column_index]);
@@ -60,8 +60,8 @@ template <bool Reset>
 NeuronViewHandle::Row get_rate_counters(NeuronViewHandle const& handle)
 {
 	NeuronViewHandle::Row ret;
-	for (auto const column : handle.columns) {
-		ret[column] = detail::get_rate_counter<Reset>(handle, column);
+	for (size_t i = 0; i < handle.columns.size(); ++i) {
+		ret[handle.columns[i]] = detail::get_rate_counter<Reset>(handle, i);
 	}
 	return ret;
 }
