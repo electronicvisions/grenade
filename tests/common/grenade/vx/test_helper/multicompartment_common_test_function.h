@@ -58,13 +58,14 @@ inline auto test_neuron_placement = [](std::string file_name,
 
 			// Generate neuron
 			hate::Timer timer_generation;
-			NeuronWithEnvironment generated = neuron_generator.generate(
+			NeuronWithEnvironmentAndParameterSpace generated = neuron_generator.generate(
 			    num_compartments, num_compartments - 1, max_num_synaptic_inputs, false, true);
 			result.time_generation = timer_generation.get_us();
 
 			// Placement object
 			ResourceManager resources;
-			resources.add_config(generated.neuron, generated.environment);
+			resources.add_config(
+			    generated.neuron, generated.parameter_space, generated.environment);
 
 			// Placement execution
 			hate::Timer timer_placement;

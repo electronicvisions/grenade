@@ -2,6 +2,98 @@
 
 namespace grenade::vx::network::abstract {
 
+MechanismSynapticInputCurrent::ParameterSpace::ParameterSpace(
+    ParameterInterval<double> const& interval_current_in,
+    ParameterInterval<double> const& interval_time_constant_in) :
+    current_interval(interval_current_in), time_constant_interval(interval_time_constant_in)
+{
+}
+
+MechanismSynapticInputCurrent::ParameterSpace::Parameterization::Parameterization(
+    double const& current_in, double const& time_constant_in) :
+    current(current_in), time_constant(time_constant_in)
+{
+}
+
+bool MechanismSynapticInputCurrent::ParameterSpace::valid(
+    Mechanism::ParameterSpace::Parameterization const& parameterization) const
+{
+	auto* cast_parameterization = dynamic_cast<Parameterization const*>(&parameterization);
+	if (!cast_parameterization) {
+		return false;
+	}
+
+	return current_interval.contains(cast_parameterization->current) &&
+	       time_constant_interval.contains(cast_parameterization->time_constant);
+}
+
+// Property methods Parameterization
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismSynapticInputCurrent::ParameterSpace::Parameterization::copy() const
+{
+	return std::make_unique<MechanismSynapticInputCurrent::ParameterSpace::Parameterization>(*this);
+}
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismSynapticInputCurrent::ParameterSpace::Parameterization::move()
+{
+	return std::make_unique<MechanismSynapticInputCurrent::ParameterSpace::Parameterization>(
+	    std::move(*this));
+}
+bool MechanismSynapticInputCurrent::ParameterSpace::Parameterization::is_equal_to(
+    Mechanism::ParameterSpace::Parameterization const& other) const
+{
+	const auto* other_cast =
+	    dynamic_cast<const MechanismSynapticInputCurrent::ParameterSpace::Parameterization*>(
+	        &other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return (current == other_cast->current && time_constant == other_cast->time_constant);
+}
+std::ostream& MechanismSynapticInputCurrent::ParameterSpace::Parameterization::print(
+    std::ostream& os) const
+{
+	os << "Parameterization(\n";
+	os << "\tCurrent: " << current;
+	os << "\n\tTime-constant: " << time_constant;
+	os << "\n)";
+	return os;
+}
+
+// Property methods ParameterSpace
+std::unique_ptr<Mechanism::ParameterSpace> MechanismSynapticInputCurrent::ParameterSpace::copy()
+    const
+{
+	return std::make_unique<MechanismSynapticInputCurrent::ParameterSpace>(*this);
+}
+std::unique_ptr<Mechanism::ParameterSpace> MechanismSynapticInputCurrent::ParameterSpace::move()
+{
+	return std::make_unique<MechanismSynapticInputCurrent::ParameterSpace>(std::move(*this));
+}
+bool MechanismSynapticInputCurrent::ParameterSpace::is_equal_to(
+    Mechanism::ParameterSpace const& other) const
+{
+	const auto* other_cast =
+	    dynamic_cast<const MechanismSynapticInputCurrent::ParameterSpace*>(&other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return (
+	    current_interval == other_cast->current_interval &&
+	    time_constant_interval == other_cast->time_constant_interval);
+}
+std::ostream& MechanismSynapticInputCurrent::ParameterSpace::print(std::ostream& os) const
+{
+	os << "ParameterSpace(\n";
+	os << "\tCurrent: " << current_interval;
+	os << "\n\tTime-constant: " << time_constant_interval;
+	os << "\n)";
+	return os;
+}
+
+
 int MechanismSynapticInputCurrent::round(int i) const
 {
 	if (i % 256 == 0) {
@@ -11,29 +103,31 @@ int MechanismSynapticInputCurrent::round(int i) const
 	}
 }
 
-// Constructor MechanismSynapticInputCurrent
-MechanismSynapticInputCurrent::MechanismSynapticInputCurrent(
-    ParameterSpace const& parameter_space_in) :
-    parameter_space(parameter_space_in)
-{
-	if (!parameter_space.current_interval.contains(parameter_space.parameterization.current) ||
-	    !parameter_space.time_constant_interval.contains(
-	        parameter_space.parameterization.time_constant)) {
-		throw std::invalid_argument("Non valid Parameterization");
-	}
-}
-
-
 // Check for Conflict with itself when placed on Compartment
 bool MechanismSynapticInputCurrent::conflict(Mechanism const& /*other*/) const
 {
 	return false;
 }
 
+bool MechanismSynapticInputCurrent::valid(Mechanism::ParameterSpace const&) const
+{
+	return true;
+}
+
 // Return HardwareRessource Requirements
 HardwareResourcesWithConstraints MechanismSynapticInputCurrent::get_hardware(
-    CompartmentOnNeuron const& compartment, Environment const& environment) const
+    CompartmentOnNeuron const& compartment,
+    Mechanism::ParameterSpace const& mechanism_parameter_space,
+    Environment const& environment) const
 {
+	const auto* parameter_space =
+	    dynamic_cast<const MechanismSynapticInputCurrent::ParameterSpace*>(
+	        &mechanism_parameter_space);
+
+	if (!parameter_space) {
+		throw("Could not cast mechanism parameter space to capacitance parameter space.");
+	}
+
 	// Return Object and Input
 	HardwareResourcesWithConstraints resources_with_constraints;
 	std::vector<dapr::PropertyHolder<HardwareResource>> resource_list;
@@ -135,51 +229,22 @@ std::unique_ptr<Mechanism> MechanismSynapticInputCurrent::move()
 {
 	return std::make_unique<MechanismSynapticInputCurrent>(std::move(*this));
 }
-// Print-Dummy
+// Print
 std::ostream& MechanismSynapticInputCurrent::print(std::ostream& os) const
 {
+	os << "MechanismSynapticInputCurrent";
 	return os;
 }
 
-// Validate
-bool MechanismSynapticInputCurrent::valid() const
-{
-	return parameter_space.valid();
-}
-
-// Contructor ParameterSpace
-MechanismSynapticInputCurrent::ParameterSpace::ParameterSpace(
-    ParameterInterval<double> const& interval_current_in,
-    ParameterInterval<double> const& interval_time_constant_in,
-    Parameterization const& parameterization_in) :
-    current_interval(interval_current_in),
-    time_constant_interval(interval_time_constant_in),
-    parameterization(parameterization_in)
-{
-}
-
-// Constructor Parameterization
-MechanismSynapticInputCurrent::ParameterSpace::Parameterization::Parameterization(
-    double const& current_in, double const& time_constant_in) :
-    current(current_in), time_constant(time_constant_in)
-{
-}
-
-// MechanismSynapticInputCurrent: Check if Parameterization is within ParameterSpace
-bool MechanismSynapticInputCurrent::ParameterSpace::valid() const
-{
-	return (
-	    current_interval.contains(parameterization.current) &&
-	    time_constant_interval.contains(parameterization.time_constant));
-}
 
 bool MechanismSynapticInputCurrent::is_equal_to(Mechanism const& other) const
 {
-	MechanismSynapticInputCurrent const& temp_mechanism =
-	    static_cast<MechanismSynapticInputCurrent const&>(other);
-	return (
-	    parameter_space == temp_mechanism.parameter_space &&
-	    parameter_space.parameterization == temp_mechanism.parameter_space.parameterization);
+	const auto* other_cast = dynamic_cast<const MechanismSynapticInputCurrent*>(&other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return true;
 }
 
 

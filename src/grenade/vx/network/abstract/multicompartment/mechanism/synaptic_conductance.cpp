@@ -2,6 +2,108 @@
 
 namespace grenade::vx::network::abstract {
 
+MechanismSynapticInputConductance::ParameterSpace::ParameterSpace(
+    ParameterInterval<double> const& interval_conductance,
+    ParameterInterval<double> const& interval_potential,
+    ParameterInterval<double> const& interval_time_constant) :
+    conductance_interval(interval_conductance),
+    potential_interval(interval_potential),
+    time_constant_interval(interval_time_constant)
+{
+}
+
+MechanismSynapticInputConductance::ParameterSpace::Parameterization::Parameterization(
+    double const& conductance_in, double const& potential_in, double const& time_constant_in) :
+    conductance(conductance_in), potential(potential_in), time_constant(time_constant_in)
+{
+}
+
+bool MechanismSynapticInputConductance::ParameterSpace::valid(
+    Mechanism::ParameterSpace::Parameterization const& parameterization) const
+{
+	auto* cast_parameterization = dynamic_cast<Parameterization const*>(&parameterization);
+	if (!cast_parameterization) {
+		return false;
+	}
+
+	return conductance_interval.contains(cast_parameterization->conductance) &&
+	       potential_interval.contains(cast_parameterization->potential) &&
+	       time_constant_interval.contains(cast_parameterization->time_constant);
+}
+
+// Property methods Parameterization
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismSynapticInputConductance::ParameterSpace::Parameterization::copy() const
+{
+	return std::make_unique<MechanismSynapticInputConductance::ParameterSpace::Parameterization>(
+	    *this);
+}
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismSynapticInputConductance::ParameterSpace::Parameterization::move()
+{
+	return std::make_unique<MechanismSynapticInputConductance::ParameterSpace::Parameterization>(
+	    std::move(*this));
+}
+bool MechanismSynapticInputConductance::ParameterSpace::Parameterization::is_equal_to(
+    Mechanism::ParameterSpace::Parameterization const& other) const
+{
+	const auto* other_cast =
+	    dynamic_cast<const MechanismSynapticInputConductance::ParameterSpace::Parameterization*>(
+	        &other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return (
+	    conductance == other_cast->conductance && potential == other_cast->potential &&
+	    time_constant == other_cast->time_constant);
+}
+std::ostream& MechanismSynapticInputConductance::ParameterSpace::Parameterization::print(
+    std::ostream& os) const
+{
+	os << "Parameterization(\n";
+	os << "\tConductance: " << conductance;
+	os << "\n\tPotential:" << potential;
+	os << "\n\tTime-constant: " << time_constant;
+	os << "\n)";
+	return os;
+}
+
+// Property methods ParameterSpace
+std::unique_ptr<Mechanism::ParameterSpace> MechanismSynapticInputConductance::ParameterSpace::copy()
+    const
+{
+	return std::make_unique<MechanismSynapticInputConductance::ParameterSpace>(*this);
+}
+std::unique_ptr<Mechanism::ParameterSpace> MechanismSynapticInputConductance::ParameterSpace::move()
+{
+	return std::make_unique<MechanismSynapticInputConductance::ParameterSpace>(std::move(*this));
+}
+bool MechanismSynapticInputConductance::ParameterSpace::is_equal_to(
+    Mechanism::ParameterSpace const& other) const
+{
+	const auto* other_cast =
+	    dynamic_cast<const MechanismSynapticInputConductance::ParameterSpace*>(&other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return (
+	    conductance_interval == other_cast->conductance_interval &&
+	    potential_interval == other_cast->potential_interval &&
+	    time_constant_interval == other_cast->time_constant_interval);
+}
+std::ostream& MechanismSynapticInputConductance::ParameterSpace::print(std::ostream& os) const
+{
+	os << "ParameterSpace(\n";
+	os << "\tConductance: " << conductance_interval;
+	os << "\n\tPotential:" << potential_interval;
+	os << "\n\tTime-constant: " << time_constant_interval;
+	os << "\n)";
+	return os;
+}
+
+
 // Convert Number of Inputs to number of synaptical input circuits
 int MechanismSynapticInputConductance::round(int i) const
 {
@@ -12,30 +114,31 @@ int MechanismSynapticInputConductance::round(int i) const
 	}
 }
 
-// Constructor MechanismSynapticInputConductance
-MechanismSynapticInputConductance::MechanismSynapticInputConductance(
-    ParameterSpace const& parameter_space_in) :
-    parameter_space(parameter_space_in)
-{
-	if (!parameter_space.conductance_interval.contains(
-	        parameter_space.parameterization.conductance) ||
-	    !parameter_space.potential_interval.contains(parameter_space.parameterization.potential) ||
-	    !parameter_space.time_constant_interval.contains(
-	        parameter_space.parameterization.time_constant)) {
-		throw std::invalid_argument("Non valid Parameterization");
-	}
-}
-
 // Check for Conflict with itself when placed on Compartment
 bool MechanismSynapticInputConductance::conflict(Mechanism const& /*other*/) const
 {
 	return false;
 }
 
+bool MechanismSynapticInputConductance::valid(Mechanism::ParameterSpace const&) const
+{
+	return true;
+}
+
 // Return HardwareRessource Requirements
 HardwareResourcesWithConstraints MechanismSynapticInputConductance::get_hardware(
-    CompartmentOnNeuron const& compartment, Environment const& environment) const
+    CompartmentOnNeuron const& compartment,
+    Mechanism::ParameterSpace const& mechanism_parameter_space,
+    Environment const& environment) const
 {
+	const auto* parameter_space =
+	    dynamic_cast<const MechanismSynapticInputConductance::ParameterSpace*>(
+	        &mechanism_parameter_space);
+
+	if (!parameter_space) {
+		throw("Could not cast mechanism parameter space to synaptic conductance parameter space.");
+	}
+
 	// Return Object and Input
 	HardwareResourcesWithConstraints resources_with_constraints;
 	std::vector<dapr::PropertyHolder<HardwareResource>> resource_list;
@@ -137,56 +240,21 @@ std::unique_ptr<Mechanism> MechanismSynapticInputConductance::move()
 {
 	return std::make_unique<MechanismSynapticInputConductance>(std::move(*this));
 }
-// Print-Dummy
+// Print
 std::ostream& MechanismSynapticInputConductance::print(std::ostream& os) const
 {
+	os << "MechanismSynapticInputConductance\n";
 	return os;
-}
-
-// Validate
-bool MechanismSynapticInputConductance::valid() const
-{
-	return parameter_space.valid();
 }
 
 // Equality-Operator and Inequality-Operator
 bool MechanismSynapticInputConductance::is_equal_to(Mechanism const& other) const
 {
-	MechanismSynapticInputConductance const& other_mechanism =
-	    static_cast<MechanismSynapticInputConductance const&>(other);
-	// Check if Content is equal
-	return (
-	    parameter_space == other_mechanism.parameter_space &&
-	    parameter_space.parameterization == other_mechanism.parameter_space.parameterization);
-}
-
-// Contructor ParameterSpace
-MechanismSynapticInputConductance::ParameterSpace::ParameterSpace(
-    ParameterInterval<double> const& interval_conductance,
-    ParameterInterval<double> const& interval_potential,
-    ParameterInterval<double> const& interval_time_constant,
-    Parameterization const& parameterization_in) :
-    conductance_interval(interval_conductance),
-    potential_interval(interval_potential),
-    time_constant_interval(interval_time_constant),
-    parameterization(parameterization_in)
-{
-}
-
-// Constructor Parameterization
-MechanismSynapticInputConductance::ParameterSpace::Parameterization::Parameterization(
-    double const& conductance_in, double const& potential_in, double const& time_constant_in) :
-    conductance(conductance_in), potential(potential_in), time_constant(time_constant_in)
-{
-}
-
-// MechanismSynapticInputConductance: Check if Parameterization is within ParameterSpace
-bool MechanismSynapticInputConductance::ParameterSpace::valid() const
-{
-	return (
-	    conductance_interval.contains(parameterization.conductance) &&
-	    potential_interval.contains(parameterization.potential) &&
-	    time_constant_interval.contains(parameterization.time_constant));
+	const auto* other_cast = dynamic_cast<const MechanismSynapticInputConductance*>(&other);
+	if (!other_cast) {
+		return false;
+	}
+	return true;
 }
 
 } // namespace grenade::vx::network::abstract

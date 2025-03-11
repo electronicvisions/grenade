@@ -3,13 +3,88 @@
 
 namespace grenade::vx::network::abstract {
 
-CompartmentOnNeuron ResourceManager::add_config(
-    CompartmentOnNeuron const& compartment, Neuron const& neuron, Environment const& environment)
+void ResourceManager::add_config(
+    Neuron const& neuron,
+    Neuron::ParameterSpace const& parameter_space,
+    Environment const& environment)
+{
+	for (auto [compartment, compartment_parameter_space] : parameter_space.compartments) {
+		add_config_compartment(compartment, neuron, compartment_parameter_space, environment);
+	}
+
+	m_recordable_pairs = environment.get_recordable_pairs();
+}
+
+void ResourceManager::remove_config(Neuron const& neuron)
+{
+	for (auto compartment : boost::make_iterator_range(neuron.compartments())) {
+		remove_config_compartment(compartment);
+	}
+}
+
+NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& compartment) const
+{
+	if (resource_map.find(compartment) == resource_map.end()) {
+		throw std::invalid_argument("Invalid Compartment: No Configuration");
+	}
+	return *(resource_map.at(compartment));
+}
+
+std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const
+{
+	std::vector<CompartmentOnNeuron> compartments;
+	for (auto [compartment, number] : resource_map) {
+		compartments.push_back(compartment);
+	}
+	return compartments;
+}
+
+NumberTopBottom const& ResourceManager::get_total() const
+{
+	return m_total;
+}
+
+void ResourceManager::write_graphviz(
+    std::string filename, Neuron const& neuron, std::string name, bool append)
+{
+	std::ofstream file;
+	if (append) {
+		file.open(filename, std::ofstream::app);
+	} else {
+		file.open(filename);
+	}
+
+
+	file << "graph " << name << " {\n";
+	for (auto connection : boost::make_iterator_range(neuron.compartment_connections())) {
+		auto compartment_a = neuron.source(connection);
+		auto compartment_b = neuron.target(connection);
+		file << compartment_a << "(" << get_config(compartment_a) << ")"
+		     << "--" << compartment_b << "(" << get_config(compartment_b) << ")"
+		     << "\n";
+	}
+	file << "}\n";
+
+	file.close();
+}
+
+std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>>
+ResourceManager::get_recordable_pairs() const
+{
+	return m_recordable_pairs;
+}
+
+void ResourceManager::add_config_compartment(
+    CompartmentOnNeuron const& compartment,
+    Neuron const& neuron,
+    Compartment::ParameterSpace const& parameter_space,
+    Environment const& environment)
 {
 	// Map with HardwareResources per Mechanism on Compartment
 	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints>
 	    hardware_resources_with_constraints_on_mechanims =
-	        neuron.get(compartment).get_hardware(compartment, environment);
+	        neuron.get(compartment).get_hardware(compartment, parameter_space, environment);
+
 	// Circuit Configuration
 	NumberTopBottom neuron_circuit_config;
 	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
@@ -66,76 +141,14 @@ CompartmentOnNeuron ResourceManager::add_config(
 	neuron_circuit_config = NumberTopBottom(max_request_total, max_request_top, max_request_bottom);
 	resource_map.emplace(compartment, neuron_circuit_config);
 	m_total += NumberTopBottom(max_request_total, max_request_top, max_request_bottom);
-	return compartment;
 }
 
-void ResourceManager::remove_config(CompartmentOnNeuron const& compartment)
+void ResourceManager::remove_config_compartment(CompartmentOnNeuron const& compartment)
 {
 	if (!resource_map.contains(compartment)) {
 		throw std::invalid_argument("Removed Compartment not in Resource Manager");
 	}
 	resource_map.erase(compartment);
-}
-
-NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& compartment) const
-{
-	if (resource_map.find(compartment) == resource_map.end()) {
-		throw std::invalid_argument("Invalid Compartment: No Configuration");
-	}
-	return *(resource_map.at(compartment));
-}
-
-std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const
-{
-	std::vector<CompartmentOnNeuron> compartments;
-	for (auto [compartment, _] : resource_map) {
-		compartments.push_back(compartment);
-	}
-	return compartments;
-}
-
-void ResourceManager::add_config(Neuron const& neuron, Environment const& environment)
-{
-	for (auto compartment : boost::make_iterator_range(neuron.compartments())) {
-		add_config(compartment, neuron, environment);
-	}
-
-	m_recordable_pairs = environment.get_recordable_pairs();
-}
-
-NumberTopBottom const& ResourceManager::get_total() const
-{
-	return m_total;
-}
-
-void ResourceManager::write_graphviz(
-    std::string filename, Neuron const& neuron, std::string name, bool append)
-{
-	std::ofstream file;
-	if (append) {
-		file.open(filename, std::ofstream::app);
-	} else {
-		file.open(filename);
-	}
-
-
-	file << "graph " << name << " {\n";
-	for (auto connection : boost::make_iterator_range(neuron.compartment_connections())) {
-		auto compartment_a = neuron.source(connection);
-		auto compartment_b = neuron.target(connection);
-		file << compartment_a << "(" << get_config(compartment_a) << ")"
-		     << "--" << compartment_b << "(" << get_config(compartment_b) << ")"
-		     << "\n";
-	}
-	file << "}\n";
-
-	file.close();
-}
-
-std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>>
-ResourceManager::get_recordable_pairs() const
-{
-	return m_recordable_pairs;
 }
 
 std::ostream& operator<<(std::ostream& os, ResourceManager const& resources)

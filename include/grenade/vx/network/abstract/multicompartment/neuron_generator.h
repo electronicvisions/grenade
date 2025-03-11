@@ -19,21 +19,27 @@ namespace grenade::vx::network::abstract {
 /**
  * Return type of the neuron generator.
  * The generated neuron requires an environment which specifies the synaptic inputs on the neurons
- * compartments.
+ * compartments and a paramter space for all mechanisms on the neuron.
  */
-struct SYMBOL_VISIBLE NeuronWithEnvironment
+struct SYMBOL_VISIBLE NeuronWithEnvironmentAndParameterSpace
 {
-	NeuronWithEnvironment() = default;
+	NeuronWithEnvironmentAndParameterSpace() = default;
+
 
 	// Deleted copy constructors since the neuron is not copyable.
-	NeuronWithEnvironment(NeuronWithEnvironment const& other) = delete;
-	NeuronWithEnvironment& operator=(NeuronWithEnvironment const& other) = delete;
+	NeuronWithEnvironmentAndParameterSpace(NeuronWithEnvironmentAndParameterSpace const& other) =
+	    delete;
+	NeuronWithEnvironmentAndParameterSpace& operator=(
+	    NeuronWithEnvironmentAndParameterSpace const& other) = delete;
 
-	NeuronWithEnvironment(NeuronWithEnvironment&& other) = default;
-	NeuronWithEnvironment& operator=(NeuronWithEnvironment&& other) = default;
+	NeuronWithEnvironmentAndParameterSpace(NeuronWithEnvironmentAndParameterSpace&& other) =
+	    default;
+	NeuronWithEnvironmentAndParameterSpace& operator=(
+	    NeuronWithEnvironmentAndParameterSpace&& other) = default;
 
 	Neuron neuron;
 	Environment environment;
+	Neuron::ParameterSpace parameter_space;
 };
 
 
@@ -48,7 +54,7 @@ struct SYMBOL_VISIBLE NeuronGenerator
 	/**
 	 * Generate an empty neuron.
 	 */
-	NeuronWithEnvironment generate();
+	NeuronWithEnvironmentAndParameterSpace generate();
 
 	/**
 	 * Generate a neuron with the given number of compartments and connections.
@@ -60,7 +66,7 @@ struct SYMBOL_VISIBLE NeuronGenerator
 	 * bottom of the chip.
 	 * @param filter_loops Wether only neurons without loops should be created.
 	 */
-	NeuronWithEnvironment generate(
+	NeuronWithEnvironmentAndParameterSpace generate(
 	    size_t num_compartments,
 	    size_t num_compartment_connections,
 	    size_t limit_synaptic_input,

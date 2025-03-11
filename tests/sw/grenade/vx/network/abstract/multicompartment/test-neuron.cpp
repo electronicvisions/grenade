@@ -19,71 +19,50 @@ TEST(multicompartment_neuron, General)
 	Compartment compartment_b;
 	Compartment compartment_c;
 
-	// Valid Mechanisms
-	MechanismCapacitance membrane_a(MechanismCapacitance::ParameterSpace(
-	    ParameterInterval<double>(1, 10),
-	    MechanismCapacitance::ParameterSpace::Parameterization(5)));
-	MechanismCapacitance membrane_b(MechanismCapacitance::ParameterSpace(
-	    ParameterInterval<double>(5, 20),
-	    MechanismCapacitance::ParameterSpace::Parameterization(7)));
-	MechanismSynapticInputCurrent synaptic_current_a(MechanismSynapticInputCurrent::ParameterSpace(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2),
-	    MechanismSynapticInputCurrent::ParameterSpace::Parameterization(1, 2)));
-	MechanismSynapticInputCurrent synaptic_current_b(MechanismSynapticInputCurrent::ParameterSpace(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2),
-	    MechanismSynapticInputCurrent::ParameterSpace::Parameterization(1, 2)));
-	MechanismSynapticInputConductance synaptic_conductance_a(
-	    MechanismSynapticInputConductance::ParameterSpace(
-	        ParameterInterval<double>(1, 1), ParameterInterval<double>(1, 1),
-	        ParameterInterval<double>(2, 2),
-	        MechanismSynapticInputConductance::ParameterSpace::Parameterization(1, 1, 2)));
+	// Mechanisms
+	MechanismCapacitance membrane;
+	MechanismSynapticInputCurrent synaptic_current;
+	MechanismSynapticInputConductance synaptic_conductance;
 
+	// Valid parameter spaces
+	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace(ParameterInterval<double>(1, 10)));
+	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace(ParameterInterval<double>(5, 20)));
+	EXPECT_NO_THROW(MechanismSynapticInputCurrent::ParameterSpace(
+	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2)));
+	EXPECT_NO_THROW(MechanismSynapticInputCurrent::ParameterSpace(
+	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2)));
+	EXPECT_NO_THROW(MechanismSynapticInputConductance::ParameterSpace(
+	    ParameterInterval<double>(1, 1), ParameterInterval<double>(1, 1),
+	    ParameterInterval<double>(2, 2)));
 
-	// Invalid Mechanisms
+	// Invalid parameter spaces
 	EXPECT_THROW(
-	    MechanismCapacitance(MechanismCapacitance::ParameterSpace(
-	        ParameterInterval<double>(4, 6),
-	        MechanismCapacitance::ParameterSpace::Parameterization(2))),
+	    MechanismCapacitance::ParameterSpace(ParameterInterval<double>(7, 3)),
 	    std::invalid_argument);
 	EXPECT_THROW(
-	    MechanismCapacitance(MechanismCapacitance::ParameterSpace(
-	        ParameterInterval<double>(7, 3),
-	        MechanismCapacitance::ParameterSpace::Parameterization(4))),
-	    std::invalid_argument);
-	EXPECT_THROW(
-	    MechanismSynapticInputCurrent(MechanismSynapticInputCurrent::ParameterSpace(
-	        ParameterInterval<double>(1, 3), ParameterInterval<double>(4, 1),
-	        MechanismSynapticInputCurrent::ParameterSpace::Parameterization(2, 2))),
-	    std::invalid_argument);
-	EXPECT_THROW(
-	    MechanismSynapticInputConductance(MechanismSynapticInputConductance::ParameterSpace(
-	        ParameterInterval<double>(1, 3), ParameterInterval<double>(1, 1),
-	        ParameterInterval<double>(2, 2),
-	        MechanismSynapticInputConductance::ParameterSpace::Parameterization(5, 1, 2))),
+	    MechanismSynapticInputCurrent::ParameterSpace(
+	        ParameterInterval<double>(1, 3), ParameterInterval<double>(4, 1)),
 	    std::invalid_argument);
 
 	// Add Mechanisms to Compartments
-	[[maybe_unused]] auto const membrane_on_compartment_a = compartment_a.add(membrane_a);
-	[[maybe_unused]] auto const membrane_on_compartment_b = compartment_b.add(membrane_b);
-	[[maybe_unused]] auto const membrane_on_compartment_c = compartment_c.add(membrane_b);
+	[[maybe_unused]] auto const membrane_on_compartment_a = compartment_a.add(membrane);
+	[[maybe_unused]] auto const membrane_on_compartment_b = compartment_b.add(membrane);
+	[[maybe_unused]] auto const membrane_on_compartment_c = compartment_c.add(membrane);
 	[[maybe_unused]] auto const synaptic_current_a_on_compartment_a =
-	    compartment_a.add(synaptic_current_a);
+	    compartment_a.add(synaptic_current);
 	[[maybe_unused]] auto const synaptic_conductance_on_compartment_a =
-	    compartment_a.add(synaptic_conductance_a);
+	    compartment_a.add(synaptic_conductance);
 	[[maybe_unused]] auto const synaptic_current_b_on_compartment_b =
-	    compartment_b.add(synaptic_current_b);
+	    compartment_b.add(synaptic_current);
 
-	EXPECT_THROW(compartment_a.add(membrane_b), std::invalid_argument);
-	EXPECT_THROW(compartment_a.add(membrane_a), std::invalid_argument);
+	// Not two mechanisms of same type on one compartment
+	EXPECT_THROW(compartment_a.add(membrane), std::invalid_argument);
 
-	compartment_c.set(
-	    membrane_on_compartment_c,
-	    MechanismCapacitance(MechanismCapacitance::ParameterSpace(
-	        ParameterInterval<double>(20, 20),
-	        MechanismCapacitance::ParameterSpace::Parameterization(20))));
+	compartment_c.set(membrane_on_compartment_c, MechanismCapacitance());
+	MechanismCapacitance::ParameterSpace(ParameterInterval<double>(20, 20));
 
-	EXPECT_FALSE(synaptic_conductance_a == synaptic_current_a);
-	EXPECT_TRUE(synaptic_current_a == synaptic_current_b);
+	EXPECT_FALSE(synaptic_conductance == synaptic_current);
+	EXPECT_TRUE(synaptic_current == synaptic_current);
 
 	compartment_a.remove(synaptic_conductance_on_compartment_a);
 	compartment_a.remove(synaptic_current_a_on_compartment_a);
@@ -100,7 +79,7 @@ TEST(multicompartment_neuron, General)
 
 	EXPECT_EQ(neuron.num_compartments(), 3);
 	EXPECT_EQ(neuron.get(compartment_a_on_neuron), compartment_a);
-	EXPECT_EQ(neuron.get(compartment_a_on_neuron).get(membrane_on_compartment_a), membrane_a);
+	EXPECT_EQ(neuron.get(compartment_a_on_neuron).get(membrane_on_compartment_a), membrane);
 
 	// Add Compartment-Connections to Neuron
 	CompartmentConnectionConductance connection_conductance_1;

@@ -49,6 +49,25 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
           CompartmentConnectionOnNeuron,
           std::unique_ptr>
 {
+	struct GENPYBIND(visible) ParameterSpace
+	{
+		struct GENPYBIND(visible) Parameterization
+		{
+			std::map<CompartmentOnNeuron, Compartment::ParameterSpace::Parameterization>
+			    compartments;
+		};
+
+		/**
+		 * Check if the given parameterization is valid for the parameter space.
+		 * This checks if the parameterization for each compartment is valid.
+		 * @param paramterization Parameterization to check validity for.
+		 */
+		bool valid(Parameterization const& parameterization) const;
+
+		std::map<CompartmentOnNeuron, Compartment::ParameterSpace> compartments;
+	};
+
+
 	Neuron() = default;
 
 	/**
@@ -64,11 +83,6 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 */
 	Neuron(Neuron&& other) = default;
 	Neuron& operator=(Neuron&& other) = default;
-
-	/**
-	 * Check wether the neuron only contains valid compartments.
-	 */
-	bool valid();
 
 	/**
 	 * Adds a compartment to the neuron.
@@ -147,7 +161,7 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	size_t num_compartment_connections() const;
 
 	/**
-	 * Return number of outgoing connections on a compartment.
+	 * Return number of connections on a compartment.
 	 * Since the neuron has a undirected graph representation the ingoing and outgoing degree is
 	 * equal.
 	 * @param descriptor Descriptor of the compartment to give degree.
@@ -284,6 +298,13 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 * @param descriptor Descriptor of the compartment to check for.
 	 */
 	bool contains(CompartmentOnNeuron const& descriptor) const;
+
+	/**
+	 * Check if the given paramter space is valid for the neuron.
+	 * This checks if the parameter space for each compartment of the neuron is valid.
+	 * @param paramter_space Paramter space to check for validity.
+	 */
+	bool valid(ParameterSpace const& parameter_space) const;
 
 	/**
 	 * Writes neuron topology in graphviz format.

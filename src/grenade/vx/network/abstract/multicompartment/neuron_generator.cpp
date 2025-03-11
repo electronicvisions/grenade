@@ -8,9 +8,9 @@ NeuronGenerator::NeuronGenerator(size_t seed) :
 {
 }
 
-NeuronWithEnvironment NeuronGenerator::generate()
+NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate()
 {
-	NeuronWithEnvironment result;
+	NeuronWithEnvironmentAndParameterSpace result;
 	return result;
 }
 
@@ -75,7 +75,7 @@ bool NeuronGenerator::path(
 }
 
 
-NeuronWithEnvironment NeuronGenerator::generate(
+NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
     size_t num_compartments,
     size_t num_compartment_connections,
     size_t limit_synaptic_input,
@@ -88,38 +88,41 @@ NeuronWithEnvironment NeuronGenerator::generate(
 	LOG4CXX_DEBUG(m_logger, "Generating Neuron.");
 
 	// Result
-	NeuronWithEnvironment result;
+	NeuronWithEnvironmentAndParameterSpace result;
 
 	size_t run_counter = 0;
 	do {
 		run_counter++;
 		result.neuron = Neuron();
 		result.environment = Environment();
-		std::vector<Compartment> compartments;
+		result.parameter_space = Neuron::ParameterSpace();
+
 		std::vector<CompartmentOnNeuron> compartment_ids;
 
-		// Create Compartments
+		// Construct Neuron
 		for (size_t i = 0; i < num_compartments; i++) {
-			Compartment temp_compartment = Compartment();
-			compartments.push_back(temp_compartment);
-		}
-
-		// Add random Synaptic Input Mechanism to Compartments
-		for (size_t i = 0; i < num_compartments; i++) {
+			// Create Compartment
+			Compartment temp_compartment;
+			// Create Compartment-Parameter-Space
+			Compartment::ParameterSpace compartment_parameter_space;
+			// Create Mechanism
 			MechanismSynapticInputCurrent temp_mechanism;
-			compartments.at(i).add(temp_mechanism);
-		}
-
-		// Add Compartments to Neuron
-		for (size_t i = 0; i < num_compartments; i++) {
-			compartment_ids.push_back(result.neuron.add_compartment(compartments.at(i)));
+			// Create Mechanism-Parameter-Space
+			MechanismSynapticInputCurrent::ParameterSpace mechanism_parameter_space;
+			// Add mechanism to compartment
+			MechanismOnCompartment mechanism_id = temp_compartment.add(temp_mechanism);
+			compartment_parameter_space.mechanisms.set(mechanism_id, mechanism_parameter_space);
+			// Add compartment to neuron
+			CompartmentOnNeuron compartment_id = result.neuron.add_compartment(temp_compartment);
+			compartment_ids.push_back(compartment_id);
+			result.parameter_space.compartments.emplace(
+			    compartment_id, compartment_parameter_space);
 		}
 
 		// Add information about synaptic input to environment
-		size_t limit = limit_synaptic_input;
+		std::uniform_int_distribution<> distribution_synaptic_inputs(0, limit_synaptic_input);
 		for (size_t i = 0; i < num_compartments; i++) {
 			SynapticInputEnvironmentCurrent temp_synaptic_input;
-			std::uniform_int_distribution<> distribution_synaptic_inputs(0, limit);
 
 			temp_synaptic_input.number_of_inputs.number_total =
 			    distribution_synaptic_inputs(m_generator);

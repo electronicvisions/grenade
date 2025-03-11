@@ -15,10 +15,10 @@ template class Graph<
 
 namespace grenade::vx::network::abstract {
 
-bool Neuron::valid()
+bool Neuron::ParameterSpace::valid(Parameterization const& parameterization) const
 {
-	for (auto compartment : boost::make_iterator_range(compartments())) {
-		if (!(get(compartment).valid())) {
+	for (auto [compartment, compartment_parameterization] : parameterization.compartments) {
+		if (!compartments.at(compartment).valid(compartment_parameterization)) {
 			return false;
 		}
 	}
@@ -250,6 +250,16 @@ bool Neuron::compartments_connected() const
 bool Neuron::contains(CompartmentOnNeuron const& descriptor) const
 {
 	return Graph::contains(descriptor);
+}
+
+bool Neuron::valid(ParameterSpace const& parameter_space) const
+{
+	for (auto& [compartment, compartment_parameter_space] : parameter_space.compartments) {
+		if (!get(compartment).valid(compartment_parameter_space)) {
+			return false;
+		}
+	}
+	return true;
 }
 
 // Writes neuron topology in graphviz format to be plotted later

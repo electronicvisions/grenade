@@ -3,6 +3,15 @@
 
 namespace grenade::vx::network::abstract {
 
+bool Compartment::ParameterSpace::valid(Parameterization const& parameterization) const
+{
+	for (auto [mechanism, mechanism_parameterization] : parameterization.mechanisms) {
+		if (!mechanisms.get(mechanism).valid(mechanism_parameterization)) {
+			return false;
+		}
+	}
+	return true;
+}
 
 // Adds Mechanism to Compartment
 MechanismOnCompartment Compartment::add(Mechanism const& mechanism)
@@ -49,15 +58,28 @@ void Compartment::set(MechanismOnCompartment const& descriptor, Mechanism const&
 
 // Return HardwareRessource Requirements
 std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> Compartment::get_hardware(
-    CompartmentOnNeuron const& compartment, Environment const& environment) const
+    CompartmentOnNeuron const& compartment,
+    Compartment::ParameterSpace const& parameter_space,
+    Environment const& environment) const
 {
 	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> hardware_map;
 	for (auto const& [key, value] : m_mechanisms) {
-		hardware_map.emplace(key, value->get_hardware(compartment, environment));
+		hardware_map.emplace(
+		    key,
+		    value->get_hardware(compartment, parameter_space.mechanisms.get(key), environment));
 	}
 	return hardware_map;
 }
 
+bool Compartment::valid(ParameterSpace const& parameter_space) const
+{
+	for (auto [mechanism, mechanism_parameter_space] : parameter_space.mechanisms) {
+		if (!get(mechanism).valid(mechanism_parameter_space)) {
+			return false;
+		}
+	}
+	return true;
+}
 
 // Operators
 bool Compartment::is_equal_to(Compartment const& other) const
@@ -81,16 +103,6 @@ std::ostream& Compartment::print(std::ostream& os) const
 		os << *mechanism;
 	}
 	return os << ")";
-}
-
-bool Compartment::valid() const
-{
-	for (auto const& [_, mechanism] : m_mechanisms) {
-		if ((*mechanism).valid()) {
-			return false;
-		}
-	}
-	return true;
 }
 
 } // namespace grenade::vx::network::abstract

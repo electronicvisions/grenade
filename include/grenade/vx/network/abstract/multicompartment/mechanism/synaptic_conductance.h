@@ -11,26 +11,11 @@
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-
 // Mechanism for Synaptic Conductance
 struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : public Mechanism
 {
-	// Check for Conflict with itself when placed on Compartment
-	bool conflict(Mechanism const& other) const;
-
-	// Return HardwareRessource Requirements
-	HardwareResourcesWithConstraints get_hardware(
-	    CompartmentOnNeuron const& compartment, Environment const& environment) const;
-
-	// Copy
-	std::unique_ptr<Mechanism> copy() const;
-	std::unique_ptr<Mechanism> move();
-
-	// Validate
-	bool valid() const;
-
 	// Parameter Space
-	struct GENPYBIND(visible) ParameterSpace
+	struct GENPYBIND(visible) ParameterSpace : public Mechanism::ParameterSpace
 	{
 		// Interval with range of Parameters
 		ParameterInterval<double> conductance_interval;
@@ -38,6 +23,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 		ParameterInterval<double> time_constant_interval;
 
 		struct GENPYBIND(visible) Parameterization
+		    : public Mechanism::ParameterSpace::Parameterization
 		{
 			Parameterization() = default;
 			Parameterization(
@@ -51,12 +37,19 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 			// Operators
 			bool operator==(Parameterization const& other) const = default;
 			bool operator!=(Parameterization const& other) const = default;
+
+			// Property methods
+			std::unique_ptr<Mechanism::ParameterSpace::Parameterization> copy() const;
+			std::unique_ptr<Mechanism::ParameterSpace::Parameterization> move();
+			bool is_equal_to(Mechanism::ParameterSpace::Parameterization const& other) const;
+			std::ostream& print(std::ostream& os) const;
 		};
 
-		Parameterization parameterization;
-
-		// Check if Parameterization is within ParameterSpace
-		bool valid() const;
+		/**
+		 * Check if parameterization is valid for the paramter space.
+		 * @param parameterization Paramterization to check validity for.
+		 */
+		bool valid(Mechanism::ParameterSpace::Parameterization const& parameterization) const;
 
 		// Operators
 		bool operator==(ParameterSpace const& other) const = default;
@@ -67,16 +60,36 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 		ParameterSpace(
 		    ParameterInterval<double> const& interval_conductance,
 		    ParameterInterval<double> const& interval_potential,
-		    ParameterInterval<double> const& interval_time_constant,
-		    Parameterization const& paramterization_in);
+		    ParameterInterval<double> const& interval_time_constant);
+
+		// Property methods
+		std::unique_ptr<Mechanism::ParameterSpace> copy() const;
+		std::unique_ptr<Mechanism::ParameterSpace> move();
+		bool is_equal_to(Mechanism::ParameterSpace const& other) const;
+		std::ostream& print(std::ostream& os) const;
 	};
 
-	ParameterSpace parameter_space;
+	// Check for Conflict with itself when placed on Compartment
+	bool conflict(Mechanism const& other) const;
+
+	/**
+	 * Check if paramter space is valid for the mechanism.
+	 * @param parameter_space Parameter-Space to check valditiy for.
+	 */
+	bool valid(Mechanism::ParameterSpace const& parameter_space) const;
+
+	// Return HardwareRessource Requirements
+	HardwareResourcesWithConstraints get_hardware(
+	    CompartmentOnNeuron const& compartment,
+	    Mechanism::ParameterSpace const& mechanism_parameter_space,
+	    Environment const& environment) const;
+
+	// Copy
+	std::unique_ptr<Mechanism> copy() const;
+	std::unique_ptr<Mechanism> move();
 
 	// Constructor
 	MechanismSynapticInputConductance() = default;
-	MechanismSynapticInputConductance(ParameterSpace const& parameter_space_in);
-
 
 protected:
 	bool is_equal_to(Mechanism const& other) const;

@@ -17,46 +17,42 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 {
 	/**
-	 * Adds the configuration for a compartment to the resource manager. Calculates the number of
-	 * required resources of the compartment based on its mechanisms.
-	 * @param compartment Compartment for which a configuration is added.
-	 * @param neuron Neuron to which the compartment belongs.
-	 * @param environment Environment specifying the synaptic inputs on the compartment.
+	 * Add the configuration for a neuron to the resource manager. Calculates the resources required
+	 * for placement depending on the mechanisms, compartments and parameterization of the neuron.
+	 *
+	 * @param neuron Neuron for which a configuration is added.
+	 * @param parameter_space Parameter-Space of the neuron.
+	 * @param environment Environment defining synaptic inputs on neuron.
 	 */
-	CompartmentOnNeuron add_config(
-	    CompartmentOnNeuron const& compartment,
+	void add_config(
 	    Neuron const& neuron,
+	    Neuron::ParameterSpace const& parameter_space,
 	    Environment const& environment);
 
 	/**
-	 * Removes the configuration of a compartment from the resource manager.
-	 * @param compartment Compartment for which the configuration is removed.
+	 * Remove the configuration of the given neuron from the resource manager.
+	 *
+	 * @param neuron Neuron for which the configuration is removed.
 	 */
-	void remove_config(CompartmentOnNeuron const& compartment);
+	void remove_config(Neuron const& neuron);
 
 	/**
 	 * Return the configuration for a compartment in the resource maanger.
-	 * @param compartment Compartment whichs configuration is returned.
+	 *
+	 * @param compartment Compartment of which configuration is returned.
 	 */
 	NumberTopBottom const& get_config(CompartmentOnNeuron const& compartment) const;
 
 	/**
-	 * Return the total resource requirements of all compartments inside the resource manager.
+	 * Returns total resources required by the contents of the resource manager.
 	 */
 	NumberTopBottom const& get_total() const;
 
 	/**
-	 * Returns all compartments for which resource requirements are stored.
+	 * Returns descriptors for all compartments for which a configuration is stored.
 	 */
 	std::vector<CompartmentOnNeuron> get_compartments() const;
 
-	/**
-	 * Adds the configuration for all compartments of a neuron.
-	 * @param neuron Neuron for which configuration is added.
-	 * @param environment Environment which specifies the synaptic inputs on the compartments of the
-	 * neuron.
-	 */
-	void add_config(Neuron const& neuron, Environment const& environment);
 
 	/**
 	 * Writes neuron topology in graphviz format.
@@ -73,6 +69,16 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> get_recordable_pairs() const;
 
 private:
+	// Adds configuration for single compartment.
+	void add_config_compartment(
+	    CompartmentOnNeuron const& compartment,
+	    Neuron const& neuron,
+	    Compartment::ParameterSpace const& parameter_space,
+	    Environment const& environment);
+
+	// Removes configuration for single compartment.
+	void remove_config_compartment(CompartmentOnNeuron const& compartment);
+
 	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> m_recordable_pairs;
 
 	std::map<CompartmentOnNeuron, dapr::PropertyHolder<NumberTopBottom>> resource_map;
