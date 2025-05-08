@@ -145,9 +145,6 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 std::ostream& operator<<(std::ostream& os, Neuron const& neuron);
 
 
-std::ostream& operator<<(std::ostream& os, Neuron const& neuron);
-
-
 } // namespace abstract
 } // namespace grenade::vx::network
 
