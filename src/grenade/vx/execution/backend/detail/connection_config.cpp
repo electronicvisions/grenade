@@ -1,10 +1,10 @@
-#include "grenade/vx/execution/detail/connection_config.h"
+#include "grenade/vx/execution/backend/detail/connection_config.h"
 
 #include "haldls/vx/v3/omnibus_constants.h"
 #include "lola/vx/v3/ppu.h"
 #include "stadls/visitors.h"
 
-namespace grenade::vx::execution::detail {
+namespace grenade::vx::execution::backend::detail {
 
 bool ConnectionConfig::get_enable_differential_config() const
 {
@@ -303,7 +303,8 @@ bool ConnectionConfigBase::operator!=(Encodable const& other) const
 
 ConnectionConfigDifferential::ConnectionConfigDifferential(ConnectionConfig& config) :
     m_config(config)
-{}
+{
+}
 
 ConnectionConfigDifferential::BackendCoordinateListVariant
 ConnectionConfigDifferential::encode_read(
@@ -385,4 +386,4 @@ bool ConnectionConfigDifferential::operator!=(Encodable const& other) const
 	return !(*this == other);
 }
 
-} // namespace grenade::vx::execution::detail
+} // namespace grenade::vx::execution::backend::detail

@@ -101,7 +101,9 @@ struct InitializedConnection
 	bool is_quiggeldy() const SYMBOL_VISIBLE;
 
 private:
-	hxcomm::vx::ConnectionVariant m_connection;
+	std::unique_ptr<hxcomm::vx::ConnectionVariant> m_connection;
+
+	hxcomm::vx::ConnectionVariant& get_connection() const;
 
 	/**
 	 * Expected highspeed link notification count in run().

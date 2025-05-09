@@ -10,7 +10,7 @@
 #include <optional>
 #include <vector>
 
-namespace grenade::vx::execution::detail {
+namespace grenade::vx::execution::backend::detail {
 
 /**
  * Connection config tracking changes to the configuration of hardware accessible via one
@@ -166,4 +166,4 @@ private:
 	ConnectionConfig& m_config;
 };
 
-} // namespace grenade::vx::execution::detail
+} // namespace grenade::vx::execution::backend::detail

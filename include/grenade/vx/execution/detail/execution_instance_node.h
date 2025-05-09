@@ -3,7 +3,6 @@
 #include <vector>
 #include <tbb/flow_graph.h>
 
-#include "grenade/vx/execution/detail/connection_state_storage.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
@@ -18,7 +17,7 @@ typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx::execution::backend {
-struct InitializedConnection;
+struct StatefulConnection;
 } // namespace grenade::vx::execution::backend
 
 namespace grenade::vx::execution::detail {
@@ -38,8 +37,7 @@ struct ExecutionInstanceNode
 	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
 	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
-	    backend::InitializedConnection& connection,
-	    ConnectionStateStorage& connection_state_storage,
+	    backend::StatefulConnection& connection,
 	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
@@ -67,8 +65,7 @@ private:
 	grenade::common::ExecutionInstanceID execution_instance;
 	halco::hicann_dls::vx::v3::DLSGlobal dls_global;
 	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> configs;
-	backend::InitializedConnection& connection;
-	ConnectionStateStorage& connection_state_storage;
+	backend::StatefulConnection& connection;
 	signal_flow::ExecutionInstanceHooks& hooks;
 	log4cxx::LoggerPtr logger;
 };

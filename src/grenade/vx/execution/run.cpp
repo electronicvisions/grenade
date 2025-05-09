@@ -148,8 +148,8 @@ std::vector<signal_flow::OutputData> run(
 		std::set<DLSGlobal>& dls_globals = vps_per_execution_instance.at(vertex);
 		// TODO: support execution instances without hardware usage
 		if (dls_globals.empty()) {
-			assert(executor.m_connection_state_storages.size() > 0);
-			dls_globals.insert(executor.m_connection_state_storages.begin()->first);
+			assert(executor.m_connections.size() > 0);
+			dls_globals.insert(executor.m_connections.begin()->first);
 		}
 		if (dls_globals.size() > 1) {
 			throw std::runtime_error(
@@ -169,7 +169,7 @@ std::vector<signal_flow::OutputData> run(
 		detail::ExecutionInstanceNode node_body(
 		    output_activation_maps, inputs, graphs, execution_instance, dls_global,
 		    execution_node_configs, executor.m_connections.at(dls_global),
-		    executor.m_connection_state_storages.at(dls_global), *(hooks[execution_instance]));
+		    *(hooks[execution_instance]));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}

@@ -1,4 +1,4 @@
-#include "grenade/vx/execution/backend/run.h"
+#include "grenade/vx/execution/backend/initialized_connection_run.h"
 
 #include "grenade/vx/execution/backend/initialized_connection.h"
 #include "halco/common/iter_all.h"
@@ -122,7 +122,7 @@ stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram& 
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 	stadls::vx::RunTimeInfo ret;
 	try {
-		ret = stadls::vx::v3::run(connection.m_connection, program);
+		ret = stadls::vx::v3::run(connection.get_connection(), program);
 		check_link_notifications(
 		    logger, program.get_highspeed_link_notifications(),
 		    connection.m_expected_link_notification_count);
@@ -131,7 +131,7 @@ stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram& 
 		    logger, program.get_highspeed_link_notifications(),
 		    connection.m_expected_link_notification_count);
 		// TODO: use specific exception for fisch run() fails, cf. task #3724
-		perform_post_fail_analysis(logger, connection.m_connection, program);
+		perform_post_fail_analysis(logger, connection.get_connection(), program);
 		throw;
 	}
 	return ret;

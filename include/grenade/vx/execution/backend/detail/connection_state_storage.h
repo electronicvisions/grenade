@@ -1,8 +1,9 @@
 #pragma once
 #include "fisch/vx/word_access/type/omnibus.h"
-#include "grenade/vx/execution/detail/connection_config.h"
+#include "grenade/vx/execution/backend/detail/connection_config.h"
 #include "lola/vx/v3/chip.h"
 #include "stadls/vx/v3/reinit_stack_entry.h"
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -10,8 +11,9 @@ namespace grenade::vx::execution::backend {
 struct InitializedConnection;
 } // namespace grenade::vx::execution::backend
 
-namespace grenade::vx::execution::detail {
+namespace grenade::vx::execution::backend::detail {
 
+// TODO: merge content with ConnectionConfig or drop hierarchy
 struct ConnectionStateStorage
 {
 	bool enable_differential_config;
@@ -25,7 +27,7 @@ struct ConnectionStateStorage
 	stadls::vx::v3::ReinitStackEntry reinit_schedule_out_replacement;
 	stadls::vx::v3::ReinitStackEntry reinit_capmem_settling_wait;
 	stadls::vx::v3::ReinitStackEntry reinit_trigger;
-	std::mutex mutex;
+	std::unique_ptr<std::mutex> mutex;
 
 	/**
 	 * Construct connection state storage with differential mode flag and connection.
@@ -34,8 +36,8 @@ struct ConnectionStateStorage
 	 * connection
 	 * @param connection Connection to construct reinit stack entries from
 	 */
-	ConnectionStateStorage(
-	    bool enable_differential_config, backend::InitializedConnection& connection) SYMBOL_VISIBLE;
+	ConnectionStateStorage(bool enable_differential_config, InitializedConnection& connection)
+	    SYMBOL_VISIBLE;
 };
 
-} // namespace grenade::vx::execution::detail
+} // namespace grenade::vx::execution::backend::detail

@@ -1,4 +1,6 @@
 #pragma once
+#include "grenade/vx/execution/backend/initialized_connection.h"
+#include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/genpybind.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -20,8 +22,10 @@ struct ConnectionAcquisor
 
 	ConnectionAcquisor(T& t) : handle(t), executor()
 	{
-		std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection> connections;
-		connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(t.get()));
+		std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection> connections;
+		connections.emplace(
+		    halco::hicann_dls::vx::v3::DLSGlobal(),
+		    backend::StatefulConnection(backend::InitializedConnection(std::move(t.get()))));
 		executor = std::make_unique<JITGraphExecutor>(std::move(connections));
 
 		auto logger = log4cxx::Logger::getLogger("grenade.execution");
@@ -35,8 +39,11 @@ struct ConnectionAcquisor
 	~ConnectionAcquisor()
 	{
 		assert(executor);
-		handle.get() = std::move(std::get<typename T::connection_type>(
-		    executor->release_connections().at(halco::hicann_dls::vx::v3::DLSGlobal()).release()));
+		handle.get() = std::move(
+		    std::get<typename T::connection_type>(executor->release_connections()
+		                                              .at(halco::hicann_dls::vx::v3::DLSGlobal())
+		                                              .release()
+		                                              .release()));
 	}
 };
 

@@ -2,11 +2,11 @@
 
 #include "fisch/vx/omnibus.h"
 #include "fisch/vx/playback_program_builder.h"
-#include "grenade/vx/execution/backend/initialized_connection.h"
-#include "grenade/vx/execution/backend/run.h"
+#include "grenade/vx/execution/backend/playback_program.h"
+#include "grenade/vx/execution/backend/stateful_connection.h"
+#include "grenade/vx/execution/backend/stateful_connection_run.h"
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
-#include "grenade/vx/execution/detail/generator/capmem.h"
 #include "grenade/vx/execution/detail/generator/get_state.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
@@ -39,8 +39,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     grenade::common::ExecutionInstanceID const& execution_instance,
     halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
     std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
-    backend::InitializedConnection& connection,
-    ConnectionStateStorage& connection_state_storage,
+    backend::StatefulConnection& connection,
     signal_flow::ExecutionInstanceHooks& hooks) :
     data_maps(data_maps),
     input_data_maps(input_data_maps),
@@ -49,7 +48,6 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     dls_global(dls_global),
     configs(configs),
     connection(connection),
-    connection_state_storage(connection_state_storage),
     hooks(hooks),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
@@ -622,197 +620,24 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
 	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
 
-	if (programs.size() > 1 && connection.is_quiggeldy() && has_hook_around_realtime) {
-		LOG4CXX_WARN(
-		    logger, "operator(): Connection uses quiggeldy and more than one playback programs "
-		            "shall be executed back-to-back with a pre or post realtime hook. Their "
-		            "contiguity can't be guaranteed.");
-	}
-
-	hate::Timer const schedule_out_replacement_timer;
-	PlaybackProgramBuilder schedule_out_replacement_builder;
-	if (ppu_symbols) {
-		schedule_out_replacement_builder.merge_back(
-		    generate(generator::PPUStop(ppu_status_coord.toMin(), ppu_stopped_coord.toMin()))
-		        .builder);
-		schedule_out_replacement_builder.merge_back(
-		    generate(generator::GetState{ppu_symbols.has_value()}).builder);
-	}
-	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
-	LOG4CXX_TRACE(
-	    logger, "operator(): Generated playback program for schedule out replacement in "
-	                << schedule_out_replacement_timer.print() << ".");
-
-	hate::Timer const read_timer;
-	PlaybackProgram get_state_program;
-	std::optional<generator::GetState::Result> get_state_result;
-	if (connection_state_storage.enable_differential_config && ppu_symbols) {
-		auto get_state = generate(generator::GetState(ppu_symbols.has_value()));
-		get_state_program = get_state.builder.done();
-		get_state_result = get_state.result;
-	}
-	LOG4CXX_TRACE(
-	    logger, "operator(): Generated playback program for read-back of PPU alterations in "
-	                << read_timer.print() << ".");
-
-	std::unique_lock<std::mutex> connection_lock(connection_state_storage.mutex, std::defer_lock);
-	// exclusive access to connection_state_storage and connection required from here in
-	// differential mode
-	if (connection_state_storage.enable_differential_config) {
-		connection_lock.lock();
-	}
-
-	hate::Timer const initial_config_program_timer;
-	bool const is_fresh_connection_state_storage_config =
-	    connection_state_storage.config.get_is_fresh();
-	connection_state_storage.config.set_chip(configs_visited[0], true);
-	if (external_ppu_dram_memory_visited) {
-		connection_state_storage.config.set_external_ppu_dram_memory(
-		    external_ppu_dram_memory_visited);
-	}
-
-	bool const enforce_base = !connection_state_storage.config.get_enable_differential_config() ||
-	                          is_fresh_connection_state_storage_config ||
-	                          !hooks.pre_static_config.empty();
-	bool const has_capmem_changes =
-	    enforce_base || connection_state_storage.config.get_differential_changes_capmem();
-	bool const nothing_changed = connection_state_storage.config.get_enable_differential_config() &&
-	                             !is_fresh_connection_state_storage_config &&
-	                             !connection_state_storage.config.get_has_differential() &&
-	                             hooks.pre_static_config.empty();
-
-	PlaybackProgramBuilder base_builder;
-
-	base_builder.merge_back(hooks.pre_static_config);
-
-	PlaybackProgramBuilder differential_builder;
-	if (!nothing_changed) {
-		base_builder.write(
-		    ConnectionConfigBaseCoordinate(),
-		    ConnectionConfigBase(connection_state_storage.config));
-		if (connection_state_storage.config.get_has_differential()) {
-			differential_builder.write(
-			    ConnectionConfigDifferentialCoordinate(),
-			    ConnectionConfigDifferential(connection_state_storage.config));
-		}
-	}
-
-	auto base_program = base_builder.done();
-	auto differential_program = differential_builder.done();
-	LOG4CXX_TRACE(
-	    logger, "operator(): Generated playback program of initial config after "
-	                << initial_config_program_timer.print() << ".");
+	backend::PlaybackProgram program{
+	    configs_visited,
+	    external_ppu_dram_memory_visited,
+	    has_hook_around_realtime,
+	    std::move(hooks.pre_static_config),
+	    ppu_symbols,
+	    programs};
 
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 
-	auto const trigger_program =
-	    ppu_symbols ? generate(generator::PPUStart(ppu_status_coord.toMin())).builder.done()
-	                : PlaybackProgram();
-
-	// execute
-	hate::Timer const exec_timer;
-	std::chrono::nanoseconds connection_execution_duration_before{0};
-	std::chrono::nanoseconds connection_execution_duration_after{0};
-
-	bool runs_successful = true;
-
-	if (!programs.empty() || !base_program.empty()) {
-		// only lock execution section for non-differential config mode
-		if (!connection_state_storage.enable_differential_config) {
-			connection_lock.lock();
-		}
-
-		// we are locked here in any case
-		connection_execution_duration_before = connection.get_time_info().execution_duration;
-
-		// Only if something changed (re-)set base and differential reinit
-		if (!nothing_changed) {
-			connection_state_storage.reinit_base.set(base_program, std::nullopt, enforce_base);
-
-			// Only enforce when not empty to support non-differential mode.
-			// In differential mode it is always enforced on changes.
-			connection_state_storage.reinit_differential.set(
-			    differential_program, std::nullopt, !differential_program.empty());
-		}
-
-		// Never enforce, since the reinit is only filled after a schedule-out operation.
-		connection_state_storage.reinit_schedule_out_replacement.set(
-		    PlaybackProgram(), schedule_out_replacement_program, false);
-
-		// Always write capmem settling wait reinit, but only enforce it when the wait is
-		// immediately required, i.e. after changes to the capmem.
-		connection_state_storage.reinit_capmem_settling_wait.set(
-		    generate(generator::CapMemSettlingWait()).builder.done(), std::nullopt,
-		    has_capmem_changes);
-
-		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
-		connection_state_storage.reinit_trigger.set(
-		    trigger_program, std::nullopt, !trigger_program.empty());
-
-		// Execute realtime sections
-		for (auto& p : programs) {
-			try {
-				auto time_info = backend::run(connection, p);
-				LOG4CXX_TRACE(
-				    logger, "operator(): Executed playback program in " << time_info << ".");
-			} catch (std::runtime_error const& error) {
-				LOG4CXX_ERROR(
-				    logger,
-				    "operator(): Run of playback program not sucecssful: " << error.what() << ".");
-				runs_successful = false;
-			}
-		}
-
-		// If the PPUs (can) alter state, read it back to update current_config accordingly to
-		// represent the actual hardware state.
-		if (!get_state_program.empty()) {
-			try {
-				auto time_info = backend::run(connection, get_state_program);
-				LOG4CXX_TRACE(
-				    logger, "operator(): Executed playback program in " << time_info << ".");
-			} catch (std::runtime_error const& error) {
-				LOG4CXX_ERROR(
-				    logger,
-				    "operator(): Run of playback program not sucecssful: " << error.what() << ".");
-				runs_successful = false;
-			}
-		}
-
-		// unlock execution section for non-differential config mode
-		if (!connection_state_storage.enable_differential_config) {
-			connection_execution_duration_after = connection.get_time_info().execution_duration;
-			connection_lock.unlock();
-		}
-	}
-	LOG4CXX_TRACE(
-	    logger, "operator(): Executed built PlaybackPrograms in " << exec_timer.print() << ".");
-
-	// update connection state
-	if (configs_visited.size() > 1 || ppu_symbols) {
-		hate::Timer const update_state_timer;
-		auto current_config = configs_visited[configs_visited.size() - 1];
-		if (get_state_result) {
-			get_state_result->apply(current_config);
-		}
-		if (runs_successful) {
-			connection_state_storage.config.set_chip(current_config, false);
-		} else {
-			// reset connection state storage since no assumptions can be made after failure
-			connection_state_storage.config = ConnectionConfig();
-			connection_state_storage.config.set_enable_differential_config(
-			    connection_state_storage.enable_differential_config);
-		}
-		LOG4CXX_TRACE(
-		    logger,
-		    "operator(): Updated connection state in " << update_state_timer.print() << ".");
-	}
-
-	// unlock execution section for differential config mode
-	if (connection_state_storage.enable_differential_config) {
-		if (!programs.empty() || !base_program.empty()) {
-			connection_execution_duration_after = connection.get_time_info().execution_duration;
-		}
-		connection_lock.unlock();
+	bool run_successful = true;
+	backend::RunTimeInfo run_time_info;
+	try {
+		run_time_info = backend::run(connection, program);
+	} catch (std::runtime_error const& error) {
+		LOG4CXX_ERROR(
+		    logger, "operator(): Run of playback program not successful: " << error.what() << ".");
+		run_successful = false;
 	}
 
 	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
@@ -839,7 +664,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		// add execution duration per hardware to result data map
 		assert(result_data_map.execution_time_info);
 		result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
-		    connection_execution_duration_after - connection_execution_duration_before;
+		    run_time_info.execution_duration;
 
 		// annotate execution health info
 		signal_flow::ExecutionHealthInfo execution_health_info_total;
@@ -850,16 +675,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		result_data_map.pre_execution_chips[execution_instance] = configs_visited[i];
 
 		// merge local data map into global data map
-		if (runs_successful) {
+		if (run_successful) {
 			data_maps[i].merge(result_data_map);
 		}
 	}
 
-	// throw exception if any run was not successful
+	// throw exception if run was not successful
 	// typically another post-processing operation above will fail before this exception is
 	// triggered
-	if (!runs_successful) {
-		throw std::runtime_error("At least one playback program execution was not successful.");
+	if (!run_successful) {
+		throw std::runtime_error("Run of playback program not successful.");
 	}
 }
 

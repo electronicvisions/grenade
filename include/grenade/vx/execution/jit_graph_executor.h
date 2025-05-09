@@ -1,7 +1,6 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/backend/initialized_connection.h"
-#include "grenade/vx/execution/detail/connection_state_storage.h"
+#include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
@@ -54,13 +53,9 @@ public:
 	/**
 	 * Construct executor with given active connections.
 	 * @param connections InitializedConnections to acquire and provide
-	 * @param enable_differential_config Whether to enable differential configuration writes instead
-	 * of full ones
 	 */
-	JITGraphExecutor(
-	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection>&&
-	        connections,
-	    bool enable_differential_config = true) SYMBOL_VISIBLE;
+	JITGraphExecutor(std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection>&&
+	                     connections) SYMBOL_VISIBLE;
 
 	/**
 	 * Get identifiers of connections contained in executor.
@@ -72,7 +67,7 @@ public:
 	 * Release contained connections.
 	 * @return InitializedConnections to the associated hardware
 	 */
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection>&&
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection>&&
 	release_connections() SYMBOL_VISIBLE;
 
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo> get_time_info() const
@@ -90,13 +85,8 @@ public:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> get_hwdb_entry() const
 	    SYMBOL_VISIBLE;
 
-	bool get_enable_differential_config() const;
-
 private:
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection> m_connections;
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, detail::ConnectionStateStorage>
-	    m_connection_state_storages;
-	bool m_enable_differential_config;
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection> m_connections;
 
 	/**
 	 * Check whether the given graph can be executed.
