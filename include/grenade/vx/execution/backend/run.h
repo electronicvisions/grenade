@@ -13,24 +13,24 @@ using PlaybackProgram = stadls::vx::PlaybackProgram;
 
 namespace grenade::vx::execution::backend {
 
-struct Connection;
+struct InitializedConnection;
 
 /**
  * Execute given playback program using the given connection.
- * @param connection Connection to run on
+ * @param connection InitializedConnection to run on
  * @param program Program to execute
  * @return Run time information of execution
  */
-stadls::vx::RunTimeInfo run(Connection& connection, stadls::vx::v3::PlaybackProgram& program)
-    SYMBOL_VISIBLE;
+stadls::vx::RunTimeInfo run(
+    InitializedConnection& connection, stadls::vx::v3::PlaybackProgram& program) SYMBOL_VISIBLE;
 
 /**
  * Execute given playback program using the given connection.
- * @param connection Connection to run on
+ * @param connection InitializedConnection to run on
  * @param program Program to execute
  * @return Run time information of execution
  */
-stadls::vx::RunTimeInfo run(Connection& connection, stadls::vx::v3::PlaybackProgram&& program)
-    SYMBOL_VISIBLE;
+stadls::vx::RunTimeInfo run(
+    InitializedConnection& connection, stadls::vx::v3::PlaybackProgram&& program) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx::execution::backend

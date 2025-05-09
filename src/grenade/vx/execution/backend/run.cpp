@@ -1,6 +1,6 @@
 #include "grenade/vx/execution/backend/run.h"
 
-#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
 #include "halco/common/iter_all.h"
 #include "halco/hicann-dls/vx/v3/barrier.h"
 #include "halco/hicann-dls/vx/v3/fpga.h"
@@ -55,10 +55,10 @@ void check_link_notifications(
 	}
 }
 
-template <typename Connection>
+template <typename InitializedConnection>
 void perform_post_fail_analysis(
     log4cxx::LoggerPtr logger,
-    Connection& connection,
+    InitializedConnection& connection,
     stadls::vx::v3::PlaybackProgram const& dead_program)
 {
 	using namespace halco::common;
@@ -117,7 +117,7 @@ using namespace stadls::vx::v3;
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
 
-stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram& program)
+stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram& program)
 {
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 	stadls::vx::RunTimeInfo ret;
@@ -137,7 +137,7 @@ stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram& program)
 	return ret;
 }
 
-stadls::vx::RunTimeInfo run(Connection& connection, PlaybackProgram&& program)
+stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram&& program)
 {
 	return run(connection, program);
 }

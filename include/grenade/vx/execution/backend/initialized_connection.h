@@ -13,9 +13,9 @@
 
 namespace grenade::vx::execution::backend {
 
-struct Connection;
-stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
-stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
+struct InitializedConnection;
+stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProgram&);
+stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProgram&&);
 
 
 /**
@@ -23,7 +23,7 @@ stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
  * In addition to the initialized connection a corresponding reinit stack is being held, which
  * requires an equal lifetime.
  */
-struct Connection
+struct InitializedConnection
 {
 	/** Accepted initialization generators. */
 	typedef std::variant<stadls::vx::v3::ExperimentInit, stadls::vx::v3::DigitalInit> Init;
@@ -31,14 +31,14 @@ struct Connection
 	/**
 	 * Construct connection from environment and initialize with default constructed ExperimentInit.
 	 */
-	Connection() SYMBOL_VISIBLE;
+	InitializedConnection() SYMBOL_VISIBLE;
 
 	/**
 	 * Construct connection from hxcomm connection and initialize with default constructed
 	 * ExperimentInit. Ownership of the hxcomm connection is transferred to this object.
 	 * @param connection Connection from hxcomm to use
 	 */
-	Connection(hxcomm::vx::ConnectionVariant&& connection) SYMBOL_VISIBLE;
+	InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) SYMBOL_VISIBLE;
 
 	/**
 	 * Construct connection from hxcomm connection and initialization generator.
@@ -46,7 +46,8 @@ struct Connection
 	 * @param connection Connection from hxcomm to use
 	 * @param init Initialization to use
 	 */
-	Connection(hxcomm::vx::ConnectionVariant&& connection, Init const& init) SYMBOL_VISIBLE;
+	InitializedConnection(hxcomm::vx::ConnectionVariant&& connection, Init const& init)
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Get time information of execution(s).
@@ -106,8 +107,8 @@ private:
 	/** Reinit stack entry of initialization for reapplication. */
 	stadls::vx::v3::ReinitStackEntry m_init;
 
-	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&);
-	friend stadls::vx::RunTimeInfo run(Connection&, stadls::vx::v3::PlaybackProgram&&);
+	friend stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProgram&);
+	friend stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProgram&&);
 };
 
 } // namespace grenade::vx::execution::backend

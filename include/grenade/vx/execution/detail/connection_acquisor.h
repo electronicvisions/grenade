@@ -20,7 +20,7 @@ struct ConnectionAcquisor
 
 	ConnectionAcquisor(T& t) : handle(t), executor()
 	{
-		std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> connections;
+		std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection> connections;
 		connections.emplace(halco::hicann_dls::vx::v3::DLSGlobal(), std::move(t.get()));
 		executor = std::make_unique<JITGraphExecutor>(std::move(connections));
 

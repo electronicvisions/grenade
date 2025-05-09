@@ -18,7 +18,7 @@ typedef std::shared_ptr<Logger> LoggerPtr;
 } // namespace log4cxx
 
 namespace grenade::vx::execution::backend {
-struct Connection;
+struct InitializedConnection;
 } // namespace grenade::vx::execution::backend
 
 namespace grenade::vx::execution::detail {
@@ -38,7 +38,7 @@ struct ExecutionInstanceNode
 	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
 	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
-	    backend::Connection& connection,
+	    backend::InitializedConnection& connection,
 	    ConnectionStateStorage& connection_state_storage,
 	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
@@ -67,7 +67,7 @@ private:
 	grenade::common::ExecutionInstanceID execution_instance;
 	halco::hicann_dls::vx::v3::DLSGlobal dls_global;
 	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> configs;
-	backend::Connection& connection;
+	backend::InitializedConnection& connection;
 	ConnectionStateStorage& connection_state_storage;
 	signal_flow::ExecutionInstanceHooks& hooks;
 	log4cxx::LoggerPtr logger;

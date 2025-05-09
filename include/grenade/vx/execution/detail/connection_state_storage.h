@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace grenade::vx::execution::backend {
-struct Connection;
+struct InitializedConnection;
 } // namespace grenade::vx::execution::backend
 
 namespace grenade::vx::execution::detail {
@@ -34,8 +34,8 @@ struct ConnectionStateStorage
 	 * connection
 	 * @param connection Connection to construct reinit stack entries from
 	 */
-	ConnectionStateStorage(bool enable_differential_config, backend::Connection& connection)
-	    SYMBOL_VISIBLE;
+	ConnectionStateStorage(
+	    bool enable_differential_config, backend::InitializedConnection& connection) SYMBOL_VISIBLE;
 };
 
 } // namespace grenade::vx::execution::detail

@@ -1,11 +1,11 @@
 #include "grenade/vx/execution/detail/connection_state_storage.h"
 
-#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
 
 namespace grenade::vx::execution::detail {
 
 ConnectionStateStorage::ConnectionStateStorage(
-    bool const enable_differential_config, backend::Connection& connection) :
+    bool const enable_differential_config, backend::InitializedConnection& connection) :
     enable_differential_config(enable_differential_config),
     current_config(),
     current_config_words(),

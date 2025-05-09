@@ -1,6 +1,6 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 
-#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -21,7 +21,8 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
 	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env();
 	for (size_t i = 0; i < hxcomm_connections.size(); ++i) {
 		halco::hicann_dls::vx::v3::DLSGlobal identifier(i);
-		m_connections.emplace(identifier, backend::Connection(std::move(hxcomm_connections.at(i))));
+		m_connections.emplace(
+		    identifier, backend::InitializedConnection(std::move(hxcomm_connections.at(i))));
 		m_connection_state_storages.emplace(
 		    std::piecewise_construct, std::forward_as_tuple(identifier),
 		    std::forward_as_tuple(m_enable_differential_config, m_connections.at(identifier)));
@@ -29,7 +30,7 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) :
 }
 
 JITGraphExecutor::JITGraphExecutor(
-    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& connections,
+    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection>&& connections,
     bool const enable_differential_config) :
     m_connections(std::move(connections)),
     m_connection_state_storages(),
@@ -51,7 +52,7 @@ std::set<halco::hicann_dls::vx::v3::DLSGlobal> JITGraphExecutor::contained_conne
 	return ret;
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&&
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection>&&
 JITGraphExecutor::release_connections()
 {
 	m_connection_state_storages.clear();

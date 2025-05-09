@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/execution/detail/connection_state_storage.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -53,12 +53,13 @@ public:
 
 	/**
 	 * Construct executor with given active connections.
-	 * @param connections Connections to acquire and provide
+	 * @param connections InitializedConnections to acquire and provide
 	 * @param enable_differential_config Whether to enable differential configuration writes instead
 	 * of full ones
 	 */
 	JITGraphExecutor(
-	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& connections,
+	    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection>&&
+	        connections,
 	    bool enable_differential_config = true) SYMBOL_VISIBLE;
 
 	/**
@@ -69,10 +70,10 @@ public:
 
 	/**
 	 * Release contained connections.
-	 * @return Connections to the associated hardware
+	 * @return InitializedConnections to the associated hardware
 	 */
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection>&& release_connections()
-	    SYMBOL_VISIBLE;
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection>&&
+	release_connections() SYMBOL_VISIBLE;
 
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo> get_time_info() const
 	    SYMBOL_VISIBLE;
@@ -89,7 +90,7 @@ public:
 	bool get_enable_differential_config() const;
 
 private:
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::Connection> m_connections;
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::InitializedConnection> m_connections;
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, detail::ConnectionStateStorage>
 	    m_connection_state_storages;
 	bool m_enable_differential_config;

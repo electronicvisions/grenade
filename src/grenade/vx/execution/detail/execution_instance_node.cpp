@@ -2,7 +2,7 @@
 
 #include "fisch/vx/omnibus.h"
 #include "fisch/vx/playback_program_builder.h"
-#include "grenade/vx/execution/backend/connection.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
@@ -39,7 +39,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     grenade::common::ExecutionInstanceID const& execution_instance,
     halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
     std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
-    backend::Connection& connection,
+    backend::InitializedConnection& connection,
     ConnectionStateStorage& connection_state_storage,
     signal_flow::ExecutionInstanceHooks& hooks) :
     data_maps(data_maps),
