@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/backend/connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/signal_flow/graph.h"

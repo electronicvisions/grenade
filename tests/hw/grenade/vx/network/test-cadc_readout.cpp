@@ -1,6 +1,4 @@
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/backend/connection.h"
-#include "grenade/vx/execution/backend/run.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/cadc_recording.h"
 #include "grenade/vx/network/extract_output.h"
