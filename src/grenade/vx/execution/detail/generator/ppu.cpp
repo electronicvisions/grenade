@@ -1,6 +1,7 @@
 #include "grenade/vx/execution/detail/generator/ppu.h"
 
 #include "halco/common/iter_all.h"
+#include "halco/hicann-dls/vx/v3/fpga.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
@@ -223,54 +224,32 @@ PPUPeriodicCADCRead::generate() const
 	    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
 
 	// generate tickets for extmem readout of periodic cadc recording data
-	if (std::holds_alternative<ExternalPPUMemoryBlockOnFPGA>(
-	        m_symbols.at("periodic_cadc_samples_top").coordinate)) { // block ram
-		if (m_used_hemispheres[HemisphereOnDLS::top]) {
-			result.tickets[PPUOnDLS::top] = builder.read(ExternalPPUMemoryBlockOnFPGA(
-			    std::get<ExternalPPUMemoryBlockOnFPGA>(
-			        m_symbols.at("periodic_cadc_samples_top").coordinate)
-			        .toMin(),
-			    ExternalPPUMemoryByteOnFPGA(
-			        std::get<ExternalPPUMemoryBlockOnFPGA>(
-			            m_symbols.at("periodic_cadc_samples_top").coordinate)
-			            .toMin() +
-			        128 + ((256 + 128) * m_size) - 1)));
-		}
-		if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
-			result.tickets[PPUOnDLS::bottom] = builder.read(ExternalPPUMemoryBlockOnFPGA(
-			    std::get<ExternalPPUMemoryBlockOnFPGA>(
-			        m_symbols.at("periodic_cadc_samples_bot").coordinate)
-			        .toMin(),
-			    ExternalPPUMemoryByteOnFPGA(
-			        std::get<ExternalPPUMemoryBlockOnFPGA>(
-			            m_symbols.at("periodic_cadc_samples_bot").coordinate)
-			            .toMin() +
-			        128 + ((256 + 128) * m_size) - 1)));
-		}
-	} else {
-		if (m_used_hemispheres[HemisphereOnDLS::top]) {
-			result.tickets[PPUOnDLS::top] = builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
-			    std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-			        m_symbols.at("periodic_cadc_samples_top").coordinate)
-			        .toMin(),
-			    ExternalPPUDRAMMemoryByteOnFPGA(
-			        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-			            m_symbols.at("periodic_cadc_samples_top").coordinate)
-			            .toMin() +
-			        128 + ((256 + 128) * m_size) - 1)));
-		}
-		if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
-			result.tickets[PPUOnDLS::bottom] = builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
-			    std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-			        m_symbols.at("periodic_cadc_samples_bot").coordinate)
-			        .toMin(),
-			    ExternalPPUDRAMMemoryByteOnFPGA(
-			        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-			            m_symbols.at("periodic_cadc_samples_bot").coordinate)
-			            .toMin() +
-			        128 + ((256 + 128) * m_size) - 1)));
-		}
-	}
+	std::visit(
+	    hate::overloaded{
+	        [&](ExternalPPUMemoryBlockOnFPGA const& coord_top,
+	            ExternalPPUMemoryBlockOnFPGA const& coord_bot) {
+		        if (m_used_hemispheres[HemisphereOnDLS::top]) {
+			        result.tickets[PPUOnDLS::top] = builder.read(coord_top);
+		        }
+		        if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
+			        result.tickets[PPUOnDLS::bottom] = builder.read(coord_bot);
+		        }
+	        },
+	        [&](ExternalPPUDRAMMemoryBlockOnFPGA const& coord_top,
+	            ExternalPPUDRAMMemoryBlockOnFPGA const& coord_bot) {
+		        if (m_used_hemispheres[HemisphereOnDLS::top]) {
+			        result.tickets[PPUOnDLS::top] = builder.read(coord_top);
+		        }
+		        if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
+			        result.tickets[PPUOnDLS::bottom] = builder.read(coord_bot);
+		        }
+	        },
+	        [&](auto const&, auto const&) {
+		        throw std::logic_error(
+		            "Reading CADC samples from given coordinate types not implemented.");
+	        }},
+	    m_symbols.at("periodic_cadc_samples_top").coordinate,
+	    m_symbols.at("periodic_cadc_samples_bot").coordinate);
 
 	// Reset the offset, from where the PPU begins to write the recorded CADC data
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
