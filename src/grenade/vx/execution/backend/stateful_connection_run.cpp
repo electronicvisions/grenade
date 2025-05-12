@@ -20,13 +20,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	stadls::vx::v3::PlaybackProgramBuilder schedule_out_replacement_builder;
 	if (program.ppu_symbols) {
 		schedule_out_replacement_builder.merge_back(
-		    stadls::vx::v3::generate(execution::detail::generator::PPUStop(
-		                                 std::get<halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU>(
-		                                     program.ppu_symbols->at("status").coordinate)
-		                                     .toMin(),
-		                                 std::get<halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU>(
-		                                     program.ppu_symbols->at("stopped").coordinate)
-		                                     .toMin()))
+		    stadls::vx::v3::generate(execution::detail::generator::PPUStop(*program.ppu_symbols))
 		        .builder);
 		schedule_out_replacement_builder.merge_back(
 		    stadls::vx::v3::generate(

@@ -94,13 +94,17 @@ stadls::vx::PlaybackGeneratorReturn<PPUStop::Builder, PPUStop::Result> PPUStop::
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
 		PPUMemoryWord config(
 		    PPUMemoryWord::Value(static_cast<uint32_t>(ppu::detail::Status::stop)));
-		builder.write(PPUMemoryWordOnDLS(m_coord, ppu), config);
+		auto const ppu_coord =
+		    std::get<PPUMemoryBlockOnPPU>(m_symbols.at("status").coordinate).toMin();
+		builder.write(PPUMemoryWordOnDLS(ppu_coord, ppu), config);
 	}
 	// poll for completion by waiting until PPU has stopped state
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
 		PollingOmnibusBlockConfig config;
+		auto const ppu_stopped_coord =
+		    std::get<PPUMemoryBlockOnPPU>(m_symbols.at("stopped").coordinate).toMin();
 		config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-		                       PPUMemoryWordOnDLS(m_stopped_coord, ppu))
+		                       PPUMemoryWordOnDLS(ppu_stopped_coord, ppu))
 		                       .at(0));
 		config.set_target(PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(true)));
 		config.set_mask(PollingOmnibusBlockConfig::Value(0x00000001));

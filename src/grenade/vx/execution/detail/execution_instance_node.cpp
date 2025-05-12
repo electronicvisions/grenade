@@ -5,6 +5,7 @@
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection_run.h"
+#include "grenade/vx/execution/detail/execution_instance_ppu_program_compiler.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
@@ -77,179 +78,21 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		ExecutionInstanceSnippetConfigVisitor(graphs[i], execution_instance)(configs_visited[i]);
 	}
 
-	ExecutionInstanceSnippetPPUUsageVisitor::Result overall_ppu_usage;
-	std::vector<ExecutionInstanceSnippetPPUUsageVisitor::Result> ppu_usages;
-	for (size_t i = 0; i < realtime_column_count; i++) {
-		auto ppu_usage =
-		    ExecutionInstanceSnippetPPUUsageVisitor(graphs[i], execution_instance, i)();
-		ppu_usages.push_back(ppu_usage);
-		overall_ppu_usage += std::move(ppu_usage);
-	}
+	bool const has_hook_around_realtime =
+	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
+	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
 
-	std::vector<common::Time> maximal_periodic_cadc_runtimes(
-	    input_data_maps.at(0).get().batch_size());
-	for (size_t i = 0; i < realtime_column_count; ++i) {
-		if (ppu_usages.at(i).has_periodic_cadc_readout ||
-		    ppu_usages.at(i).has_periodic_cadc_readout_on_dram) {
-			for (size_t b = 0; b < maximal_periodic_cadc_runtimes.size(); ++b) {
-				maximal_periodic_cadc_runtimes.at(b) +=
-				    input_data_maps.at(i).get().runtime.at(b).at(execution_instance);
-			}
-		}
-	}
-	common::Time maximal_periodic_cadc_runtime(0);
-	if (!maximal_periodic_cadc_runtimes.empty()) {
-		maximal_periodic_cadc_runtime = *std::max_element(
-		    maximal_periodic_cadc_runtimes.begin(), maximal_periodic_cadc_runtimes.end());
-	}
+	backend::PlaybackProgram program{
+	    configs_visited,
+	    std::nullopt,
+	    has_hook_around_realtime,
+	    std::move(hooks.pre_static_config),
+	    std::nullopt,
+	    {}};
 
-	std::optional<PPUElfFile::symbols_type> ppu_symbols;
-	std::vector<std::map<signal_flow::vertex::PlasticityRule::ID, size_t>>
-	    plasticity_rule_timed_recording_start_periods(realtime_column_count);
-	PPUMemoryBlockOnPPU ppu_status_coord;
-	PPUMemoryBlockOnPPU ppu_stopped_coord;
-	size_t estimated_cadc_recording_size = 0;
-	if (overall_ppu_usage.has_cadc_readout || !overall_ppu_usage.plasticity_rules.empty()) {
-		hate::Timer ppu_timer;
-		PPUElfFile::Memory ppu_program;
-		PPUMemoryBlockOnPPU ppu_neuron_reset_mask_coord;
-		PPUMemoryWordOnPPU ppu_location_coord;
-		{
-			PPUProgramGenerator ppu_program_generator;
-			std::vector<std::map<signal_flow::vertex::PlasticityRule::ID, size_t>>
-			    plasticity_rule_timed_recording_num_periods(realtime_column_count);
-			for (auto const& [descriptor, rule, synapses, neurons, realtime_column_index] :
-			     overall_ppu_usage.plasticity_rules) {
-				ppu_program_generator.add(
-				    descriptor, rule, synapses, neurons, realtime_column_index);
-				plasticity_rule_timed_recording_num_periods.at(
-				    realtime_column_index)[rule.get_id()] = rule.get_timer().num_periods;
-			}
-			// sum up number of periods for different plasticity rules in order to get the index
-			// offset of the rule in the recording data for each realtime snippet.
-			for (size_t i = 0; i < realtime_column_count; ++i) {
-				for (size_t j = 0; j < i; ++j) {
-					for (auto const& [id, num_periods] :
-					     plasticity_rule_timed_recording_num_periods.at(j)) {
-						plasticity_rule_timed_recording_start_periods.at(i)[id] += num_periods;
-					}
-				}
-			}
-			ppu_program_generator.has_periodic_cadc_readout =
-			    overall_ppu_usage.has_periodic_cadc_readout;
-			ppu_program_generator.has_periodic_cadc_readout_on_dram =
-			    overall_ppu_usage.has_periodic_cadc_readout_on_dram;
-			// calculate aproximate number of expected samples
-			// lower bound on sample duration -> upper bound on sample rate
-			size_t const approx_sample_duration =
-			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
-			estimated_cadc_recording_size =
-			    (maximal_periodic_cadc_runtime +
-			     (ExecutionInstanceSnippetRealtimeExecutor::wait_before_realtime +
-			      ExecutionInstanceSnippetRealtimeExecutor::wait_after_realtime) +
-			     periodic_cadc_fpga_wait_clock_cycles -
-			     (periodic_cadc_ppu_wait_clock_cycles /
-			      2 /* 250MHz vs. 125 MHz PPU vs. FPGA clock */)) /
-			    approx_sample_duration;
-			// add one sample as constant margin for error
-			estimated_cadc_recording_size += 1;
-			// cap at maximal possible amount of samples
-			size_t const maximal_size = overall_ppu_usage.has_periodic_cadc_readout_on_dram
-			                                ? num_cadc_samples_in_extmem_dram
-			                                : num_cadc_samples_in_extmem;
-			if (estimated_cadc_recording_size > maximal_size) {
-				LOG4CXX_WARN(
-				    logger, "It is estimated, that the CADC will measure "
-				                << estimated_cadc_recording_size << " samples , but only the first "
-				                << maximal_size << " can be recorded.");
-				estimated_cadc_recording_size = maximal_size;
-			}
-			ppu_program_generator.num_periodic_cadc_samples = estimated_cadc_recording_size;
-			CachingCompiler compiler;
-			auto program = compiler.compile(ppu_program_generator.done());
-			ppu_program = std::move(program.memory);
-			ppu_symbols = std::move(program.symbols);
-			ppu_neuron_reset_mask_coord =
-			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("neuron_reset_mask").coordinate);
-			ppu_location_coord =
-			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("ppu").coordinate).toMin();
-			ppu_status_coord = std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate);
-			ppu_stopped_coord =
-			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("stopped").coordinate);
-		}
-		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
-
-		// set external DRAM PPU program
-		external_ppu_dram_memory_visited = std::move(ppu_program.external_dram);
-
-		for (size_t i = 0; i < realtime_column_count; i++) {
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				// set internal PPU program
-				configs_visited[i].ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
-				    PPUMemoryBlockOnPPU(
-				        PPUMemoryWordOnPPU(),
-				        PPUMemoryWordOnPPU(ppu_program.internal.get_words().size() - 1)),
-				    ppu_program.internal);
-
-				// set neuron reset mask
-				halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;
-				for (auto const col : iter_all<NeuronColumnOnDLS>()) {
-					values[col] =
-					    ppu_usages[i].enabled_neuron_resets
-					        [AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS()).toNeuronResetOnDLS()];
-				}
-				auto const neuron_reset_mask = to_vector_unit_row(values);
-				configs_visited[i].ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
-				    ppu_neuron_reset_mask_coord, neuron_reset_mask);
-				configs_visited[i].ppu_memory[ppu.toPPUMemoryOnDLS()].set_word(
-				    ppu_location_coord, PPUMemoryWord::Value(ppu.value()));
-			}
-
-			// set external PPU program
-			if (ppu_program.external) {
-				configs_visited[i].external_ppu_memory.set_subblock(
-				    0, ppu_program.external.value());
-			}
-
-			// inject playback-hook PPU symbols to be overwritten
-			for (auto const& [name, memory_config] : hooks.write_ppu_symbols) {
-				if (!ppu_symbols) {
-					throw std::runtime_error("Provided PPU symbols but no PPU program is present.");
-				}
-				if (!ppu_symbols->contains(name)) {
-					throw std::runtime_error(
-					    "Provided unknown symbol name via ExecutionInstanceHooks.");
-				}
-				std::visit(
-				    hate::overloaded{
-				        [&](PPUMemoryBlockOnPPU const& coordinate) {
-					        for (auto const& [hemisphere, memory] : std::get<
-					                 std::map<HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>>(
-					                 memory_config)) {
-						        configs_visited[i]
-						            .ppu_memory[hemisphere.toPPUMemoryOnDLS()]
-						            .set_block(coordinate, memory);
-					        }
-				        },
-				        [&](ExternalPPUMemoryBlockOnFPGA const& coordinate) {
-					        configs_visited[i].external_ppu_memory.set_subblock(
-					            coordinate.toMin().value(),
-					            std::get<lola::vx::v3::ExternalPPUMemoryBlock>(memory_config));
-				        },
-				        [&](ExternalPPUDRAMMemoryBlockOnFPGA const& coordinate) {
-					        assert(external_ppu_dram_memory_visited);
-					        // only apply once
-					        if (i > 0) {
-						        return;
-					        }
-					        external_ppu_dram_memory_visited->set_subblock(
-					            coordinate.toMin().value(),
-					            std::get<lola::vx::v3::ExternalPPUDRAMMemoryBlock>(memory_config));
-				        }},
-				    ppu_symbols->at(name).coordinate);
-			}
-		}
-	}
+	auto const ppu_program =
+	    ExecutionInstancePPUProgramCompiler(graphs, input_data_maps, hooks, execution_instance)();
+	ppu_program.apply(program);
 
 	LOG4CXX_TRACE(
 	    logger, "operator(): Constructed configuration(s) in " << configs_timer.print() << ".");
@@ -281,8 +124,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool uses_madc = false;
 	for (size_t i = 0; i < realtime_column_count; i++) {
 		ExecutionInstanceSnippetRealtimeExecutor builder(
-		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, i,
-		    plasticity_rule_timed_recording_start_periods.at(i));
+		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_program.symbols, i,
+		    ppu_program.plasticity_rule_timed_recording_start_periods.at(i));
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
@@ -383,8 +226,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
 		// generate tickets for extmem readout of periodic cadc recording data
 		for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
-			auto [cadc_finalize_builder, local_cadc_readout_tickets] = generate(
-			    generator::PPUPeriodicCADCRead({uses_top_cadc, uses_bot_cadc}, *ppu_symbols));
+			auto [cadc_finalize_builder, local_cadc_readout_tickets] =
+			    generate(generator::PPUPeriodicCADCRead(
+			        {uses_top_cadc, uses_bot_cadc}, *ppu_program.symbols));
 			cadc_finalize_builders.push_back(std::move(cadc_finalize_builder));
 			cadc_readout_tickets[i] = std::move(local_cadc_readout_tickets.tickets);
 		}
@@ -469,9 +313,9 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			assemble_builder.merge_back(realtime_columns[j].realtimes[i].ppu_finish_builder);
 		}
 		// append PPU read hooks
-		if (ppu_symbols) {
+		if (ppu_program.symbols) {
 			auto [ppu_read_hooks_builder, ppu_read_hooks_result] =
-			    generate(generator::PPUReadHooks(hooks.read_ppu_symbols, *ppu_symbols));
+			    generate(generator::PPUReadHooks(hooks.read_ppu_symbols, *ppu_program.symbols));
 			assemble_builder.merge_back(ppu_read_hooks_builder);
 			ppu_read_hooks_results.push_back(std::move(ppu_read_hooks_result));
 		}
@@ -486,10 +330,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			assemble_builder.merge_back(cadc_finalize_builders.at(i));
 		}
 		// for the last batch entry, stop the PPU
-		if (i == realtime_columns[0].realtimes.size() - 1 && ppu_symbols) {
-			assemble_builder.merge_back(
-			    generate(generator::PPUStop(ppu_status_coord.toMin(), ppu_stopped_coord.toMin()))
-			        .builder);
+		if (i == realtime_columns[0].realtimes.size() - 1 && ppu_program.symbols) {
+			assemble_builder.merge_back(generate(generator::PPUStop(*ppu_program.symbols)).builder);
 		}
 		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
 		if (input_data_maps[input_data_maps.size() - 1].get().inter_batch_entry_wait.contains(
@@ -522,17 +364,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		programs.push_back(std::move(final_builder.done()));
 	}
 
-	bool const has_hook_around_realtime =
-	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
-	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
-
-	backend::PlaybackProgram program{
-	    configs_visited,
-	    external_ppu_dram_memory_visited,
-	    has_hook_around_realtime,
-	    std::move(hooks.pre_static_config),
-	    ppu_symbols,
-	    programs};
+	program.programs = programs;
 
 	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
 

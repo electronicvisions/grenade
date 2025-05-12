@@ -101,13 +101,9 @@ struct PPUStop
 
 	/**
 	 * Construct blocking PPU command.
-	 * @param coord PPU memory location at which to place the command
+	 * @param symbols PPU program symbols to extract memory location at which to place the command
 	 */
-	PPUStop(
-	    halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& coord,
-	    halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU const& stopped_coord) :
-	    m_coord(coord), m_stopped_coord(stopped_coord)
-	{}
+	PPUStop(lola::vx::v3::PPUElfFile::symbols_type const& symbols) : m_symbols(symbols) {}
 
 protected:
 	stadls::vx::PlaybackGeneratorReturn<Builder, Result> generate() const SYMBOL_VISIBLE;
@@ -115,8 +111,7 @@ protected:
 	friend auto stadls::vx::generate<PPUStop>(PPUStop const&);
 
 private:
-	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_coord;
-	halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU m_stopped_coord;
+	lola::vx::v3::PPUElfFile::symbols_type m_symbols;
 };
 
 
