@@ -192,4 +192,103 @@ PPUReadHooks::generate() const
 }
 
 
+stadls::vx::PlaybackGeneratorReturn<PPUPeriodicCADCRead::Builder, PPUPeriodicCADCRead::Result>
+PPUPeriodicCADCRead::generate() const
+{
+	Builder builder;
+	Result result;
+
+	InstructionTimeoutConfig instruction_timeout;
+	instruction_timeout.set_value(InstructionTimeoutConfig::Value(
+	    100000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
+	builder.write(halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
+
+	// wait for ppu command idle
+	// TODO: make generator for this, all PPU generators should take the symbols as constructor
+	// argument and extract the symbol names from it
+	for (auto const ppu : iter_all<PPUOnDLS>()) {
+		PPUMemoryWordOnPPU ppu_status_coord;
+		ppu_status_coord = std::get<PPUMemoryBlockOnPPU>(m_symbols.at("status").coordinate).toMin();
+		PollingOmnibusBlockConfig polling_config;
+		polling_config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
+		                               PPUMemoryWordOnDLS(ppu_status_coord, ppu))
+		                               .at(0));
+		polling_config.set_target(
+		    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
+		polling_config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
+		builder.write(PollingOmnibusBlockConfigOnFPGA(), polling_config);
+		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+		builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+
+		builder.write(
+		    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
+	}
+
+	// generate tickets for extmem readout of periodic cadc recording data
+	if (not m_use_dram) {
+		if (m_used_hemispheres[HemisphereOnDLS::top]) {
+			result.tickets[PPUOnDLS::top] = builder.read(ExternalPPUMemoryBlockOnFPGA(
+			    std::get<ExternalPPUMemoryBlockOnFPGA>(
+			        m_symbols.at("periodic_cadc_samples_top").coordinate)
+			        .toMin(),
+			    ExternalPPUMemoryByteOnFPGA(
+			        std::get<ExternalPPUMemoryBlockOnFPGA>(
+			            m_symbols.at("periodic_cadc_samples_top").coordinate)
+			            .toMin() +
+			        128 + ((256 + 128) * m_size) - 1)));
+		}
+		if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
+			result.tickets[PPUOnDLS::bottom] = builder.read(ExternalPPUMemoryBlockOnFPGA(
+			    std::get<ExternalPPUMemoryBlockOnFPGA>(
+			        m_symbols.at("periodic_cadc_samples_bot").coordinate)
+			        .toMin(),
+			    ExternalPPUMemoryByteOnFPGA(
+			        std::get<ExternalPPUMemoryBlockOnFPGA>(
+			            m_symbols.at("periodic_cadc_samples_bot").coordinate)
+			            .toMin() +
+			        128 + ((256 + 128) * m_size) - 1)));
+		}
+	} else {
+		if (m_used_hemispheres[HemisphereOnDLS::top]) {
+			result.tickets[PPUOnDLS::top] = builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
+			    std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+			        m_symbols.at("periodic_cadc_samples_top").coordinate)
+			        .toMin(),
+			    ExternalPPUDRAMMemoryByteOnFPGA(
+			        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+			            m_symbols.at("periodic_cadc_samples_top").coordinate)
+			            .toMin() +
+			        128 + ((256 + 128) * m_size) - 1)));
+		}
+		if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
+			result.tickets[PPUOnDLS::bottom] = builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
+			    std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+			        m_symbols.at("periodic_cadc_samples_bot").coordinate)
+			        .toMin(),
+			    ExternalPPUDRAMMemoryByteOnFPGA(
+			        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
+			            m_symbols.at("periodic_cadc_samples_bot").coordinate)
+			            .toMin() +
+			        128 + ((256 + 128) * m_size) - 1)));
+		}
+	}
+
+	// Reset the offset, from where the PPU begins to write the recorded CADC data
+	for (auto const ppu : iter_all<PPUOnDLS>()) {
+		builder.write(
+		    PPUMemoryWordOnDLS(
+		        std::get<PPUMemoryBlockOnPPU>(
+		            m_symbols.at("periodic_cadc_readout_memory_offset").coordinate)
+		            .toMin(),
+		        ppu),
+		    PPUMemoryWord(PPUMemoryWord::Value(static_cast<uint32_t>(0))));
+	}
+
+	// wait for response data
+	builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+
+	return {std::move(builder), std::move(result)};
+}
+
+
 } // namespace grenade::vx::execution::detail::generator

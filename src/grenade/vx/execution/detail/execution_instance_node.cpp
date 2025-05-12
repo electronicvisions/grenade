@@ -378,109 +378,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	    periodic_cadc_dram_recording.end();
 	assert(!has_periodic_cadc_recording || !has_periodic_cadc_dram_recording);
 	if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
-		PlaybackProgramBuilder cadc_finalize_builder_base;
-
-		InstructionTimeoutConfig instruction_timeout;
-		instruction_timeout.set_value(InstructionTimeoutConfig::Value(
-		    100000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
-		cadc_finalize_builder_base.write(
-		    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
-
-		// wait for ppu command idle
-		for (auto const ppu : iter_all<PPUOnDLS>()) {
-			PPUMemoryWordOnPPU ppu_status_coord;
-			ppu_status_coord =
-			    std::get<PPUMemoryBlockOnPPU>(ppu_symbols->at("status").coordinate).toMin();
-			PollingOmnibusBlockConfig polling_config;
-			polling_config.set_address(PPUMemoryWord::addresses<PollingOmnibusBlockConfig::Address>(
-			                               PPUMemoryWordOnDLS(ppu_status_coord, ppu))
-			                               .at(0));
-			polling_config.set_target(
-			    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
-			polling_config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
-			cadc_finalize_builder_base.write(PollingOmnibusBlockConfigOnFPGA(), polling_config);
-			cadc_finalize_builder_base.block_until(BarrierOnFPGA(), Barrier::omnibus);
-			cadc_finalize_builder_base.block_until(
-			    PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-
-			cadc_finalize_builder_base.write(
-			    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(),
-			    InstructionTimeoutConfig());
-		}
-
 		// generate tickets for extmem readout of periodic cadc recording data
 		for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
-			PlaybackProgramBuilder cadc_finalize_builder;
-			if (i < realtime_columns[0].realtimes.size() - 1) {
-				cadc_finalize_builder.copy_back(cadc_finalize_builder_base);
-			} else {
-				cadc_finalize_builder.merge_back(cadc_finalize_builder_base);
-			}
-			if (has_periodic_cadc_recording) {
-				if (uses_top_cadc) {
-					cadc_readout_tickets[i][PPUOnDLS::top] =
-					    cadc_finalize_builder.read(ExternalPPUMemoryBlockOnFPGA(
-					        std::get<ExternalPPUMemoryBlockOnFPGA>(
-					            ppu_symbols->at("periodic_cadc_samples_top").coordinate)
-					            .toMin(),
-					        ExternalPPUMemoryByteOnFPGA(
-					            std::get<ExternalPPUMemoryBlockOnFPGA>(
-					                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
-					                .toMin() +
-					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
-				}
-				if (uses_bot_cadc) {
-					cadc_readout_tickets[i][PPUOnDLS::bottom] =
-					    cadc_finalize_builder.read(ExternalPPUMemoryBlockOnFPGA(
-					        std::get<ExternalPPUMemoryBlockOnFPGA>(
-					            ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
-					            .toMin(),
-					        ExternalPPUMemoryByteOnFPGA(
-					            std::get<ExternalPPUMemoryBlockOnFPGA>(
-					                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
-					                .toMin() +
-					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
-				}
-			}
-			if (has_periodic_cadc_dram_recording) {
-				if (uses_top_cadc) {
-					cadc_readout_tickets[i][PPUOnDLS::top] =
-					    cadc_finalize_builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
-					        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-					            ppu_symbols->at("periodic_cadc_samples_top").coordinate)
-					            .toMin(),
-					        ExternalPPUDRAMMemoryByteOnFPGA(
-					            std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-					                ppu_symbols->at("periodic_cadc_samples_top").coordinate)
-					                .toMin() +
-					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
-				}
-				if (uses_bot_cadc) {
-					cadc_readout_tickets[i][PPUOnDLS::bottom] =
-					    cadc_finalize_builder.read(ExternalPPUDRAMMemoryBlockOnFPGA(
-					        std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-					            ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
-					            .toMin(),
-					        ExternalPPUDRAMMemoryByteOnFPGA(
-					            std::get<ExternalPPUDRAMMemoryBlockOnFPGA>(
-					                ppu_symbols->at("periodic_cadc_samples_bot").coordinate)
-					                .toMin() +
-					            128 + ((256 + 128) * estimated_cadc_recording_size) - 1)));
-				}
-			}
-			// Reset the offset, from where the PPU begins to write the recorded CADC data
-			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				cadc_finalize_builder.write(
-				    PPUMemoryWordOnDLS(
-				        std::get<PPUMemoryBlockOnPPU>(
-				            ppu_symbols->at("periodic_cadc_readout_memory_offset").coordinate)
-				            .toMin(),
-				        ppu),
-				    PPUMemoryWord(PPUMemoryWord::Value(static_cast<uint32_t>(0))));
-			}
-			// wait for response data
-			cadc_finalize_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			auto [cadc_finalize_builder, local_cadc_readout_tickets] =
+			    generate(generator::PPUPeriodicCADCRead(
+			        estimated_cadc_recording_size, has_periodic_cadc_dram_recording,
+			        {uses_top_cadc, uses_bot_cadc}, *ppu_symbols));
 			cadc_finalize_builders.push_back(std::move(cadc_finalize_builder));
+			cadc_readout_tickets[i] = std::move(local_cadc_readout_tickets.tickets);
 		}
 	}
 
