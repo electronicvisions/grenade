@@ -24,90 +24,36 @@ namespace grenade::vx::execution::detail {
 class ExecutionInstanceConfigVisitor
 {
 public:
-	struct PpuUsage
-	{
-		bool has_periodic_cadc_readout = false;
-		bool has_periodic_cadc_readout_on_dram = false;
-		bool has_cadc_readout = false;
-		std::vector<std::tuple<
-		    signal_flow::Graph::vertex_descriptor,
-		    signal_flow::vertex::PlasticityRule,
-		    std::vector<
-		        std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
-		    std::vector<
-		        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>,
-		    size_t>>
-		    plasticity_rules;
-
-		PpuUsage() = default;
-		PpuUsage(PpuUsage const& other) = default;
-		PpuUsage(PpuUsage&& other);
-		PpuUsage& operator=(PpuUsage&& other);
-		PpuUsage& operator=(PpuUsage& other) = default;
-
-		/**
-		 * Order has_periodic_cadc_readout and concatenate plasticity_rules
-		 */
-		PpuUsage& operator+=(PpuUsage&& other);
-	};
-
 	/**
 	 * Construct visitor.
 	 * @param graph Graph to use for locality and property lookup
 	 * @param execution_instance Local execution instance to visit
-	 * @param config Configuration to alter
 	 */
 	ExecutionInstanceConfigVisitor(
 	    signal_flow::Graph const& graph,
-	    grenade::common::ExecutionInstanceID const& execution_instance,
-	    lola::vx::v3::Chip& config,
-	    size_t realtime_column_index) SYMBOL_VISIBLE;
+	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
 	/**
 	 * Perform visit operation and generate initial configuration.
-	 * @return PpuUsage
 	 */
-	std::tuple<
-	    PpuUsage,
-	    halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>>
-	operator()() SYMBOL_VISIBLE;
+	void operator()(lola::vx::v3::Chip& chip) const SYMBOL_VISIBLE;
 
 private:
 	signal_flow::Graph const& m_graph;
 	grenade::common::ExecutionInstanceID m_execution_instance;
-
-	lola::vx::v3::Chip& m_config;
-
-	size_t m_realtime_column_index;
-
-	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>
-	    m_enabled_neuron_resets;
-	bool m_has_periodic_cadc_readout;
-	bool m_has_periodic_cadc_readout_on_dram;
-	bool m_has_cadc_readout;
-	bool m_used_madc;
-
-	std::vector<std::tuple<
-	    signal_flow::Graph::vertex_descriptor,
-	    signal_flow::vertex::PlasticityRule,
-	    std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>,
-	    std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>,
-	    size_t>>
-	    m_plasticity_rules;
 
 	/**
 	 * Process single vertex.
 	 * This function is called in preprocess.
 	 * @param vertex Vertex descriptor
 	 * @param data Data associated with vertex
+	 * @param chip Chip configuration to alter
 	 */
 	template <typename Vertex>
-	void process(signal_flow::Graph::vertex_descriptor const vertex, Vertex const& data);
-
-	/**
-	 * Preprocess by single visit of all local vertices.
-	 */
-	void pre_process() SYMBOL_VISIBLE;
+	void process(
+	    signal_flow::Graph::vertex_descriptor const vertex,
+	    Vertex const& data,
+	    lola::vx::v3::Chip& chip) const;
 };
 
 } // namespace grenade::vx::execution::detail

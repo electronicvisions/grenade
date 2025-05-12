@@ -6,6 +6,7 @@
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection_run.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/get_state.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
@@ -72,16 +73,17 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::vector<Chip> configs_visited(configs.begin(), configs.end());
 	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
 
-	ExecutionInstanceConfigVisitor::PpuUsage overall_ppu_usage;
-	std::vector<ExecutionInstanceConfigVisitor::PpuUsage> ppu_usages;
-	std::vector<typed_array<bool, NeuronResetOnDLS>> enabled_neuron_resets;
 	for (size_t i = 0; i < realtime_column_count; i++) {
-		std::tuple<ExecutionInstanceConfigVisitor::PpuUsage, typed_array<bool, NeuronResetOnDLS>>
-		    ppu_information = ExecutionInstanceConfigVisitor(
-		        graphs[i], execution_instance, configs_visited[i], i)();
-		ppu_usages.push_back(std::get<0>(ppu_information));
-		overall_ppu_usage += std::move(std::get<0>(ppu_information));
-		enabled_neuron_resets.push_back(std::get<1>(ppu_information));
+		ExecutionInstanceConfigVisitor(graphs[i], execution_instance)(configs_visited[i]);
+	}
+
+	ExecutionInstanceSnippetPPUUsageVisitor::Result overall_ppu_usage;
+	std::vector<ExecutionInstanceSnippetPPUUsageVisitor::Result> ppu_usages;
+	for (size_t i = 0; i < realtime_column_count; i++) {
+		auto ppu_usage =
+		    ExecutionInstanceSnippetPPUUsageVisitor(graphs[i], execution_instance, i)();
+		ppu_usages.push_back(ppu_usage);
+		overall_ppu_usage += std::move(ppu_usage);
 	}
 
 	std::vector<common::Time> maximal_periodic_cadc_runtimes(
@@ -193,8 +195,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 				halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;
 				for (auto const col : iter_all<NeuronColumnOnDLS>()) {
 					values[col] =
-					    enabled_neuron_resets[i][AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS())
-					                                 .toNeuronResetOnDLS()];
+					    ppu_usages[i].enabled_neuron_resets
+					        [AtomicNeuronOnDLS(col, ppu.toNeuronRowOnDLS()).toNeuronResetOnDLS()];
 				}
 				auto const neuron_reset_mask = to_vector_unit_row(values);
 				configs_visited[i].ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(

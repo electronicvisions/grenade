@@ -22,96 +22,18 @@
 
 namespace grenade::vx::execution::detail {
 
-ExecutionInstanceConfigVisitor::PpuUsage::PpuUsage(
-    ExecutionInstanceConfigVisitor::PpuUsage&& other) :
-    has_periodic_cadc_readout(other.has_periodic_cadc_readout),
-    has_periodic_cadc_readout_on_dram(other.has_periodic_cadc_readout_on_dram),
-    has_cadc_readout(other.has_cadc_readout),
-    plasticity_rules(std::move(other.plasticity_rules))
-{}
-
-ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsage::operator=(
-    ExecutionInstanceConfigVisitor::PpuUsage&& other)
-{
-	has_periodic_cadc_readout = other.has_periodic_cadc_readout;
-	has_periodic_cadc_readout_on_dram = other.has_periodic_cadc_readout_on_dram;
-	has_cadc_readout = other.has_cadc_readout;
-	plasticity_rules = std::move(other.plasticity_rules);
-	return *this;
-}
-
-ExecutionInstanceConfigVisitor::PpuUsage& ExecutionInstanceConfigVisitor::PpuUsage::operator+=(
-    ExecutionInstanceConfigVisitor::PpuUsage&& other)
-{
-	has_periodic_cadc_readout = has_periodic_cadc_readout || other.has_periodic_cadc_readout;
-	has_periodic_cadc_readout_on_dram =
-	    has_periodic_cadc_readout_on_dram || other.has_periodic_cadc_readout_on_dram;
-	has_cadc_readout = has_cadc_readout || other.has_cadc_readout;
-	plasticity_rules.insert(
-	    plasticity_rules.begin(), std::make_move_iterator(other.plasticity_rules.begin()),
-	    std::make_move_iterator(other.plasticity_rules.end()));
-	return *this;
-}
-
 ExecutionInstanceConfigVisitor::ExecutionInstanceConfigVisitor(
     signal_flow::Graph const& graph,
-    grenade::common::ExecutionInstanceID const& execution_instance,
-    lola::vx::v3::Chip& chip_config,
-    size_t realtime_column_index) :
-    m_graph(graph),
-    m_execution_instance(execution_instance),
-    m_config(chip_config),
-    m_realtime_column_index(realtime_column_index),
-    m_has_periodic_cadc_readout(false),
-    m_has_periodic_cadc_readout_on_dram(false),
-    m_has_cadc_readout(false)
+    grenade::common::ExecutionInstanceID const& execution_instance) :
+    m_graph(graph), m_execution_instance(execution_instance)
 {
-	using namespace halco::common;
-	using namespace halco::hicann_dls::vx::v3;
-	m_used_madc = false;
-	m_enabled_neuron_resets.fill(false);
-
-	/** Silence everything which is not set in the graph. */
-	for (auto& node : m_config.crossbar.nodes) {
-		node = haldls::vx::v3::CrossbarNode::drop_all;
-	}
-	for (auto const& block : iter_all<SynapseDriverBlockOnDLS>()) {
-		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
-			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_top(
-			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
-			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_bottom(
-			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
-			m_config.synapse_driver_blocks[block].synapse_drivers[drv].set_enable_receiver(false);
-		}
-	}
-	for (auto const& row : iter_all<ColumnCurrentRowOnDLS>()) {
-		for (auto const col : iter_all<SynapseOnSynapseRow>()) {
-			m_config.neuron_block.current_rows[row]
-			    .values[col]
-			    .set_enable_synaptic_current_excitatory(false);
-			m_config.neuron_block.current_rows[row]
-			    .values[col]
-			    .set_enable_synaptic_current_inhibitory(false);
-		}
-	}
-	for (auto const backend : iter_all<CommonNeuronBackendConfigOnDLS>()) {
-		m_config.neuron_block.backends[backend].set_enable_event_registers(false);
-	}
-	{
-		for (auto const& block : iter_all<SynapseBlockOnDLS>()) {
-			for (auto const& row : iter_all<SynapseRowOnSynram>()) {
-				m_config.synapse_blocks[block].matrix.weights[row].fill(
-				    lola::vx::v3::SynapseMatrix::Weight(0));
-				m_config.synapse_blocks[block].matrix.labels[row].fill(
-				    lola::vx::v3::SynapseMatrix::Label(0));
-			}
-		}
-	}
 }
 
 template <typename T>
 void ExecutionInstanceConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */, T const& /* data */)
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    T const& /* data */,
+    lola::vx::v3::Chip& /* chip */) const
 {
 	// Spezialize for types which change static configuration
 }
@@ -119,7 +41,8 @@ void ExecutionInstanceConfigVisitor::process(
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::CADCMembraneReadoutView const& data)
+    signal_flow::vertex::CADCMembraneReadoutView const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	// Configure neurons
 	for (size_t i = 0; i < data.get_columns().size(); ++i) {
@@ -127,28 +50,23 @@ void ExecutionInstanceConfigVisitor::process(
 			halco::hicann_dls::vx::v3::AtomicNeuronOnDLS neuron(
 			    data.get_columns().at(i).at(j).toNeuronColumnOnDLS(),
 			    data.get_synram().toNeuronRowOnDLS());
-			m_config.neuron_block.atomic_neurons[neuron].readout.source =
+			chip.neuron_block.atomic_neurons[neuron].readout.source =
 			    data.get_sources().at(i).at(j);
-			m_config.neuron_block.atomic_neurons[neuron].readout.enable_amplifier = true;
+			chip.neuron_block.atomic_neurons[neuron].readout.enable_amplifier = true;
 		}
 	}
-
-	m_has_periodic_cadc_readout =
-	    data.get_mode() == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic;
-	m_has_periodic_cadc_readout_on_dram =
-	    data.get_mode() == signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram;
-	m_has_cadc_readout = true;
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const,
-    signal_flow::vertex::NeuronEventOutputView const& data)
+    signal_flow::vertex::NeuronEventOutputView const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	for (auto const& [row, columns] : data.get_neurons()) {
 		for (auto const& cs : columns) {
 			for (auto const& column : cs) {
-				m_config.neuron_block
+				chip.neuron_block
 				    .backends[column.toNeuronEventOutputOnDLS()
 				                  .toNeuronBackendConfigBlockOnDLS()
 				                  .toCommonNeuronBackendConfigOnDLS()]
@@ -161,7 +79,8 @@ void ExecutionInstanceConfigVisitor::process(
 template <>
 void ExecutionInstanceConfigVisitor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
-    signal_flow::vertex::MADCReadoutView const& data)
+    signal_flow::vertex::MADCReadoutView const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
@@ -171,7 +90,7 @@ void ExecutionInstanceConfigVisitor::process(
 
 	// first source
 	// Determine readout chain configuration
-	auto& smux = m_config.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(0)];
+	auto& smux = chip.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(0)];
 	auto const& first_source = data.get_first_source();
 	bool const is_odd = first_source.coord.toNeuronColumnOnDLS() % 2;
 	auto neuron_even = smux.get_neuron_even();
@@ -180,17 +99,16 @@ void ExecutionInstanceConfigVisitor::process(
 	auto neuron_odd = smux.get_neuron_odd();
 	neuron_odd[first_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 	smux.set_neuron_odd(neuron_odd);
-	m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(0)].enable =
-	    true;
+	chip.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(0)].enable = true;
 	// Configure neuron
-	m_config.neuron_block.atomic_neurons[first_source.coord].readout.source = first_source.type;
-	m_config.neuron_block.atomic_neurons[first_source.coord].readout.enable_amplifier = true;
-	m_config.neuron_block.atomic_neurons[first_source.coord].readout.enable_buffered_access = true;
+	chip.neuron_block.atomic_neurons[first_source.coord].readout.source = first_source.type;
+	chip.neuron_block.atomic_neurons[first_source.coord].readout.enable_amplifier = true;
+	chip.neuron_block.atomic_neurons[first_source.coord].readout.enable_buffered_access = true;
 
 	// second source
 	if (data.get_second_source()) {
 		// Determine readout chain configuration
-		auto& smux = m_config.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(1)];
+		auto& smux = chip.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(1)];
 		auto const& second_source = *(data.get_second_source());
 		bool const is_odd = second_source.coord.toNeuronColumnOnDLS() % 2;
 		auto neuron_even = smux.get_neuron_even();
@@ -199,39 +117,35 @@ void ExecutionInstanceConfigVisitor::process(
 		auto neuron_odd = smux.get_neuron_odd();
 		neuron_odd[second_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 		smux.set_neuron_odd(neuron_odd);
-		m_config.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(1)].enable =
+		chip.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(1)].enable =
 		    true;
 		// Configure neuron
-		m_config.neuron_block.atomic_neurons[second_source.coord].readout.source =
-		    second_source.type;
-		m_config.neuron_block.atomic_neurons[second_source.coord].readout.enable_amplifier = true;
-		m_config.neuron_block.atomic_neurons[second_source.coord].readout.enable_buffered_access =
-		    true;
+		chip.neuron_block.atomic_neurons[second_source.coord].readout.source = second_source.type;
+		chip.neuron_block.atomic_neurons[second_source.coord].readout.enable_amplifier = true;
+		chip.neuron_block.atomic_neurons[second_source.coord].readout.enable_buffered_access = true;
 	}
 
 	// configure source selection
-	m_config.readout_chain.dynamic_mux.input_select_length = data.get_source_selection().period;
-	m_config.readout_chain.dynamic_mux.initially_selected_input =
-	    data.get_source_selection().initial;
+	chip.readout_chain.dynamic_mux.input_select_length = data.get_source_selection().period;
+	chip.readout_chain.dynamic_mux.initially_selected_input = data.get_source_selection().initial;
 
 	// Configure analog parameters
 	// TODO: should come from calibration
-	m_config.readout_chain.dynamic_mux.i_bias = CapMemCell::Value(500);
-	m_config.readout_chain.madc.in_500na = CapMemCell::Value(500);
-	m_config.readout_chain.madc_preamp.i_bias = CapMemCell::Value(500);
-	m_config.readout_chain.madc_preamp.v_ref = CapMemCell::Value(400);
-	m_config.readout_chain.pseudo_diff_converter.buffer_bias = CapMemCell::Value(0);
-	m_config.readout_chain.pseudo_diff_converter.v_ref = CapMemCell::Value(400);
-	m_config.readout_chain.source_measure_unit.amp_v_ref = CapMemCell::Value(400);
-	m_config.readout_chain.source_measure_unit.test_voltage = CapMemCell::Value(400);
-
-	m_used_madc = true;
+	chip.readout_chain.dynamic_mux.i_bias = CapMemCell::Value(500);
+	chip.readout_chain.madc.in_500na = CapMemCell::Value(500);
+	chip.readout_chain.madc_preamp.i_bias = CapMemCell::Value(500);
+	chip.readout_chain.madc_preamp.v_ref = CapMemCell::Value(400);
+	chip.readout_chain.pseudo_diff_converter.buffer_bias = CapMemCell::Value(0);
+	chip.readout_chain.pseudo_diff_converter.v_ref = CapMemCell::Value(400);
+	chip.readout_chain.source_measure_unit.amp_v_ref = CapMemCell::Value(400);
+	chip.readout_chain.source_measure_unit.test_voltage = CapMemCell::Value(400);
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
-    signal_flow::vertex::PadReadoutView const& data)
+    signal_flow::vertex::PadReadoutView const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
@@ -240,12 +154,12 @@ void ExecutionInstanceConfigVisitor::process(
 
 	auto const& source = data.get_source();
 
-	m_config.neuron_block.atomic_neurons[source.coord].readout.source = source.type;
+	chip.neuron_block.atomic_neurons[source.coord].readout.source = source.type;
 
 	if (data.get_source().enable_buffered) {
 		// Determine readout chain configuration
 		auto& smux =
-		    m_config.readout_chain
+		    chip.readout_chain
 		        .input_mux[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())];
 		bool const is_odd = source.coord.toNeuronColumnOnDLS() % 2;
 		auto neuron_even = smux.get_neuron_even();
@@ -254,42 +168,43 @@ void ExecutionInstanceConfigVisitor::process(
 		auto neuron_odd = smux.get_neuron_odd();
 		neuron_odd[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 		smux.set_neuron_odd(neuron_odd);
-		m_config.readout_chain
+		chip.readout_chain
 		    .buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())]
 		    .enable = true;
 		PadMultiplexerConfig::buffer_type buffers;
 		buffers.fill(false);
 		buffers[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())] = true;
-		m_config.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())]
+		chip.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())]
 		    .set_buffer_to_pad(buffers);
 		// Configure neuron
-		m_config.neuron_block.atomic_neurons[source.coord].readout.enable_amplifier = true;
-		m_config.neuron_block.atomic_neurons[source.coord].readout.enable_buffered_access = true;
+		chip.neuron_block.atomic_neurons[source.coord].readout.enable_amplifier = true;
+		chip.neuron_block.atomic_neurons[source.coord].readout.enable_buffered_access = true;
 	} else {
 		// enable unbuffered access to pad
 		auto& pad_mux =
-		    m_config.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())];
+		    chip.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())];
 		auto neuron_i_stim_mux = pad_mux.get_neuron_i_stim_mux();
 		neuron_i_stim_mux.fill(false);
 		neuron_i_stim_mux[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = true;
 		pad_mux.set_neuron_i_stim_mux(neuron_i_stim_mux);
 		pad_mux.set_neuron_i_stim_mux_to_pad(true);
 		// Configure neuron
-		m_config.neuron_block.atomic_neurons[source.coord].readout.enable_unbuffered_access = true;
+		chip.neuron_block.atomic_neurons[source.coord].readout.enable_unbuffered_access = true;
 	}
 
 	// Configure analog parameters
 	for (auto const smux : halco::common::iter_all<SourceMultiplexerOnReadoutSourceSelection>()) {
-		m_config.readout_chain.buffer_to_pad[smux].amp_i_bias = CapMemCell::Value(1022);
+		chip.readout_chain.buffer_to_pad[smux].amp_i_bias = CapMemCell::Value(1022);
 	}
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::SynapseArrayView const& data)
+    signal_flow::vertex::SynapseArrayView const& data,
+    lola::vx::v3::Chip& chip) const
 {
-	auto& config = m_config;
+	auto& config = chip;
 	auto const& columns = data.get_columns();
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
@@ -312,9 +227,10 @@ void ExecutionInstanceConfigVisitor::process(
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::SynapseArrayViewSparse const& data)
+    signal_flow::vertex::SynapseArrayViewSparse const& data,
+    lola::vx::v3::Chip& chip) const
 {
-	auto& config = m_config;
+	auto& config = chip;
 	auto const& columns = data.get_columns();
 	auto const& rows = data.get_rows();
 	auto const synram = data.get_synram();
@@ -330,55 +246,32 @@ void ExecutionInstanceConfigVisitor::process(
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
-    signal_flow::vertex::PlasticityRule const& data)
+    signal_flow::Graph::vertex_descriptor,
+    signal_flow::vertex::PlasticityRule const& data,
+    lola::vx::v3::Chip& chip) const
 {
-	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-	// convert the plasticity rule input vertices to their respective on-PPU handles to transfer
-	// onto the PPUs
-	std::vector<std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>>
-	    synapses;
-	std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>>
-	    neurons;
-	for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-		// extract on-PPU handles from source vertex properties
-		auto const& in_vertex_property =
-		    m_graph.get_vertex_property(boost::source(in_edge, m_graph.get_graph()));
-		if (std::holds_alternative<signal_flow::vertex::SynapseArrayViewSparse>(
-		        in_vertex_property)) {
-			auto const& view =
-			    std::get<signal_flow::vertex::SynapseArrayViewSparse>(in_vertex_property);
-			synapses.push_back({view.get_synram(), view.toSynapseArrayViewHandle()});
-		} else if (std::holds_alternative<signal_flow::vertex::NeuronView>(in_vertex_property)) {
-			auto const& view = std::get<signal_flow::vertex::NeuronView>(in_vertex_property);
-			neurons.push_back({view.get_row(), view.toNeuronViewHandle()});
-		}
-		// handle setting neuron readout parameters
-		for (auto const& neuron_view : data.get_neuron_view_shapes()) {
-			for (size_t i = 0; i < neuron_view.columns.size(); ++i) {
-				if (neuron_view.neuron_readout_sources.at(i)) {
-					auto& atomic_neuron =
-					    m_config.neuron_block
-					        .atomic_neurons[halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
-					            neuron_view.columns.at(i), neuron_view.row)];
-					atomic_neuron.readout.source = *neuron_view.neuron_readout_sources.at(i);
-					atomic_neuron.readout.enable_amplifier = true;
-				}
+	// handle setting neuron readout parameters
+	for (auto const& neuron_view : data.get_neuron_view_shapes()) {
+		for (size_t i = 0; i < neuron_view.columns.size(); ++i) {
+			if (neuron_view.neuron_readout_sources.at(i)) {
+				auto& atomic_neuron =
+				    chip.neuron_block.atomic_neurons[halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
+				        neuron_view.columns.at(i), neuron_view.row)];
+				atomic_neuron.readout.source = *neuron_view.neuron_readout_sources.at(i);
+				atomic_neuron.readout.enable_amplifier = true;
 			}
 		}
 	}
-	// store on-PPU handles for later PPU source code generation
-	m_plasticity_rules.push_back(
-	    {vertex, data, std::move(synapses), std::move(neurons), m_realtime_column_index});
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::SynapseDriver const& data)
+    signal_flow::vertex::SynapseDriver const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	auto& synapse_driver_config =
-	    m_config.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
+	    chip.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
 	        .synapse_drivers[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
 	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::top]);
@@ -392,12 +285,12 @@ void ExecutionInstanceConfigVisitor::process(
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::PADIBus const& data)
+    signal_flow::vertex::PADIBus const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	auto const bus = data.get_coordinate();
 	auto& config =
-	    m_config.synapse_driver_blocks[bus.toPADIBusBlockOnDLS().toSynapseDriverBlockOnDLS()]
-	        .padi_bus;
+	    chip.synapse_driver_blocks[bus.toPADIBusBlockOnDLS().toSynapseDriverBlockOnDLS()].padi_bus;
 	auto enable_config = config.get_enable_spl1();
 	enable_config[bus.toPADIBusOnPADIBusBlock()] = true;
 	config.set_enable_spl1(enable_config);
@@ -406,39 +299,42 @@ void ExecutionInstanceConfigVisitor::process(
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::CrossbarNode const& data)
+    signal_flow::vertex::CrossbarNode const& data,
+    lola::vx::v3::Chip& chip) const
 {
-	m_config.crossbar.nodes[data.get_coordinate()] = data.get_config();
+	chip.crossbar.nodes[data.get_coordinate()] = data.get_config();
 	// enable drop counter for accumulated measure in health info
-	m_config.crossbar.nodes[data.get_coordinate()].set_enable_drop_counter(true);
-	auto enable_event_counter = m_config.crossbar.outputs.get_enable_event_counter();
+	chip.crossbar.nodes[data.get_coordinate()].set_enable_drop_counter(true);
+	auto enable_event_counter = chip.crossbar.outputs.get_enable_event_counter();
 	// enable event counter of output for accumulated measure in health info
 	enable_event_counter[data.get_coordinate().toCrossbarOutputOnDLS()] = true;
-	m_config.crossbar.outputs.set_enable_event_counter(enable_event_counter);
+	chip.crossbar.outputs.set_enable_event_counter(enable_event_counter);
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::BackgroundSpikeSource const& data)
+    signal_flow::vertex::BackgroundSpikeSource const& data,
+    lola::vx::v3::Chip& chip) const
 {
-	m_config.background_spike_sources[data.get_coordinate()] = data.get_config();
+	chip.background_spike_sources[data.get_coordinate()] = data.get_config();
 }
 
 template <>
 void ExecutionInstanceConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::NeuronView const& data)
+    signal_flow::Graph::vertex_descriptor const vertex,
+    signal_flow::vertex::NeuronView const& data,
+    lola::vx::v3::Chip& chip) const
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 	size_t i = 0;
 	auto const& configs = data.get_configs();
-	auto& neurons = m_config.neuron_block.atomic_neurons;
+	auto& neurons = chip.neuron_block.atomic_neurons;
 	for (auto const column : data.get_columns()) {
 		auto const& config = configs.at(i);
 		auto const an = AtomicNeuronOnDLS(column, data.get_row());
 		auto const neuron_reset = an.toNeuronResetOnDLS();
-		m_enabled_neuron_resets[neuron_reset] = config.enable_reset;
 		if (config.label) {
 			neurons[an].event_routing.address = *(config.label);
 			neurons[an].event_routing.enable_digital = true;
@@ -469,22 +365,58 @@ void ExecutionInstanceConfigVisitor::process(
 			}
 		}
 		for (auto const& column : incoming_synapse_columns) {
-			m_config.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
+			chip.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
 			    .values[column]
 			    .set_enable_synaptic_current_excitatory(true);
-			m_config.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
+			chip.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
 			    .values[column]
 			    .set_enable_synaptic_current_inhibitory(true);
 		}
 	}
 }
 
-std::tuple<
-    ExecutionInstanceConfigVisitor::PpuUsage,
-    halco::common::typed_array<bool, halco::hicann_dls::vx::v3::NeuronResetOnDLS>>
-ExecutionInstanceConfigVisitor::operator()()
+void ExecutionInstanceConfigVisitor::operator()(lola::vx::v3::Chip& chip) const
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceConfigVisitor");
+
+	using namespace halco::common;
+	using namespace halco::hicann_dls::vx::v3;
+
+	/** Silence everything which is not set in the graph. */
+	for (auto& node : chip.crossbar.nodes) {
+		node = haldls::vx::v3::CrossbarNode::drop_all;
+	}
+	for (auto const& block : iter_all<SynapseDriverBlockOnDLS>()) {
+		for (auto const drv : iter_all<SynapseDriverOnSynapseDriverBlock>()) {
+			chip.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_top(
+			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
+			chip.synapse_driver_blocks[block].synapse_drivers[drv].set_row_mode_bottom(
+			    haldls::vx::v3::SynapseDriverConfig::RowMode::disabled);
+			chip.synapse_driver_blocks[block].synapse_drivers[drv].set_enable_receiver(false);
+		}
+	}
+	for (auto const& row : iter_all<ColumnCurrentRowOnDLS>()) {
+		for (auto const col : iter_all<SynapseOnSynapseRow>()) {
+			chip.neuron_block.current_rows[row].values[col].set_enable_synaptic_current_excitatory(
+			    false);
+			chip.neuron_block.current_rows[row].values[col].set_enable_synaptic_current_inhibitory(
+			    false);
+		}
+	}
+	for (auto const backend : iter_all<CommonNeuronBackendConfigOnDLS>()) {
+		chip.neuron_block.backends[backend].set_enable_event_registers(false);
+	}
+	{
+		for (auto const& block : iter_all<SynapseBlockOnDLS>()) {
+			for (auto const& row : iter_all<SynapseRowOnSynram>()) {
+				chip.synapse_blocks[block].matrix.weights[row].fill(
+				    lola::vx::v3::SynapseMatrix::Weight(0));
+				chip.synapse_blocks[block].matrix.labels[row].fill(
+				    lola::vx::v3::SynapseMatrix::Label(0));
+			}
+		}
+	}
+
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
 	for (auto const p : boost::make_iterator_range(
@@ -493,21 +425,14 @@ ExecutionInstanceConfigVisitor::operator()()
 		std::visit(
 		    [&](auto const& value) {
 			    hate::Timer timer;
-			    process(vertex, value);
+			    process(vertex, value, chip);
 			    LOG4CXX_TRACE(
-			        logger, "process(): Preprocessed "
+			        logger, "process(): Processed "
 			                    << hate::name<hate::remove_all_qualifiers_t<decltype(value)>>()
 			                    << " in " << timer.print() << ".");
 		    },
 		    m_graph.get_vertex_property(vertex));
 	}
-
-	ExecutionInstanceConfigVisitor::PpuUsage ppu_usage;
-	ppu_usage.has_periodic_cadc_readout = m_has_periodic_cadc_readout;
-	ppu_usage.has_periodic_cadc_readout_on_dram = m_has_periodic_cadc_readout_on_dram;
-	ppu_usage.has_cadc_readout = m_has_cadc_readout;
-	ppu_usage.plasticity_rules = std::move(m_plasticity_rules);
-	return {std::move(ppu_usage), std::move(m_enabled_neuron_resets)};
 }
 
 } // namespace grenade::vx::execution::detail
