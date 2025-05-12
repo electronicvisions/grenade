@@ -5,7 +5,7 @@
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection_run.h"
-#include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/get_state.h"
@@ -74,7 +74,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
 
 	for (size_t i = 0; i < realtime_column_count; i++) {
-		ExecutionInstanceConfigVisitor(graphs[i], execution_instance)(configs_visited[i]);
+		ExecutionInstanceSnippetConfigVisitor(graphs[i], execution_instance)(configs_visited[i]);
 	}
 
 	ExecutionInstanceSnippetPPUUsageVisitor::Result overall_ppu_usage;
