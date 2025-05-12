@@ -50,11 +50,11 @@ struct ExecutionInstanceNode
 		std::vector<haldls::vx::v3::Timer::Value> time_zero;
 
 		// Begin of the realtime snippets that use cadc recording and are associated with the
-		// according ExecutionInstanceBuilder
+		// according ExecutionInstanceSnippetRealtimeExecutor
 		std::vector<haldls::vx::v3::Timer::Value> interval_begin;
 
 		// End of the realtime snippets that use cadc recording and are associated with the
-		// according ExecutionInstanceBuilder
+		// according ExecutionInstanceSnippetRealtimeExecutor
 		std::vector<haldls::vx::v3::Timer::Value> interval_end;
 	};
 

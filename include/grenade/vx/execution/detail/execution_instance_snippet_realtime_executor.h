@@ -34,7 +34,7 @@ namespace grenade::vx::execution::detail {
  * Once executed, the result structure stores resulting measurements which can be processed to
  * be fed back into a graph executor.
  */
-class ExecutionInstanceBuilder
+class ExecutionInstanceSnippetRealtimeExecutor
 {
 public:
 	/**
@@ -48,7 +48,7 @@ public:
 	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
 	 * which the builder generates
 	 */
-	ExecutionInstanceBuilder(
+	ExecutionInstanceSnippetRealtimeExecutor(
 	    signal_flow::Graph const& graph,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    signal_flow::InputData const& input_list,

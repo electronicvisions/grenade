@@ -1,4 +1,4 @@
-#include "grenade/vx/execution/detail/execution_instance_builder.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
@@ -48,14 +48,14 @@ std::string name()
 
 } // namespace
 
-haldls::vx::v3::Timer::Value const ExecutionInstanceBuilder::wait_before_realtime{
+haldls::vx::v3::Timer::Value const ExecutionInstanceSnippetRealtimeExecutor::wait_before_realtime{
     haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us};
 
-haldls::vx::v3::Timer::Value const ExecutionInstanceBuilder::wait_after_realtime{
+haldls::vx::v3::Timer::Value const ExecutionInstanceSnippetRealtimeExecutor::wait_after_realtime{
     haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us};
 
 
-ExecutionInstanceBuilder::ExecutionInstanceBuilder(
+ExecutionInstanceSnippetRealtimeExecutor::ExecutionInstanceSnippetRealtimeExecutor(
     signal_flow::Graph const& graph,
     grenade::common::ExecutionInstanceID const& execution_instance,
     signal_flow::InputData const& input_list,
@@ -84,7 +84,7 @@ ExecutionInstanceBuilder::ExecutionInstanceBuilder(
 	m_batch_entries.resize(batch_size);
 }
 
-bool ExecutionInstanceBuilder::input_data_matches_graph(
+bool ExecutionInstanceSnippetRealtimeExecutor::input_data_matches_graph(
     signal_flow::InputData const& input_data) const
 {
 	if (input_data.empty()) {
@@ -117,7 +117,7 @@ bool ExecutionInstanceBuilder::input_data_matches_graph(
 	});
 }
 
-bool ExecutionInstanceBuilder::inputs_available(
+bool ExecutionInstanceSnippetRealtimeExecutor::inputs_available(
     signal_flow::Graph::vertex_descriptor const descriptor) const
 {
 	auto const edges = boost::make_iterator_range(boost::in_edges(descriptor, m_graph.get_graph()));
@@ -129,14 +129,14 @@ bool ExecutionInstanceBuilder::inputs_available(
 }
 
 template <typename T>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */, T const& /* data */)
 {
 	// Specialize for types which are not empty
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const /*vertex*/,
     signal_flow::vertex::NeuronView const& data)
 {
@@ -152,7 +152,7 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::CrossbarL2Input const&)
 {
 	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
@@ -164,7 +164,7 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::CrossbarL2Output const&)
 {
@@ -175,7 +175,8 @@ void ExecutionInstanceBuilder::process(
 		m_event_output_vertex = vertex;
 		m_post_vertices.push_back(vertex);
 	} else {
-		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+		auto logger =
+		    log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetRealtimeExecutor");
 
 		hate::Timer timer;
 		std::vector<stadls::vx::PlaybackProgram::spikes_type> spikes(m_batch_entries.size());
@@ -226,7 +227,7 @@ std::vector<common::TimedDataSequence<std::vector<T>>> apply_restriction(
 } // namespace
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::DataInput const& /* data */)
 {
@@ -272,7 +273,7 @@ void resize_rectangular(std::vector<std::vector<T>>& data, size_t size_outer, si
 } // namespace
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::CADCMembraneReadoutView const& data)
 {
@@ -359,7 +360,8 @@ void ExecutionInstanceBuilder::process(
 					num_samples |= static_cast<uint32_t>(local_bytes.at(i)) << (3 - i) * CHAR_BIT;
 				}
 				if (num_samples > local_block_size_expectation) {
-					auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+					auto logger = log4cxx::Logger::getLogger(
+					    "grenade.ExecutionInstanceSnippetRealtimeExecutor");
 					LOG4CXX_WARN(
 					    logger, "Less CADC samples read-out (" << local_block_size_expectation
 					                                           << ") than recorded (" << num_samples
@@ -423,13 +425,14 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::ExternalInput const& /* data */)
-{}
+{
+}
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::DataOutput const& data)
 {
@@ -462,7 +465,7 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <typename T>
-void ExecutionInstanceBuilder::filter_events(
+void ExecutionInstanceSnippetRealtimeExecutor::filter_events(
     std::vector<std::vector<T>>& filtered_data, std::vector<T>&& data) const
 {
 	// early return if no events are recorded
@@ -532,7 +535,7 @@ void ExecutionInstanceBuilder::filter_events(
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::MADCReadoutView const& data)
 {
@@ -543,7 +546,8 @@ void ExecutionInstanceBuilder::process(
 		m_madc_readout_vertex = vertex;
 		m_post_vertices.push_back(vertex);
 	} else {
-		auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+		auto logger =
+		    log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetRealtimeExecutor");
 
 		std::vector<stadls::vx::PlaybackProgram::madc_samples_type> madc_samples(
 		    m_batch_entries.size());
@@ -576,7 +580,7 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::Transformation const& data)
 {
@@ -606,7 +610,7 @@ void ExecutionInstanceBuilder::process(
 }
 
 template <>
-void ExecutionInstanceBuilder::process(
+void ExecutionInstanceSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::PlasticityRule const& data)
 {
@@ -708,9 +712,10 @@ void ExecutionInstanceBuilder::process(
 	}
 }
 
-ExecutionInstanceBuilder::Usages ExecutionInstanceBuilder::pre_process()
+ExecutionInstanceSnippetRealtimeExecutor::Usages
+ExecutionInstanceSnippetRealtimeExecutor::pre_process()
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetRealtimeExecutor");
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
 	// Sequential preprocessing because vertices might depend on each other.
@@ -746,13 +751,13 @@ ExecutionInstanceBuilder::Usages ExecutionInstanceBuilder::pre_process()
 			}
 		}
 	}
-	return ExecutionInstanceBuilder::Usages{
+	return ExecutionInstanceSnippetRealtimeExecutor::Usages{
 	    .madc_recording = m_madc_readout_vertex.has_value(),
 	    .event_recording = m_event_output_vertex.has_value() || m_madc_readout_vertex.has_value(),
 	    .cadc_recording = cadc_recording};
 }
 
-signal_flow::OutputData ExecutionInstanceBuilder::post_process(
+signal_flow::OutputData ExecutionInstanceSnippetRealtimeExecutor::post_process(
     std::vector<stadls::vx::v3::PlaybackProgram> const& realtime,
     std::vector<halco::common::typed_array<
         std::optional<stadls::vx::v3::ContainerTicket>,
@@ -768,7 +773,7 @@ signal_flow::OutputData ExecutionInstanceBuilder::post_process(
 		m_periodic_cadc_readout_times = periodic_cadc_readout_times.value();
 	}
 
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetRealtimeExecutor");
 
 	std::chrono::nanoseconds total_realtime_duration{0};
 	for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
@@ -861,7 +866,9 @@ signal_flow::OutputData ExecutionInstanceBuilder::post_process(
 	return local_data_output;
 }
 
-ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstanceBuilder::Usages before, ExecutionInstanceBuilder::Usages after)
+ExecutionInstanceSnippetRealtimeExecutor::Ret ExecutionInstanceSnippetRealtimeExecutor::generate(
+    ExecutionInstanceSnippetRealtimeExecutor::Usages before,
+    ExecutionInstanceSnippetRealtimeExecutor::Usages after)
 {
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
@@ -877,12 +884,13 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 		        return r.contains(m_execution_instance) && r.at(m_execution_instance) != 0;
 	        });
 	if (!has_computation) {
-		std::vector<ExecutionInstanceBuilder::RealtimeSnippet> realtime(m_batch_entries.size());
+		std::vector<ExecutionInstanceSnippetRealtimeExecutor::RealtimeSnippet> realtime(
+		    m_batch_entries.size());
 		return {std::move(realtime)};
 	}
 
 	// absolute time playback builder sequence to be concatenated in the end
-	std::vector<ExecutionInstanceBuilder::RealtimeSnippet> realtimes;
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::RealtimeSnippet> realtimes;
 
 	// generate playback snippet for neuron resets
 	auto builder_neuron_reset = stadls::vx::generate(m_neuron_resets);
@@ -1247,14 +1255,14 @@ ExecutionInstanceBuilder::Ret ExecutionInstanceBuilder::generate(ExecutionInstan
 				        coord);
 			}
 		}
-		realtimes.push_back(ExecutionInstanceBuilder::RealtimeSnippet{
+		realtimes.push_back(ExecutionInstanceSnippetRealtimeExecutor::RealtimeSnippet{
 		    .builder = std::move(builder),
 		    .ppu_finish_builder = std::move(ppu_finish_builder),
 		    .pre_realtime_duration = pre_realtime_duration,
 		    .realtime_duration = realtime_duration});
 	}
 
-	return ExecutionInstanceBuilder::Ret{std::move(realtimes)};
+	return ExecutionInstanceSnippetRealtimeExecutor::Ret{std::move(realtimes)};
 }
 
 } // namespace grenade::vx::execution::detail

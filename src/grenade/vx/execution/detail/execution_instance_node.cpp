@@ -5,8 +5,8 @@
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection_run.h"
-#include "grenade/vx/execution/detail/execution_instance_builder.h"
 #include "grenade/vx/execution/detail/execution_instance_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/get_state.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
@@ -141,13 +141,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			// lower bound on sample duration -> upper bound on sample rate
 			size_t const approx_sample_duration =
 			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
-			estimated_cadc_recording_size = (maximal_periodic_cadc_runtime +
-			                                 (ExecutionInstanceBuilder::wait_before_realtime +
-			                                  ExecutionInstanceBuilder::wait_after_realtime) +
-			                                 periodic_cadc_fpga_wait_clock_cycles -
-			                                 (periodic_cadc_ppu_wait_clock_cycles /
-			                                  2 /* 250MHz vs. 125 MHz PPU vs. FPGA clock */)) /
-			                                approx_sample_duration;
+			estimated_cadc_recording_size =
+			    (maximal_periodic_cadc_runtime +
+			     (ExecutionInstanceSnippetRealtimeExecutor::wait_before_realtime +
+			      ExecutionInstanceSnippetRealtimeExecutor::wait_after_realtime) +
+			     periodic_cadc_fpga_wait_clock_cycles -
+			     (periodic_cadc_ppu_wait_clock_cycles /
+			      2 /* 250MHz vs. 125 MHz PPU vs. FPGA clock */)) /
+			    approx_sample_duration;
 			// add one sample as constant margin for error
 			estimated_cadc_recording_size += 1;
 			// cap at maximal possible amount of samples
@@ -254,22 +255,22 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	// vectors for storing the information on what chip components are used in the realtime snippets
 	// before and after the current one (the according index) Example: usages_before[0] holds the
 	// usages needed before the first realtime snippet etc...
-	std::vector<ExecutionInstanceBuilder::Usages> usages_before(configs.size());
-	std::vector<ExecutionInstanceBuilder::Usages> usages_after(configs.size());
-	usages_before[0] = ExecutionInstanceBuilder::Usages{
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_before(configs.size());
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_after(configs.size());
+	usages_before[0] = ExecutionInstanceSnippetRealtimeExecutor::Usages{
 	    .madc_recording = false,
 	    .event_recording = false,
 	    .cadc_recording = typed_array<
 	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
-	usages_after[usages_after.size() - 1] = ExecutionInstanceBuilder::Usages{
+	usages_after[usages_after.size() - 1] = ExecutionInstanceSnippetRealtimeExecutor::Usages{
 	    .madc_recording = false,
 	    .event_recording = false,
 	    .cadc_recording = typed_array<
 	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
 
-	// vector for storing all execution_instance_builders
-	std::vector<ExecutionInstanceBuilder> builders;
-	std::vector<ExecutionInstanceBuilder::Ret> realtime_columns;
+	// vector for storing all execution_instance_snippet_realtime_executors
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor> builders;
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Ret> realtime_columns;
 
 	std::vector<bool> periodic_cadc_recording;
 	std::vector<bool> periodic_cadc_dram_recording;
@@ -277,13 +278,13 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	bool uses_bot_cadc = false;
 	bool uses_madc = false;
 	for (size_t i = 0; i < realtime_column_count; i++) {
-		ExecutionInstanceBuilder builder(
+		ExecutionInstanceSnippetRealtimeExecutor builder(
 		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_symbols, i,
 		    plasticity_rule_timed_recording_start_periods.at(i));
 		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
-		ExecutionInstanceBuilder::Usages usages = builders[i].pre_process();
+		ExecutionInstanceSnippetRealtimeExecutor::Usages usages = builders[i].pre_process();
 		if (usages.madc_recording) {
 			uses_madc = true;
 		}

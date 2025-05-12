@@ -12,10 +12,10 @@ namespace grenade::vx::execution::detail {
 /**
  * Data storage for execution instance without unnecessary copies.
  *
- * It is used in the ExecutionInstanceBuilder as temporary execution-instance-local storage of data
- * associated with vertices. During construction of the experiment and post-processing of results
- * only necessary copies are made. After successful post-processing, the output data can be
- * extracted to be placed into the global output data storage.
+ * It is used in the ExecutionInstanceSnippetRealtimeExecutor as temporary execution-instance-local
+ * storage of data associated with vertices. During construction of the experiment and
+ * post-processing of results only necessary copies are made. After successful post-processing, the
+ * output data can be extracted to be placed into the global output data storage.
  */
 struct ExecutionInstanceData
 {
