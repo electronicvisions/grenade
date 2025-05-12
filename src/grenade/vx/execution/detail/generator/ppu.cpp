@@ -204,8 +204,6 @@ PPUPeriodicCADCRead::generate() const
 	builder.write(halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
 
 	// wait for ppu command idle
-	// TODO: make generator for this, all PPU generators should take the symbols as constructor
-	// argument and extract the symbol names from it
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
 		PPUMemoryWordOnPPU ppu_status_coord;
 		ppu_status_coord = std::get<PPUMemoryBlockOnPPU>(m_symbols.at("status").coordinate).toMin();
@@ -219,13 +217,14 @@ PPUPeriodicCADCRead::generate() const
 		builder.write(PollingOmnibusBlockConfigOnFPGA(), polling_config);
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 		builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
-
-		builder.write(
-		    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
 	}
 
+	builder.write(
+	    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
+
 	// generate tickets for extmem readout of periodic cadc recording data
-	if (not m_use_dram) {
+	if (std::holds_alternative<ExternalPPUMemoryBlockOnFPGA>(
+	        m_symbols.at("periodic_cadc_samples_top").coordinate)) { // block ram
 		if (m_used_hemispheres[HemisphereOnDLS::top]) {
 			result.tickets[PPUOnDLS::top] = builder.read(ExternalPPUMemoryBlockOnFPGA(
 			    std::get<ExternalPPUMemoryBlockOnFPGA>(

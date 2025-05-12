@@ -382,8 +382,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
 			auto [cadc_finalize_builder, local_cadc_readout_tickets] =
 			    generate(generator::PPUPeriodicCADCRead(
-			        estimated_cadc_recording_size, has_periodic_cadc_dram_recording,
-			        {uses_top_cadc, uses_bot_cadc}, *ppu_symbols));
+			        estimated_cadc_recording_size, {uses_top_cadc, uses_bot_cadc}, *ppu_symbols));
 			cadc_finalize_builders.push_back(std::move(cadc_finalize_builder));
 			cadc_readout_tickets[i] = std::move(local_cadc_readout_tickets.tickets);
 		}

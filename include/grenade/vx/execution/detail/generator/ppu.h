@@ -182,17 +182,15 @@ struct PPUPeriodicCADCRead
 	/**
 	 * Construct generator for read hooks.
 	 * @param size Number of bytes to read
-	 * @param use_dram Whether to use DRAM on the FPGA
 	 * @param used_hemispheres Which hemispheres are used for recording
 	 * @param symbols PPU symbols to use for location lookup
 	 */
 	PPUPeriodicCADCRead(
 	    size_t size,
-	    bool use_dram,
 	    halco::common::typed_array<bool, halco::hicann_dls::vx::v3::HemisphereOnDLS> const&
 	        used_hemispheres,
 	    lola::vx::v3::PPUElfFile::symbols_type const& symbols) :
-	    m_size(size), m_use_dram(use_dram), m_used_hemispheres(used_hemispheres), m_symbols(symbols)
+	    m_size(size), m_used_hemispheres(used_hemispheres), m_symbols(symbols)
 	{
 	}
 
@@ -203,7 +201,6 @@ protected:
 
 private:
 	size_t m_size;
-	bool m_use_dram;
 	halco::common::typed_array<bool, halco::hicann_dls::vx::v3::HemisphereOnDLS> m_used_hemispheres;
 	lola::vx::v3::PPUElfFile::symbols_type const& m_symbols;
 };
