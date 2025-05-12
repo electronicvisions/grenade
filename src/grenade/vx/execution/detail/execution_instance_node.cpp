@@ -1,35 +1,10 @@
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 
-#include "fisch/vx/omnibus.h"
-#include "fisch/vx/playback_program_builder.h"
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection_run.h"
-#include "grenade/vx/execution/detail/execution_instance_ppu_program_compiler.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
-#include "grenade/vx/execution/detail/generator/get_state.h"
-#include "grenade/vx/execution/detail/generator/health_info.h"
-#include "grenade/vx/execution/detail/generator/madc.h"
-#include "grenade/vx/execution/detail/generator/ppu.h"
-#include "grenade/vx/execution/detail/ppu_program_generator.h"
-#include "grenade/vx/ppu.h"
-#include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/ppu/detail/stopped.h"
-#include "halco/hicann-dls/vx/v3/ppu.h"
-#include "haldls/vx/v3/barrier.h"
-#include "haldls/vx/v3/omnibus_constants.h"
-#include "haldls/vx/v3/timer.h"
+#include "grenade/vx/execution/detail/execution_instance_executor.h"
 #include "hate/timer.h"
-#include "hate/variant.h"
-#include "stadls/visitors.h"
-#include "stadls/vx/constants.h"
-#include "stadls/vx/v3/container_ticket.h"
-
-#include <algorithm>
-#include <utility>
-#include <variant>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
@@ -62,359 +37,37 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace stadls::vx::v3;
 	using namespace lola::vx::v3;
 
-	hate::Timer const build_timer;
+	ExecutionInstanceExecutor executor(
+	    graphs, input_data_maps, data_maps, configs, hooks, execution_instance);
 
-	assert(
-	    (std::set<size_t>{data_maps.size(), input_data_maps.size(), graphs.size(), configs.size()}
-	         .size() == 1));
-	size_t const realtime_column_count = data_maps.size();
+	hate::Timer const compile_timer;
 
-	hate::Timer const configs_timer;
-
-	std::vector<Chip> configs_visited(configs.begin(), configs.end());
-	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> external_ppu_dram_memory_visited;
-
-	for (size_t i = 0; i < realtime_column_count; i++) {
-		ExecutionInstanceSnippetConfigVisitor(graphs[i], execution_instance)(configs_visited[i]);
-	}
-
-	bool const has_hook_around_realtime =
-	    !hooks.pre_realtime.empty() || !hooks.inside_realtime_begin.empty() ||
-	    !hooks.inside_realtime_end.empty() || !hooks.post_realtime.empty();
-
-	backend::PlaybackProgram program{
-	    configs_visited,
-	    std::nullopt,
-	    has_hook_around_realtime,
-	    std::move(hooks.pre_static_config),
-	    std::nullopt,
-	    {}};
-
-	auto const ppu_program =
-	    ExecutionInstancePPUProgramCompiler(graphs, input_data_maps, hooks, execution_instance)();
-	ppu_program.apply(program);
+	auto [playback_program, post_processor] = executor();
 
 	LOG4CXX_TRACE(
-	    logger, "operator(): Constructed configuration(s) in " << configs_timer.print() << ".");
-
-	// vectors for storing the information on what chip components are used in the realtime snippets
-	// before and after the current one (the according index) Example: usages_before[0] holds the
-	// usages needed before the first realtime snippet etc...
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_before(configs.size());
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_after(configs.size());
-	usages_before[0] = ExecutionInstanceSnippetRealtimeExecutor::Usages{
-	    .madc_recording = false,
-	    .event_recording = false,
-	    .cadc_recording = typed_array<
-	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
-	usages_after[usages_after.size() - 1] = ExecutionInstanceSnippetRealtimeExecutor::Usages{
-	    .madc_recording = false,
-	    .event_recording = false,
-	    .cadc_recording = typed_array<
-	        std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode>, HemisphereOnDLS>{{}}};
-
-	// vector for storing all execution_instance_snippet_realtime_executors
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor> builders;
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Ret> realtime_columns;
-
-	std::vector<bool> periodic_cadc_recording;
-	std::vector<bool> periodic_cadc_dram_recording;
-	bool uses_top_cadc = false;
-	bool uses_bot_cadc = false;
-	bool uses_madc = false;
-	for (size_t i = 0; i < realtime_column_count; i++) {
-		ExecutionInstanceSnippetRealtimeExecutor builder(
-		    graphs[i], execution_instance, input_data_maps[i], data_maps[i], ppu_program.symbols, i,
-		    ppu_program.plasticity_rule_timed_recording_start_periods.at(i));
-		builders.push_back(std::move(builder));
-
-		hate::Timer const realtime_preprocess_timer;
-		ExecutionInstanceSnippetRealtimeExecutor::Usages usages = builders[i].pre_process();
-		if (usages.madc_recording) {
-			uses_madc = true;
-		}
-		if(i < usages_before.size() - 1){
-			usages_before[i + 1] = usages;
-		}
-		if(i > 0){
-			usages_after[i - 1] = usages;
-		}
-		periodic_cadc_recording.push_back(std::any_of(
-		    usages.cadc_recording.begin(), usages.cadc_recording.end(),
-		    [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> const& mode) {
-			    return mode.contains(signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic);
-		    }));
-		periodic_cadc_dram_recording.push_back(std::any_of(
-		    usages.cadc_recording.begin(), usages.cadc_recording.end(),
-		    [](std::set<signal_flow::vertex::CADCMembraneReadoutView::Mode> const& mode) {
-			    return mode.contains(
-			        signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram);
-		    }));
-		uses_top_cadc = uses_top_cadc || !usages.cadc_recording[HemisphereOnDLS::top].empty();
-		uses_bot_cadc = uses_bot_cadc || !usages.cadc_recording[HemisphereOnDLS::bottom].empty();
-
-		LOG4CXX_TRACE(
-		    logger, "operator(): Preprocessed local vertices for realtime column "
-		                << i << " in " << realtime_preprocess_timer.print() << ".");
-	}
-
-	std::vector<std::vector<Timer::Value>> realtime_durations;
-	std::vector<std::optional<ExecutionInstanceNode::PeriodicCADCReadoutTimes>>
-	    cadc_readout_time_information;
-	std::optional<std::vector<Timer::Value>> times_of_first_cadc_sample;
-	std::vector<Timer::Value> current_times; // beginning of the realtime section of the snippets
-	std::vector<Timer::Value>
-	    subsequent_times; // beginning of the realtime section of the subsequent snippets
-	for (size_t i = 0; i < realtime_column_count; i++) {
-		// build realtime programs
-		hate::Timer const realtime_generate_timer;
-		auto realtime_column = builders[i].generate(usages_before[i], usages_after[i]);
-
-		// initialize current_times, subsequent_times and realtime_durations
-		if (i == 0) {
-			current_times =
-			    std::vector<Timer::Value>(realtime_column.realtimes.size(), Timer::Value(0));
-			subsequent_times =
-			    std::vector<Timer::Value>(realtime_column.realtimes.size(), Timer::Value(0));
-		} else {
-			current_times = subsequent_times;
-		}
-		// Set subsequent times to the begin of the subsequent realtime snippet and collect the
-		// realtime durations for calculating the approximated CADC sample size
-		std::vector<Timer::Value> realtime_durations_local_column;
-		for (size_t j = 0; j < realtime_column.realtimes.size(); j++) {
-			realtime_durations_local_column.push_back(
-			    realtime_column.realtimes[j].realtime_duration);
-			subsequent_times[j] = current_times[j] + realtime_column.realtimes[j].realtime_duration;
-		}
-		realtime_durations.push_back(realtime_durations_local_column);
-		if (periodic_cadc_recording[i] || periodic_cadc_dram_recording[i]) {
-			if (!times_of_first_cadc_sample) {
-				std::vector<Timer::Value> determined_times_of_first_cadc_sample;
-				for (size_t j = 0; j < realtime_column.realtimes.size(); j++) {
-					determined_times_of_first_cadc_sample.push_back(current_times[j]);
-				}
-				times_of_first_cadc_sample = std::move(determined_times_of_first_cadc_sample);
-			}
-			cadc_readout_time_information.push_back(ExecutionInstanceNode::PeriodicCADCReadoutTimes{
-			    .time_zero = times_of_first_cadc_sample.value(),
-			    .interval_begin = current_times,
-			    .interval_end = subsequent_times});
-		} else {
-			cadc_readout_time_information.push_back(std::nullopt);
-		}
-
-		realtime_columns.push_back(std::move(realtime_column));
-		LOG4CXX_TRACE(
-		    logger, "operator(): Generated playback program builders and processed CADC readout "
-		            "time information for realtime column "
-		                << i << " in " << realtime_generate_timer.print() << ".");
-	}
-
-	// Construct cadc_finalize_builders, which each are executed at the end of a batch entry
-	std::vector<PlaybackProgramBuilder> cadc_finalize_builders;
-	std::vector<typed_array<std::optional<ContainerTicket>, PPUOnDLS>> cadc_readout_tickets(
-	    realtime_columns[0].realtimes.size(),
-	    typed_array<std::optional<ContainerTicket>, PPUOnDLS>{});
-	auto const has_periodic_cadc_recording =
-	    std::find(periodic_cadc_recording.begin(), periodic_cadc_recording.end(), true) !=
-	    periodic_cadc_recording.end();
-	auto const has_periodic_cadc_dram_recording =
-	    std::find(periodic_cadc_dram_recording.begin(), periodic_cadc_dram_recording.end(), true) !=
-	    periodic_cadc_dram_recording.end();
-	assert(!has_periodic_cadc_recording || !has_periodic_cadc_dram_recording);
-	if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
-		// generate tickets for extmem readout of periodic cadc recording data
-		for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
-			auto [cadc_finalize_builder, local_cadc_readout_tickets] =
-			    generate(generator::PPUPeriodicCADCRead(
-			        {uses_top_cadc, uses_bot_cadc}, *ppu_program.symbols));
-			cadc_finalize_builders.push_back(std::move(cadc_finalize_builder));
-			cadc_readout_tickets[i] = std::move(local_cadc_readout_tickets.tickets);
-		}
-	}
-
-	// storage for PPU read-hooks results to evaluate post-execution
-	std::vector<generator::PPUReadHooks::Result> ppu_read_hooks_results;
-
-	// Experiment assembly
-	std::vector<PlaybackProgram> programs;
-	PlaybackProgramBuilder final_builder;
-	std::vector<generator::HealthInfo::Result> health_info_results_pre;
-	std::vector<generator::HealthInfo::Result> health_info_results_post;
-	for (size_t i = 0; i < realtime_columns[0].realtimes.size(); i++) {
-		if (final_builder.empty()) {
-			auto [health_info_builder_pre, health_info_result_pre] =
-			    generate(generator::HealthInfo());
-			health_info_results_pre.push_back(health_info_result_pre);
-			final_builder.merge_back(health_info_builder_pre.done());
-			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		}
-
-		AbsoluteTimePlaybackProgramBuilder program_builder;
-		haldls::vx::v3::Timer::Value config_time =
-		    realtime_columns[0].realtimes[i].pre_realtime_duration;
-		for (size_t j = 0; j < realtime_column_count; j++) {
-			if (j > 0) {
-				config_time += realtime_columns[j - 1].realtimes[i].realtime_duration;
-				program_builder.write(
-				    config_time, ChipOnDLS(), configs_visited[j], configs_visited[j - 1]);
-			}
-			realtime_columns[j].realtimes[i].builder +=
-			    (config_time - realtime_columns[j].realtimes[i].pre_realtime_duration);
-			program_builder.merge(realtime_columns[j].realtimes[i].builder);
-		}
-
-		// insert inside_realtime hook
-		if (i < realtime_columns[0].realtimes.size() - 1) {
-			program_builder.copy(hooks.inside_realtime);
-		} else {
-			program_builder.merge(hooks.inside_realtime);
-		}
-
-		// reset config to initial config at end of each realtime_row if experiment has multiple
-		// configs
-		if (realtime_columns.size() > 1) {
-			config_time +=
-			    realtime_columns[realtime_columns.size() - 1].realtimes[i].realtime_duration;
-			if (i < realtime_columns[0].realtimes.size() - 1) {
-				program_builder.write(
-				    config_time, ChipOnDLS(), configs_visited[0],
-				    configs_visited[configs_visited.size() - 1]);
-			}
-		}
-
-		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
-		// stop_ppu and the playback hooks
-		PlaybackProgramBuilder assemble_builder;
-		if (i == 0 && uses_madc) {
-			assemble_builder.merge_back(generate(generator::MADCArm()).builder);
-		}
-		// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
-		if (i == 0) {
-			assemble_builder.merge_back(hooks.pre_realtime);
-		}
-		// append inside_realtime_begin hook
-		if (i < realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.copy_back(hooks.inside_realtime_begin);
-		} else {
-			assemble_builder.merge_back(hooks.inside_realtime_begin);
-		}
-		// append realtime section
-		assemble_builder.merge_back(std::move(program_builder.done()));
-		// append inside_realtime_end hook
-		if (i < realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.copy_back(hooks.inside_realtime_end);
-		} else {
-			assemble_builder.merge_back(hooks.inside_realtime_end);
-		}
-		// append ppu_finish_builders
-		for (size_t j = 0; j < realtime_column_count; j++) {
-			assemble_builder.merge_back(realtime_columns[j].realtimes[i].ppu_finish_builder);
-		}
-		// append PPU read hooks
-		if (ppu_program.symbols) {
-			auto [ppu_read_hooks_builder, ppu_read_hooks_result] =
-			    generate(generator::PPUReadHooks(hooks.read_ppu_symbols, *ppu_program.symbols));
-			assemble_builder.merge_back(ppu_read_hooks_builder);
-			ppu_read_hooks_results.push_back(std::move(ppu_read_hooks_result));
-		}
-		// wait for response data
-		assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		// for the last batch entry, append post_realtime hook
-		if (i == realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.merge_back(hooks.post_realtime);
-		}
-		// append cadc_finazlize_builder for periodic_cadc data readout
-		if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
-			assemble_builder.merge_back(cadc_finalize_builders.at(i));
-		}
-		// for the last batch entry, stop the PPU
-		if (i == realtime_columns[0].realtimes.size() - 1 && ppu_program.symbols) {
-			assemble_builder.merge_back(generate(generator::PPUStop(*ppu_program.symbols)).builder);
-		}
-		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
-		if (input_data_maps[input_data_maps.size() - 1].get().inter_batch_entry_wait.contains(
-		        execution_instance)) {
-			assemble_builder.block_until(
-			    TimerOnDLS(), config_time + input_data_maps[input_data_maps.size() - 1]
-			                                    .get()
-			                                    .inter_batch_entry_wait.at(execution_instance)
-			                                    .toTimerOnFPGAValue());
-		}
-		// Create playback programs with the maximal amount of batch entries that fit in as a whole
-		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga() +
-		     generate(generator::HealthInfo()).builder.done().size_to_fpga()) >
-		    stadls::vx::playback_memory_size_to_fpga) {
-			auto [health_info_builder_post, health_info_result_post] =
-			    generate(generator::HealthInfo());
-			health_info_results_post.push_back(health_info_result_post);
-			final_builder.merge_back(health_info_builder_post.done());
-			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-			programs.push_back(std::move(final_builder.done()));
-		}
-		final_builder.merge_back(assemble_builder);
-	}
-	if (!final_builder.empty()) {
-		auto [health_info_builder_post, health_info_result_post] =
-		    generate(generator::HealthInfo());
-		health_info_results_post.push_back(health_info_result_post);
-		final_builder.merge_back(health_info_builder_post.done());
-		final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		programs.push_back(std::move(final_builder.done()));
-	}
-
-	program.programs = programs;
-
-	LOG4CXX_TRACE(logger, "operator(): Built PlaybackPrograms in " << build_timer.print() << ".");
+	    logger, "operator(): Compiled playback program in " << compile_timer.print() << ".");
 
 	bool run_successful = true;
 	backend::RunTimeInfo run_time_info;
 	try {
-		run_time_info = backend::run(connection, program);
+		run_time_info = backend::run(connection, playback_program);
 	} catch (std::runtime_error const& error) {
 		LOG4CXX_ERROR(
 		    logger, "operator(): Run of playback program not successful: " << error.what() << ".");
 		run_successful = false;
 	}
 
-	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
-	for (size_t i = 0; i < health_info_results_pre.size(); ++i) {
-		execution_health_info +=
-		    (health_info_results_post.at(i).get_execution_health_info() -=
-		     health_info_results_pre.at(i).get_execution_health_info());
-	}
+	auto output_data = post_processor(playback_program);
 
-	for (size_t i = 0; i < realtime_column_count; i++) {
-		// extract output data map
-		hate::Timer const post_timer;
-		auto result_data_map = builders[i].post_process(
-		    programs, cadc_readout_tickets, cadc_readout_time_information[i]);
-		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
-
-		// extract PPU read hooks
-		result_data_map.read_ppu_symbols.resize(ppu_read_hooks_results.size());
-		for (size_t b = 0; b < ppu_read_hooks_results.size(); ++b) {
-			result_data_map.read_ppu_symbols.at(b)[execution_instance] =
-			    ppu_read_hooks_results.at(b).evaluate();
-		}
-
+	for (size_t i = 0; i < output_data.size(); ++i) {
 		// add execution duration per hardware to result data map
-		assert(result_data_map.execution_time_info);
-		result_data_map.execution_time_info->execution_duration_per_hardware[dls_global] =
+		assert(output_data.at(i).execution_time_info);
+		output_data.at(i).execution_time_info->execution_duration_per_hardware[dls_global] =
 		    run_time_info.execution_duration;
-
-		// annotate execution health info
-		signal_flow::ExecutionHealthInfo execution_health_info_total;
-		execution_health_info_total.execution_instances[execution_instance] = execution_health_info;
-		result_data_map.execution_health_info = execution_health_info_total;
-
-		// add pre-execution config to result data map
-		result_data_map.pre_execution_chips[execution_instance] = configs_visited[i];
 
 		// merge local data map into global data map
 		if (run_successful) {
-			data_maps[i].merge(result_data_map);
+			data_maps[i].merge(output_data.at(i));
 		}
 	}
 
