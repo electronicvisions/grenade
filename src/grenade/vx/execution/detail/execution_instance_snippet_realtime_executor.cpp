@@ -18,6 +18,7 @@
 #include "haldls/vx/v3/padi.h"
 #include "hate/math.h"
 #include "hate/timer.h"
+#include "hate/type_index.h"
 #include "hate/type_traits.h"
 #include "hate/variant.h"
 #include "lola/vx/ppu.h"
@@ -35,17 +36,6 @@
 #include <tbb/parallel_for_each.h>
 
 namespace grenade::vx::execution::detail {
-
-namespace {
-
-template <typename T>
-std::string name()
-{
-	auto const full = boost::typeindex::type_id<T>().pretty_name();
-	return full.substr(full.rfind(':') + 1);
-}
-
-} // namespace
 
 haldls::vx::v3::Timer::Value const ExecutionInstanceSnippetRealtimeExecutor::wait_before_realtime{
     haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us};
@@ -728,7 +718,7 @@ ExecutionInstanceSnippetRealtimeExecutor::pre_process()
 				    process(vertex, value);
 				    LOG4CXX_TRACE(
 				        logger, "process(): Preprocessed "
-				                    << name<hate::remove_all_qualifiers_t<decltype(value)>>()
+				                    << hate::name<hate::remove_all_qualifiers_t<decltype(value)>>()
 				                    << " in " << timer.print() << ".");
 			    },
 			    m_graph.get_vertex_property(vertex));
@@ -850,8 +840,8 @@ ExecutionInstanceSnippetRealtimeExecutor::post_process(
 			    process(vertex, value);
 			    LOG4CXX_TRACE(
 			        logger, "post_process(): Postprocessed "
-			                    << name<hate::remove_all_qualifiers_t<decltype(value)>>() << " in "
-			                    << timer.print() << ".");
+			                    << hate::name<hate::remove_all_qualifiers_t<decltype(value)>>()
+			                    << " in " << timer.print() << ".");
 		    },
 		    m_graph.get_vertex_property(vertex));
 	}
