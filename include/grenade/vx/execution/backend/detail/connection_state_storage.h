@@ -16,10 +16,6 @@ namespace grenade::vx::execution::backend::detail {
 // TODO: merge content with ConnectionConfig or drop hierarchy
 struct ConnectionStateStorage
 {
-	bool enable_differential_config;
-	lola::vx::v3::Chip current_config;
-	std::vector<fisch::vx::word_access_type::Omnibus> current_config_words;
-
 	ConnectionConfig config;
 
 	stadls::vx::v3::ReinitStackEntry reinit_base;

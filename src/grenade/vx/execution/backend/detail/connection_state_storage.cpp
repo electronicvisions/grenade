@@ -6,9 +6,6 @@ namespace grenade::vx::execution::backend::detail {
 
 ConnectionStateStorage::ConnectionStateStorage(
     bool const enable_differential_config, InitializedConnection& connection) :
-    enable_differential_config(enable_differential_config),
-    current_config(),
-    current_config_words(),
     config(),
     reinit_base(connection.create_reinit_stack_entry()),
     reinit_differential(connection.create_reinit_stack_entry()),
