@@ -1,4 +1,4 @@
-#include "grenade/vx/execution/backend/detail/connection_config.h"
+#include "grenade/vx/execution/backend/detail/stateful_connection_config.h"
 
 #include "haldls/vx/v3/omnibus_constants.h"
 #include "lola/vx/v3/ppu.h"
@@ -6,12 +6,12 @@
 
 namespace grenade::vx::execution::backend::detail {
 
-bool ConnectionConfig::get_enable_differential_config() const
+bool StatefulConnectionConfig::get_enable_differential_config() const
 {
 	return m_enable_differential_config;
 }
 
-void ConnectionConfig::set_enable_differential_config(bool const value)
+void StatefulConnectionConfig::set_enable_differential_config(bool const value)
 {
 	m_enable_differential_config = value;
 }
@@ -33,7 +33,8 @@ static const std::vector<halco::hicann_dls::vx::OmnibusAddress> chip_addresses =
 
 } // namespace
 
-void ConnectionConfig::set_chip(lola::vx::v3::Chip const& value, bool const split_base_differential)
+void StatefulConnectionConfig::set_chip(
+    lola::vx::v3::Chip const& value, bool const split_base_differential)
 {
 	auto const encode_value = [value, this]() {
 		std::swap(m_last_chip_words, m_chip_words);
@@ -97,7 +98,7 @@ void ConnectionConfig::set_chip(lola::vx::v3::Chip const& value, bool const spli
 	}
 }
 
-void ConnectionConfig::set_external_ppu_dram_memory(
+void StatefulConnectionConfig::set_external_ppu_dram_memory(
     std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> const& value)
 {
 	m_last_external_ppu_dram_memory = m_external_ppu_dram_memory;
@@ -166,19 +167,19 @@ void ConnectionConfig::set_external_ppu_dram_memory(
 	}
 }
 
-bool ConnectionConfig::get_is_fresh() const
+bool StatefulConnectionConfig::get_is_fresh() const
 {
 	return m_chip_words.empty();
 }
 
-bool ConnectionConfig::get_has_differential() const
+bool StatefulConnectionConfig::get_has_differential() const
 {
 	return !m_chip_differential_words.empty() ||
 	       !m_external_ppu_dram_memory_differential_words.empty();
 }
 
 
-bool ConnectionConfig::get_differential_changes_capmem() const
+bool StatefulConnectionConfig::get_differential_changes_capmem() const
 {
 	// iterate over all addresses and check whether the base matches one of the CapMem base
 	// addresses.
@@ -195,7 +196,7 @@ bool ConnectionConfig::get_differential_changes_capmem() const
 	return false;
 }
 
-haldls::vx::Encodable::BackendCocoListVariant ConnectionConfig::get_base()
+haldls::vx::Encodable::BackendCocoListVariant StatefulConnectionConfig::get_base()
 {
 	Addresses addresses(m_chip_base_addresses);
 	addresses.insert(
@@ -208,7 +209,7 @@ haldls::vx::Encodable::BackendCocoListVariant ConnectionConfig::get_base()
 	return std::pair{addresses, words};
 }
 
-haldls::vx::Encodable::BackendCocoListVariant ConnectionConfig::get_differential()
+haldls::vx::Encodable::BackendCocoListVariant StatefulConnectionConfig::get_differential()
 {
 	Addresses addresses(m_chip_differential_addresses);
 	addresses.insert(
@@ -222,166 +223,175 @@ haldls::vx::Encodable::BackendCocoListVariant ConnectionConfig::get_differential
 }
 
 
-ConnectionConfigBase::ConnectionConfigBase(ConnectionConfig& config) : m_config(config) {}
-
-ConnectionConfigBase::BackendCoordinateListVariant ConnectionConfigBase::encode_read(
-    Coordinate const& coordinate, std::optional<haldls::vx::Backend> const& /* backend */) const
-{
-	if (typeid(coordinate) != typeid(ConnectionConfigBaseCoordinate)) {
-		throw std::runtime_error("Coordinate type doesn't match container.");
-	}
-	return ConnectionConfig::Addresses{};
-}
-
-void ConnectionConfigBase::decode_read(
-    BackendContainerListVariant const& /* data */, Coordinate const& coordinate)
-{
-	if (typeid(coordinate) != typeid(ConnectionConfigBaseCoordinate)) {
-		throw std::runtime_error("Coordinate type doesn't match container.");
-	}
-}
-
-std::initializer_list<hxcomm::vx::Target> ConnectionConfigBase::get_unsupported_read_targets() const
-{
-	return {};
-}
-
-std::unique_ptr<ConnectionConfigBase::Container> ConnectionConfigBase::clone_container() const
-{
-	return std::make_unique<ConnectionConfigBase>(*this);
-}
-
-ConnectionConfigBase::BackendCocoListVariant ConnectionConfigBase::encode_write(
-    Coordinate const& coordinate, std::optional<haldls::vx::Backend> const& /* backend */) const
-{
-	if (typeid(coordinate) != typeid(ConnectionConfigBaseCoordinate)) {
-		throw std::runtime_error("Coordinate type doesn't match container.");
-	}
-	return m_config.get_base();
-}
-
-std::initializer_list<hxcomm::vx::Target> ConnectionConfigBase::get_unsupported_write_targets()
-    const
-{
-	return {};
-}
-
-bool ConnectionConfigBase::get_supports_differential_write() const
-{
-	return false;
-}
-
-std::unique_ptr<ConnectionConfigBase::Encodable> ConnectionConfigBase::clone_encodable() const
-{
-	return std::make_unique<ConnectionConfigBase>(*this);
-}
-
-bool ConnectionConfigBase::get_is_valid_backend(haldls::vx::Backend backend) const
-{
-	return backend == haldls::vx::Backend::Omnibus;
-}
-
-std::ostream& ConnectionConfigBase::print(std::ostream& os) const
-{
-	return os;
-}
-
-
-bool ConnectionConfigBase::operator==(Encodable const& other) const
-{
-	if (auto const ptr = dynamic_cast<ConnectionConfigBase const*>(&other); ptr) {
-		return m_config == ptr->m_config;
-	}
-	return false;
-}
-
-bool ConnectionConfigBase::operator!=(Encodable const& other) const
-{
-	return !(*this == other);
-}
-
-
-ConnectionConfigDifferential::ConnectionConfigDifferential(ConnectionConfig& config) :
+StatefulConnectionConfigBase::StatefulConnectionConfigBase(StatefulConnectionConfig& config) :
     m_config(config)
 {
 }
 
-ConnectionConfigDifferential::BackendCoordinateListVariant
-ConnectionConfigDifferential::encode_read(
+StatefulConnectionConfigBase::BackendCoordinateListVariant
+StatefulConnectionConfigBase::encode_read(
     Coordinate const& coordinate, std::optional<haldls::vx::Backend> const& /* backend */) const
 {
-	if (typeid(coordinate) != typeid(ConnectionConfigDifferentialCoordinate)) {
+	if (typeid(coordinate) != typeid(StatefulConnectionConfigBaseCoordinate)) {
 		throw std::runtime_error("Coordinate type doesn't match container.");
 	}
-	return ConnectionConfig::Addresses{};
+	return StatefulConnectionConfig::Addresses{};
 }
 
-void ConnectionConfigDifferential::decode_read(
+void StatefulConnectionConfigBase::decode_read(
     BackendContainerListVariant const& /* data */, Coordinate const& coordinate)
 {
-	if (typeid(coordinate) != typeid(ConnectionConfigDifferentialCoordinate)) {
+	if (typeid(coordinate) != typeid(StatefulConnectionConfigBaseCoordinate)) {
 		throw std::runtime_error("Coordinate type doesn't match container.");
 	}
 }
 
 std::initializer_list<hxcomm::vx::Target>
-ConnectionConfigDifferential::get_unsupported_read_targets() const
+StatefulConnectionConfigBase::get_unsupported_read_targets() const
 {
 	return {};
 }
 
-std::unique_ptr<ConnectionConfigDifferential::Container>
-ConnectionConfigDifferential::clone_container() const
+std::unique_ptr<StatefulConnectionConfigBase::Container>
+StatefulConnectionConfigBase::clone_container() const
 {
-	return std::make_unique<ConnectionConfigDifferential>(*this);
+	return std::make_unique<StatefulConnectionConfigBase>(*this);
 }
 
-ConnectionConfigDifferential::BackendCocoListVariant ConnectionConfigDifferential::encode_write(
+StatefulConnectionConfigBase::BackendCocoListVariant StatefulConnectionConfigBase::encode_write(
     Coordinate const& coordinate, std::optional<haldls::vx::Backend> const& /* backend */) const
 {
-	if (typeid(coordinate) != typeid(ConnectionConfigDifferentialCoordinate)) {
+	if (typeid(coordinate) != typeid(StatefulConnectionConfigBaseCoordinate)) {
+		throw std::runtime_error("Coordinate type doesn't match container.");
+	}
+	return m_config.get_base();
+}
+
+std::initializer_list<hxcomm::vx::Target>
+StatefulConnectionConfigBase::get_unsupported_write_targets() const
+{
+	return {};
+}
+
+bool StatefulConnectionConfigBase::get_supports_differential_write() const
+{
+	return false;
+}
+
+std::unique_ptr<StatefulConnectionConfigBase::Encodable>
+StatefulConnectionConfigBase::clone_encodable() const
+{
+	return std::make_unique<StatefulConnectionConfigBase>(*this);
+}
+
+bool StatefulConnectionConfigBase::get_is_valid_backend(haldls::vx::Backend backend) const
+{
+	return backend == haldls::vx::Backend::Omnibus;
+}
+
+std::ostream& StatefulConnectionConfigBase::print(std::ostream& os) const
+{
+	return os;
+}
+
+
+bool StatefulConnectionConfigBase::operator==(Encodable const& other) const
+{
+	if (auto const ptr = dynamic_cast<StatefulConnectionConfigBase const*>(&other); ptr) {
+		return m_config == ptr->m_config;
+	}
+	return false;
+}
+
+bool StatefulConnectionConfigBase::operator!=(Encodable const& other) const
+{
+	return !(*this == other);
+}
+
+
+StatefulConnectionConfigDifferential::StatefulConnectionConfigDifferential(
+    StatefulConnectionConfig& config) :
+    m_config(config)
+{
+}
+
+StatefulConnectionConfigDifferential::BackendCoordinateListVariant
+StatefulConnectionConfigDifferential::encode_read(
+    Coordinate const& coordinate, std::optional<haldls::vx::Backend> const& /* backend */) const
+{
+	if (typeid(coordinate) != typeid(StatefulConnectionConfigDifferentialCoordinate)) {
+		throw std::runtime_error("Coordinate type doesn't match container.");
+	}
+	return StatefulConnectionConfig::Addresses{};
+}
+
+void StatefulConnectionConfigDifferential::decode_read(
+    BackendContainerListVariant const& /* data */, Coordinate const& coordinate)
+{
+	if (typeid(coordinate) != typeid(StatefulConnectionConfigDifferentialCoordinate)) {
+		throw std::runtime_error("Coordinate type doesn't match container.");
+	}
+}
+
+std::initializer_list<hxcomm::vx::Target>
+StatefulConnectionConfigDifferential::get_unsupported_read_targets() const
+{
+	return {};
+}
+
+std::unique_ptr<StatefulConnectionConfigDifferential::Container>
+StatefulConnectionConfigDifferential::clone_container() const
+{
+	return std::make_unique<StatefulConnectionConfigDifferential>(*this);
+}
+
+StatefulConnectionConfigDifferential::BackendCocoListVariant
+StatefulConnectionConfigDifferential::encode_write(
+    Coordinate const& coordinate, std::optional<haldls::vx::Backend> const& /* backend */) const
+{
+	if (typeid(coordinate) != typeid(StatefulConnectionConfigDifferentialCoordinate)) {
 		throw std::runtime_error("Coordinate type doesn't match container.");
 	}
 	return m_config.get_differential();
 }
 
 std::initializer_list<hxcomm::vx::Target>
-ConnectionConfigDifferential::get_unsupported_write_targets() const
+StatefulConnectionConfigDifferential::get_unsupported_write_targets() const
 {
 	return {};
 }
 
-bool ConnectionConfigDifferential::get_supports_differential_write() const
+bool StatefulConnectionConfigDifferential::get_supports_differential_write() const
 {
 	return false;
 }
 
-std::unique_ptr<ConnectionConfigDifferential::Encodable>
-ConnectionConfigDifferential::clone_encodable() const
+std::unique_ptr<StatefulConnectionConfigDifferential::Encodable>
+StatefulConnectionConfigDifferential::clone_encodable() const
 {
-	return std::make_unique<ConnectionConfigDifferential>(*this);
+	return std::make_unique<StatefulConnectionConfigDifferential>(*this);
 }
 
-bool ConnectionConfigDifferential::get_is_valid_backend(haldls::vx::Backend backend) const
+bool StatefulConnectionConfigDifferential::get_is_valid_backend(haldls::vx::Backend backend) const
 {
 	return backend == haldls::vx::Backend::Omnibus;
 }
 
-std::ostream& ConnectionConfigDifferential::print(std::ostream& os) const
+std::ostream& StatefulConnectionConfigDifferential::print(std::ostream& os) const
 {
 	return os;
 }
 
 
-bool ConnectionConfigDifferential::operator==(Encodable const& other) const
+bool StatefulConnectionConfigDifferential::operator==(Encodable const& other) const
 {
-	if (auto const ptr = dynamic_cast<ConnectionConfigDifferential const*>(&other); ptr) {
+	if (auto const ptr = dynamic_cast<StatefulConnectionConfigDifferential const*>(&other); ptr) {
 		return m_config == ptr->m_config;
 	}
 	return false;
 }
 
-bool ConnectionConfigDifferential::operator!=(Encodable const& other) const
+bool StatefulConnectionConfigDifferential::operator!=(Encodable const& other) const
 {
 	return !(*this == other);
 }

@@ -92,12 +92,12 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	stadls::vx::v3::PlaybackProgramBuilder differential_builder;
 	if (!nothing_changed) {
 		base_builder.write(
-		    detail::ConnectionConfigBaseCoordinate(),
-		    detail::ConnectionConfigBase(connection.m_config));
+		    detail::StatefulConnectionConfigBaseCoordinate(),
+		    detail::StatefulConnectionConfigBase(connection.m_config));
 		if (connection.m_config.get_has_differential()) {
 			differential_builder.write(
-			    detail::ConnectionConfigDifferentialCoordinate(),
-			    detail::ConnectionConfigDifferential(connection.m_config));
+			    detail::StatefulConnectionConfigDifferentialCoordinate(),
+			    detail::StatefulConnectionConfigDifferential(connection.m_config));
 		}
 	}
 
@@ -200,7 +200,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 			// reset connection state storage since no assumptions can be made after failure
 			// TODO: create reset mechanism in class
 			bool const enable_differential_config = connection.get_enable_differential_config();
-			connection.m_config = detail::ConnectionConfig();
+			connection.m_config = detail::StatefulConnectionConfig();
 			connection.m_config.set_enable_differential_config(enable_differential_config);
 		}
 		LOG4CXX_TRACE(logger, "Updated connection state in " << update_state_timer.print() << ".");
