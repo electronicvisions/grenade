@@ -35,8 +35,11 @@ ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
 	for (size_t i = 0; i < snippet_executors.size(); i++) {
 		// extract output data map
 		hate::Timer const post_timer;
-		auto result = snippet_executors[i].post_process(
-		    playback_program.programs, cadc_readout_tickets, cadc_readout_time_information[i]);
+		ExecutionInstanceSnippetRealtimeExecutor::PostProcessable post_processable;
+		post_processable.realtime = playback_program.programs;
+		post_processable.cadc_readout_tickets = cadc_readout_tickets;
+		post_processable.periodic_cadc_readout_times = cadc_readout_time_information[i];
+		auto result = snippet_executors[i].post_process(post_processable);
 		results.push_back(std::move(result));
 		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
 	}
@@ -103,11 +106,10 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	bool uses_bot_cadc = false;
 	bool uses_madc = false;
 	for (size_t i = 0; i < realtime_column_count; i++) {
-		ExecutionInstanceSnippetRealtimeExecutor builder(
+		builders.emplace_back(
 		    m_graphs[i], m_execution_instance, m_input_data[i], m_output_data[i],
 		    m_ppu_program.symbols, i,
 		    m_ppu_program.plasticity_rule_timed_recording_start_periods.at(i));
-		builders.push_back(std::move(builder));
 
 		hate::Timer const realtime_preprocess_timer;
 		ExecutionInstanceSnippetRealtimeExecutor::Usages usages = builders[i].pre_process();

@@ -2,8 +2,8 @@
 
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/playback_program.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
@@ -152,8 +152,8 @@ ExecutionInstancePPUProgramCompiler::Result ExecutionInstancePPUProgramCompiler:
 			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
 			estimated_cadc_recording_size =
 			    (maximal_periodic_cadc_runtime +
-			     (ExecutionInstanceSnippetRealtimeExecutor::wait_before_realtime +
-			      ExecutionInstanceSnippetRealtimeExecutor::wait_after_realtime) +
+			     (ExecutionInstanceChipSnippetRealtimeExecutor::wait_before_realtime +
+			      ExecutionInstanceChipSnippetRealtimeExecutor::wait_after_realtime) +
 			     periodic_cadc_fpga_wait_clock_cycles -
 			     (periodic_cadc_ppu_wait_clock_cycles /
 			      2 /* 250MHz vs. 125 MHz PPU vs. FPGA clock */)) /
