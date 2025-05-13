@@ -14,15 +14,17 @@ ExecutionInstanceNode::ExecutionInstanceNode(
     signal_flow::InputData const& input_data_maps,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     grenade::common::ExecutionInstanceID const& execution_instance,
-    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
-    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
+    grenade::common::ConnectionOnExecutor const& connection_on_executor,
+    std::vector<
+        std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
+        configs,
     backend::StatefulConnection& connection,
     signal_flow::ExecutionInstanceHooks& hooks) :
     data_maps(data_maps),
     input_data_maps(input_data_maps),
     graphs(graphs),
     execution_instance(execution_instance),
-    dls_global(dls_global),
+    connection_on_executor(connection_on_executor),
     configs(configs),
     connection(connection),
     hooks(hooks),
@@ -38,7 +40,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace lola::vx::v3;
 
 	ExecutionInstanceExecutor executor(
-	    graphs, input_data_maps, data_maps, configs, hooks, execution_instance);
+	    graphs, input_data_maps, data_maps, configs, hooks, connection.get_chips_on_connection(),
+	    execution_instance);
 
 	hate::Timer const compile_timer;
 
@@ -61,7 +64,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	// add execution duration per hardware to result data map
 	assert(output_data.execution_time_info);
-	output_data.execution_time_info->execution_duration_per_hardware[dls_global] =
+	output_data.execution_time_info->execution_duration_per_hardware[connection_on_executor] =
 	    run_time_info.execution_duration;
 
 	// merge local data map into global data map

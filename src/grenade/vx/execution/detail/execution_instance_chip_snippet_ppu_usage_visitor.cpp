@@ -1,4 +1,4 @@
-#include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_ppu_usage_visitor.h"
 
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
@@ -22,7 +22,7 @@
 
 namespace grenade::vx::execution::detail {
 
-ExecutionInstanceSnippetPPUUsageVisitor::Result::Result() :
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result::Result() :
     has_periodic_cadc_readout(false),
     has_periodic_cadc_readout_on_dram(false),
     has_cadc_readout(false),
@@ -32,8 +32,8 @@ ExecutionInstanceSnippetPPUUsageVisitor::Result::Result() :
 	enabled_neuron_resets.fill(false);
 }
 
-ExecutionInstanceSnippetPPUUsageVisitor::Result::Result(
-    ExecutionInstanceSnippetPPUUsageVisitor::Result&& other) :
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result::Result(
+    ExecutionInstanceChipSnippetPPUUsageVisitor::Result&& other) :
     has_periodic_cadc_readout(other.has_periodic_cadc_readout),
     has_periodic_cadc_readout_on_dram(other.has_periodic_cadc_readout_on_dram),
     has_cadc_readout(other.has_cadc_readout),
@@ -42,9 +42,9 @@ ExecutionInstanceSnippetPPUUsageVisitor::Result::Result(
 {
 }
 
-ExecutionInstanceSnippetPPUUsageVisitor::Result&
-ExecutionInstanceSnippetPPUUsageVisitor::Result::operator=(
-    ExecutionInstanceSnippetPPUUsageVisitor::Result&& other)
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result&
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result::operator=(
+    ExecutionInstanceChipSnippetPPUUsageVisitor::Result&& other)
 {
 	has_periodic_cadc_readout = other.has_periodic_cadc_readout;
 	has_periodic_cadc_readout_on_dram = other.has_periodic_cadc_readout_on_dram;
@@ -54,9 +54,9 @@ ExecutionInstanceSnippetPPUUsageVisitor::Result::operator=(
 	return *this;
 }
 
-ExecutionInstanceSnippetPPUUsageVisitor::Result&
-ExecutionInstanceSnippetPPUUsageVisitor::Result::operator+=(
-    ExecutionInstanceSnippetPPUUsageVisitor::Result&& other)
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result&
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result::operator+=(
+    ExecutionInstanceChipSnippetPPUUsageVisitor::Result&& other)
 {
 	has_periodic_cadc_readout = has_periodic_cadc_readout || other.has_periodic_cadc_readout;
 	has_periodic_cadc_readout_on_dram =
@@ -72,18 +72,20 @@ ExecutionInstanceSnippetPPUUsageVisitor::Result::operator+=(
 	return *this;
 }
 
-ExecutionInstanceSnippetPPUUsageVisitor::ExecutionInstanceSnippetPPUUsageVisitor(
+ExecutionInstanceChipSnippetPPUUsageVisitor::ExecutionInstanceChipSnippetPPUUsageVisitor(
     signal_flow::Graph const& graph,
+    common::ChipOnConnection const& chip_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance,
     size_t realtime_column_index) :
     m_graph(graph),
+    m_chip_on_connection(chip_on_connection),
     m_execution_instance(execution_instance),
     m_realtime_column_index(realtime_column_index)
 {
 }
 
 template <typename T>
-void ExecutionInstanceSnippetPPUUsageVisitor::process(
+void ExecutionInstanceChipSnippetPPUUsageVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     T const& /* data */,
     Result& /* result */) const
@@ -92,7 +94,7 @@ void ExecutionInstanceSnippetPPUUsageVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetPPUUsageVisitor::process(
+void ExecutionInstanceChipSnippetPPUUsageVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::CADCMembraneReadoutView const& data,
     Result& result) const
@@ -105,7 +107,7 @@ void ExecutionInstanceSnippetPPUUsageVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetPPUUsageVisitor::process(
+void ExecutionInstanceChipSnippetPPUUsageVisitor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::PlasticityRule const& data,
     Result& result) const
@@ -137,7 +139,7 @@ void ExecutionInstanceSnippetPPUUsageVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetPPUUsageVisitor::process(
+void ExecutionInstanceChipSnippetPPUUsageVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::NeuronView const& data,
     Result& result) const
@@ -155,10 +157,10 @@ void ExecutionInstanceSnippetPPUUsageVisitor::process(
 	}
 }
 
-ExecutionInstanceSnippetPPUUsageVisitor::Result
-ExecutionInstanceSnippetPPUUsageVisitor::operator()() const
+ExecutionInstanceChipSnippetPPUUsageVisitor::Result
+ExecutionInstanceChipSnippetPPUUsageVisitor::operator()() const
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetPPUUsageVisitor");
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetPPUUsageVisitor");
 	Result result;
 	auto const execution_instance_vertex =
 	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
@@ -169,6 +171,12 @@ ExecutionInstanceSnippetPPUUsageVisitor::operator()() const
 		    [&](auto const& value) {
 			    hate::Timer timer;
 			    process(vertex, value, result);
+			    typedef hate::remove_all_qualifiers_t<decltype(value)> vertex_type;
+			    if constexpr (std::is_base_of_v<vertex_type, common::EntityOnChip>) {
+				    if (value.chip_on_connection == m_chip_on_connection) {
+					    process(vertex, value);
+				    }
+			    }
 			    LOG4CXX_TRACE(
 			        logger, "process(): Processed "
 			                    << hate::name<hate::remove_all_qualifiers_t<decltype(value)>>()

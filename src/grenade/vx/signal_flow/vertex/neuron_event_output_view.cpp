@@ -11,8 +11,8 @@
 namespace grenade::vx::signal_flow::vertex {
 
 NeuronEventOutputView::NeuronEventOutputView(
-    Neurons const& neurons, ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate), m_neurons()
+    Neurons const& neurons, ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor), m_neurons()
 {
 	for (auto const& [_, columns_of_inputs] : neurons) {
 		std::set<Columns::value_type> unique;

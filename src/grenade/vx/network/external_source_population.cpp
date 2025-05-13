@@ -17,8 +17,8 @@ std::ostream& operator<<(std::ostream& os, ExternalSourcePopulation::Neuron cons
 }
 
 ExternalSourcePopulation::ExternalSourcePopulation(
-    std::vector<Neuron> neurons, common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate), neurons(std::move(neurons))
+    std::vector<Neuron> neurons, common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor), neurons(std::move(neurons))
 {}
 
 bool ExternalSourcePopulation::operator==(ExternalSourcePopulation const& other) const

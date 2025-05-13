@@ -297,8 +297,8 @@ PlasticityRule::PlasticityRule(
     std::vector<NeuronViewShape> const& neuron_view_shapes,
     std::optional<Recording> const& recording,
     ID const& id,
-    ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate),
+    ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor),
     m_kernel(std::move(kernel)),
     m_timer(timer),
     m_synapse_view_shapes(synapse_view_shapes),

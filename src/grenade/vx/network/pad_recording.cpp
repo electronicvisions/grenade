@@ -18,8 +18,8 @@ bool PadRecording::Source::operator!=(Source const& other) const
 
 
 PadRecording::PadRecording(
-    Recordings const& recordings, common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate), recordings(recordings)
+    Recordings const& recordings, common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor), recordings(recordings)
 {}
 
 bool PadRecording::operator==(PadRecording const& other) const

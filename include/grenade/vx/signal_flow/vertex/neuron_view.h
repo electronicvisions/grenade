@@ -58,14 +58,14 @@ struct NeuronView : public EntityOnChip
 	 * @param columns Neuron columns
 	 * @param enable_resets Enable values for initial reset of the neurons
 	 * @param row Neuron row
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	template <typename ColumnsT, typename ConfigsT, typename RowT>
 	explicit NeuronView(
 	    ColumnsT&& columns,
 	    ConfigsT&& enable_resets,
 	    RowT&& row,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor());
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Configs const& get_configs() const SYMBOL_VISIBLE;

@@ -1,9 +1,10 @@
-#include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
 
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
@@ -22,15 +23,18 @@
 
 namespace grenade::vx::execution::detail {
 
-ExecutionInstanceSnippetConfigVisitor::ExecutionInstanceSnippetConfigVisitor(
+ExecutionInstanceChipSnippetConfigVisitor::ExecutionInstanceChipSnippetConfigVisitor(
     signal_flow::Graph const& graph,
+    common::ChipOnConnection const& chip_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance) :
-    m_graph(graph), m_execution_instance(execution_instance)
+    m_graph(graph),
+    m_chip_on_connection(chip_on_connection),
+    m_execution_instance(execution_instance)
 {
 }
 
 template <typename T>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     T const& /* data */,
     lola::vx::v3::Chip& /* chip */) const
@@ -39,7 +43,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::CADCMembraneReadoutView const& data,
     lola::vx::v3::Chip& chip) const
@@ -58,7 +62,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const,
     signal_flow::vertex::NeuronEventOutputView const& data,
     lola::vx::v3::Chip& chip) const
@@ -77,7 +81,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::MADCReadoutView const& data,
     lola::vx::v3::Chip& chip) const
@@ -142,7 +146,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::PadReadoutView const& data,
     lola::vx::v3::Chip& chip) const
@@ -199,7 +203,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::SynapseArrayView const& data,
     lola::vx::v3::Chip& chip) const
@@ -225,7 +229,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::SynapseArrayViewSparse const& data,
     lola::vx::v3::Chip& chip) const
@@ -245,7 +249,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor,
     signal_flow::vertex::PlasticityRule const& data,
     lola::vx::v3::Chip& chip) const
@@ -265,7 +269,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::SynapseDriver const& data,
     lola::vx::v3::Chip& chip) const
@@ -283,7 +287,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::PADIBus const& data,
     lola::vx::v3::Chip& chip) const
@@ -297,7 +301,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::CrossbarNode const& data,
     lola::vx::v3::Chip& chip) const
@@ -312,7 +316,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::BackgroundSpikeSource const& data,
     lola::vx::v3::Chip& chip) const
@@ -321,7 +325,7 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 }
 
 template <>
-void ExecutionInstanceSnippetConfigVisitor::process(
+void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::NeuronView const& data,
     lola::vx::v3::Chip& chip) const
@@ -375,9 +379,9 @@ void ExecutionInstanceSnippetConfigVisitor::process(
 	}
 }
 
-void ExecutionInstanceSnippetConfigVisitor::operator()(lola::vx::v3::Chip& chip) const
+void ExecutionInstanceChipSnippetConfigVisitor::operator()(lola::vx::v3::Chip& chip) const
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetConfigVisitor");
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor");
 
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
@@ -425,11 +429,15 @@ void ExecutionInstanceSnippetConfigVisitor::operator()(lola::vx::v3::Chip& chip)
 		std::visit(
 		    [&](auto const& value) {
 			    hate::Timer timer;
-			    process(vertex, value, chip);
-			    LOG4CXX_TRACE(
-			        logger, "process(): Processed "
-			                    << hate::name<hate::remove_all_qualifiers_t<decltype(value)>>()
-			                    << " in " << timer.print() << ".");
+			    typedef hate::remove_all_qualifiers_t<decltype(value)> Value;
+			    if constexpr (std::is_base_of_v<signal_flow::vertex::EntityOnChip, Value>) {
+				    if (value.chip_on_executor.first == m_chip_on_connection) {
+					    process(vertex, value, chip);
+					    LOG4CXX_TRACE(
+					        logger, "process(): Processed " << hate::name<Value>() << " in "
+					                                        << timer.print() << ".");
+				    }
+			    }
 		    },
 		    m_graph.get_vertex_property(vertex));
 	}

@@ -29,7 +29,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	grenade::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	// build network
 	NetworkBuilder network_builder;

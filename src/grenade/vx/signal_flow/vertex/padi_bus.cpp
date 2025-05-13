@@ -6,8 +6,8 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-PADIBus::PADIBus(Coordinate const& coordinate, ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate), m_coordinate(coordinate)
+PADIBus::PADIBus(Coordinate const& coordinate, ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor), m_coordinate(coordinate)
 {}
 
 bool PADIBus::supports_input_from(

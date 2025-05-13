@@ -40,7 +40,7 @@ struct SynapseArrayView : public EntityOnChip
 	 * @param columns Coordinates of columns
 	 * @param weights Weight values
 	 * @param labels Label values
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	template <
 	    typename SynramT,
@@ -54,7 +54,7 @@ struct SynapseArrayView : public EntityOnChip
 	    ColumnsT&& columns,
 	    WeightsT&& weights,
 	    LabelsT&& labels,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor());
 
 	/**
 	 * Accessor to synapse row coordinates via a range.

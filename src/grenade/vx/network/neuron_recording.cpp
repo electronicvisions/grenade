@@ -19,8 +19,8 @@ bool NeuronRecording::Neuron::operator!=(Neuron const& other) const
 
 NeuronRecording::NeuronRecording(
     std::vector<Neuron> const& neurons,
-    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate), neurons(neurons)
+    common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor), neurons(neurons)
 {}
 
 bool NeuronRecording::operator==(NeuronRecording const& other) const

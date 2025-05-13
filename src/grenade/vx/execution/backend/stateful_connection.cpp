@@ -67,4 +67,9 @@ void StatefulConnection::set_enable_differential_config(bool const value)
 	m_config.set_enable_differential_config(value);
 }
 
+std::vector<common::ChipOnConnection> StatefulConnection::get_chips_on_connection() const
+{
+	return m_initialized_connection.get_chips_on_connection();
+}
+
 } // namespace grenade::vx::execution::backend

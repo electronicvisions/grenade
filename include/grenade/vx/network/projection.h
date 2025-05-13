@@ -65,15 +65,15 @@ struct GENPYBIND(visible) Projection : public common::EntityOnChip
 	    Connections const& connections,
 	    PopulationOnExecutionInstance population_pre,
 	    PopulationOnExecutionInstance population_post,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 	Projection(
 	    Receptor const& receptor,
 	    Connections&& connections,
 	    PopulationOnExecutionInstance population_pre,
 	    PopulationOnExecutionInstance population_post,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	GENPYBIND_MANUAL({
 		using namespace grenade::vx::network;
@@ -82,9 +82,9 @@ struct GENPYBIND(visible) Projection : public common::EntityOnChip
 		                           pybind11::array_t<size_t> const& pyconnections,
 		                           PopulationOnExecutionInstance const population_pre,
 		                           PopulationOnExecutionInstance const population_post,
-		                           grenade::vx::common::EntityOnChip::ChipCoordinate
-		                               chip_coordinate =
-		                                   grenade::vx::common::EntityOnChip::ChipCoordinate()) {
+		                           grenade::vx::common::EntityOnChip::ChipOnExecutor
+		                               chip_on_executor =
+		                                   grenade::vx::common::EntityOnChip::ChipOnExecutor()) {
 			if (pyconnections.ndim() != 2) {
 				throw std::runtime_error("Expected connections array to be of dimension 2.");
 			}
@@ -110,14 +110,14 @@ struct GENPYBIND(visible) Projection : public common::EntityOnChip
 			self.receptor = receptor;
 			self.population_pre = population_pre;
 			self.population_post = population_post;
-			self.chip_coordinate = chip_coordinate;
+			self.chip_on_executor = chip_on_executor;
 		};
 
 		parent.def(
 		    "from_numpy", from_numpy, parent->py::arg("receptor"), parent->py::arg("connections"),
 		    parent->py::arg("population_pre"), parent->py::arg("population_post"),
-		    parent->py::arg("chip_coordinate") =
-		        grenade::vx::common::EntityOnChip::ChipCoordinate());
+		    parent->py::arg("chip_on_executor") =
+		        grenade::vx::common::EntityOnChip::ChipOnExecutor());
 	})
 
 	bool operator==(Projection const& other) const SYMBOL_VISIBLE;

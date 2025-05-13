@@ -140,4 +140,9 @@ bool InitializedConnection::is_quiggeldy() const
 	return std::holds_alternative<hxcomm::vx::QuiggeldyConnection>(get_connection());
 }
 
+std::vector<common::ChipOnConnection> InitializedConnection::get_chips_on_connection() const
+{
+	return {common::ChipOnConnection()};
+}
+
 } // namespace grenade::vx::execution::backend

@@ -123,10 +123,10 @@ stadls::vx::PlaybackGeneratorReturn<PPUStop::Builder, PPUStop::Result> PPUStop::
 }
 
 
-signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type PPUReadHooks::Result::evaluate()
-    const
+signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type::mapped_type
+PPUReadHooks::Result::evaluate() const
 {
-	signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type ret;
+	signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type::mapped_type ret;
 	for (auto const& [name, ticket] : tickets) {
 		std::visit(
 		    hate::overloaded{

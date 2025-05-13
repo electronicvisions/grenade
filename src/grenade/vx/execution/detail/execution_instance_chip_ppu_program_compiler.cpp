@@ -1,9 +1,10 @@
-#include "grenade/vx/execution/detail/execution_instance_ppu_program_compiler.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_ppu_program_compiler.h"
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/backend/playback_program.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
@@ -25,10 +26,11 @@
 
 namespace grenade::vx::execution::detail {
 
-void ExecutionInstancePPUProgramCompiler::Result::apply(
+void ExecutionInstanceChipPPUProgramCompiler::Result::apply(
     backend::PlaybackProgram& playback_program) const
 {
-	if (!internal.empty() && playback_program.chip_configs.size() != internal.size()) {
+	if (!internal.empty() &&
+	    playback_program.chips.at(chip_on_connection).chip_configs.size() != internal.size()) {
 		throw std::invalid_argument(
 		    "Number of realtime snippets in playback program doesn't match PPU program.");
 	}
@@ -36,44 +38,53 @@ void ExecutionInstancePPUProgramCompiler::Result::apply(
 	for (size_t i = 0; i < internal.size(); ++i) {
 		// set internal PPU program
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
-			playback_program.chip_configs[i].ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
-			    halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU(
-			        halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(0),
-			        halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(internal[i][ppu].size() - 1)),
-			    internal[i][ppu]);
+			playback_program.chips.at(chip_on_connection)
+			    .chip_configs[i]
+			    .ppu_memory[ppu.toPPUMemoryOnDLS()]
+			    .set_block(
+			        halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU(
+			            halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(0),
+			            halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(internal[i][ppu].size() - 1)),
+			        internal[i][ppu]);
 		}
 
 		// set external PPU program
 		if (external) {
-			playback_program.chip_configs[i].external_ppu_memory.set_subblock(0, external.value());
+			playback_program.chips.at(chip_on_connection)
+			    .chip_configs[i]
+			    .external_ppu_memory.set_subblock(0, external.value());
 		}
 	}
 
 	// set external dram PPU program
-	playback_program.external_ppu_dram_memory_config = external_dram;
+	playback_program.chips.at(chip_on_connection).external_ppu_dram_memory_config = external_dram;
 
 	// set PPU symbols
-	playback_program.ppu_symbols = symbols;
+	playback_program.chips.at(chip_on_connection).ppu_symbols = symbols;
 }
 
 
-ExecutionInstancePPUProgramCompiler::ExecutionInstancePPUProgramCompiler(
+ExecutionInstanceChipPPUProgramCompiler::ExecutionInstanceChipPPUProgramCompiler(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     signal_flow::InputData const& input_data,
     signal_flow::ExecutionInstanceHooks const& hooks,
+    common::ChipOnConnection const& chip_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance) :
     m_graphs(graphs),
     m_input_data(input_data),
     m_hooks(hooks),
+    m_chip_on_connection(chip_on_connection),
     m_execution_instance(execution_instance)
 {
 }
 
-ExecutionInstancePPUProgramCompiler::Result ExecutionInstancePPUProgramCompiler::operator()() const
+ExecutionInstanceChipPPUProgramCompiler::Result
+ExecutionInstanceChipPPUProgramCompiler::operator()() const
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstancePPUProgramCompiler");
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipPPUProgramCompiler");
 
 	Result result;
+	result.chip_on_connection = m_chip_on_connection;
 
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
@@ -83,11 +94,11 @@ ExecutionInstancePPUProgramCompiler::Result ExecutionInstancePPUProgramCompiler:
 	assert((std::set<size_t>{m_input_data.snippets.size(), m_graphs.size()}.size() == 1));
 	size_t const realtime_column_count = m_graphs.size();
 
-	ExecutionInstanceSnippetPPUUsageVisitor::Result overall_ppu_usage;
-	std::vector<ExecutionInstanceSnippetPPUUsageVisitor::Result> ppu_usages;
+	ExecutionInstanceChipSnippetPPUUsageVisitor::Result overall_ppu_usage;
+	std::vector<ExecutionInstanceChipSnippetPPUUsageVisitor::Result> ppu_usages;
 	for (size_t i = 0; i < realtime_column_count; i++) {
-		auto ppu_usage =
-		    ExecutionInstanceSnippetPPUUsageVisitor(m_graphs[i], m_execution_instance, i)();
+		auto ppu_usage = ExecutionInstanceChipSnippetPPUUsageVisitor(
+		    m_graphs[i], m_chip_on_connection, m_execution_instance, i)();
 		ppu_usages.push_back(ppu_usage);
 		overall_ppu_usage += std::move(ppu_usage);
 	}
@@ -211,7 +222,8 @@ ExecutionInstancePPUProgramCompiler::Result ExecutionInstancePPUProgramCompiler:
 			}
 
 			// inject playback-hook PPU symbols to be overwritten
-			for (auto const& [name, memory_config] : m_hooks.write_ppu_symbols) {
+			for (auto const& [name, memory_config] :
+			     m_hooks.chips.at(m_chip_on_connection).write_ppu_symbols) {
 				if (!result.symbols) {
 					throw std::runtime_error("Provided PPU symbols but no PPU program is present.");
 				}

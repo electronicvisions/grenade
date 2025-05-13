@@ -20,7 +20,7 @@ struct HealthInfo
 	{
 		haldls::vx::v3::Timer::Value execution_duration;
 
-		signal_flow::ExecutionHealthInfo::ExecutionInstance get_execution_health_info() const
+		signal_flow::ExecutionHealthInfo::ExecutionInstance::Chip get_execution_health_info() const
 		    SYMBOL_VISIBLE;
 
 	private:

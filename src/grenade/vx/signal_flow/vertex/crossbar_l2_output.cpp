@@ -7,8 +7,8 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-CrossbarL2Output::CrossbarL2Output(ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate)
+CrossbarL2Output::CrossbarL2Output(ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor)
 {}
 
 std::ostream& operator<<(std::ostream& os, CrossbarL2Output const&)

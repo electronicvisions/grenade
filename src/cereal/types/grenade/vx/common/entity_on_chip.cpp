@@ -2,13 +2,14 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/utility.hpp>
 
 namespace grenade::vx::common {
 
 template <typename Archive>
 void EntityOnChip::serialize(Archive& ar, std::uint32_t const)
 {
-	ar(CEREAL_NVP(chip_coordinate));
+	ar(CEREAL_NVP(chip_on_executor));
 }
 
 } // namespace grenade::vx::common

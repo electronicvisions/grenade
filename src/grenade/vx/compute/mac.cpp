@@ -447,7 +447,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
 	for (auto const& [_, execution_instance] : m_graph.get_execution_instance_map()) {
-		chip_configs.emplace(execution_instance, config);
+		chip_configs[execution_instance][common::ChipOnConnection()] = config;
 	}
 
 	// run Graph with given inputs and return results

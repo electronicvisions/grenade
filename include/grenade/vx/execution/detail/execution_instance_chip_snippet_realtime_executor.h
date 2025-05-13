@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
@@ -128,6 +129,7 @@ public:
 private:
 	signal_flow::Graph const& m_graph;
 	grenade::common::ExecutionInstanceID m_execution_instance;
+	common::ChipOnConnection m_chip_on_connection;
 
 	ExecutionInstanceSnippetData& m_data;
 

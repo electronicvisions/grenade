@@ -1,6 +1,5 @@
 #pragma once
 #include "grenade/vx/common/entity_on_chip.h"
-#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include <optional>
 
@@ -19,7 +18,7 @@ namespace vertex {
  */
 struct EntityOnChip : public common::EntityOnChip
 {
-	explicit EntityOnChip(ChipCoordinate const& coordinate_chip = ChipCoordinate()) SYMBOL_VISIBLE;
+	explicit EntityOnChip(ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	/**
 	 * Whether entity on chip supports input from given vertex.

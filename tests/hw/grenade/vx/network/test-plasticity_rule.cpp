@@ -1,4 +1,5 @@
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/extract_output.h"
 #include "grenade/vx/network/network.h"
@@ -30,7 +31,7 @@ TEST(PlasticityRule, RawRecording)
 	grenade::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	// build network
 	NetworkBuilder network_builder;
@@ -127,7 +128,7 @@ TEST(PlasticityRule, TimedRecording)
 	grenade::common::ExecutionInstanceID instance;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	grenade::vx::signal_flow::InputData inputs;
 	inputs.snippets.resize(1);
@@ -601,7 +602,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
 	inputs.snippets.resize(1);
@@ -718,7 +719,7 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
 	inputs.snippets.resize(1);
@@ -798,7 +799,7 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
 	inputs.snippets.resize(1);
@@ -893,7 +894,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	grenade::common::ExecutionInstanceID instance;
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
 	inputs.snippets.resize(1);
@@ -962,19 +963,26 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
 	hooks[grenade::common::ExecutionInstanceID()] =
 	    std::make_shared<signal_flow::ExecutionInstanceHooks>();
-	hooks[grenade::common::ExecutionInstanceID()]->write_ppu_symbols["test"] =
+	hooks[grenade::common::ExecutionInstanceID()]
+	    ->chips[grenade::vx::common::ChipOnConnection()]
+	    .write_ppu_symbols["test"] =
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::top, expectation},
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom, expectation},
 	    };
-	hooks[grenade::common::ExecutionInstanceID()]->read_ppu_symbols.insert("test");
+	hooks[grenade::common::ExecutionInstanceID()]
+	    ->chips[grenade::vx::common::ChipOnConnection()]
+	    .read_ppu_symbols.insert("test");
 
-	auto const expectation_symbols =
-	    hooks.at(grenade::common::ExecutionInstanceID())->write_ppu_symbols;
+	auto const expectation_symbols = hooks.at(grenade::common::ExecutionInstanceID())
+	                                     ->chips[grenade::vx::common::ChipOnConnection()]
+	                                     .write_ppu_symbols;
 
 	auto const result = run(executor, network_graph, chip_configs, inputs, std::move(hooks));
 
 	EXPECT_EQ(
-	    result.read_ppu_symbols.at(0).at(grenade::common::ExecutionInstanceID()),
+	    result.read_ppu_symbols.at(0)
+	        .at(grenade::common::ExecutionInstanceID())
+	        .at(grenade::vx::common::ChipOnConnection()),
 	    expectation_symbols);
 }

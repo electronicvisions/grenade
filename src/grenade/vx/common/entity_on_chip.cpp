@@ -4,12 +4,13 @@
 
 namespace grenade::vx::common {
 
-EntityOnChip::EntityOnChip(ChipCoordinate const& chip_coordinate) : chip_coordinate(chip_coordinate)
+EntityOnChip::EntityOnChip(ChipOnExecutor const& chip_on_executor) :
+    chip_on_executor(chip_on_executor)
 {}
 
 bool EntityOnChip::operator==(EntityOnChip const& other) const
 {
-	return chip_coordinate == other.chip_coordinate;
+	return chip_on_executor == other.chip_on_executor;
 }
 
 bool EntityOnChip::operator!=(EntityOnChip const& other) const
@@ -19,7 +20,8 @@ bool EntityOnChip::operator!=(EntityOnChip const& other) const
 
 std::ostream& operator<<(std::ostream& os, EntityOnChip const& entity)
 {
-	return os << "EntityOnChip(" << entity.chip_coordinate << ")";
+	return os << "EntityOnChip(" << entity.chip_on_executor.first << ", "
+	          << entity.chip_on_executor.second << ")";
 }
 
 } // namespace grenade::vx::common

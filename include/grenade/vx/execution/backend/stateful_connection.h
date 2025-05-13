@@ -100,6 +100,11 @@ struct StatefulConnection
 	 */
 	void set_enable_differential_config(bool value) SYMBOL_VISIBLE;
 
+	/**
+	 * Get chip identifiers on this connection.
+	 */
+	std::vector<common::ChipOnConnection> get_chips_on_connection() const;
+
 private:
 	InitializedConnection m_initialized_connection;
 

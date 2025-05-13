@@ -10,10 +10,10 @@ using namespace haldls::vx::v3;
 using namespace stadls::vx::v3;
 using namespace halco::hicann_dls::vx::v3;
 
-signal_flow::ExecutionHealthInfo::ExecutionInstance HealthInfo::Result::get_execution_health_info()
-    const
+signal_flow::ExecutionHealthInfo::ExecutionInstance::Chip
+HealthInfo::Result::get_execution_health_info() const
 {
-	signal_flow::ExecutionHealthInfo::ExecutionInstance ret;
+	signal_flow::ExecutionHealthInfo::ExecutionInstance::Chip ret;
 
 	ret.hicann_arq_status = dynamic_cast<HicannARQStatus const&>(m_hicann_arq_status.get());
 

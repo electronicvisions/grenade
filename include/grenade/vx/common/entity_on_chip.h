@@ -1,6 +1,7 @@
 #pragma once
+#include "grenade/common/connection_on_executor.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/genpybind.h"
-#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include <iosfwd>
 
@@ -16,11 +17,11 @@ namespace common GENPYBIND_TAG_GRENADE_VX_COMMON {
  */
 struct GENPYBIND(visible) EntityOnChip
 {
-	typedef halco::hicann_dls::vx::v3::DLSGlobal ChipCoordinate;
+	typedef std::pair<ChipOnConnection, grenade::common::ConnectionOnExecutor> ChipOnExecutor;
 
-	explicit EntityOnChip(ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	explicit EntityOnChip(ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
-	ChipCoordinate chip_coordinate;
+	ChipOnExecutor chip_on_executor;
 
 	bool operator==(EntityOnChip const& other) const SYMBOL_VISIBLE;
 	bool operator!=(EntityOnChip const& other) const SYMBOL_VISIBLE;

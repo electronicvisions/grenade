@@ -35,8 +35,10 @@ struct ExecutionInstanceNode
 	    signal_flow::InputData const& input_data_maps,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
-	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
-	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
+	    grenade::common::ConnectionOnExecutor const& connection_on_executor,
+	    std::vector<std::map<
+	        common::ChipOnConnection,
+	        std::reference_wrapper<lola::vx::v3::Chip const>>> const& configs,
 	    backend::StatefulConnection& connection,
 	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
@@ -63,8 +65,10 @@ private:
 	signal_flow::InputData const& input_data_maps;
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs;
 	grenade::common::ExecutionInstanceID execution_instance;
-	halco::hicann_dls::vx::v3::DLSGlobal dls_global;
-	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> configs;
+	grenade::common::ConnectionOnExecutor connection_on_executor;
+	std::vector<
+	    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>>
+	    configs;
 	backend::StatefulConnection& connection;
 	signal_flow::ExecutionInstanceHooks& hooks;
 	log4cxx::LoggerPtr logger;

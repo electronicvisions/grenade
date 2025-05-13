@@ -30,8 +30,8 @@ struct GENPYBIND(visible) ExternalSourcePopulation : public common::EntityOnChip
 	ExternalSourcePopulation() = default;
 	ExternalSourcePopulation(
 	    std::vector<Neuron> neurons,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	bool operator==(ExternalSourcePopulation const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ExternalSourcePopulation const& other) const SYMBOL_VISIBLE;

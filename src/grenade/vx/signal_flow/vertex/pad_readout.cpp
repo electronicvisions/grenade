@@ -21,8 +21,8 @@ bool PadReadoutView::Source::operator!=(Source const& other) const
 
 
 PadReadoutView::PadReadoutView(
-    Source const& source, Coordinate const& coordinate, ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate), m_source(source), m_coordinate(coordinate)
+    Source const& source, Coordinate const& coordinate, ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor), m_source(source), m_coordinate(coordinate)
 {}
 
 PadReadoutView::Source const& PadReadoutView::get_source() const

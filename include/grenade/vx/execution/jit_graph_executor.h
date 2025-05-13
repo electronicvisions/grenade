@@ -1,8 +1,8 @@
 #pragma once
+#include "grenade/common/connection_on_executor.h"
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/signal_flow/execution_instance_hooks.h"
-#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 #include <memory>
@@ -36,7 +36,10 @@ public:
 
 	static constexpr char name[] = "JITGraphExecutor";
 
-	typedef std::map<grenade::common::ExecutionInstanceID, lola::vx::v3::Chip> ChipConfigs;
+	typedef std::map<
+	    grenade::common::ExecutionInstanceID,
+	    std::map<common::ChipOnConnection, lola::vx::v3::Chip>>
+	    ChipConfigs;
 
 	typedef std::map<
 	    grenade::common::ExecutionInstanceID,
@@ -54,39 +57,39 @@ public:
 	 * Construct executor with given active connections.
 	 * @param connections InitializedConnections to acquire and provide
 	 */
-	JITGraphExecutor(std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection>&&
+	JITGraphExecutor(std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&&
 	                     connections) SYMBOL_VISIBLE;
 
 	/**
 	 * Get identifiers of connections contained in executor.
 	 * @return Set of connection identifiers
 	 */
-	std::set<halco::hicann_dls::vx::v3::DLSGlobal> contained_connections() const SYMBOL_VISIBLE;
+	std::set<grenade::common::ConnectionOnExecutor> contained_connections() const SYMBOL_VISIBLE;
 
 	/**
 	 * Release contained connections.
 	 * @return InitializedConnections to the associated hardware
 	 */
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection>&&
+	std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&&
 	release_connections() SYMBOL_VISIBLE;
 
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo> get_time_info() const
-	    SYMBOL_VISIBLE;
+	std::map<grenade::common::ConnectionOnExecutor, hxcomm::ConnectionTimeInfo> get_time_info()
+	    const SYMBOL_VISIBLE;
 
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_unique_identifier(
+	std::map<grenade::common::ConnectionOnExecutor, std::string> get_unique_identifier(
 	    std::optional<std::string> const& hwdb_path) const SYMBOL_VISIBLE;
 
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_bitfile_info() const
+	std::map<grenade::common::ConnectionOnExecutor, std::string> get_bitfile_info() const
 	    SYMBOL_VISIBLE;
 
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_remote_repo_state() const
+	std::map<grenade::common::ConnectionOnExecutor, std::string> get_remote_repo_state() const
 	    SYMBOL_VISIBLE;
 
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> get_hwdb_entry() const
+	std::map<grenade::common::ConnectionOnExecutor, hxcomm::HwdbEntry> get_hwdb_entry() const
 	    SYMBOL_VISIBLE;
 
 private:
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection> m_connections;
+	std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection> m_connections;
 
 	/**
 	 * Check whether the given graph can be executed.

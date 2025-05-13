@@ -62,7 +62,7 @@ struct CADCMembraneReadoutView : public EntityOnChip
 	    SynramT&& synram,
 	    Mode const& mode,
 	    SourcesT&& sources,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor());
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Synram const& get_synram() const SYMBOL_VISIBLE;

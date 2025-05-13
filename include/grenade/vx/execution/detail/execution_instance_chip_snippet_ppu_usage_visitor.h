@@ -19,7 +19,7 @@ namespace grenade::vx::execution::detail {
 /**
  * Visitor of graph vertices of a single execution instance for extraction of used PPU resources.
  */
-class ExecutionInstanceSnippetPPUUsageVisitor
+class ExecutionInstanceChipSnippetPPUUsageVisitor
 {
 public:
 	struct Result
@@ -58,8 +58,9 @@ public:
 	 * @param execution_instance Local execution instance to visit
 	 * @param realtime_column_index Index of realtime column
 	 */
-	ExecutionInstanceSnippetPPUUsageVisitor(
+	ExecutionInstanceChipSnippetPPUUsageVisitor(
 	    signal_flow::Graph const& graph,
+	    common::ChipOnConnection const& chip_on_connection,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    size_t realtime_column_index) SYMBOL_VISIBLE;
 
@@ -71,6 +72,7 @@ public:
 
 private:
 	signal_flow::Graph const& m_graph;
+	common::ChipOnConnection m_chip_on_connection;
 	grenade::common::ExecutionInstanceID m_execution_instance;
 	size_t m_realtime_column_index;
 

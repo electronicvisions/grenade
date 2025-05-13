@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
@@ -42,6 +43,7 @@ public:
 	 * Construct builder.
 	 * @param graph Graph to use for locality and property lookup
 	 * @param execution_instance Local execution instance to build for
+	 * @param chips_on_connection Chip identifiers on connection to use
 	 * @param input_list Input list to use for input data lookup
 	 * @param data_output Data output from depended-on executions to use for data lookup
 	 * @param chip_config Chip configuration to use
@@ -52,21 +54,29 @@ public:
 	ExecutionInstanceSnippetRealtimeExecutor(
 	    signal_flow::Graph const& graph,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
+	    std::vector<common::ChipOnConnection> const& chips_on_connection,
 	    signal_flow::InputDataSnippet const& input_list,
 	    signal_flow::DataSnippet const& data_output,
-	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
+	    std::map<
+	        common::ChipOnConnection,
+	        std::reference_wrapper<
+	            std::optional<lola::vx::v3::PPUElfFile::symbols_type> const>> const& ppu_symbols,
 	    size_t realtime_column_index,
-	    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const&
+	    std::map<
+	        common::ChipOnConnection,
+	        std::map<signal_flow::vertex::PlasticityRule::ID, size_t>> const&
 	        timed_recording_index_offset) SYMBOL_VISIBLE;
 
-	typedef ExecutionInstanceChipSnippetRealtimeExecutor::Usages Usages;
+	typedef std::map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor::Usages>
+	    Usages;
 
 	/**
 	 * Preprocess by single visit of all local vertices.
 	 */
 	Usages pre_process() SYMBOL_VISIBLE;
 
-	typedef ExecutionInstanceChipSnippetRealtimeExecutor::Ret Ret;
+	typedef std::map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor::Ret>
+	    Ret;
 
 	/**
 	 * Generate playback sequence.
@@ -78,10 +88,12 @@ public:
 	{
 		signal_flow::DataSnippet data;
 
-		std::chrono::nanoseconds total_realtime_duration;
+		std::map<common::ChipOnConnection, std::chrono::nanoseconds> total_realtime_duration;
 	};
 
-	typedef ExecutionInstanceChipSnippetRealtimeExecutor::PostProcessable PostProcessable;
+	typedef std::
+	    map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor::PostProcessable>
+	        PostProcessable;
 
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
@@ -97,7 +109,8 @@ private:
 
 	std::unique_ptr<std::vector<signal_flow::Graph::vertex_descriptor>> m_post_vertices;
 
-	ExecutionInstanceChipSnippetRealtimeExecutor m_chip_executor;
+	std::map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor>
+	    m_chip_executors;
 
 	/**
 	 * Check if any incoming vertex requires post processing.

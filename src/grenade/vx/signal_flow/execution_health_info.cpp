@@ -6,8 +6,8 @@
 
 namespace grenade::vx::signal_flow {
 
-ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::operator-=(
-    ExecutionInstance const& rhs)
+ExecutionHealthInfo::ExecutionInstance::Chip&
+ExecutionHealthInfo::ExecutionInstance::Chip::operator-=(Chip const& rhs)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	hicann_arq_status.set_read_count(
@@ -52,8 +52,8 @@ ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::
 	return *this;
 }
 
-ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::operator+=(
-    ExecutionInstance const& rhs)
+ExecutionHealthInfo::ExecutionInstance::Chip&
+ExecutionHealthInfo::ExecutionInstance::Chip::operator+=(Chip const& rhs)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	hicann_arq_status.set_read_count(
@@ -92,11 +92,11 @@ ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::
 	return *this;
 }
 
-std::ostream& operator<<(std::ostream& os, ExecutionHealthInfo::ExecutionInstance const& info)
+std::ostream& operator<<(std::ostream& os, ExecutionHealthInfo::ExecutionInstance::Chip const& info)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	hate::IndentingOstream ios(os);
-	ios << "ExecutionInstance(\n";
+	ios << "Chip(\n";
 	ios << hate::Indentation("\t");
 	ios << info.hicann_arq_status << "\n";
 	for (auto const coord : halco::common::iter_all<PhyStatusOnFPGA>()) {
@@ -107,6 +107,40 @@ std::ostream& operator<<(std::ostream& os, ExecutionHealthInfo::ExecutionInstanc
 	}
 	for (auto const coord : halco::common::iter_all<CrossbarOutputOnDLS>()) {
 		ios << coord << ": " << info.crossbar_output_event_counter[coord] << "\n";
+	}
+	ios << hate::Indentation();
+	ios << "\n)";
+	return os;
+}
+
+ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::operator-=(
+    ExecutionInstance const& rhs)
+{
+	for (auto& [chip_on_connection, chip] : chips) {
+		chip -= rhs.chips.at(chip_on_connection);
+	}
+
+	return *this;
+}
+
+ExecutionHealthInfo::ExecutionInstance& ExecutionHealthInfo::ExecutionInstance::operator+=(
+    ExecutionInstance const& rhs)
+{
+	for (auto& [chip_on_connection, chip] : chips) {
+		chip += rhs.chips.at(chip_on_connection);
+	}
+
+	return *this;
+}
+
+std::ostream& operator<<(std::ostream& os, ExecutionHealthInfo::ExecutionInstance const& info)
+{
+	using namespace halco::hicann_dls::vx::v3;
+	hate::IndentingOstream ios(os);
+	ios << "ExecutionInstance(\n";
+	ios << hate::Indentation("\t");
+	for (auto const& [chip_on_connection, chip] : info.chips) {
+		ios << chip_on_connection << ": " << chip << "\n";
 	}
 	ios << hate::Indentation();
 	ios << "\n)";

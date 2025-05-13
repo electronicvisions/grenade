@@ -47,7 +47,7 @@ bool requires_routing(std::shared_ptr<Network> const& current, NetworkGraph cons
 			           BackgroundSourcePopulation const& old_pop) {
 				        return pop.neurons != old_pop.neurons ||
 				               pop.coordinate != old_pop.coordinate ||
-				               pop.chip_coordinate != old_pop.chip_coordinate;
+				               pop.chip_on_executor != old_pop.chip_on_executor;
 			        },
 			        [](auto const&, auto const&) { return true; },
 			    },

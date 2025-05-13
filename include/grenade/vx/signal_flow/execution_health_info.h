@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/genpybind.h"
 #include "halco/common/typed_heap_array.h"
 #include "halco/hicann-dls/vx/v3/highspeed_link.h"
@@ -22,21 +23,39 @@ struct GENPYBIND(visible) ExecutionHealthInfo
 {
 	struct ExecutionInstance
 	{
-		haldls::vx::v3::HicannARQStatus hicann_arq_status;
+		struct Chip
+		{
+			haldls::vx::v3::HicannARQStatus hicann_arq_status;
 
-		halco::common::
-		    typed_heap_array<haldls::vx::v3::PhyStatus, halco::hicann_dls::vx::v3::PhyStatusOnFPGA>
-		        phy_status;
+			halco::common::typed_heap_array<
+			    haldls::vx::v3::PhyStatus,
+			    halco::hicann_dls::vx::v3::PhyStatusOnFPGA>
+			    phy_status;
 
-		halco::common::typed_heap_array<
-		    haldls::vx::CrossbarInputDropCounter,
-		    halco::hicann_dls::vx::v3::CrossbarInputOnDLS>
-		    crossbar_input_drop_counter;
+			halco::common::typed_heap_array<
+			    haldls::vx::CrossbarInputDropCounter,
+			    halco::hicann_dls::vx::v3::CrossbarInputOnDLS>
+			    crossbar_input_drop_counter;
 
-		halco::common::typed_heap_array<
-		    haldls::vx::CrossbarOutputEventCounter,
-		    halco::hicann_dls::vx::v3::CrossbarOutputOnDLS>
-		    crossbar_output_event_counter;
+			halco::common::typed_heap_array<
+			    haldls::vx::CrossbarOutputEventCounter,
+			    halco::hicann_dls::vx::v3::CrossbarOutputOnDLS>
+			    crossbar_output_event_counter;
+			/**
+			 * Calculates difference of counter values, expects rhs > lhs.
+			 */
+			Chip& operator-=(Chip const& rhs) SYMBOL_VISIBLE;
+
+			/**
+			 * Calculates sum of counter values.
+			 */
+			Chip& operator+=(Chip const& rhs) SYMBOL_VISIBLE;
+
+			GENPYBIND(stringstream)
+			friend std::ostream& operator<<(std::ostream& os, Chip const& data) SYMBOL_VISIBLE;
+		};
+
+		std::map<common::ChipOnConnection, Chip> chips;
 
 		/**
 		 * Calculates difference of counter values, expects rhs > lhs.

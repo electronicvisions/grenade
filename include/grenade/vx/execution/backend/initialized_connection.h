@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/genpybind.h"
 #include "hate/visibility.h"
 #include "hxcomm/common/connection_time_info.h"
@@ -99,6 +100,11 @@ struct InitializedConnection
 	 * @return Boolean value
 	 */
 	bool is_quiggeldy() const SYMBOL_VISIBLE;
+
+	/**
+	 * Get chip identifiers on this connection.
+	 */
+	std::vector<common::ChipOnConnection> get_chips_on_connection() const;
 
 private:
 	std::unique_ptr<hxcomm::vx::ConnectionVariant> m_connection;

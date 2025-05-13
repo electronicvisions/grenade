@@ -21,7 +21,7 @@ namespace grenade::vx::execution::detail {
  * configuration.
  * The result is applied to a given configuration object.
  */
-class ExecutionInstanceSnippetConfigVisitor
+class ExecutionInstanceChipSnippetConfigVisitor
 {
 public:
 	/**
@@ -29,8 +29,9 @@ public:
 	 * @param graph Graph to use for locality and property lookup
 	 * @param execution_instance Local execution instance to visit
 	 */
-	ExecutionInstanceSnippetConfigVisitor(
+	ExecutionInstanceChipSnippetConfigVisitor(
 	    signal_flow::Graph const& graph,
+	    common::ChipOnConnection const& chip_on_connection,
 	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
 	/**
@@ -40,6 +41,7 @@ public:
 
 private:
 	signal_flow::Graph const& m_graph;
+	common::ChipOnConnection m_chip_on_connection;
 	grenade::common::ExecutionInstanceID m_execution_instance;
 
 	/**

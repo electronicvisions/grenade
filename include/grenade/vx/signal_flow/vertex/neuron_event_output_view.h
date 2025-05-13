@@ -37,11 +37,11 @@ struct NeuronEventOutputView : public EntityOnChip
 	/**
 	 * Construct NeuronEventOutputView with specified neurons.
 	 * @param neurons Incoming neurons
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	NeuronEventOutputView(
 	    Neurons const& neurons,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	Neurons const& get_neurons() const SYMBOL_VISIBLE;
 

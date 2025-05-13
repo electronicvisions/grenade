@@ -42,7 +42,7 @@ TEST(Reconfiguration, CADC)
 	}
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance] = lola::vx::v3::Chip();
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	OutputData outputs = grenade::vx::execution::run(
 	    executor,

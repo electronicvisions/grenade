@@ -38,8 +38,8 @@ Projection::Projection(
     Connections const& connections,
     PopulationOnExecutionInstance const population_pre,
     PopulationOnExecutionInstance const population_post,
-    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate),
+    common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor),
     receptor(receptor),
     connections(connections),
     population_pre(population_pre),
@@ -51,8 +51,8 @@ Projection::Projection(
     Connections&& connections,
     PopulationOnExecutionInstance const population_pre,
     PopulationOnExecutionInstance const population_post,
-    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate),
+    common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor),
     receptor(receptor),
     connections(std::move(connections)),
     population_pre(population_pre),

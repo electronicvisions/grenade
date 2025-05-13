@@ -78,7 +78,7 @@ inline void test_background_spike_source_regular(
 	input_list.snippets.at(0).runtime.push_back({{instance, running_period}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs.insert({instance, lola::vx::v3::Chip()});
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	// run Graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);

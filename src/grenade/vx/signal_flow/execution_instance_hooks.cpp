@@ -2,7 +2,7 @@
 
 namespace grenade::vx::signal_flow {
 
-ExecutionInstanceHooks::ExecutionInstanceHooks(
+ExecutionInstanceHooks::Chip::Chip(
     stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
     stadls::vx::v3::PlaybackProgramBuilder& pre_realtime,
     stadls::vx::v3::PlaybackProgramBuilder& inside_realtime_begin,
@@ -20,5 +20,13 @@ ExecutionInstanceHooks::ExecutionInstanceHooks(
     write_ppu_symbols(write_ppu_symbols),
     read_ppu_symbols(read_ppu_symbols)
 {}
+
+
+ExecutionInstanceHooks::ExecutionInstanceHooks(
+    common::ChipOnConnection const& chip_on_connection, Chip& chip) :
+    chips()
+{
+	chips.emplace(chip_on_connection, std::move(chip));
+}
 
 } // namespace grenade::vx::signal_flow

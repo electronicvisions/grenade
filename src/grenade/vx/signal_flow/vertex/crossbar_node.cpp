@@ -6,8 +6,8 @@
 namespace grenade::vx::signal_flow::vertex {
 
 CrossbarNode::CrossbarNode(
-    Coordinate const& coordinate, Config const& config, ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate), m_coordinate(coordinate), m_config(config)
+    Coordinate const& coordinate, Config const& config, ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor), m_coordinate(coordinate), m_config(config)
 {}
 
 CrossbarNode::Coordinate const& CrossbarNode::get_coordinate() const

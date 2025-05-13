@@ -36,12 +36,12 @@ struct GENPYBIND(visible) PadRecording : public common::EntityOnChip
 	/**
 	 * Construct pad recording.
 	 * @param recordings Recordings to perform
-	 * @param chip_coordinate Chip coordinate to place pad recording on
+	 * @param chip_on_executor Chip coordinate to place pad recording on
 	 */
 	PadRecording(
 	    Recordings const& recordings,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	bool operator==(PadRecording const& other) const SYMBOL_VISIBLE;
 	bool operator!=(PadRecording const& other) const SYMBOL_VISIBLE;

@@ -30,8 +30,8 @@ struct GENPYBIND(visible) NeuronRecording : public common::EntityOnChip
 	NeuronRecording() = default;
 	NeuronRecording(
 	    std::vector<Neuron> const& neurons,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	bool operator==(NeuronRecording const& other) const SYMBOL_VISIBLE;
 	bool operator!=(NeuronRecording const& other) const SYMBOL_VISIBLE;

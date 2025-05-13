@@ -14,8 +14,8 @@ struct GENPYBIND(visible) MADCRecording : public NeuronRecording
 	MADCRecording() = default;
 	MADCRecording(
 	    std::vector<Neuron> const& neurons,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 };
 
 } // namespace network

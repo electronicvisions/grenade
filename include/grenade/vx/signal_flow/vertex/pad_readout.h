@@ -54,12 +54,12 @@ struct PadReadoutView : public EntityOnChip
 	 * Construct PadReadoutView.
 	 * @param source Neuron source and location to read out
 	 * @param coordinate Pad to use
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	explicit PadReadoutView(
 	    Source const& source,
 	    Coordinate const& coordinate,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	Source const& get_source() const SYMBOL_VISIBLE;
 	Coordinate const& get_coordinate() const SYMBOL_VISIBLE;

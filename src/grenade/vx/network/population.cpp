@@ -121,8 +121,8 @@ std::ostream& operator<<(std::ostream& os, Population::Neuron const& config)
 
 
 Population::Population(
-    Neurons const& neurons, common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate), neurons(neurons)
+    Neurons const& neurons, common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor), neurons(neurons)
 {}
 
 bool Population::operator==(Population const& other) const

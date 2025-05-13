@@ -1,5 +1,7 @@
 #pragma once
+#include "grenade/vx/common/chip_on_connection.h"
 #include <chrono>
+#include <map>
 
 namespace grenade::vx::execution::backend {
 
@@ -9,9 +11,10 @@ namespace grenade::vx::execution::backend {
 struct RunTimeInfo
 {
 	/**
-	 * Accumulated execution duration of all stadls playback program executions.
+	 * Accumulated execution duration of all stadls playback program executions per chip on
+	 * connection.
 	 */
-	std::chrono::nanoseconds execution_duration;
+	std::map<common::ChipOnConnection, std::chrono::nanoseconds> execution_duration;
 };
 
 } // namespace grenade::vx::execution::backend

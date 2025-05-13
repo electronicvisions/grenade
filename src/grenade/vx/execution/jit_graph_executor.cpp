@@ -1,5 +1,7 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 
+#include "grenade/vx/common/chip_on_connection.h"
+#include "grenade/vx/common/entity_on_chip.h"
 #include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -18,7 +20,7 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) : m_co
 {
 	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env();
 	for (size_t i = 0; i < hxcomm_connections.size(); ++i) {
-		halco::hicann_dls::vx::v3::DLSGlobal identifier(i);
+		grenade::common::ConnectionOnExecutor identifier(i);
 		m_connections.emplace(
 		    identifier, backend::StatefulConnection(
 		                    backend::InitializedConnection(std::move(hxcomm_connections.at(i))),
@@ -27,70 +29,70 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) : m_co
 }
 
 JITGraphExecutor::JITGraphExecutor(
-    std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection>&& connections) :
+    std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&& connections) :
     m_connections(std::move(connections))
 {
 }
 
-std::set<halco::hicann_dls::vx::v3::DLSGlobal> JITGraphExecutor::contained_connections() const
+std::set<grenade::common::ConnectionOnExecutor> JITGraphExecutor::contained_connections() const
 {
-	std::set<halco::hicann_dls::vx::v3::DLSGlobal> ret;
+	std::set<grenade::common::ConnectionOnExecutor> ret;
 	for (auto const& [identifier, _] : m_connections) {
 		ret.insert(identifier);
 	}
 	return ret;
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection>&&
+std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&&
 JITGraphExecutor::release_connections()
 {
 	return std::move(m_connections);
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo>
+std::map<grenade::common::ConnectionOnExecutor, hxcomm::ConnectionTimeInfo>
 JITGraphExecutor::get_time_info() const
 {
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::ConnectionTimeInfo> ret;
+	std::map<grenade::common::ConnectionOnExecutor, hxcomm::ConnectionTimeInfo> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_time_info());
 	}
 	return ret;
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> JITGraphExecutor::get_unique_identifier(
-    std::optional<std::string> const& hwdb_path) const
+std::map<grenade::common::ConnectionOnExecutor, std::string>
+JITGraphExecutor::get_unique_identifier(std::optional<std::string> const& hwdb_path) const
 {
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::string> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_unique_identifier(hwdb_path));
 	}
 	return ret;
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> JITGraphExecutor::get_bitfile_info()
+std::map<grenade::common::ConnectionOnExecutor, std::string> JITGraphExecutor::get_bitfile_info()
     const
 {
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::string> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_bitfile_info());
 	}
 	return ret;
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string>
+std::map<grenade::common::ConnectionOnExecutor, std::string>
 JITGraphExecutor::get_remote_repo_state() const
 {
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::string> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_remote_repo_state());
 	}
 	return ret;
 }
 
-std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> JITGraphExecutor::get_hwdb_entry()
-    const
+std::map<grenade::common::ConnectionOnExecutor, hxcomm::HwdbEntry>
+JITGraphExecutor::get_hwdb_entry() const
 {
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> ret;
+	std::map<grenade::common::ConnectionOnExecutor, hxcomm::HwdbEntry> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_hwdb_entry());
 	}
@@ -99,14 +101,18 @@ std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> JITGraphExecut
 
 bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 {
-	auto const connection_dls_globals = boost::adaptors::keys(m_connections);
+	std::set<grenade::vx::common::EntityOnChip::ChipOnExecutor> chips_on_executor;
+	for (auto const& [connection_on_executor, connection] : m_connections) {
+		auto const local_chips = connection.get_chips_on_connection();
+		for (auto const& chip_on_connection : connection.get_chips_on_connection()) {
+			chips_on_executor.insert({chip_on_connection, connection_on_executor});
+		}
+	}
 
-	auto const find_chip_of_vertex_property = [connection_dls_globals](auto const& v) {
+	auto const find_chip_of_vertex_property = [chips_on_executor](auto const& v) {
 		if constexpr (std::is_base_of_v<
 		                  signal_flow::vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
-			return std::find(
-			           connection_dls_globals.begin(), connection_dls_globals.end(),
-			           v.chip_coordinate) != connection_dls_globals.end();
+			return chips_on_executor.contains(v.chip_on_executor);
 		}
 		return true;
 	};
@@ -130,7 +136,7 @@ void JITGraphExecutor::check(signal_flow::Graph const& graph)
 		throw std::runtime_error("Execution instance graph is not acyclic.");
 	}
 
-	// check all DLSGlobal physical chips used in the graph are present in the provided connections
+	// check all physical chips used in the graph are present in the provided connections
 	if (!is_executable_on(graph)) {
 		throw std::runtime_error("Graph requests connection not provided.");
 	}

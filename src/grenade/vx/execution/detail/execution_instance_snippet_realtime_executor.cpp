@@ -1,7 +1,8 @@
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
+#include "grenade/vx/common/chip_on_connection.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/execution/detail/generator/timed_spike_to_chip_sequence.h"
@@ -25,6 +26,7 @@
 #include "stadls/vx/constants.h"
 #include "stadls/vx/playback_generator.h"
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <set>
 #include <utility>
@@ -40,24 +42,31 @@ namespace grenade::vx::execution::detail {
 ExecutionInstanceSnippetRealtimeExecutor::ExecutionInstanceSnippetRealtimeExecutor(
     signal_flow::Graph const& graph,
     grenade::common::ExecutionInstanceID const& execution_instance,
+    std::vector<common::ChipOnConnection> const& chips_on_connection,
     signal_flow::InputDataSnippet const& input_list,
     signal_flow::DataSnippet const& data_output,
-    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
+    std::map<
+        common::ChipOnConnection,
+        std::reference_wrapper<std::optional<lola::vx::v3::PPUElfFile::symbols_type> const>> const&
+        ppu_symbols,
     size_t realtime_column_index,
-    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const& timed_recording_index_offset) :
+    std::map<
+        common::ChipOnConnection,
+        std::map<signal_flow::vertex::PlasticityRule::ID, size_t>> const&
+        timed_recording_index_offset) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_data(std::make_unique<ExecutionInstanceSnippetData>(input_list, data_output)),
     m_post_vertices(std::make_unique<std::vector<signal_flow::Graph::vertex_descriptor>>()),
-    m_chip_executor(
-        graph,
-        execution_instance,
-        *m_data,
-        *m_post_vertices,
-        ppu_symbols,
-        realtime_column_index,
-        timed_recording_index_offset)
+    m_chip_executors()
 {
+	for (auto const& chip_on_connection : chips_on_connection) {
+		m_chip_executors.emplace(
+		    chip_on_connection, ExecutionInstanceChipSnippetRealtimeExecutor(
+		                            graph, execution_instance, *m_data, *m_post_vertices,
+		                            ppu_symbols.at(chip_on_connection).get(), realtime_column_index,
+		                            timed_recording_index_offset.at(chip_on_connection)));
+	}
 	// check that input list provides all requested input for local graph
 	if (!input_data_matches_graph(input_list)) {
 		throw std::runtime_error("Graph requests unprovided input.");
@@ -273,7 +282,7 @@ ExecutionInstanceSnippetRealtimeExecutor::pre_process()
 				    hate::Timer timer;
 				    typedef hate::remove_all_qualifiers_t<decltype(value)> vertex_type;
 				    if constexpr (std::is_base_of_v<common::EntityOnChip, vertex_type>) {
-					    m_chip_executor.process(vertex, value);
+					    m_chip_executors.at(value.chip_on_executor.first).process(vertex, value);
 				    } else {
 					    process(vertex, value);
 				    }
@@ -287,7 +296,12 @@ ExecutionInstanceSnippetRealtimeExecutor::pre_process()
 		}
 	}
 
-	return m_chip_executor.pre_process();
+	Usages ret;
+	for (auto& [chip_on_connection, chip_executor] : m_chip_executors) {
+		ret.emplace(chip_on_connection, chip_executor.pre_process());
+	}
+
+	return ret;
 }
 
 ExecutionInstanceSnippetRealtimeExecutor::Result
@@ -295,7 +309,11 @@ ExecutionInstanceSnippetRealtimeExecutor::post_process(PostProcessable const& po
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetRealtimeExecutor");
 
-	auto const total_realtime_duration = m_chip_executor.post_process(post_processable);
+	std::map<common::ChipOnConnection, std::chrono::nanoseconds> total_realtime_duration;
+	for (auto& [chip_on_connection, chip_executor] : m_chip_executors) {
+		total_realtime_duration[chip_on_connection] =
+		    chip_executor.post_process(post_processable.at(chip_on_connection));
+	}
 
 	assert(m_data);
 	assert(m_post_vertices);
@@ -305,7 +323,7 @@ ExecutionInstanceSnippetRealtimeExecutor::post_process(PostProcessable const& po
 			    hate::Timer timer;
 			    typedef hate::remove_all_qualifiers_t<decltype(value)> vertex_type;
 			    if constexpr (std::is_base_of_v<common::EntityOnChip, vertex_type>) {
-				    m_chip_executor.process(vertex, value);
+				    m_chip_executors.at(value.chip_on_executor.first).process(vertex, value);
 			    } else {
 				    process(vertex, value);
 			    }
@@ -323,7 +341,13 @@ ExecutionInstanceSnippetRealtimeExecutor::Ret ExecutionInstanceSnippetRealtimeEx
     ExecutionInstanceSnippetRealtimeExecutor::Usages before,
     ExecutionInstanceSnippetRealtimeExecutor::Usages after)
 {
-	return m_chip_executor.generate(before, after);
+	Ret ret;
+	for (auto& [chip_on_connection, chip_executor] : m_chip_executors) {
+		ret.emplace(
+		    chip_on_connection,
+		    chip_executor.generate(before.at(chip_on_connection), after.at(chip_on_connection)));
+	}
+	return ret;
 }
 
 } // namespace grenade::vx::execution::detail

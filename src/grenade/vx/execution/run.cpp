@@ -90,11 +90,12 @@ signal_flow::OutputData run(
 			    " has differing execution_instance_map from other graphs");
 		}
 	}
-	std::map<signal_flow::Graph::vertex_descriptor, std::set<DLSGlobal>> vps_per_execution_instance;
+	std::map<signal_flow::Graph::vertex_descriptor, std::set<grenade::common::ConnectionOnExecutor>>
+	    vps_per_execution_instance;
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
 		auto const get_vps = [graphs, vertex](size_t i) {
-			std::set<DLSGlobal> vps;
+			std::set<grenade::common::ConnectionOnExecutor> vps;
 			auto const& vertex_descriptor_map = graphs[i].get().get_vertex_descriptor_map();
 			for (auto const& [vertex_descriptor, _] :
 			     boost::make_iterator_range(vertex_descriptor_map.right.equal_range(vertex))) {
@@ -105,7 +106,7 @@ signal_flow::OutputData run(
 					    if constexpr (std::is_base_of_v<
 					                      signal_flow::vertex::EntityOnChip,
 					                      std::decay_t<decltype(vp)>>) {
-						    vps.insert(vp.chip_coordinate);
+						    vps.insert(vp.chip_on_executor.second);
 					    }
 				    },
 				    vertex_property);
@@ -120,7 +121,7 @@ signal_flow::OutputData run(
 			if (vps != get_vps(i)) {
 				throw std::runtime_error(
 				    "graph corresponding to configuration " + std::to_string(i) +
-				    " uses other chips than other graphs");
+				    " uses other connections than other graphs");
 			}
 		}
 	}
@@ -145,30 +146,45 @@ signal_flow::OutputData run(
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
 		auto const execution_instance = execution_instance_map.left.at(vertex);
 		// collect all chips used by execution instance
-		std::set<DLSGlobal>& dls_globals = vps_per_execution_instance.at(vertex);
+		std::set<grenade::common::ConnectionOnExecutor>& connections_on_executor =
+		    vps_per_execution_instance.at(vertex);
 		// TODO: support execution instances without hardware usage
-		if (dls_globals.empty()) {
+		if (connections_on_executor.empty()) {
 			assert(executor.m_connections.size() > 0);
-			dls_globals.insert(executor.m_connections.begin()->first);
+			connections_on_executor.insert(executor.m_connections.begin()->first);
 		}
-		if (dls_globals.size() > 1) {
+		if (connections_on_executor.size() > 1) {
 			throw std::runtime_error(
-			    "Execution instance using multiple chips not supported (yet).");
+			    "Execution instance using multiple connections not supported.");
 		}
-		assert(dls_globals.size() == 1);
-		auto const dls_global = *dls_globals.begin();
+		assert(connections_on_executor.size() == 1);
+		auto const connection_on_executor = *connections_on_executor.begin();
 
 		// vector of configs to pass to execution_instance_node
-		std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> execution_node_configs;
+		std::vector<
+		    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>>
+		    execution_node_configs(configs.size());
 		for (size_t i = 0; i < configs.size(); i++) {
-			execution_node_configs.push_back(configs[i].get().at(execution_instance));
+			for (auto const& [chip_on_connection, config] :
+			     configs[i].get().at(execution_instance)) {
+				execution_node_configs.at(i).emplace(chip_on_connection, config);
+			}
 		}
 		if (!hooks.contains(execution_instance)) {
 			hooks[execution_instance] = std::make_shared<signal_flow::ExecutionInstanceHooks>();
+			for (auto const& [chip_on_connection, _] : configs.at(0).get().at(execution_instance)) {
+				hooks.at(execution_instance)->chips[chip_on_connection] = {};
+			}
+		} else {
+			for (auto const& [chip_on_connection, _] : configs.at(0).get().at(execution_instance)) {
+				if (!hooks.at(execution_instance)->chips.contains(chip_on_connection)) {
+					hooks.at(execution_instance)->chips[chip_on_connection] = {};
+				}
+			}
 		}
 		detail::ExecutionInstanceNode node_body(
-		    output_activation_maps, inputs, graphs, execution_instance, dls_global,
-		    execution_node_configs, executor.m_connections.at(dls_global),
+		    output_activation_maps, inputs, graphs, execution_instance, connection_on_executor,
+		    std::move(execution_node_configs), executor.m_connections.at(connection_on_executor),
 		    *(hooks[execution_instance]));
 		nodes.insert(std::make_pair(
 		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
@@ -209,17 +225,19 @@ signal_flow::OutputData run(
 	    "run(): Executed graph in "
 	        << hate::to_string(output_activation_maps.execution_time_info->execution_duration)
 	        << ".");
-	for (auto const& [dls, duration] :
+	for (auto const& [connection_on_executor, duration_per_chip] :
 	     output_activation_maps.execution_time_info->execution_duration_per_hardware) {
-		LOG4CXX_INFO(
-		    logger, "run(): Chip at "
-		                << dls << " spent " << hate::to_string(duration)
-		                << " in execution, which is "
-		                << (static_cast<double>(duration.count()) /
-		                    static_cast<double>(output_activation_maps.execution_time_info
-		                                            ->execution_duration.count()) *
-		                    100.)
-		                << " % of total graph execution time.");
+		for (auto const& [chip_on_connection, duration] : duration_per_chip) {
+			LOG4CXX_INFO(
+			    logger, "run(): Chip at "
+			                << connection_on_executor << ", " << chip_on_connection << " spent "
+			                << hate::to_string(duration) << " in execution, which is "
+			                << (static_cast<double>(duration.count()) /
+			                    static_cast<double>(output_activation_maps.execution_time_info
+			                                            ->execution_duration.count()) *
+			                    100.)
+			                << " % of total graph execution time.");
+		}
 	}
 	if (output_activation_maps.execution_health_info) {
 		LOG4CXX_TRACE(logger, "run(): " << *(output_activation_maps.execution_health_info) << ".");

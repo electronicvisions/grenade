@@ -22,9 +22,9 @@ struct ConnectionAcquisor
 
 	ConnectionAcquisor(T& t) : handle(t), executor()
 	{
-		std::map<halco::hicann_dls::vx::v3::DLSGlobal, backend::StatefulConnection> connections;
+		std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection> connections;
 		connections.emplace(
-		    halco::hicann_dls::vx::v3::DLSGlobal(),
+		    grenade::common::ConnectionOnExecutor(),
 		    backend::StatefulConnection(backend::InitializedConnection(std::move(t.get()))));
 		executor = std::make_unique<JITGraphExecutor>(std::move(connections));
 
@@ -41,7 +41,7 @@ struct ConnectionAcquisor
 		assert(executor);
 		handle.get() = std::move(
 		    std::get<typename T::connection_type>(executor->release_connections()
-		                                              .at(halco::hicann_dls::vx::v3::DLSGlobal())
+		                                              .at(grenade::common::ConnectionOnExecutor())
 		                                              .release()
 		                                              .release()));
 	}

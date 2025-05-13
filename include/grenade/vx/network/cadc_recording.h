@@ -15,8 +15,8 @@ struct GENPYBIND(visible) CADCRecording : public NeuronRecording
 	CADCRecording(
 	    std::vector<Neuron> const& neurons,
 	    bool placement_on_dram = false,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	bool placement_on_dram{false};
 };

@@ -9,6 +9,7 @@
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "hate/timer.h"
 #include <mutex>
+#include <stdexcept>
 
 namespace grenade::vx::execution::backend {
 
@@ -16,15 +17,23 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 {
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 
+	auto const chips_on_connection = connection.get_chips_on_connection();
+	if (chips_on_connection.size() > 1) {
+		throw std::invalid_argument("Only connections with one chip are supported for now.");
+	}
+
+	auto& local_program = program.chips.at(chips_on_connection.at(0));
+
 	hate::Timer const schedule_out_replacement_timer;
 	stadls::vx::v3::PlaybackProgramBuilder schedule_out_replacement_builder;
-	if (program.ppu_symbols) {
+	if (local_program.ppu_symbols) {
 		schedule_out_replacement_builder.merge_back(
-		    stadls::vx::v3::generate(execution::detail::generator::PPUStop(*program.ppu_symbols))
+		    stadls::vx::v3::generate(
+		        execution::detail::generator::PPUStop(*local_program.ppu_symbols))
 		        .builder);
 		schedule_out_replacement_builder.merge_back(
 		    stadls::vx::v3::generate(
-		        execution::detail::generator::GetState{program.ppu_symbols.has_value()})
+		        execution::detail::generator::GetState{local_program.ppu_symbols.has_value()})
 		        .builder);
 	}
 	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
@@ -32,8 +41,8 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	    logger, "operator(): Generated playback program for schedule out replacement in "
 	                << schedule_out_replacement_timer.print() << ".");
 
-	if (program.programs.size() > 1 && connection.is_quiggeldy() &&
-	    program.has_hooks_around_realtime) {
+	if (local_program.programs.size() > 1 && connection.is_quiggeldy() &&
+	    local_program.has_hooks_around_realtime) {
 		LOG4CXX_WARN(
 		    logger, "Connection uses quiggeldy and more than one playback programs "
 		            "shall be executed back-to-back with a pre or post realtime hook. Their "
@@ -43,9 +52,9 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	hate::Timer const read_timer;
 	stadls::vx::v3::PlaybackProgram get_state_program;
 	std::optional<execution::detail::generator::GetState::Result> get_state_result;
-	if (connection.get_enable_differential_config() && program.ppu_symbols) {
+	if (connection.get_enable_differential_config() && local_program.ppu_symbols) {
 		auto get_state = stadls::vx::v3::generate(
-		    execution::detail::generator::GetState(program.ppu_symbols.has_value()));
+		    execution::detail::generator::GetState(local_program.ppu_symbols.has_value()));
 		get_state_program = get_state.builder.done();
 		get_state_result = get_state.result;
 	}
@@ -65,23 +74,25 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 	hate::Timer const initial_config_program_timer;
 	bool const is_fresh_connection_config = connection.m_config.get_is_fresh();
-	connection.m_config.set_chip(program.chip_configs[0], true);
-	if (program.external_ppu_dram_memory_config) {
-		connection.m_config.set_external_ppu_dram_memory(program.external_ppu_dram_memory_config);
+	connection.m_config.set_chip(local_program.chip_configs[0], true);
+	if (local_program.external_ppu_dram_memory_config) {
+		connection.m_config.set_external_ppu_dram_memory(
+		    local_program.external_ppu_dram_memory_config);
 	}
 
 	bool const enforce_base = !connection.get_enable_differential_config() ||
 	                          is_fresh_connection_config ||
-	                          !program.pre_initial_config_hook.empty();
+	                          !local_program.pre_initial_config_hook.empty();
 	bool const has_capmem_changes =
 	    enforce_base || connection.m_config.get_differential_changes_capmem();
-	bool const nothing_changed =
-	    connection.get_enable_differential_config() && !is_fresh_connection_config &&
-	    !connection.m_config.get_has_differential() && program.pre_initial_config_hook.empty();
+	bool const nothing_changed = connection.get_enable_differential_config() &&
+	                             !is_fresh_connection_config &&
+	                             !connection.m_config.get_has_differential() &&
+	                             local_program.pre_initial_config_hook.empty();
 
 	stadls::vx::v3::PlaybackProgramBuilder base_builder;
 
-	base_builder.merge_back(program.pre_initial_config_hook);
+	base_builder.merge_back(local_program.pre_initial_config_hook);
 
 	stadls::vx::v3::PlaybackProgramBuilder differential_builder;
 	if (!nothing_changed) {
@@ -102,10 +113,10 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	                << initial_config_program_timer.print() << ".");
 
 	auto const trigger_program =
-	    program.ppu_symbols
+	    local_program.ppu_symbols
 	        ? stadls::vx::v3::generate(execution::detail::generator::PPUStart(
 	                                       std::get<halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU>(
-	                                           program.ppu_symbols->at("status").coordinate)
+	                                           local_program.ppu_symbols->at("status").coordinate)
 	                                           .toMin()))
 	              .builder.done()
 	        : stadls::vx::v3::PlaybackProgram();
@@ -117,7 +128,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 	bool runs_successful = true;
 
-	if (!program.programs.empty() || !base_program.empty()) {
+	if (!local_program.programs.empty() || !base_program.empty()) {
 		// only lock execution section for non-differential config mode
 		if (!connection.get_enable_differential_config()) {
 			connection_lock.lock();
@@ -151,7 +162,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		connection.m_reinit_start_ppus.set(trigger_program, std::nullopt, !trigger_program.empty());
 
 		// Execute realtime sections
-		for (auto& p : program.programs) {
+		for (auto& p : local_program.programs) {
 			try {
 				run(connection.m_initialized_connection, p);
 			} catch (std::runtime_error const& error) {
@@ -182,9 +193,9 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	LOG4CXX_TRACE(logger, "Executed built PlaybackPrograms in " << exec_timer.print() << ".");
 
 	// update connection state
-	if (program.chip_configs.size() > 1 || program.ppu_symbols) {
+	if (local_program.chip_configs.size() > 1 || local_program.ppu_symbols) {
 		hate::Timer const update_state_timer;
-		auto current_config = program.chip_configs[program.chip_configs.size() - 1];
+		auto current_config = local_program.chip_configs[local_program.chip_configs.size() - 1];
 		if (get_state_result) {
 			get_state_result->apply(current_config);
 		}
@@ -202,7 +213,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 	// unlock execution section for differential config mode
 	if (connection.get_enable_differential_config()) {
-		if (!program.programs.empty() || !base_program.empty()) {
+		if (!local_program.programs.empty() || !base_program.empty()) {
 			connection_execution_duration_after = connection.get_time_info().execution_duration;
 		}
 		connection_lock.unlock();
@@ -213,7 +224,11 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		throw std::runtime_error("At least one playback program execution was not successful.");
 	}
 
-	return RunTimeInfo{connection_execution_duration_after - connection_execution_duration_before};
+	RunTimeInfo ret;
+	ret.execution_duration[chips_on_connection.at(0)] =
+	    connection_execution_duration_after - connection_execution_duration_before;
+
+	return ret;
 }
 
 RunTimeInfo run(StatefulConnection& connection, PlaybackProgram&& program)

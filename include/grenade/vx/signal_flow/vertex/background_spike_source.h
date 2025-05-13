@@ -38,12 +38,12 @@ struct BackgroundSpikeSource : public EntityOnChip
 	 * Construct BackgroundSpikeSource.
 	 * @param config Config to use
 	 * @param coordinate Coordinate to use
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	BackgroundSpikeSource(
 	    Config const& config,
 	    Coordinate const& coordinate,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	constexpr std::array<Port, 0> inputs() const

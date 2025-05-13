@@ -1,7 +1,7 @@
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
 
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/execution/detail/generator/timed_spike_to_chip_sequence.h"
@@ -642,6 +642,7 @@ std::chrono::nanoseconds ExecutionInstanceChipSnippetRealtimeExecutor::post_proc
 			    1000.));
 		}
 	}
+
 	m_postprocessing = true;
 
 	return total_realtime_duration;

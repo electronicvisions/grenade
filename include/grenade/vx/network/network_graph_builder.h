@@ -224,7 +224,7 @@ public:
 	    RoutingResult const& connection_result,
 	    grenade::common::ExecutionInstanceID const& instance) const;
 
-	common::EntityOnChip::ChipCoordinate get_chip_coordinate(
+	common::EntityOnChip::ChipOnExecutor get_chip_on_executor(
 	    grenade::common::ExecutionInstanceID const& instance) const;
 
 private:

@@ -6,8 +6,8 @@ CADCMembraneReadoutView::CADCMembraneReadoutView(
     SynramT&& synram,
     Mode const& mode,
     SourcesT&& sources,
-    ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate),
+    ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor),
     m_columns(),
     m_synram(std::forward<SynramT>(synram)),
     m_mode(mode),

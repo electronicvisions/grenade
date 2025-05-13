@@ -1,9 +1,10 @@
 #include "grenade/vx/execution/detail/execution_instance_executor.h"
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/backend/playback_program.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_config_visitor.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_ppu_usage_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
+#include "grenade/vx/execution/detail/execution_instance_chip_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
@@ -37,44 +38,51 @@ signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
 
 	auto realtime_results = realtime(playback_program);
 
+	size_t const num_realtime_snippets = realtime_results.size();
 	signal_flow::OutputData output_data;
+	output_data.snippets.resize(num_realtime_snippets);
+
+	for (size_t i = 0; auto& result : realtime_results) {
+		output_data.snippets.at(i).merge(std::move(result.data));
+		i++;
+	}
 
 	signal_flow::ExecutionTimeInfo execution_time_info;
-	for (auto const& result : realtime_results) {
-		execution_time_info.realtime_duration_per_execution_instance[execution_instance] +=
-		    result.total_realtime_duration;
+	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
+	for (auto const& [chip_on_connection, chip] : chips) {
+		for (auto const& result : realtime_results) {
+			execution_time_info
+			    .realtime_duration_per_execution_instance[execution_instance][chip_on_connection] +=
+			    result.total_realtime_duration.at(chip_on_connection);
+		}
+
+		// extract PPU read hooks
+		output_data.read_ppu_symbols.resize(chip.ppu_read_hooks_results.size());
+		for (size_t b = 0; b < chip.ppu_read_hooks_results.size(); ++b) {
+			output_data.read_ppu_symbols.at(b)[execution_instance][chip_on_connection] =
+			    chip.ppu_read_hooks_results.at(b).evaluate();
+		}
+
+		for (size_t i = 0; i < chip.health_info_results_pre.size(); ++i) {
+			execution_health_info.chips[chip_on_connection] +=
+			    (chip.health_info_results_post.at(i).get_execution_health_info() -=
+			     chip.health_info_results_pre.at(i).get_execution_health_info());
+		}
+
+		for (size_t i = 0; i < output_data.snippets.size(); i++) {
+			// add pre-execution config to result data map
+			output_data.snippets.at(i).pre_execution_chips[execution_instance] =
+			    playback_program.chips.at(chip_on_connection).chip_configs[i];
+		}
 	}
 
 	output_data.execution_time_info = execution_time_info;
-
-	for (auto& result : realtime_results) {
-		output_data.snippets.emplace_back(std::move(result.data));
-	}
-
-	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
-	for (size_t i = 0; i < health_info_results_pre.size(); ++i) {
-		execution_health_info +=
-		    (health_info_results_post.at(i).get_execution_health_info() -=
-		     health_info_results_pre.at(i).get_execution_health_info());
-	}
-
-	// extract PPU read hooks
-	output_data.read_ppu_symbols.resize(ppu_read_hooks_results.size());
-	for (size_t b = 0; b < ppu_read_hooks_results.size(); ++b) {
-		output_data.read_ppu_symbols.at(b)[execution_instance] =
-		    ppu_read_hooks_results.at(b).evaluate();
-	}
 
 	// annotate execution health info
 	signal_flow::ExecutionHealthInfo execution_health_info_total;
 	execution_health_info_total.execution_instances[execution_instance] = execution_health_info;
 	output_data.execution_health_info = execution_health_info_total;
 
-	for (size_t i = 0; i < output_data.snippets.size(); i++) {
-		// add pre-execution config to result data map
-		output_data.snippets[i].pre_execution_chips[execution_instance] =
-		    playback_program.chip_configs[i];
-	}
 	return output_data;
 }
 
@@ -83,14 +91,18 @@ ExecutionInstanceExecutor::ExecutionInstanceExecutor(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     signal_flow::InputData const& input_data,
     signal_flow::OutputData& output_data,
-    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
+    std::vector<
+        std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
+        configs,
     signal_flow::ExecutionInstanceHooks& hooks,
+    std::vector<common::ChipOnConnection> const& chips_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance) :
     m_graphs(graphs),
     m_input_data(input_data),
     m_output_data(output_data),
     m_configs(configs),
     m_hooks(hooks),
+    m_chips_on_connection(chips_on_connection),
     m_execution_instance(execution_instance)
 {
 }
@@ -115,169 +127,217 @@ ExecutionInstanceExecutor::operator()() const
 
 	hate::Timer const configs_timer;
 
-	bool const has_hook_around_realtime =
-	    !m_hooks.pre_realtime.empty() || !m_hooks.inside_realtime_begin.empty() ||
-	    !m_hooks.inside_realtime_end.empty() || !m_hooks.post_realtime.empty();
+	backend::PlaybackProgram playback_program;
 
-	backend::PlaybackProgram playback_program{
-	    std::vector<Chip>(m_configs.begin(), m_configs.end()),
-	    std::nullopt,
-	    has_hook_around_realtime,
-	    std::move(m_hooks.pre_static_config),
-	    std::nullopt,
-	    {}};
+	std::map<common::ChipOnConnection, ExecutionInstanceChipPPUProgramCompiler::Result>
+	    ppu_programs;
+	for (auto const& chip_on_connection : m_chips_on_connection) {
+		bool const has_hook_around_realtime =
+		    !m_hooks.chips.at(chip_on_connection).pre_realtime.empty() ||
+		    !m_hooks.chips.at(chip_on_connection).inside_realtime_begin.empty() ||
+		    !m_hooks.chips.at(chip_on_connection).inside_realtime_end.empty() ||
+		    !m_hooks.chips.at(chip_on_connection).post_realtime.empty();
 
-	for (size_t i = 0; i < realtime_column_count; i++) {
-		ExecutionInstanceSnippetConfigVisitor(
-		    m_graphs[i], m_execution_instance)(playback_program.chip_configs[i]);
+		playback_program.chips[chip_on_connection].has_hooks_around_realtime =
+		    has_hook_around_realtime;
+		playback_program.chips[chip_on_connection].pre_initial_config_hook =
+		    std::move(m_hooks.chips.at(chip_on_connection).pre_static_config);
+
+		for (size_t j = 0; j < realtime_column_count; j++) {
+			playback_program.chips[chip_on_connection].chip_configs.push_back(
+			    m_configs.at(j).at(chip_on_connection).get());
+
+			ExecutionInstanceChipSnippetConfigVisitor(
+			    m_graphs[j], chip_on_connection, m_execution_instance)(
+			    playback_program.chips.at(chip_on_connection).chip_configs[j]);
+		}
+
+		auto const ppu_program = ExecutionInstanceChipPPUProgramCompiler(
+		    m_graphs, m_input_data, m_hooks, chip_on_connection, m_execution_instance)();
+		ppu_program.apply(playback_program);
+		ppu_programs[chip_on_connection] = ppu_program;
 	}
 
-	auto const ppu_program = ExecutionInstancePPUProgramCompiler(
-	    m_graphs, m_input_data, m_hooks, m_execution_instance)();
-	ppu_program.apply(playback_program);
-
 	auto [realtime_program, realtime_post_processor] = ExecutionInstanceRealtimeExecutor(
-	    m_graphs, m_input_data.snippets, m_output_data.snippets, ppu_program,
-	    m_execution_instance)();
+	    m_graphs, m_input_data.snippets, m_output_data.snippets, ppu_programs,
+	    m_chips_on_connection, m_execution_instance)();
 
 	PostProcessor post_processor;
 	post_processor.execution_instance = m_execution_instance;
 	post_processor.realtime = std::move(realtime_post_processor);
 
+	size_t const batch_size = m_input_data.batch_size();
+
 	// Experiment assembly
-	std::vector<PlaybackProgramBuilder> assembled_builders;
-	for (size_t i = 0; i < realtime_program.realtime_columns[0].realtimes.size(); i++) {
-		AbsoluteTimePlaybackProgramBuilder program_builder;
-		haldls::vx::v3::Timer::Value config_time =
-		    realtime_program.realtime_columns[0].realtimes[i].pre_realtime_duration;
-		for (size_t j = 0; j < realtime_column_count; j++) {
-			if (j > 0) {
+	std::vector<std::map<common::ChipOnConnection, PlaybackProgramBuilder>> assembled_builders(
+	    batch_size);
+	for (size_t i = 0; i < batch_size; i++) {
+		for (auto const& chip_on_connection : m_chips_on_connection) {
+			auto& local_realtime_program = realtime_program.chips.at(chip_on_connection);
+			auto& local_hooks = m_hooks.chips.at(chip_on_connection);
+			auto& local_playback_program = playback_program.chips.at(chip_on_connection);
+			AbsoluteTimePlaybackProgramBuilder program_builder;
+			haldls::vx::v3::Timer::Value config_time = realtime_program.realtime_columns[0]
+			                                               .at(chip_on_connection)
+			                                               .realtimes[i]
+			                                               .pre_realtime_duration;
+			for (size_t j = 0; j < realtime_column_count; j++) {
+				if (j > 0) {
+					config_time += realtime_program.realtime_columns[j - 1]
+					                   .at(chip_on_connection)
+					                   .realtimes[i]
+					                   .realtime_duration;
+					program_builder.write(
+					    config_time, ChipOnDLS(), local_playback_program.chip_configs[j],
+					    local_playback_program.chip_configs[j - 1]);
+				}
+				realtime_program.realtime_columns[j].at(chip_on_connection).realtimes[i].builder +=
+				    (config_time - realtime_program.realtime_columns[j]
+				                       .at(chip_on_connection)
+				                       .realtimes[i]
+				                       .pre_realtime_duration);
+				program_builder.merge(realtime_program.realtime_columns[j]
+				                          .at(chip_on_connection)
+				                          .realtimes[i]
+				                          .builder);
+			}
+
+			// insert inside_realtime hook
+			if (i < batch_size - 1) {
+				program_builder.copy(local_hooks.inside_realtime);
+			} else {
+				program_builder.merge(local_hooks.inside_realtime);
+			}
+
+			// reset config to initial config at end of each realtime_row if experiment has multiple
+			// configs
+			if (realtime_program.realtime_columns.size() > 1) {
 				config_time +=
-				    realtime_program.realtime_columns[j - 1].realtimes[i].realtime_duration;
-				program_builder.write(
-				    config_time, ChipOnDLS(), playback_program.chip_configs[j],
-				    playback_program.chip_configs[j - 1]);
+				    realtime_program.realtime_columns[realtime_program.realtime_columns.size() - 1]
+				        .at(chip_on_connection)
+				        .realtimes[i]
+				        .realtime_duration;
+				if (i < batch_size - 1) {
+					program_builder.write(
+					    config_time, ChipOnDLS(), local_playback_program.chip_configs[0],
+					    local_playback_program
+					        .chip_configs[local_playback_program.chip_configs.size() - 1]);
+				}
 			}
-			realtime_program.realtime_columns[j].realtimes[i].builder +=
-			    (config_time -
-			     realtime_program.realtime_columns[j].realtimes[i].pre_realtime_duration);
-			program_builder.merge(realtime_program.realtime_columns[j].realtimes[i].builder);
-		}
 
-		// insert inside_realtime hook
-		if (i < realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			program_builder.copy(m_hooks.inside_realtime);
-		} else {
-			program_builder.merge(m_hooks.inside_realtime);
-		}
-
-		// reset config to initial config at end of each realtime_row if experiment has multiple
-		// configs
-		if (realtime_program.realtime_columns.size() > 1) {
-			config_time +=
-			    realtime_program.realtime_columns[realtime_program.realtime_columns.size() - 1]
-			        .realtimes[i]
-			        .realtime_duration;
-			if (i < realtime_program.realtime_columns[0].realtimes.size() - 1) {
-				program_builder.write(
-				    config_time, ChipOnDLS(), playback_program.chip_configs[0],
-				    playback_program.chip_configs[playback_program.chip_configs.size() - 1]);
+			// assemble playback_program from arm_madc and program_builder and if applicable,
+			// start_ppu, stop_ppu and the playback hooks
+			PlaybackProgramBuilder assembled_builder;
+			if (i == 0 && local_realtime_program.uses_madc) {
+				assembled_builder.merge_back(generate(generator::MADCArm()).builder);
 			}
+			// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
+			if (i == 0) {
+				assembled_builder.merge_back(local_hooks.pre_realtime);
+			}
+			// append inside_realtime_begin hook
+			if (i < batch_size - 1) {
+				assembled_builder.copy_back(local_hooks.inside_realtime_begin);
+			} else {
+				assembled_builder.merge_back(local_hooks.inside_realtime_begin);
+			}
+			// append realtime section
+			assembled_builder.merge_back(program_builder.done());
+			// append inside_realtime_end hook
+			if (i < batch_size - 1) {
+				assembled_builder.copy_back(local_hooks.inside_realtime_end);
+			} else {
+				assembled_builder.merge_back(local_hooks.inside_realtime_end);
+			}
+			// append ppu_finish_builders
+			for (size_t j = 0; j < realtime_column_count; j++) {
+				assembled_builder.merge_back(realtime_program.realtime_columns[j]
+				                                 .at(chip_on_connection)
+				                                 .realtimes[i]
+				                                 .ppu_finish_builder);
+			}
+			// append PPU read hooks
+			if (local_playback_program.ppu_symbols) {
+				auto [ppu_read_hooks_builder, ppu_read_hooks_result] =
+				    generate(generator::PPUReadHooks(
+				        local_hooks.read_ppu_symbols, *local_playback_program.ppu_symbols));
+				assembled_builder.merge_back(ppu_read_hooks_builder);
+				post_processor.chips[chip_on_connection].ppu_read_hooks_results.push_back(
+				    std::move(ppu_read_hooks_result));
+			}
+			// wait for response data
+			assembled_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			// for the last batch entry, append post_realtime hook
+			if (i == batch_size - 1) {
+				assembled_builder.merge_back(local_hooks.post_realtime);
+			}
+			// append cadc_finazlize_builder for periodic_cadc data readout
+			assembled_builder.merge_back(local_realtime_program.cadc_finalize_builders.at(i));
+			// for the last batch entry, stop the PPU
+			if (i == batch_size - 1 && local_playback_program.ppu_symbols) {
+				assembled_builder.merge_back(
+				    generate(generator::PPUStop(*local_playback_program.ppu_symbols)).builder);
+			}
+			// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch
+			// entries)
+			if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
+				assembled_builder.block_until(
+				    TimerOnDLS(),
+				    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
+				                      .toTimerOnFPGAValue());
+			}
+			assembled_builders.at(i)[chip_on_connection] = std::move(assembled_builder);
 		}
-
-		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
-		// stop_ppu and the playback hooks
-		PlaybackProgramBuilder assembled_builder;
-		if (i == 0 && realtime_program.uses_madc) {
-			assembled_builder.merge_back(generate(generator::MADCArm()).builder);
-		}
-		// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
-		if (i == 0) {
-			assembled_builder.merge_back(m_hooks.pre_realtime);
-		}
-		// append inside_realtime_begin hook
-		if (i < realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			assembled_builder.copy_back(m_hooks.inside_realtime_begin);
-		} else {
-			assembled_builder.merge_back(m_hooks.inside_realtime_begin);
-		}
-		// append realtime section
-		assembled_builder.merge_back(program_builder.done());
-		// append inside_realtime_end hook
-		if (i < realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			assembled_builder.copy_back(m_hooks.inside_realtime_end);
-		} else {
-			assembled_builder.merge_back(m_hooks.inside_realtime_end);
-		}
-		// append ppu_finish_builders
-		for (size_t j = 0; j < realtime_column_count; j++) {
-			assembled_builder.merge_back(
-			    realtime_program.realtime_columns[j].realtimes[i].ppu_finish_builder);
-		}
-		// append PPU read hooks
-		if (playback_program.ppu_symbols) {
-			auto [ppu_read_hooks_builder, ppu_read_hooks_result] = generate(
-			    generator::PPUReadHooks(m_hooks.read_ppu_symbols, *playback_program.ppu_symbols));
-			assembled_builder.merge_back(ppu_read_hooks_builder);
-			post_processor.ppu_read_hooks_results.push_back(std::move(ppu_read_hooks_result));
-		}
-		// wait for response data
-		assembled_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		// for the last batch entry, append post_realtime hook
-		if (i == realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			assembled_builder.merge_back(m_hooks.post_realtime);
-		}
-		// append cadc_finazlize_builder for periodic_cadc data readout
-		assembled_builder.merge_back(realtime_program.cadc_finalize_builders.at(i));
-		// for the last batch entry, stop the PPU
-		if (i == realtime_program.realtime_columns[0].realtimes.size() - 1 &&
-		    playback_program.ppu_symbols) {
-			assembled_builder.merge_back(
-			    generate(generator::PPUStop(*playback_program.ppu_symbols)).builder);
-		}
-		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
-		if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
-			assembled_builder.block_until(
-			    TimerOnDLS(),
-			    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
-			                      .toTimerOnFPGAValue());
-		}
-		assembled_builders.emplace_back(std::move(assembled_builder));
 	}
 
 	// chunk builders into maximally-sized builders, add pre & post measurements
-	std::vector<PlaybackProgramBuilder> chunked_assembled_builders;
+	std::vector<std::map<common::ChipOnConnection, PlaybackProgramBuilder>>
+	    chunked_assembled_builders;
 	size_t const pre_size_to_fpga = generate(generator::HealthInfo()).builder.done().size_to_fpga();
 	size_t const post_size_to_fpga = pre_size_to_fpga;
-	PlaybackProgramBuilder chunked_assembled_builder;
-	for (auto& assembled_builder : assembled_builders) {
-		if ((chunked_assembled_builder.size_to_fpga() + assembled_builder.size_to_fpga() +
-		     pre_size_to_fpga + post_size_to_fpga) > stadls::vx::playback_memory_size_to_fpga) {
+	std::map<common::ChipOnConnection, PlaybackProgramBuilder> chunked_assembled_builder;
+	for (auto& assembled_builders_per_chip : assembled_builders) {
+		if (std::any_of(
+		        assembled_builders_per_chip.begin(), assembled_builders_per_chip.end(),
+		        [&](auto& assembled_builder_per_chip) {
+			        auto& [chip_on_connection, assembled_builder] = assembled_builder_per_chip;
+			        return (chunked_assembled_builder[chip_on_connection].size_to_fpga() +
+			                assembled_builder.size_to_fpga() + pre_size_to_fpga +
+			                post_size_to_fpga) > stadls::vx::playback_memory_size_to_fpga;
+		        })) {
 			chunked_assembled_builders.emplace_back(std::move(chunked_assembled_builder));
 		}
-		chunked_assembled_builder.merge_back(assembled_builder);
+		for (auto& [chip_on_connection, assembled_builder] : assembled_builders_per_chip) {
+			chunked_assembled_builder[chip_on_connection].merge_back(assembled_builder);
+		}
 	}
 	if (!chunked_assembled_builder.empty()) {
 		chunked_assembled_builders.emplace_back(std::move(chunked_assembled_builder));
 	}
 
 	// add pre and post measurements and construct finalized playback programs
-	for (auto& chunked_assembled_builder : chunked_assembled_builders) {
-		PlaybackProgramBuilder final_builder;
+	for (auto& chunked_assembled_builder_per_chip : chunked_assembled_builders) {
+		for (auto& [chip_on_connection, chunked_assembled_builder] :
+		     chunked_assembled_builder_per_chip) {
+			PlaybackProgramBuilder final_builder;
 
-		auto [health_info_builder_pre, health_info_result_pre] = generate(generator::HealthInfo());
-		post_processor.health_info_results_pre.push_back(health_info_result_pre);
-		final_builder.merge_back(health_info_builder_pre.done());
-		final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			auto [health_info_builder_pre, health_info_result_pre] =
+			    generate(generator::HealthInfo());
+			post_processor.chips[chip_on_connection].health_info_results_pre.push_back(
+			    health_info_result_pre);
+			final_builder.merge_back(health_info_builder_pre.done());
+			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 
-		final_builder.merge_back(chunked_assembled_builder);
+			final_builder.merge_back(chunked_assembled_builder);
 
-		auto [health_info_builder_post, health_info_result_post] =
-		    generate(generator::HealthInfo());
-		post_processor.health_info_results_post.push_back(health_info_result_post);
-		final_builder.merge_back(health_info_builder_post.done());
-		final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		playback_program.programs.emplace_back(final_builder.done());
+			auto [health_info_builder_post, health_info_result_post] =
+			    generate(generator::HealthInfo());
+			post_processor.chips[chip_on_connection].health_info_results_post.push_back(
+			    health_info_result_post);
+			final_builder.merge_back(health_info_builder_post.done());
+			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			playback_program.chips[chip_on_connection].programs.emplace_back(final_builder.done());
+		}
 	}
 
 	return {std::move(playback_program), std::move(post_processor)};

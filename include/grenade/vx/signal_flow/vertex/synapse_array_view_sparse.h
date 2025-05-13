@@ -59,7 +59,7 @@ struct SynapseArrayViewSparse : public EntityOnChip
 	 * @param rows Coordinates of rows
 	 * @param columns Coordinates of columns
 	 * @param synapses Synapse values
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	template <typename SynramT, typename RowsT, typename ColumnsT, typename SynapsesT>
 	explicit SynapseArrayViewSparse(
@@ -67,7 +67,7 @@ struct SynapseArrayViewSparse : public EntityOnChip
 	    RowsT&& rows,
 	    ColumnsT&& columns,
 	    SynapsesT&& synapses,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate());
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor());
 
 	/**
 	 * Accessor to synapse row coordinates via a range.

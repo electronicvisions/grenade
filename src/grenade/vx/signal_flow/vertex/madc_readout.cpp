@@ -33,8 +33,8 @@ MADCReadoutView::MADCReadoutView(
     Source const& first_source,
     std::optional<Source> const& second_source,
     SourceSelection const& source_selection,
-    ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate)
+    ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor)
 {
 	if (!second_source &&
 	    ((source_selection.period.value() != 0) || (source_selection.initial.value() != 0))) {

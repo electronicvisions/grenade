@@ -60,7 +60,7 @@ test_event_loopback_single_crossbar_node(
 	input_list.snippets.at(0).data[v1] = inputs;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs.insert({instance, lola::vx::v3::Chip()});
+	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
 
 	// run Graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);

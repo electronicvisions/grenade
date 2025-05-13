@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
 #include "grenade/vx/network/network_builder.h"
@@ -63,8 +64,10 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
-	auto& config = initial_config.at(grenade::common::ExecutionInstanceID());
+	    {grenade::common::ExecutionInstanceID(),
+	     {{grenade::vx::common::ChipOnConnection(), lola::vx::v3::Chip()}}}};
+	auto& config = initial_config.at(grenade::common::ExecutionInstanceID())
+	                   .at(grenade::vx::common::ChipOnConnection());
 
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.DifferentialConfig");
 	{
@@ -132,8 +135,10 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
-	auto& config = initial_config.at(grenade::common::ExecutionInstanceID());
+	    {grenade::common::ExecutionInstanceID(),
+	     {{grenade::vx::common::ChipOnConnection(), lola::vx::v3::Chip()}}}};
+	auto& config = initial_config.at(grenade::common::ExecutionInstanceID())
+	                   .at(grenade::vx::common::ChipOnConnection());
 
 	auto logger = log4cxx::Logger::getLogger("TEST_JITGraphExecutor.NoDifferentialConfig");
 	{
@@ -199,7 +204,8 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 	      grenade::vx::common::Time(10000 * grenade::vx::common::Time::fpga_clock_cycles_per_us)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
-	    {grenade::common::ExecutionInstanceID(), lola::vx::v3::Chip()}};
+	    {grenade::common::ExecutionInstanceID(),
+	     {{grenade::vx::common::ChipOnConnection(), lola::vx::v3::Chip()}}}};
 
 	std::vector<std::future<grenade::vx::signal_flow::OutputData>> results;
 	constexpr size_t num_concurrent = 100;
@@ -218,11 +224,12 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 		auto const data = results.at(i).get();
 		assert(data.execution_time_info);
 		EXPECT_TRUE(data.execution_time_info->execution_duration_per_hardware.contains(
-		    halco::hicann_dls::vx::v3::DLSGlobal()));
+		    grenade::common::ConnectionOnExecutor()));
 		// expect at least the realtime runtime as duration
 		EXPECT_GE(
-		    data.execution_time_info->execution_duration_per_hardware.at(
-		        halco::hicann_dls::vx::v3::DLSGlobal()),
+		    data.execution_time_info->execution_duration_per_hardware
+		        .at(grenade::common::ConnectionOnExecutor())
+		        .at(grenade::vx::common::ChipOnConnection()),
 		    std::chrono::milliseconds(10));
 	}
 

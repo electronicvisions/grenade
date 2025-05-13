@@ -131,7 +131,8 @@ struct PPUReadHooks
 		        stadls::vx::v3::ContainerTicket>>
 		    tickets;
 
-		signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type evaluate() const;
+		signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type::mapped_type evaluate()
+		    const;
 	};
 
 	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;

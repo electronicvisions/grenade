@@ -1,7 +1,8 @@
 #pragma once
+#include "grenade/common/connection_on_executor.h"
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/genpybind.h"
-#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <iosfwd>
@@ -22,7 +23,9 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	 * program instruction streams, that is from encoding and sending instructions to receiving all
 	 * responses and decoding them up to the halt response.
 	 */
-	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::chrono::nanoseconds>
+	std::map<
+	    grenade::common::ConnectionOnExecutor,
+	    std::map<common::ChipOnConnection, std::chrono::nanoseconds>>
 	    execution_duration_per_hardware{};
 
 	/**
@@ -31,7 +34,9 @@ struct GENPYBIND(visible) ExecutionTimeInfo
 	 * each batch entry. It is equivalent to the accumulated duration of the intervals during which
 	 * event recording is enabled for each batch entry.
 	 */
-	std::map<grenade::common::ExecutionInstanceID, std::chrono::nanoseconds>
+	std::map<
+	    grenade::common::ExecutionInstanceID,
+	    std::map<common::ChipOnConnection, std::chrono::nanoseconds>>
 	    realtime_duration_per_execution_instance{};
 
 	/**

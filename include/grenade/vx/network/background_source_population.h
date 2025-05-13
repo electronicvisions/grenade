@@ -56,8 +56,8 @@ struct GENPYBIND(visible) BackgroundSourcePopulation : common::EntityOnChip
 	    std::vector<Neuron> neurons,
 	    Coordinate const& coordinate,
 	    Config const& config,
-	    common::EntityOnChip::ChipCoordinate chip_coordinate =
-	        common::EntityOnChip::ChipCoordinate()) SYMBOL_VISIBLE;
+	    common::EntityOnChip::ChipOnExecutor chip_on_executor =
+	        common::EntityOnChip::ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	bool operator==(BackgroundSourcePopulation const& other) const SYMBOL_VISIBLE;
 	bool operator!=(BackgroundSourcePopulation const& other) const SYMBOL_VISIBLE;

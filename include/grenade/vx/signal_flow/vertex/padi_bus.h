@@ -34,9 +34,9 @@ struct PADIBus : public EntityOnChip
 	/**
 	 * Construct PADI bus at specified location.
 	 * @param coordinate Location
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
-	PADIBus(Coordinate const& coordinate, ChipCoordinate const& chip_coordinate = ChipCoordinate())
+	PADIBus(Coordinate const& coordinate, ChipOnExecutor const& chip_on_executor = ChipOnExecutor())
 	    SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = true;

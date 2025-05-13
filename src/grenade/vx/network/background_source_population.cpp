@@ -20,8 +20,8 @@ BackgroundSourcePopulation::BackgroundSourcePopulation(
     std::vector<Neuron> neurons,
     Coordinate const& coordinate,
     Config const& config,
-    common::EntityOnChip::ChipCoordinate const chip_coordinate) :
-    common::EntityOnChip(chip_coordinate),
+    common::EntityOnChip::ChipOnExecutor const chip_on_executor) :
+    common::EntityOnChip(chip_on_executor),
     neurons(std::move(neurons)),
     coordinate(coordinate),
     config(config)

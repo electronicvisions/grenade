@@ -494,7 +494,7 @@ struct PlasticityRule : public EntityOnChip
 	 * @param id Identifier of same plasticity rule across realtime snippets.
 	 *           Plasticity rules with equal identifier share their state across realtime snippets.
 	 *           Currently, in addition, the complete provided kernel code is required to be equal.
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	PlasticityRule(
 	    std::string kernel,
@@ -503,7 +503,7 @@ struct PlasticityRule : public EntityOnChip
 	    std::vector<NeuronViewShape> const& neuron_view_shapes,
 	    std::optional<Recording> const& recording,
 	    ID const& id = ID(),
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	/**
 	 * Size (in bytes) of recorded scratchpad memory, which is stored after execution and

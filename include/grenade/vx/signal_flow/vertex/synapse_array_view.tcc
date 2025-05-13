@@ -7,8 +7,8 @@ SynapseArrayView::SynapseArrayView(
     ColumnsT&& columns,
     WeightsT&& weights,
     LabelsT&& labels,
-    ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate),
+    ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor),
     m_synram(std::forward<SynramT>(synram)),
     m_rows(),
     m_columns(),

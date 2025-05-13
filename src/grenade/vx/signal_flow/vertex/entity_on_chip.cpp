@@ -2,8 +2,8 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-EntityOnChip::EntityOnChip(ChipCoordinate const& coordinate_chip) :
-    common::EntityOnChip(coordinate_chip)
+EntityOnChip::EntityOnChip(ChipOnExecutor const& chip_on_executor) :
+    common::EntityOnChip(chip_on_executor)
 {}
 
 } // namespace grenade::vx::signal_flow::vertex

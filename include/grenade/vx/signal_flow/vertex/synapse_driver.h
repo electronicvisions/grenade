@@ -58,12 +58,12 @@ struct SynapseDriver : public EntityOnChip
 	 * Construct synapse driver at specified location with specified configuration.
 	 * @param coordinate Location
 	 * @param config Configuration
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	SynapseDriver(
 	    Coordinate const& coordinate,
 	    Config const& config,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = false;
 	constexpr std::array<Port, 1> inputs() const

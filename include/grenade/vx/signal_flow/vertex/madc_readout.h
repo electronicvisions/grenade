@@ -73,13 +73,13 @@ struct MADCReadoutView : public EntityOnChip
 	 * @param first_source Neuron source and location to read out
 	 * @param second_source Optional second neuron source and location to read out
 	 * @param source_selection Source selection config
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
 	explicit MADCReadoutView(
 	    Source const& first_source,
 	    std::optional<Source> const& second_source,
 	    SourceSelection const& source_selection,
-	    ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	Source const& get_first_source() const SYMBOL_VISIBLE;
 	std::optional<Source> const& get_second_source() const SYMBOL_VISIBLE;

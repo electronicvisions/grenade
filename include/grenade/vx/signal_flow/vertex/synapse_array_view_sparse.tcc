@@ -6,8 +6,8 @@ SynapseArrayViewSparse::SynapseArrayViewSparse(
     RowsT&& rows,
     ColumnsT&& columns,
     SynapsesT&& synapses,
-    ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate),
+    ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor),
     m_synram(std::forward<SynramT>(synram)),
     m_rows(),
     m_columns(),

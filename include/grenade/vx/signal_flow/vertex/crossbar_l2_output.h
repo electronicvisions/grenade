@@ -31,9 +31,9 @@ struct CrossbarL2Output : public EntityOnChip
 
 	/**
 	 * Construct CrossbarL2Output.
-	 * @param chip_coordinate Coordinate of chip to use
+	 * @param chip_on_executor Coordinate of chip to use
 	 */
-	CrossbarL2Output(ChipCoordinate const& chip_coordinate = ChipCoordinate()) SYMBOL_VISIBLE;
+	CrossbarL2Output(ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
 	constexpr static bool variadic_input = true;
 	constexpr std::array<Port, 1> inputs() const

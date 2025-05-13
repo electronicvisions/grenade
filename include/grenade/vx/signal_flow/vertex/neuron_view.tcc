@@ -2,8 +2,8 @@ namespace grenade::vx::signal_flow::vertex {
 
 template <typename ColumnsT, typename ConfigsT, typename RowT>
 NeuronView::NeuronView(
-    ColumnsT&& columns, ConfigsT&& configs, RowT&& row, ChipCoordinate const& chip_coordinate) :
-    EntityOnChip(chip_coordinate), m_columns(), m_row(std::forward<RowT>(row))
+    ColumnsT&& columns, ConfigsT&& configs, RowT&& row, ChipOnExecutor const& chip_on_executor) :
+    EntityOnChip(chip_on_executor), m_columns(), m_row(std::forward<RowT>(row))
 {
 	check(columns, configs);
 	m_columns = std::forward<ColumnsT>(columns);

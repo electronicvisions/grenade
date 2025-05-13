@@ -251,7 +251,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			    old_columns.begin(), old_columns.end()};
 			signal_flow::vertex::SynapseArrayViewSparse synapse_array_view(
 			    old_synapse_array_view.get_synram(), std::move(rows), std::move(columns),
-			    std::move(synapses.at(vertex_descriptor)), old_synapse_array_view.chip_coordinate);
+			    std::move(synapses.at(vertex_descriptor)), old_synapse_array_view.chip_on_executor);
 			network_graph.m_graph.update(vertex_descriptor, std::move(synapse_array_view));
 		}
 	};
@@ -302,7 +302,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		        signal_flow::vertex::PlasticityRule::Timer::Value(new_rule.timer.period.value()),
 		        new_rule.timer.num_periods},
 		    old_rule.get_synapse_view_shapes(), old_rule.get_neuron_view_shapes(),
-		    new_rule.recording, new_rule.id, old_rule.chip_coordinate);
+		    new_rule.recording, new_rule.id, old_rule.chip_on_executor);
 		network_graph.m_graph.update_and_relocate(vertex_descriptor, std::move(vertex), inputs);
 	};
 
@@ -419,7 +419,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 				    network_graph.m_graph.update(
 				        vertex_descriptor,
 				        signal_flow::vertex::BackgroundSpikeSource(
-				            config, old_vertex.get_coordinate(), old_vertex.chip_coordinate));
+				            config, old_vertex.get_coordinate(), old_vertex.chip_on_executor));
 			    }
 		    }
 	    };
@@ -455,7 +455,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		network_graph.m_graph.update(
 		    vertex_descriptor, signal_flow::vertex::MADCReadoutView(
 		                           new_first_source, new_second_source,
-		                           old_vertex.get_source_selection(), old_vertex.chip_coordinate));
+		                           old_vertex.get_source_selection(), old_vertex.chip_on_executor));
 	};
 
 	// update CADC recording sources
@@ -509,7 +509,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			    signal_flow::vertex::CADCMembraneReadoutView(
 			        old_vertex.get_columns(), old_vertex.get_synram(), old_vertex.get_mode(),
 			        std::move(sources[old_vertex.get_synram().toNeuronRowOnDLS()]),
-			        old_vertex.chip_coordinate));
+			        old_vertex.chip_on_executor));
 		}
 	};
 
@@ -534,7 +534,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			network_graph.m_graph.update(
 			    vertex_descriptors.at(i),
 			    signal_flow::vertex::PadReadoutView(
-			        new_source, old_vertex.get_coordinate(), old_vertex.chip_coordinate));
+			        new_source, old_vertex.get_coordinate(), old_vertex.chip_on_executor));
 		}
 	};
 
@@ -691,7 +691,7 @@ void NetworkGraphBuilder::add_external_input(
 	    external_source_merger_vertex;
 
 	// add crossbar l2 input from spike data
-	signal_flow::vertex::CrossbarL2Input crossbar_l2_input(get_chip_coordinate(instance));
+	signal_flow::vertex::CrossbarL2Input crossbar_l2_input(get_chip_on_executor(instance));
 	auto const crossbar_l2_input_vertex =
 	    graph.add(crossbar_l2_input, instance, {external_source_merger_vertex});
 	resources.execution_instances.at(instance).graph_translation.event_input_vertex =
@@ -759,7 +759,7 @@ void NetworkGraphBuilder::add_background_spike_sources(
 			    config,
 			    BackgroundSpikeSourceOnDLS(
 			        bus.value() + hemisphere.value() * PADIBusOnPADIBusBlock::size),
-			    get_chip_coordinate(instance));
+			    get_chip_on_executor(instance));
 			auto const background_spike_source_vertex =
 			    graph.add(background_spike_source, instance, {});
 			resources.execution_instances.at(instance)
@@ -871,7 +871,7 @@ void NetworkGraphBuilder::add_population(
 				columns.push_back(column);
 			}
 			signal_flow::vertex::NeuronView neuron_view(
-			    std::move(columns), std::move(configs), row, get_chip_coordinate(instance));
+			    std::move(columns), std::move(configs), row, get_chip_on_executor(instance));
 			auto const hemisphere = row.toHemisphereOnDLS();
 			// use input for specific hemisphere
 			std::vector<signal_flow::Input> inputs;
@@ -929,7 +929,7 @@ void NetworkGraphBuilder::add_padi_bus(
 		}
 	} else { // padi bus not added yet
 		resources.execution_instances.at(instance).padi_busses[coordinate] = graph.add(
-		    signal_flow::vertex::PADIBus(coordinate, get_chip_coordinate(instance)), instance,
+		    signal_flow::vertex::PADIBus(coordinate, get_chip_on_executor(instance)), instance,
 		    inputs);
 	}
 	LOG4CXX_TRACE(
@@ -985,7 +985,7 @@ void NetworkGraphBuilder::add_crossbar_node(
 		        ? connection_result.execution_instances.at(instance).crossbar_nodes.at(coordinate)
 		        : haldls::vx::v3::CrossbarNode::drop_all;
 		resources.execution_instances.at(instance).crossbar_nodes[coordinate] = graph.add(
-		    signal_flow::vertex::CrossbarNode(coordinate, config, get_chip_coordinate(instance)),
+		    signal_flow::vertex::CrossbarNode(coordinate, config, get_chip_on_executor(instance)),
 		    instance, inputs);
 	}
 	LOG4CXX_TRACE(
@@ -1034,7 +1034,7 @@ void NetworkGraphBuilder::add_synapse_driver(
 		    {connection_result.execution_instances.at(instance).synapse_driver_compare_masks.at(
 		         coordinate),
 		     row_modes, true /* TODO: expose */},
-		    get_chip_coordinate(instance));
+		    get_chip_on_executor(instance));
 		resources.execution_instances.at(instance).synapse_drivers[coordinate] =
 		    graph.add(synapse_driver, instance, inputs);
 	}
@@ -1119,7 +1119,7 @@ void NetworkGraphBuilder::add_neuron_event_output(
 	}
 	resources.execution_instances.at(instance).neuron_event_outputs[coordinate] = graph.add(
 	    signal_flow::vertex::NeuronEventOutputView(
-	        std::move(neurons), get_chip_coordinate(instance)),
+	        std::move(neurons), get_chip_on_executor(instance)),
 	    instance, inputs);
 	LOG4CXX_TRACE(
 	    m_logger,
@@ -1265,7 +1265,7 @@ void NetworkGraphBuilder::add_synapse_array_view_sparse(
 		auto&& syns = synapses.at(hemisphere);
 		auto const synram = hemisphere.toSynramOnDLS();
 		signal_flow::vertex::SynapseArrayViewSparse config(
-		    synram, std::move(rs), std::move(cs), std::move(syns), get_chip_coordinate(instance));
+		    synram, std::move(rs), std::move(cs), std::move(syns), get_chip_on_executor(instance));
 
 		assert(
 		    !resources.execution_instances.at(instance).projections.contains(descriptor) ||
@@ -1703,7 +1703,7 @@ void NetworkGraphBuilder::add_external_output(
 	}
 	// add crossbar l2 output
 	auto const crossbar_l2_output = graph.add(
-	    signal_flow::vertex::CrossbarL2Output(get_chip_coordinate(instance)), instance,
+	    signal_flow::vertex::CrossbarL2Output(get_chip_on_executor(instance)), instance,
 	    crossbar_l2_output_inputs);
 	resources.execution_instances.at(instance).graph_translation.event_output_vertex = graph.add(
 	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1),
@@ -1779,7 +1779,7 @@ void NetworkGraphBuilder::add_plasticity_rules(
 		            plasticity_rule.timer.period.value()),
 		        plasticity_rule.timer.num_periods},
 		    std::move(synapse_view_shapes), std::move(neuron_view_shapes),
-		    plasticity_rule.recording, plasticity_rule.id, get_chip_coordinate(instance));
+		    plasticity_rule.recording, plasticity_rule.id, get_chip_on_executor(instance));
 		auto const output = vertex.output();
 		auto const plasticity_rule_descriptor = graph.add(std::move(vertex), instance, inputs);
 		resources.execution_instances.at(instance)
@@ -1987,7 +1987,7 @@ void NetworkGraphBuilder::add_madc_recording(
 	}
 
 	signal_flow::vertex::MADCReadoutView madc_readout(
-	    first_source, second_source, source_selection, get_chip_coordinate(instance));
+	    first_source, second_source, source_selection, get_chip_on_executor(instance));
 	auto const madc_vertex = graph.add(madc_readout, instance, inputs);
 	resources.execution_instances.at(instance).graph_translation.madc_sample_output_vertex =
 	    graph.add(
@@ -2056,7 +2056,7 @@ void NetworkGraphBuilder::add_cadc_recording(
 		    cadc_recording.placement_on_dram
 		        ? signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic_on_dram
 		        : signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic,
-		    std::move(sources), get_chip_coordinate(instance));
+		    std::move(sources), get_chip_on_executor(instance));
 		signal_flow::vertex::DataOutput data_output(
 		    signal_flow::ConnectionType::Int8, vertex.output().size);
 		auto const cv = graph.add(std::move(vertex), instance, inputs);
@@ -2104,39 +2104,39 @@ void NetworkGraphBuilder::add_pad_recording(
 		    signal_flow::Input(neuron_vertex_descriptor, {in_view_location, in_view_location}));
 
 		signal_flow::vertex::PadReadoutView pad_readout(
-		    vertex_source, pad, get_chip_coordinate(instance));
+		    vertex_source, pad, get_chip_on_executor(instance));
 		resources.execution_instances.at(instance).graph_translation.pad_readout_vertex.push_back(
 		    graph.add(pad_readout, instance, {input}));
 	}
 	LOG4CXX_TRACE(m_logger, "add_pad_recording(): Added pad recording in " << timer.print() << ".");
 }
 
-common::EntityOnChip::ChipCoordinate NetworkGraphBuilder::get_chip_coordinate(
+common::EntityOnChip::ChipOnExecutor NetworkGraphBuilder::get_chip_on_executor(
     grenade::common::ExecutionInstanceID const& instance) const
 {
-	std::set<common::EntityOnChip::ChipCoordinate> chip_coordinates;
+	std::set<common::EntityOnChip::ChipOnExecutor> chip_on_executors;
 	auto const& execution_instance = m_network.execution_instances.at(instance);
 	for (auto const& [_, pop] : execution_instance.populations) {
-		chip_coordinates.insert(
-		    std::visit([](auto const& population) { return population.chip_coordinate; }, pop));
+		chip_on_executors.insert(
+		    std::visit([](auto const& population) { return population.chip_on_executor; }, pop));
 	}
 	for (auto const& [_, proj] : execution_instance.projections) {
-		chip_coordinates.insert(proj.chip_coordinate);
+		chip_on_executors.insert(proj.chip_on_executor);
 	}
 	if (execution_instance.madc_recording) {
-		chip_coordinates.insert(execution_instance.madc_recording->chip_coordinate);
+		chip_on_executors.insert(execution_instance.madc_recording->chip_on_executor);
 	}
 	if (execution_instance.cadc_recording) {
-		chip_coordinates.insert(execution_instance.cadc_recording->chip_coordinate);
+		chip_on_executors.insert(execution_instance.cadc_recording->chip_on_executor);
 	}
 	if (execution_instance.pad_recording) {
-		chip_coordinates.insert(execution_instance.pad_recording->chip_coordinate);
+		chip_on_executors.insert(execution_instance.pad_recording->chip_on_executor);
 	}
-	assert(chip_coordinates.size() > 0);
-	if (chip_coordinates.size() > 1) {
+	assert(chip_on_executors.size() > 0);
+	if (chip_on_executors.size() > 1) {
 		throw std::logic_error("Multiple chips in single execution instance not supported (yet).");
 	}
-	return *chip_coordinates.begin();
+	return *chip_on_executors.begin();
 }
 
 } // namespace grenade::vx::network
