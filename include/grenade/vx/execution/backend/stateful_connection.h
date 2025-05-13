@@ -1,9 +1,12 @@
 #pragma once
-#include "grenade/vx/execution/backend/detail/connection_state_storage.h"
+#include "grenade/vx/execution/backend/detail/connection_config.h"
 #include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/genpybind.h"
 #include "hate/visibility.h"
 #include "hxcomm/common/connection_time_info.h"
+#include "stadls/vx/v3/reinit_stack_entry.h"
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 
@@ -100,7 +103,42 @@ struct StatefulConnection
 private:
 	InitializedConnection m_initialized_connection;
 
-	detail::ConnectionStateStorage m_state_storage;
+	/**
+	 * Tracked hardware configuration.
+	 */
+	detail::ConnectionConfig m_config;
+
+	/**
+	 * Reinit applying the base configuration.
+	 */
+	stadls::vx::v3::ReinitStackEntry m_reinit_base;
+
+	/**
+	 * Reinit applying the differential configuration.
+	 */
+	stadls::vx::v3::ReinitStackEntry m_reinit_differential;
+
+	/**
+	 * Reinit applying reading the hardware state when the user gets scheduled out by Quiggeldy and
+	 * afterwards applying this state upon the next execution.
+	 */
+	stadls::vx::v3::ReinitStackEntry m_reinit_schedule_out_replacement;
+
+	/**
+	 * Reinit waiting for the CapMem to settle.
+	 */
+	stadls::vx::v3::ReinitStackEntry m_reinit_capmem_settling_wait;
+
+	/**
+	 * Reinit starting the PPUs.
+	 */
+	stadls::vx::v3::ReinitStackEntry m_reinit_start_ppus;
+
+	/**
+	 * Mutex used for exclusive usage of the connection in run().
+	 */
+	std::unique_ptr<std::mutex> m_mutex;
+
 
 	friend RunTimeInfo run(StatefulConnection&, PlaybackProgram&);
 	friend RunTimeInfo run(StatefulConnection&, PlaybackProgram&&);

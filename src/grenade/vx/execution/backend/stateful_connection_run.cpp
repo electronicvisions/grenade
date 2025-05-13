@@ -59,11 +59,10 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	    logger, "Generated playback program for read-back of PPU alterations in "
 	                << read_timer.print() << ".");
 
-	if (!connection.m_state_storage.mutex) {
+	if (!connection.m_mutex) {
 		throw std::logic_error("Unexpected access to moved-from object.");
 	}
-	std::unique_lock<std::mutex> connection_lock(
-	    *connection.m_state_storage.mutex, std::defer_lock);
+	std::unique_lock<std::mutex> connection_lock(*connection.m_mutex, std::defer_lock);
 	// exclusive access to connection.m_state_storage and initialized connection required from here
 	// in differential mode
 	if (connection.get_enable_differential_config()) {
@@ -71,23 +70,20 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	}
 
 	hate::Timer const initial_config_program_timer;
-	bool const is_fresh_connection_state_storage_config =
-	    connection.m_state_storage.config.get_is_fresh();
-	connection.m_state_storage.config.set_chip(program.chip_configs[0], true);
+	bool const is_fresh_connection_config = connection.m_config.get_is_fresh();
+	connection.m_config.set_chip(program.chip_configs[0], true);
 	if (program.external_ppu_dram_memory_config) {
-		connection.m_state_storage.config.set_external_ppu_dram_memory(
-		    program.external_ppu_dram_memory_config);
+		connection.m_config.set_external_ppu_dram_memory(program.external_ppu_dram_memory_config);
 	}
 
 	bool const enforce_base = !connection.get_enable_differential_config() ||
-	                          is_fresh_connection_state_storage_config ||
+	                          is_fresh_connection_config ||
 	                          !program.pre_initial_config_hook.empty();
 	bool const has_capmem_changes =
-	    enforce_base || connection.m_state_storage.config.get_differential_changes_capmem();
-	bool const nothing_changed = connection.get_enable_differential_config() &&
-	                             !is_fresh_connection_state_storage_config &&
-	                             !connection.m_state_storage.config.get_has_differential() &&
-	                             program.pre_initial_config_hook.empty();
+	    enforce_base || connection.m_config.get_differential_changes_capmem();
+	bool const nothing_changed =
+	    connection.get_enable_differential_config() && !is_fresh_connection_config &&
+	    !connection.m_config.get_has_differential() && program.pre_initial_config_hook.empty();
 
 	stadls::vx::v3::PlaybackProgramBuilder base_builder;
 
@@ -97,11 +93,11 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	if (!nothing_changed) {
 		base_builder.write(
 		    detail::ConnectionConfigBaseCoordinate(),
-		    detail::ConnectionConfigBase(connection.m_state_storage.config));
-		if (connection.m_state_storage.config.get_has_differential()) {
+		    detail::ConnectionConfigBase(connection.m_config));
+		if (connection.m_config.get_has_differential()) {
 			differential_builder.write(
 			    detail::ConnectionConfigDifferentialCoordinate(),
-			    detail::ConnectionConfigDifferential(connection.m_state_storage.config));
+			    detail::ConnectionConfigDifferential(connection.m_config));
 		}
 	}
 
@@ -138,28 +134,27 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
-			connection.m_state_storage.reinit_base.set(base_program, std::nullopt, enforce_base);
+			connection.m_reinit_base.set(base_program, std::nullopt, enforce_base);
 
 			// Only enforce when not empty to support non-differential mode.
 			// In differential mode it is always enforced on changes.
-			connection.m_state_storage.reinit_differential.set(
+			connection.m_reinit_differential.set(
 			    differential_program, std::nullopt, !differential_program.empty());
 		}
 
 		// Never enforce, since the reinit is only filled after a schedule-out operation.
-		connection.m_state_storage.reinit_schedule_out_replacement.set(
+		connection.m_reinit_schedule_out_replacement.set(
 		    stadls::vx::v3::PlaybackProgram(), schedule_out_replacement_program, false);
 
 		// Always write capmem settling wait reinit, but only enforce it when the wait is
 		// immediately required, i.e. after changes to the capmem.
-		connection.m_state_storage.reinit_capmem_settling_wait.set(
+		connection.m_reinit_capmem_settling_wait.set(
 		    stadls::vx::v3::generate(execution::detail::generator::CapMemSettlingWait())
 		        .builder.done(),
 		    std::nullopt, has_capmem_changes);
 
 		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
-		connection.m_state_storage.reinit_trigger.set(
-		    trigger_program, std::nullopt, !trigger_program.empty());
+		connection.m_reinit_start_ppus.set(trigger_program, std::nullopt, !trigger_program.empty());
 
 		// Execute realtime sections
 		for (auto& p : program.programs) {
@@ -200,14 +195,13 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 			get_state_result->apply(current_config);
 		}
 		if (runs_successful) {
-			connection.m_state_storage.config.set_chip(current_config, false);
+			connection.m_config.set_chip(current_config, false);
 		} else {
 			// reset connection state storage since no assumptions can be made after failure
 			// TODO: create reset mechanism in class
 			bool const enable_differential_config = connection.get_enable_differential_config();
-			connection.m_state_storage.config = detail::ConnectionConfig();
-			connection.m_state_storage.config.set_enable_differential_config(
-			    enable_differential_config);
+			connection.m_config = detail::ConnectionConfig();
+			connection.m_config.set_enable_differential_config(enable_differential_config);
 		}
 		LOG4CXX_TRACE(logger, "Updated connection state in " << update_state_timer.print() << ".");
 	}
