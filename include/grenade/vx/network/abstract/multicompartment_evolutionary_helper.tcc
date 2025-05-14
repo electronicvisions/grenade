@@ -13,7 +13,7 @@ template <class EOT>
 void SelectionNBest<EOT>::operator()(EoPopulation<EOT>& pop_source, EoPopulation<EOT>& pop_target)
 
 {
-	if (pop_source == pop_target) {
+	if (&pop_source == &pop_target) {
 		throw std::logic_error("Cannot use source population as target population for selection.");
 	}
 	if (pop_source.size() <= m_number_selection) {
@@ -93,7 +93,7 @@ Tournament<EOT>::Tournament(size_t contestants, size_t selection, std::mt19937& 
 template <class EOT>
 void Tournament<EOT>::operator()(EoPopulation<EOT>& pop_source, EoPopulation<EOT>& pop_target)
 {
-	if (pop_source == pop_target) {
+	if (&pop_source == &pop_target) {
 		throw std::logic_error("Cannot use source population as target population for tournament.");
 	}
 
@@ -123,7 +123,7 @@ template <class EOT>
 void MatingExchangeBlocks<EOT>::operator()(
     EoPopulation<EOT>& pop_source, EoPopulation<EOT>& pop_target)
 {
-	if (pop_source == pop_target) {
+	if (&pop_source == &pop_target) {
 		throw std::logic_error("Cannot use source population as target population for mating.");
 	}
 
