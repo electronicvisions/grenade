@@ -56,7 +56,8 @@ test_event_loopback_single_crossbar_node(
 
 	// fill graph inputs
 	grenade::vx::signal_flow::InputData input_list;
-	input_list.data[v1] = inputs;
+	input_list.snippets.resize(1);
+	input_list.snippets.at(0).data[v1] = inputs;
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
@@ -64,16 +65,16 @@ test_event_loopback_single_crossbar_node(
 	// run Graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
 
-	EXPECT_EQ(result_map.data.size(), 1);
+	EXPECT_EQ(result_map.snippets.at(0).data.size(), 1);
 
-	EXPECT_TRUE(result_map.data.find(v6) != result_map.data.end());
+	EXPECT_TRUE(result_map.snippets.at(0).data.find(v6) != result_map.snippets.at(0).data.end());
 	EXPECT_EQ(
 	    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	        result_map.data.at(v6))
+	        result_map.snippets.at(0).data.at(v6))
 	        .size(),
 	    inputs.size());
 	return std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	    result_map.data.at(v6));
+	    result_map.snippets.at(0).data.at(v6));
 }
 
 TEST(JITGraphExecutor, EventLoopback)

@@ -59,7 +59,7 @@ void ExecutionInstancePPUProgramCompiler::Result::apply(
 
 ExecutionInstancePPUProgramCompiler::ExecutionInstancePPUProgramCompiler(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data,
+    signal_flow::InputData const& input_data,
     signal_flow::ExecutionInstanceHooks const& hooks,
     grenade::common::ExecutionInstanceID const& execution_instance) :
     m_graphs(graphs),
@@ -80,7 +80,7 @@ ExecutionInstancePPUProgramCompiler::Result ExecutionInstancePPUProgramCompiler:
 	using namespace lola::vx::v3;
 	using namespace haldls::vx::v3;
 
-	assert((std::set<size_t>{m_input_data.size(), m_graphs.size()}.size() == 1));
+	assert((std::set<size_t>{m_input_data.snippets.size(), m_graphs.size()}.size() == 1));
 	size_t const realtime_column_count = m_graphs.size();
 
 	ExecutionInstanceSnippetPPUUsageVisitor::Result overall_ppu_usage;
@@ -92,13 +92,13 @@ ExecutionInstancePPUProgramCompiler::Result ExecutionInstancePPUProgramCompiler:
 		overall_ppu_usage += std::move(ppu_usage);
 	}
 
-	std::vector<common::Time> maximal_periodic_cadc_runtimes(m_input_data.at(0).get().batch_size());
+	std::vector<common::Time> maximal_periodic_cadc_runtimes(m_input_data.batch_size());
 	for (size_t i = 0; i < realtime_column_count; ++i) {
 		if (ppu_usages.at(i).has_periodic_cadc_readout ||
 		    ppu_usages.at(i).has_periodic_cadc_readout_on_dram) {
 			for (size_t b = 0; b < maximal_periodic_cadc_runtimes.size(); ++b) {
 				maximal_periodic_cadc_runtimes.at(b) +=
-				    m_input_data.at(i).get().runtime.at(b).at(m_execution_instance);
+				    m_input_data.snippets.at(i).runtime.at(b).at(m_execution_instance);
 			}
 		}
 	}

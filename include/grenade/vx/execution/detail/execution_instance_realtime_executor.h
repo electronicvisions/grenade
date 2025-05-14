@@ -39,7 +39,7 @@ struct ExecutionInstanceRealtimeExecutor
 		std::vector<std::optional<ExecutionInstanceNode::PeriodicCADCReadoutTimes>>
 		    cadc_readout_time_information;
 
-		std::vector<signal_flow::OutputData> operator()(
+		std::vector<ExecutionInstanceSnippetRealtimeExecutor::Result> operator()(
 		    backend::PlaybackProgram const& playback_program) SYMBOL_VISIBLE;
 	};
 
@@ -53,8 +53,8 @@ struct ExecutionInstanceRealtimeExecutor
 	 */
 	ExecutionInstanceRealtimeExecutor(
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data,
-	    std::vector<signal_flow::OutputData>& output_data,
+	    std::vector<signal_flow::InputDataSnippet> const& input_data,
+	    std::vector<signal_flow::OutputDataSnippet>& output_data,
 	    ExecutionInstancePPUProgramCompiler::Result const& ppu_program,
 	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
@@ -62,8 +62,8 @@ struct ExecutionInstanceRealtimeExecutor
 
 private:
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;
-	std::vector<std::reference_wrapper<signal_flow::InputData const>> const& m_input_data;
-	std::vector<signal_flow::OutputData>& m_output_data;
+	std::vector<signal_flow::InputDataSnippet> const& m_input_data;
+	std::vector<signal_flow::OutputDataSnippet>& m_output_data;
 	ExecutionInstancePPUProgramCompiler::Result const& m_ppu_program;
 	grenade::common::ExecutionInstanceID m_execution_instance;
 };

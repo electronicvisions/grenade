@@ -64,13 +64,14 @@ std::vector<std::vector<signal_flow::UInt32>> ArgMax::run(
 		// TODO: Think about what to do with timing information
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
-	input_map.data[m_input_vertex] = timed_inputs;
+	input_map.snippets.resize(1);
+	input_map.snippets[0].data[m_input_vertex] = timed_inputs;
 
 	auto const output_map = execution::run(executor, m_graph, configs, input_map);
 
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>>(
-	        output_map.data.at(m_output_vertex));
+	        output_map.snippets[0].data.at(m_output_vertex));
 	std::vector<std::vector<signal_flow::UInt32>> outputs(timed_outputs.size());
 	for (size_t i = 0; i < outputs.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);

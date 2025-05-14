@@ -20,12 +20,12 @@ signal_flow::OutputData run(
 	    executor, network_graph.get_graph(), config, input, std::move(hooks));
 }
 
-std::vector<signal_flow::OutputData> run(
+signal_flow::OutputData run(
     grenade::vx::execution::JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
+    signal_flow::InputData const& inputs,
     execution::JITGraphExecutor::Hooks&& hooks)
 {
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> graphs;

@@ -1,10 +1,10 @@
 #pragma once
-#include "grenade/vx/execution/detail/execution_instance_data.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
 
 namespace grenade::vx::execution::detail {
 
 template <typename EntryT>
-void ExecutionInstanceData::insert(
+void ExecutionInstanceSnippetData::insert(
     signal_flow::Graph::vertex_descriptor descriptor, EntryT&& entry, bool is_output)
 {
 	m_local_data.data.emplace(descriptor, std::forward<EntryT>(entry));

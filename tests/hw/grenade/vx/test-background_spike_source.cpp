@@ -74,7 +74,8 @@ inline void test_background_spike_source_regular(
 	auto const v4 = g.add(data_output, instance, {v3});
 
 	grenade::vx::signal_flow::InputData input_list;
-	input_list.runtime.push_back({{instance, running_period}});
+	input_list.snippets.resize(1);
+	input_list.snippets.at(0).runtime.push_back({{instance, running_period}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs.insert({instance, lola::vx::v3::Chip()});
@@ -82,12 +83,12 @@ inline void test_background_spike_source_regular(
 	// run Graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
 
-	EXPECT_EQ(result_map.data.size(), 1);
+	EXPECT_EQ(result_map.snippets.at(0).data.size(), 1);
 
-	EXPECT_TRUE(result_map.data.find(v4) != result_map.data.end());
+	EXPECT_TRUE(result_map.snippets.at(0).data.find(v4) != result_map.snippets.at(0).data.end());
 
 	auto const spikes = std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	                        result_map.data.at(v4))
+	                        result_map.snippets.at(0).data.at(v4))
 	                        .at(0);
 
 	typed_array<size_t, BackgroundSpikeSourceOnDLS> expected_labels_count;

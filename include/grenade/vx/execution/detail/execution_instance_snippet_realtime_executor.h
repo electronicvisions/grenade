@@ -1,17 +1,12 @@
 #pragma once
-#include <atomic>
-#include <optional>
-#include <set>
-#include <vector>
-
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/detail/execution_instance_data.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
-#include "grenade/vx/signal_flow/data.h"
+#include "grenade/vx/signal_flow/data_snippet.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/input_data_snippet.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
@@ -25,6 +20,11 @@
 #include "stadls/vx/v3/playback_generator.h"
 #include "stadls/vx/v3/playback_program.h"
 #include "stadls/vx/v3/playback_program_builder.h"
+#include <atomic>
+#include <chrono>
+#include <optional>
+#include <set>
+#include <vector>
 
 namespace grenade::vx::execution::detail {
 
@@ -51,8 +51,8 @@ public:
 	ExecutionInstanceSnippetRealtimeExecutor(
 	    signal_flow::Graph const& graph,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
-	    signal_flow::InputData const& input_list,
-	    signal_flow::Data const& data_output,
+	    signal_flow::InputDataSnippet const& input_list,
+	    signal_flow::DataSnippet const& data_output,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
 	    size_t realtime_column_index,
 	    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const&
@@ -92,12 +92,18 @@ public:
 	 */
 	Ret generate(Usages before, Usages after) SYMBOL_VISIBLE;
 
+	struct Result
+	{
+		signal_flow::DataSnippet data;
+
+		std::chrono::nanoseconds total_realtime_duration;
+	};
+
 	/**
 	 * Postprocess by visit of all local vertices to be post processed after execution.
 	 * This resets the internal state of the builder to be ready for the next time step.
-	 * @return signal_flow::OutputData of locally computed results
 	 */
-	signal_flow::OutputData post_process(
+	Result post_process(
 	    std::vector<stadls::vx::v3::PlaybackProgram> const& realtime,
 	    std::vector<halco::common::typed_array<
 	        std::optional<stadls::vx::v3::ContainerTicket>,
@@ -119,7 +125,7 @@ private:
 	signal_flow::Graph const& m_graph;
 	grenade::common::ExecutionInstanceID m_execution_instance;
 
-	ExecutionInstanceData m_data;
+	ExecutionInstanceSnippetData m_data;
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
@@ -211,7 +217,7 @@ private:
 	 * @param input_data Input data to check
 	 * @return Boolean value
 	 */
-	bool input_data_matches_graph(signal_flow::InputData const& input_data) const;
+	bool input_data_matches_graph(signal_flow::InputDataSnippet const& input_data) const;
 
 	/**
 	 * Filter events via batch entry runtime and recording interval.

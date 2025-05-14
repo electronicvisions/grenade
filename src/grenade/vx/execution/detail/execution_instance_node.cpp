@@ -10,8 +10,8 @@
 namespace grenade::vx::execution::detail {
 
 ExecutionInstanceNode::ExecutionInstanceNode(
-    std::vector<signal_flow::OutputData>& data_maps,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps,
+    signal_flow::OutputData& data_maps,
+    signal_flow::InputData const& input_data_maps,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     grenade::common::ExecutionInstanceID const& execution_instance,
     halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
@@ -59,16 +59,14 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	auto output_data = post_processor(playback_program);
 
-	for (size_t i = 0; i < output_data.size(); ++i) {
-		// add execution duration per hardware to result data map
-		assert(output_data.at(i).execution_time_info);
-		output_data.at(i).execution_time_info->execution_duration_per_hardware[dls_global] =
-		    run_time_info.execution_duration;
+	// add execution duration per hardware to result data map
+	assert(output_data.execution_time_info);
+	output_data.execution_time_info->execution_duration_per_hardware[dls_global] =
+	    run_time_info.execution_duration;
 
-		// merge local data map into global data map
-		if (run_successful) {
-			data_maps[i].merge(output_data.at(i));
-		}
+	// merge local data map into global data map
+	if (run_successful) {
+		data_maps.merge(output_data);
 	}
 
 	// throw exception if run was not successful

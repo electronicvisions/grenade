@@ -67,13 +67,15 @@ TEST(NetworkGraphBuilder, ExternalSourcePopulationRecord)
 	}
 	InputGenerator input_generator(network_graph, input_spike_times.size());
 	input_generator.add(input_spike_times, population_external_descriptor);
-	auto inputs = input_generator.done();
-	inputs.runtime.resize(inputs.batch_size(), {{instance, grenade::vx::common::Time(num * isi)}});
+	grenade::vx::signal_flow::InputData inputs;
+	inputs.snippets.push_back(input_generator.done());
+	inputs.snippets.at(0).runtime.resize(
+	    inputs.batch_size(), {{instance, grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-	auto const result = extract_neuron_spikes(result_map, network_graph);
+	auto const result = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < population_external.neurons.size(); ++i) {
@@ -165,15 +167,16 @@ TEST(NetworkGraphBuilder, FeedForwardOneToOne)
 	}
 	InputGenerator input_generator(network_graph, input_spike_times.size());
 	input_generator.add(input_spike_times, population_external_descriptor);
-	auto inputs = input_generator.done();
-	inputs.runtime.resize(
+	grenade::vx::signal_flow::InputData inputs;
+	inputs.snippets.push_back(input_generator.done());
+	inputs.snippets.at(0).runtime.resize(
 	    inputs.batch_size(),
 	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-	auto const result = extract_neuron_spikes(result_map, network_graph);
+	auto const result = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < population_internal.neurons.size(); ++i) {
@@ -273,15 +276,16 @@ TEST(NetworkGraphBuilder, FeedForwardAllToAll)
 	}
 	InputGenerator input_generator(network_graph, input_spike_times.size());
 	input_generator.add(input_spike_times, population_external_descriptor);
-	auto inputs = input_generator.done();
-	inputs.runtime.resize(
+	grenade::vx::signal_flow::InputData inputs;
+	inputs.snippets.push_back(input_generator.done());
+	inputs.snippets.at(0).runtime.resize(
 	    inputs.batch_size(),
 	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-	auto const result = extract_neuron_spikes(result_map, network_graph);
+	auto const result = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t j = 0; j < population_external.neurons.size(); ++j) {
@@ -406,15 +410,16 @@ TEST(NetworkGraphBuilder, SynfireChain)
 		}
 		InputGenerator input_generator(network_graph, input_spike_times.size());
 		input_generator.add(input_spike_times, population_external_descriptor);
-		auto inputs = input_generator.done();
-		inputs.runtime.resize(
+		grenade::vx::signal_flow::InputData inputs;
+		inputs.snippets.push_back(input_generator.done());
+		inputs.snippets.at(0).runtime.resize(
 		    inputs.batch_size(),
 		    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(num * isi)}});
 
 		// run graph with given inputs and return results
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-		auto const result = extract_neuron_spikes(result_map, network_graph);
+		auto const result = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 
 		EXPECT_EQ(result.size(), inputs.batch_size());
 		EXPECT_TRUE(result.at(0).contains(std::tuple{
@@ -576,8 +581,10 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 		}
 		input_generator.add(spike_times_2, population_2_descriptor);
 	}
-	auto inputs = input_generator.done();
-	inputs.runtime.resize(
+	grenade::vx::signal_flow::InputData inputs;
+	inputs.snippets.push_back(input_generator.done());
+
+	inputs.snippets.at(0).runtime.resize(
 	    inputs.batch_size(),
 	    {{grenade::common::ExecutionInstanceID(0), grenade::vx::common::Time(num * isi + delay)},
 	     {grenade::common::ExecutionInstanceID(1), grenade::vx::common::Time(num * isi + delay)}});
@@ -585,7 +592,7 @@ TEST(NetworkGraphBuilder, ExecutionInstanceChain)
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-	auto const result = extract_neuron_spikes(result_map, network_graph);
+	auto const result = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < population_3.neurons.size(); ++i) {

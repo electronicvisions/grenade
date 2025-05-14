@@ -9,7 +9,7 @@ namespace grenade::vx::network {
 std::vector<std::map<
     std::tuple<PopulationOnNetwork, size_t, halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
     std::vector<common::Time>>>
-extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& network_graph)
+extract_neuron_spikes(signal_flow::OutputDataSnippet const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
 	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_neuron_spikes");
@@ -152,7 +152,7 @@ extract_neuron_spikes(signal_flow::OutputData const& data, NetworkGraph const& n
 
 std::vector<std::vector<
     std::tuple<common::Time, AtomicNeuronOnNetwork, haldls::vx::v3::MADCSampleFromChip::Value>>>
-extract_madc_samples(signal_flow::OutputData const& data, NetworkGraph const& network_graph)
+extract_madc_samples(signal_flow::OutputDataSnippet const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
 	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_madc_samples");
@@ -196,7 +196,7 @@ extract_madc_samples(signal_flow::OutputData const& data, NetworkGraph const& ne
 
 
 std::vector<std::vector<std::tuple<common::Time, AtomicNeuronOnNetwork, signal_flow::Int8>>>
-extract_cadc_samples(signal_flow::OutputData const& data, NetworkGraph const& network_graph)
+extract_cadc_samples(signal_flow::OutputDataSnippet const& data, NetworkGraph const& network_graph)
 {
 	hate::Timer timer;
 	auto logger = log4cxx::Logger::getLogger("grenade.network.extract_cadc_samples");
@@ -390,7 +390,7 @@ void extract_plasticity_rule_recording_data_per_neuron(
 } // namespace
 
 PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
-    signal_flow::OutputData const& data,
+    signal_flow::OutputDataSnippet const& data,
     NetworkGraph const& network_graph,
     PlasticityRuleOnNetwork descriptor)
 {
@@ -411,8 +411,8 @@ PlasticityRule::RecordingData extract_plasticity_rule_recording_data(
 	        .execution_instances.at(descriptor.toExecutionInstanceID())
 	        .plasticity_rule_output_vertices.at(descriptor.toPlasticityRuleOnExecutionInstance());
 	if (!data.data.contains(output_vertex)) {
-		throw std::runtime_error(
-		    "Provided signal_flow::OutputData doesn't contain data of recording plasticity rule.");
+		throw std::runtime_error("Provided signal_flow::OutputDataSnippet doesn't contain data of "
+		                         "recording plasticity rule.");
 	}
 	auto const& output_data =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(

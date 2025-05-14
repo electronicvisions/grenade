@@ -1,35 +1,27 @@
-#include "grenade/vx/signal_flow/data.h"
+#include "grenade/vx/signal_flow/data_snippet.h"
 
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow {
 
-Data::Data() : data() {}
+DataSnippet::DataSnippet() : data() {}
 
-Data::Data(Data&& other) : data(std::move(other.data)) {}
-
-Data& Data::operator=(Data&& other)
-{
-	data = std::move(other.data);
-	return *this;
-}
-
-void Data::merge(Data&& other)
+void DataSnippet::merge(DataSnippet&& other)
 {
 	data.merge(other.data);
 }
 
-void Data::merge(Data& other)
+void DataSnippet::merge(DataSnippet& other)
 {
-	merge(std::forward<Data>(other));
+	merge(std::forward<DataSnippet>(other));
 }
 
-void Data::clear()
+void DataSnippet::clear()
 {
 	data.clear();
 }
 
-bool Data::empty() const
+bool DataSnippet::empty() const
 {
 	return data.empty();
 }
@@ -39,7 +31,7 @@ namespace {
 /**
  * Get batch size via the first entry (any) internal data type.
  */
-size_t unsafe_batch_size(Data const& map)
+size_t unsafe_batch_size(DataSnippet const& map)
 {
 	if (map.data.empty()) {
 		return 0;
@@ -50,7 +42,7 @@ size_t unsafe_batch_size(Data const& map)
 /**
  * Get validity of map given arbitrary batch size.
  */
-bool unsafe_valid(Data const& map, size_t const size)
+bool unsafe_valid(DataSnippet const& map, size_t const size)
 {
 	return std::all_of(map.data.cbegin(), map.data.cend(), [size](auto const& list) {
 		return std::visit([size](auto const& d) { return d.size() == size; }, list.second);
@@ -59,30 +51,30 @@ bool unsafe_valid(Data const& map, size_t const size)
 
 } // namespace
 
-size_t Data::batch_size() const
+size_t DataSnippet::batch_size() const
 {
 	size_t const size = unsafe_batch_size(*this);
 	if (!unsafe_valid(*this, size)) {
-		throw std::runtime_error("Data is not valid.");
+		throw std::runtime_error("DataSnippet is not valid.");
 	}
 	return size;
 }
 
-bool Data::valid() const
+bool DataSnippet::valid() const
 {
 	return unsafe_valid(*this, unsafe_batch_size(*this));
 }
 
-bool Data::is_match(Entry const& entry, signal_flow::Port const& port)
+bool DataSnippet::is_match(Entry const& entry, signal_flow::Port const& port)
 {
 	auto const check_shape = [&](auto const& d) {
-		typedef std::remove_cvref_t<decltype(d)> Data;
+		typedef std::remove_cvref_t<decltype(d)> DataSnippet;
 		typedef hate::type_list<
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>>,
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>
-		    MatrixData;
-		if constexpr (hate::is_in_type_list<Data, MatrixData>::value) {
+		    MatrixDataSnippet;
+		if constexpr (hate::is_in_type_list<DataSnippet, MatrixDataSnippet>::value) {
 			if (!d.empty()) {
 				if (!d.front().empty()) {
 					if (d.front().at(0).data.size() != port.size) {

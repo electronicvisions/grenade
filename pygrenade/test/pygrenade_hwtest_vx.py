@@ -79,8 +79,9 @@ class HwTestPygrenadeVx(unittest.TestCase):
 
         config = {grenade.common.ExecutionInstanceID(): lola.Chip()}
 
-        inputs = grenade.network.InputGenerator(
-            network_graph).done()
+        inputs = grenade.signal_flow.InputData()
+        inputs.snippets = [grenade.network.InputGenerator(
+            network_graph).done()]
 
         with hxcomm.ManagedConnection() as connection:
             outputs = grenade.network.run(
@@ -102,6 +103,7 @@ class HwTestPygrenadeVx(unittest.TestCase):
         network_graph = grenade.network.build_network_graph(
             network, grenade.network.routing.PortfolioRouter()(network))
         inputs = grenade.signal_flow.InputData()
+        inputs.snippets = [grenade.signal_flow.InputDataSnippet()]
         with hxcomm.ManagedConnection() as connection:
             grenade.network.run(
                 connection,
@@ -193,8 +195,9 @@ class HwTestPygrenadeVx(unittest.TestCase):
         for i in range(batch_size):
             times[i] = [[] for _ in range(ext_pop_size)]
         input_generator.add(times, ext_pop_descr)
-        inputs = input_generator.done()
-        inputs.runtime = [{
+        inputs = grenade.signal_flow.InputData()
+        inputs.snippets = [input_generator.done()]
+        inputs.snippets[0].runtime = [{
             grenade.common.ExecutionInstanceID():
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100}] * batch_size
 
@@ -203,10 +206,10 @@ class HwTestPygrenadeVx(unittest.TestCase):
                 connection, network_graph, config, inputs)
 
         hw_spike_times = grenade.network.extract_neuron_spikes(
-            result_map, network_graph)
+            result_map.snippets[0], network_graph)
         print(hw_spike_times)
         hw_cadc_samples = grenade.network.extract_cadc_samples(
-            result_map, network_graph)
+            result_map.snippets[0], network_graph)
         print(hw_cadc_samples)
 
 

@@ -48,7 +48,7 @@ struct ExecutionInstancePPUProgramCompiler
 	 */
 	ExecutionInstancePPUProgramCompiler(
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data,
+	    signal_flow::InputData const& input_data,
 	    signal_flow::ExecutionInstanceHooks const& hooks,
 	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
@@ -56,7 +56,7 @@ struct ExecutionInstancePPUProgramCompiler
 
 private:
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;
-	std::vector<std::reference_wrapper<signal_flow::InputData const>> const& m_input_data;
+	signal_flow::InputData const& m_input_data;
 	signal_flow::ExecutionInstanceHooks const& m_hooks;
 	grenade::common::ExecutionInstanceID m_execution_instance;
 };

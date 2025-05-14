@@ -441,7 +441,8 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		// TODO: Think about what to do with timing information
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
-	input_list.data[m_input_vertex] = timed_inputs;
+	input_list.snippets.resize(1);
+	input_list.snippets[0].data[m_input_vertex] = timed_inputs;
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
 	execution::JITGraphExecutor::ChipConfigs chip_configs;
@@ -455,7 +456,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 	hate::Timer output_timer;
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
-	        output_activation_map.data.at(m_output_vertex));
+	        output_activation_map.snippets[0].data.at(m_output_vertex));
 	std::vector<std::vector<signal_flow::Int8>> output(timed_outputs.size());
 	for (size_t i = 0; i < output.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);
@@ -467,7 +468,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		    double, boost::accumulators::features<
 		                boost::accumulators::tag::mean, boost::accumulators::tag::variance>>
 		    acc;
-		for (auto const& l : output_activation_map.data) {
+		for (auto const& l : output_activation_map.snippets[0].data) {
 			if (!std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
 			        l.second)) {
 				continue;
@@ -504,7 +505,7 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		for (auto [instance, vertex] : m_madc_recording_vertices) {
 			auto const madc_data =
 			    std::get<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(
-			        output_activation_map.data.at(vertex));
+			        output_activation_map.snippets[0].data.at(vertex));
 			for (size_t b = 0; b < output_activation_map.batch_size(); ++b) {
 				auto const& local_madc_data = madc_data.at(b);
 				for (auto const& sample : local_madc_data) {

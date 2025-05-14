@@ -1,7 +1,7 @@
 #pragma once
-#include "grenade/vx/signal_flow/data.h"
+#include "grenade/vx/signal_flow/data_snippet.h"
 #include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/input_data_snippet.h"
 #include "hate/visibility.h"
 #include <map>
 #include <set>
@@ -17,11 +17,11 @@ namespace grenade::vx::execution::detail {
  * post-processing of results only necessary copies are made. After successful post-processing, the
  * output data can be extracted to be placed into the global output data storage.
  */
-struct ExecutionInstanceData
+struct ExecutionInstanceSnippetData
 {
-	ExecutionInstanceData(
-	    signal_flow::InputData const& input_data,
-	    signal_flow::Data const& global_output_data) SYMBOL_VISIBLE;
+	ExecutionInstanceSnippetData(
+	    signal_flow::InputDataSnippet const& input_data,
+	    signal_flow::DataSnippet const& global_output_data) SYMBOL_VISIBLE;
 
 	/**
 	 * Insert entry by reference without data copy.
@@ -44,8 +44,8 @@ struct ExecutionInstanceData
 	void insert(
 	    signal_flow::Graph::vertex_descriptor descriptor, EntryT&& entry, bool is_output = false);
 
-	signal_flow::Data::Entry const& at(signal_flow::Graph::vertex_descriptor descriptor) const
-	    SYMBOL_VISIBLE;
+	signal_flow::DataSnippet::Entry const& at(
+	    signal_flow::Graph::vertex_descriptor descriptor) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get runtime from input data with batch entry as outer dimension.
@@ -59,16 +59,16 @@ struct ExecutionInstanceData
 	 * Extract output data.
 	 * Empties local data storage.
 	 */
-	signal_flow::Data done() SYMBOL_VISIBLE;
+	signal_flow::DataSnippet done() SYMBOL_VISIBLE;
 
-	signal_flow::InputData const& get_input_data() const SYMBOL_VISIBLE;
+	signal_flow::InputDataSnippet const& get_input_data() const SYMBOL_VISIBLE;
 
 private:
-	signal_flow::Data::Entry extract_at(signal_flow::Graph::vertex_descriptor descriptor);
+	signal_flow::DataSnippet::Entry extract_at(signal_flow::Graph::vertex_descriptor descriptor);
 
-	signal_flow::InputData const& m_input_data;
-	signal_flow::Data const& m_global_output_data;
-	signal_flow::Data m_local_data;
+	signal_flow::InputDataSnippet const& m_input_data;
+	signal_flow::DataSnippet const& m_global_output_data;
+	signal_flow::DataSnippet m_local_data;
 	std::map<signal_flow::Graph::vertex_descriptor, signal_flow::Graph::vertex_descriptor>
 	    m_reference;
 	std::set<signal_flow::Graph::vertex_descriptor> m_is_output;
@@ -76,4 +76,4 @@ private:
 
 } // namespace grenade::vx::execution::detail
 
-#include "grenade/vx/execution/detail/execution_instance_data.tcc"
+#include "grenade/vx/execution/detail/execution_instance_snippet_data.tcc"

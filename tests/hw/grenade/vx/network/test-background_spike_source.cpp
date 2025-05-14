@@ -97,12 +97,14 @@ void test_background_spike_source_regular(
 
 	// generate input
 	grenade::vx::signal_flow::InputData inputs;
-	inputs.runtime.push_back({{grenade::common::ExecutionInstanceID(), running_period}});
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
+	    {{grenade::common::ExecutionInstanceID(), running_period}});
 
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-	auto const spikes = extract_neuron_spikes(result_map, network_graph);
+	auto const spikes = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 	EXPECT_EQ(spikes.size(), 1);
 
 	size_t expected_label_count = 0;
@@ -223,12 +225,14 @@ void test_background_spike_source_poisson(
 
 		// generate input
 		grenade::vx::signal_flow::InputData inputs;
-		inputs.runtime.push_back({{grenade::common::ExecutionInstanceID(), running_period}});
+		inputs.snippets.resize(1);
+		inputs.snippets.at(0).runtime.push_back(
+		    {{grenade::common::ExecutionInstanceID(), running_period}});
 
 		// run graph with given inputs and return results
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-		auto const spikes = extract_neuron_spikes(result_map, network_graph);
+		auto const spikes = extract_neuron_spikes(result_map.snippets.at(0), network_graph);
 		EXPECT_EQ(spikes.size(), 1);
 
 		std::array<intmax_t, 64> expected_label_counts;

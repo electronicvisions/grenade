@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
-#include "grenade/vx/signal_flow/data.h"
+#include "grenade/vx/signal_flow/data_snippet.h"
 #include "grenade/vx/signal_flow/port.h"
 #include "hate/visibility.h"
 #include <memory>
@@ -27,7 +27,7 @@ struct Transformation
 	 */
 	struct SYMBOL_VISIBLE Function
 	{
-		typedef signal_flow::Data::Entry Value;
+		typedef signal_flow::DataSnippet::Entry Value;
 
 		virtual ~Function() = 0;
 

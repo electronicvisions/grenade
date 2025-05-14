@@ -36,35 +36,37 @@ TEST(Reconfiguration, CADC)
 
 	grenade::vx::execution::JITGraphExecutor executor;
 	InputData inputs;
-	inputs.runtime.push_back({{instance, grenade::vx::common::Time(10000)}});
+	inputs.snippets.resize(5);
+	for (auto& snippet : inputs.snippets) {
+		snippet.runtime.push_back({{instance, grenade::vx::common::Time(10000)}});
+	}
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
 	chip_configs[instance] = lola::vx::v3::Chip();
 
-	std::vector<OutputData> outputs = grenade::vx::execution::run(
+	OutputData outputs = grenade::vx::execution::run(
 	    executor,
 	    {not_cadc_using_graph, cadc_using_graph, not_cadc_using_graph, cadc_using_graph,
 	     cadc_using_graph},
-	    {chip_configs, chip_configs, chip_configs, chip_configs, chip_configs},
-	    {inputs, inputs, inputs, inputs, inputs});
+	    {chip_configs, chip_configs, chip_configs, chip_configs, chip_configs}, inputs);
 
-	EXPECT_TRUE(outputs[0].data.empty());
+	EXPECT_TRUE(outputs.snippets[0].data.empty());
 	EXPECT_GE(
 	    std::get<std::vector<grenade::vx::common::TimedDataSequence<std::vector<Int8>>>>(
-	        outputs[1].data.at(output_descriptor))
+	        outputs.snippets[1].data.at(output_descriptor))
 	        .at(0)
 	        .size(),
 	    0);
-	EXPECT_TRUE(outputs[2].data.empty());
+	EXPECT_TRUE(outputs.snippets[2].data.empty());
 	EXPECT_GE(
 	    std::get<std::vector<grenade::vx::common::TimedDataSequence<std::vector<Int8>>>>(
-	        outputs[3].data.at(output_descriptor))
+	        outputs.snippets[3].data.at(output_descriptor))
 	        .at(0)
 	        .size(),
 	    0);
 	EXPECT_GE(
 	    std::get<std::vector<grenade::vx::common::TimedDataSequence<std::vector<Int8>>>>(
-	        outputs[4].data.at(output_descriptor))
+	        outputs.snippets[4].data.at(output_descriptor))
 	        .at(0)
 	        .size(),
 	    0);

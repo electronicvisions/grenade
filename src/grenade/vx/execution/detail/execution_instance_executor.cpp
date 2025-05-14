@@ -8,6 +8,7 @@
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/output_data.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
@@ -27,13 +28,27 @@
 
 namespace grenade::vx::execution::detail {
 
-std::vector<signal_flow::OutputData> ExecutionInstanceExecutor::PostProcessor::operator()(
+signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
     backend::PlaybackProgram const& playback_program)
 {
 	auto logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceExecutor.Program.PostProcessor");
 
-	auto output_data = realtime(playback_program);
+	auto realtime_results = realtime(playback_program);
+
+	signal_flow::OutputData output_data;
+
+	signal_flow::ExecutionTimeInfo execution_time_info;
+	for (auto const& result : realtime_results) {
+		execution_time_info.realtime_duration_per_execution_instance[execution_instance] +=
+		    result.total_realtime_duration;
+	}
+
+	output_data.execution_time_info = execution_time_info;
+
+	for (auto& result : realtime_results) {
+		output_data.snippets.emplace_back(std::move(result.data));
+	}
 
 	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
 	for (size_t i = 0; i < health_info_results_pre.size(); ++i) {
@@ -42,21 +57,21 @@ std::vector<signal_flow::OutputData> ExecutionInstanceExecutor::PostProcessor::o
 		     health_info_results_pre.at(i).get_execution_health_info());
 	}
 
-	for (size_t i = 0; i < output_data.size(); i++) {
-		// extract PPU read hooks
-		output_data.at(i).read_ppu_symbols.resize(ppu_read_hooks_results.size());
-		for (size_t b = 0; b < ppu_read_hooks_results.size(); ++b) {
-			output_data.at(i).read_ppu_symbols.at(b)[execution_instance] =
-			    ppu_read_hooks_results.at(b).evaluate();
-		}
+	// extract PPU read hooks
+	output_data.read_ppu_symbols.resize(ppu_read_hooks_results.size());
+	for (size_t b = 0; b < ppu_read_hooks_results.size(); ++b) {
+		output_data.read_ppu_symbols.at(b)[execution_instance] =
+		    ppu_read_hooks_results.at(b).evaluate();
+	}
 
-		// annotate execution health info
-		signal_flow::ExecutionHealthInfo execution_health_info_total;
-		execution_health_info_total.execution_instances[execution_instance] = execution_health_info;
-		output_data.at(i).execution_health_info = execution_health_info_total;
+	// annotate execution health info
+	signal_flow::ExecutionHealthInfo execution_health_info_total;
+	execution_health_info_total.execution_instances[execution_instance] = execution_health_info;
+	output_data.execution_health_info = execution_health_info_total;
 
+	for (size_t i = 0; i < output_data.snippets.size(); i++) {
 		// add pre-execution config to result data map
-		output_data.at(i).pre_execution_chips[execution_instance] =
+		output_data.snippets[i].pre_execution_chips[execution_instance] =
 		    playback_program.chip_configs[i];
 	}
 	return output_data;
@@ -65,8 +80,8 @@ std::vector<signal_flow::OutputData> ExecutionInstanceExecutor::PostProcessor::o
 
 ExecutionInstanceExecutor::ExecutionInstanceExecutor(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data,
-    std::vector<signal_flow::OutputData>& output_data,
+    signal_flow::InputData const& input_data,
+    signal_flow::OutputData& output_data,
     std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
     signal_flow::ExecutionInstanceHooks& hooks,
     grenade::common::ExecutionInstanceID const& execution_instance) :
@@ -92,9 +107,10 @@ ExecutionInstanceExecutor::operator()() const
 
 	assert(
 	    (std::set<size_t>{
-	         m_output_data.size(), m_input_data.size(), m_graphs.size(), m_configs.size()}
+	         m_output_data.snippets.size(), m_input_data.snippets.size(), m_graphs.size(),
+	         m_configs.size()}
 	         .size() == 1));
-	size_t const realtime_column_count = m_output_data.size();
+	size_t const realtime_column_count = m_output_data.snippets.size();
 
 	hate::Timer const configs_timer;
 
@@ -120,7 +136,8 @@ ExecutionInstanceExecutor::operator()() const
 	ppu_program.apply(playback_program);
 
 	auto [realtime_program, realtime_post_processor] = ExecutionInstanceRealtimeExecutor(
-	    m_graphs, m_input_data, m_output_data, ppu_program, m_execution_instance)();
+	    m_graphs, m_input_data.snippets, m_output_data.snippets, ppu_program,
+	    m_execution_instance)();
 
 	// storage for PPU read-hooks results to evaluate post-execution
 	std::vector<generator::PPUReadHooks::Result> ppu_read_hooks_results;
@@ -231,13 +248,11 @@ ExecutionInstanceExecutor::operator()() const
 			    generate(generator::PPUStop(*playback_program.ppu_symbols)).builder);
 		}
 		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
-		if (m_input_data[m_input_data.size() - 1].get().inter_batch_entry_wait.contains(
-		        m_execution_instance)) {
+		if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
 			assemble_builder.block_until(
-			    TimerOnDLS(), config_time + m_input_data[m_input_data.size() - 1]
-			                                    .get()
-			                                    .inter_batch_entry_wait.at(m_execution_instance)
-			                                    .toTimerOnFPGAValue());
+			    TimerOnDLS(),
+			    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
+			                      .toTimerOnFPGAValue());
 		}
 		// Create playback programs with the maximal amount of batch entries that fit in as a whole
 		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga() +

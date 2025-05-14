@@ -1,11 +1,11 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/signal_flow/data.h"
 #include "grenade/vx/signal_flow/detail/graph.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_health_info.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
+#include "grenade/vx/signal_flow/output_data_snippet.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "haldls/vx/v3/ppu.h"
 #include "hate/visibility.h"
@@ -23,8 +23,13 @@ namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 /**
  * Data map used for output data in graph execution.
  */
-struct GENPYBIND(visible) OutputData : public Data
+struct GENPYBIND(visible) OutputData
 {
+	/**
+	 * Data per realtime snippet.
+	 */
+	std::vector<OutputDataSnippet> snippets;
+
 	/**
 	 * Optional time information of performed execution to be filled by executor.
 	 */
@@ -51,18 +56,9 @@ struct GENPYBIND(visible) OutputData : public Data
 	 */
 	ReadPPUSymbols read_ppu_symbols;
 
-	typedef std::map<grenade::common::ExecutionInstanceID, lola::vx::v3::Chip> Chips;
-
-	/**
-	 * Pre-execution chip configuration including execution instance's static configuration.
-	 */
-	Chips pre_execution_chips;
-
 	OutputData() SYMBOL_VISIBLE;
 
 	OutputData(OutputData const&) = delete;
-
-	OutputData(Data&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
 
 	OutputData(OutputData&& other) SYMBOL_VISIBLE;
 

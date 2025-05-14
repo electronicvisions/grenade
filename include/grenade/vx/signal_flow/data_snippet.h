@@ -17,13 +17,13 @@ namespace grenade::vx {
 namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
- * Data map used for external data exchange in graph execution.
+ * Data corresponding to a realtime snippet used for external data exchange in graph execution.
  * For each type of data a separate member allows access.
  */
-struct GENPYBIND(visible) Data
+struct GENPYBIND(visible) DataSnippet
 {
 	/**
-	 * Data entry for a vertex.
+	 * DataSnippet entry for a vertex.
 	 */
 	typedef std::variant<
 	    std::vector<common::TimedDataSequence<std::vector<UInt32>>>,
@@ -43,33 +43,26 @@ struct GENPYBIND(visible) Data
 	static bool is_match(Entry const& entry, signal_flow::Port const& port) SYMBOL_VISIBLE;
 
 	/**
-	 * Data is connected to specified vertex descriptors.
+	 * DataSnippet is connected to specified vertex descriptors.
 	 * Batch-support is enabled by storing batch-size many data elements aside each-other.
-	 * Data is stored as shared_ptr to allow for inexpensive shallow copy of data for multiple
-	 * vertices in the map.
+	 * DataSnippet is stored as shared_ptr to allow for inexpensive shallow copy of data for
+	 * multiple vertices in the map.
 	 */
 	std::map<signal_flow::detail::vertex_descriptor, Entry> data GENPYBIND(hidden);
 
-	Data() SYMBOL_VISIBLE;
-
-	Data(Data const&) = delete;
-
-	Data(Data&& other) SYMBOL_VISIBLE;
-
-	Data& operator=(Data&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
-	Data& operator=(Data const& other) = delete;
+	DataSnippet() SYMBOL_VISIBLE;
 
 	/**
 	 * Merge other map content into this one's.
 	 * @param other Other map to merge into this instance
 	 */
-	void merge(Data&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
+	void merge(DataSnippet&& other) SYMBOL_VISIBLE GENPYBIND(hidden);
 
 	/**
 	 * Merge other map content into this one's.
 	 * @param other Other map to merge into this instance
 	 */
-	void merge(Data& other) SYMBOL_VISIBLE;
+	void merge(DataSnippet& other) SYMBOL_VISIBLE;
 
 	/**
 	 * Clear content of map.

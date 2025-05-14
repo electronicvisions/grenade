@@ -1,15 +1,17 @@
-#include "grenade/vx/execution/detail/execution_instance_data.h"
+#include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
 
 #include <stdexcept>
 
 namespace grenade::vx::execution::detail {
 
-ExecutionInstanceData::ExecutionInstanceData(
-    signal_flow::InputData const& input_data, signal_flow::Data const& global_output_data) :
+ExecutionInstanceSnippetData::ExecutionInstanceSnippetData(
+    signal_flow::InputDataSnippet const& input_data,
+    signal_flow::DataSnippet const& global_output_data) :
     m_input_data(input_data), m_global_output_data(global_output_data), m_local_data()
-{}
+{
+}
 
-void ExecutionInstanceData::insert(
+void ExecutionInstanceSnippetData::insert(
     signal_flow::Graph::vertex_descriptor descriptor,
     signal_flow::Graph::vertex_descriptor reference_descriptor,
     bool is_output)
@@ -20,7 +22,7 @@ void ExecutionInstanceData::insert(
 	}
 }
 
-signal_flow::Data::Entry ExecutionInstanceData::extract_at(
+signal_flow::DataSnippet::Entry ExecutionInstanceSnippetData::extract_at(
     signal_flow::Graph::vertex_descriptor descriptor)
 {
 	if (m_local_data.data.contains(descriptor)) {
@@ -33,11 +35,11 @@ signal_flow::Data::Entry ExecutionInstanceData::extract_at(
 		return extract_at(m_reference.at(descriptor));
 	}
 	throw std::out_of_range(
-	    "ExecutionInstanceData doesn't contain entry for descriptor " + std::to_string(descriptor) +
-	    ".");
+	    "ExecutionInstanceSnippetData doesn't contain entry for descriptor " +
+	    std::to_string(descriptor) + ".");
 }
 
-signal_flow::Data::Entry const& ExecutionInstanceData::at(
+signal_flow::DataSnippet::Entry const& ExecutionInstanceSnippetData::at(
     signal_flow::Graph::vertex_descriptor descriptor) const
 {
 	if (m_local_data.data.contains(descriptor)) {
@@ -50,24 +52,24 @@ signal_flow::Data::Entry const& ExecutionInstanceData::at(
 		return at(m_reference.at(descriptor));
 	}
 	throw std::out_of_range(
-	    "ExecutionInstanceData doesn't contain entry for descriptor " + std::to_string(descriptor) +
-	    ".");
+	    "ExecutionInstanceSnippetData doesn't contain entry for descriptor " +
+	    std::to_string(descriptor) + ".");
 }
 
 std::vector<std::map<grenade::common::ExecutionInstanceID, common::Time>> const&
-ExecutionInstanceData::get_runtime() const
+ExecutionInstanceSnippetData::get_runtime() const
 {
 	return m_input_data.runtime;
 }
 
-size_t ExecutionInstanceData::batch_size() const
+size_t ExecutionInstanceSnippetData::batch_size() const
 {
 	return m_input_data.batch_size();
 }
 
-signal_flow::Data ExecutionInstanceData::done()
+signal_flow::DataSnippet ExecutionInstanceSnippetData::done()
 {
-	signal_flow::Data ret;
+	signal_flow::DataSnippet ret;
 	for (auto const& descriptor : m_is_output) {
 		ret.data.emplace(descriptor, extract_at(descriptor));
 	}

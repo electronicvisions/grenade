@@ -31,8 +31,8 @@ struct ExecutionInstanceExecutor
 
 		ExecutionInstanceRealtimeExecutor::PostProcessor realtime;
 
-		std::vector<signal_flow::OutputData> operator()(
-		    backend::PlaybackProgram const& playback_program) SYMBOL_VISIBLE;
+		signal_flow::OutputData operator()(backend::PlaybackProgram const& playback_program)
+		    SYMBOL_VISIBLE;
 	};
 
 	/**
@@ -46,8 +46,8 @@ struct ExecutionInstanceExecutor
 	 */
 	ExecutionInstanceExecutor(
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data,
-	    std::vector<signal_flow::OutputData>& output_data,
+	    signal_flow::InputData const& input_data,
+	    signal_flow::OutputData& output_data,
 	    std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& configs,
 	    signal_flow::ExecutionInstanceHooks& hooks,
 	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
@@ -56,8 +56,8 @@ struct ExecutionInstanceExecutor
 
 private:
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;
-	std::vector<std::reference_wrapper<signal_flow::InputData const>> const& m_input_data;
-	std::vector<signal_flow::OutputData>& m_output_data;
+	signal_flow::InputData const& m_input_data;
+	signal_flow::OutputData& m_output_data;
 	std::vector<std::reference_wrapper<lola::vx::v3::Chip const>> const& m_configs;
 	signal_flow::ExecutionInstanceHooks& m_hooks;
 	grenade::common::ExecutionInstanceID m_execution_instance;

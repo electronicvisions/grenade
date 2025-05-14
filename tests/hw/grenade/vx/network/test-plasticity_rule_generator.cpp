@@ -193,7 +193,8 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	auto const network_graph = build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
@@ -205,7 +206,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 
 	auto const recorded_data =
 	    std::get<PlasticityRule::TimedRecordingData>(extract_plasticity_rule_recording_data(
-	        result_map, network_graph, plasticity_rule_descriptor));
+	        result_map.snippets.at(0), network_graph, plasticity_rule_descriptor));
 	EXPECT_EQ(recorded_data.data_per_synapse.size(), 1);
 	EXPECT_EQ(recorded_data.data_array.size(), 0);
 	EXPECT_TRUE(recorded_data.data_per_synapse.contains("weights"));

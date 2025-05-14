@@ -4,37 +4,36 @@
 
 namespace grenade::vx::signal_flow {
 
-InputData::InputData() : Data(), runtime() {}
+InputData::InputData() : snippets(), inter_batch_entry_wait() {}
 
 InputData::InputData(InputData&& other) :
-    Data(static_cast<Data&&>(other)),
-    runtime(std::move(other.runtime)),
+    snippets(std::move(other.snippets)),
     inter_batch_entry_wait(std::move(other.inter_batch_entry_wait))
 {}
 
 InputData& InputData::operator=(InputData&& other)
 {
-	static_cast<Data&>(*this).operator=(static_cast<Data&&>(other));
-	runtime = std::move(other.runtime);
+	snippets = std::move(other.snippets);
 	inter_batch_entry_wait = std::move(other.inter_batch_entry_wait);
 	return *this;
 }
 
 void InputData::merge(InputData&& other)
 {
-	static_cast<Data&>(*this).merge(other);
-	if (!other.runtime.empty()) {
-		if (runtime.empty()) {
-			runtime = std::move(other.runtime);
-		} else {
-			if (runtime.size() != other.runtime.size()) {
-				throw std::runtime_error(
-				    "Runtime sizes need to match for InputData::merge(), but are (" +
-				    std::to_string(runtime.size()) + ") vs. (" +
-				    std::to_string(other.runtime.size()) + ").");
+	if (!other.snippets.empty()) {
+		if (snippets.empty()) {
+			for (auto& snippet : other.snippets) {
+				snippets.emplace_back(std::move(snippet));
 			}
-			for (size_t i = 0; i < runtime.size(); ++i) {
-				runtime.at(i).merge(other.runtime.at(i));
+		} else {
+			if (snippets.size() != other.snippets.size()) {
+				throw std::runtime_error(
+				    "Snippet sizes need to match for InputData::merge(), but are (" +
+				    std::to_string(snippets.size()) + ") vs. (" +
+				    std::to_string(other.snippets.size()) + ").");
+			}
+			for (size_t i = 0; i < snippets.size(); ++i) {
+				snippets.at(i).merge(other.snippets.at(i));
 			}
 		}
 	}
@@ -50,30 +49,50 @@ void InputData::merge(InputData& other)
 
 void InputData::clear()
 {
-	static_cast<Data&>(*this).clear();
-	runtime.clear();
+	for (auto& snippet : snippets) {
+		snippet.clear();
+	}
 	inter_batch_entry_wait.clear();
 }
 
 bool InputData::empty() const
 {
-	return static_cast<Data const&>(*this).empty() && runtime.empty() &&
+	return std::all_of(
+	           snippets.begin(), snippets.end(),
+	           [](auto const& snippet) { return snippet.empty(); }) &&
 	       inter_batch_entry_wait.empty();
 }
 
 size_t InputData::batch_size() const
 {
-	size_t const size = static_cast<Data const&>(*this).batch_size();
-	if (!data.empty() && !runtime.empty() && size != runtime.size()) {
-		throw std::runtime_error("InputData is not valid.");
+	if (snippets.empty()) {
+		return 0;
 	}
-	return data.empty() ? runtime.size() : size;
+	size_t size = snippets.at(0).batch_size();
+	for (size_t i = 1; i < snippets.size(); ++i) {
+		if (snippets.at(i).batch_size() != size) {
+			throw std::runtime_error("InputData is not valid.");
+		}
+	}
+	return size;
 }
 
 bool InputData::valid() const
 {
-	size_t const size = static_cast<Data const&>(*this).batch_size();
-	return data.empty() || runtime.empty() || size == runtime.size();
+	for (auto const& snippet : snippets) {
+		if (!snippet.valid()) {
+			return false;
+		}
+	}
+	if (!snippets.empty()) {
+		size_t size = snippets.at(0).batch_size();
+		for (size_t i = 1; i < snippets.size(); ++i) {
+			if (snippets.at(i).batch_size() != size) {
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 } // namespace grenade::vx::signal_flow

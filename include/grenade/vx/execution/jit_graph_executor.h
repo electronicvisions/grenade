@@ -102,11 +102,11 @@ private:
 	 */
 	void check(signal_flow::Graph const& graph);
 
-	friend std::vector<signal_flow::OutputData> run(
+	friend signal_flow::OutputData run(
 	    JITGraphExecutor& executor,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
 	    std::vector<std::reference_wrapper<ChipConfigs const>> const& configs,
-	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
+	    signal_flow::InputData const& inputs,
 	    Hooks&& hooks);
 };
 

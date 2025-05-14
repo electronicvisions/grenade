@@ -93,11 +93,12 @@ TEST(CADCRecording, General)
 		auto const network_graph = build_network_graph(network, routing_result);
 
 		grenade::vx::signal_flow::InputData inputs;
-		inputs.runtime.push_back(
+		inputs.snippets.resize(1);
+		inputs.snippets.at(0).runtime.push_back(
 		    {{instance, grenade::vx::common::Time(
 		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 100 *
 		                    (placement_on_dram ? 10 : 1))}});
-		inputs.runtime.push_back(
+		inputs.snippets.at(0).runtime.push_back(
 		    {{instance, grenade::vx::common::Time(
 		                    grenade::vx::common::Time::fpga_clock_cycles_per_us * 150 *
 		                    (placement_on_dram ? 10 : 1))}});
@@ -105,7 +106,7 @@ TEST(CADCRecording, General)
 		// run graph with given inputs and return results
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-		auto const result = extract_cadc_samples(result_map, network_graph);
+		auto const result = extract_cadc_samples(result_map.snippets.at(0), network_graph);
 
 		EXPECT_EQ(result.size(), inputs.batch_size());
 		std::set<grenade::vx::common::Time> unique_times;
@@ -121,12 +122,13 @@ TEST(CADCRecording, General)
 			    << placement_on_dram;
 			for (auto const& [_, num] : samples_per_neuron) {
 				EXPECT_GE(
-				    num, inputs.runtime.at(i).at(instance) /
+				    num, inputs.snippets.at(0).runtime.at(i).at(instance) /
 				             Timer::Value::fpga_clock_cycles_per_us /
 				             expected_period.at(placement_on_dram))
 				    << placement_on_dram;
 				EXPECT_LE(
-				    num, inputs.runtime.at(i).at(instance) / Timer::Value::fpga_clock_cycles_per_us)
+				    num, inputs.snippets.at(0).runtime.at(i).at(instance) /
+				             Timer::Value::fpga_clock_cycles_per_us)
 				    << placement_on_dram;
 			}
 		}

@@ -41,11 +41,11 @@ signal_flow::OutputData run(
  * @param hooks Map of playback sequence collections to be inserted at specified
  * execution instances
  */
-std::vector<signal_flow::OutputData> run(
+signal_flow::OutputData run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
+    signal_flow::InputData const& inputs,
     JITGraphExecutor::Hooks&& hooks = {}) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx::execution

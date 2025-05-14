@@ -31,8 +31,8 @@ namespace grenade::vx::execution::detail {
 struct ExecutionInstanceNode
 {
 	ExecutionInstanceNode(
-	    std::vector<signal_flow::OutputData>& data_maps,
-	    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps,
+	    signal_flow::OutputData& data_maps,
+	    signal_flow::InputData const& input_data_maps,
 	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
 	    halco::hicann_dls::vx::v3::DLSGlobal const& dls_global,
@@ -59,8 +59,8 @@ struct ExecutionInstanceNode
 	};
 
 private:
-	std::vector<signal_flow::OutputData>& data_maps;
-	std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data_maps;
+	signal_flow::OutputData& data_maps;
+	signal_flow::InputData const& input_data_maps;
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs;
 	grenade::common::ExecutionInstanceID execution_instance;
 	halco::hicann_dls::vx::v3::DLSGlobal dls_global;

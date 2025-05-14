@@ -48,12 +48,12 @@ signal_flow::OutputData run(
  * @param hooks Optional playback sequences to inject
  * @return Run time information
  */
-std::vector<signal_flow::OutputData> run(
+signal_flow::OutputData run(
     execution::JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<NetworkGraph const>> const& network_graphs,
     std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>> const&
         configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
+    signal_flow::InputData const& inputs,
     execution::JITGraphExecutor::Hooks&& hooks = {}) SYMBOL_VISIBLE;
 
 
@@ -89,8 +89,8 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		    "run",
 		    [](T& conn, std::vector<NetworkGraph*> const& network_graphs,
 		       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
-		       std::vector<signal_flow::InputData*> const& inputs,
-		       execution::JITGraphExecutor::Hooks& hooks) -> std::vector<signal_flow::OutputData> {
+		       signal_flow::InputData const& inputs,
+		       execution::JITGraphExecutor::Hooks& hooks) -> signal_flow::OutputData {
 			    execution::detail::ConnectionAcquisor<T> acquisor(conn);
 			    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
 			        configs_ref;
@@ -101,14 +101,8 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 			    for (auto const& network_graph : network_graphs) {
 				    network_graphs_ref.push_back(*network_graph);
 			    }
-			    std::vector<std::reference_wrapper<signal_flow::InputData const>> inputs_ref;
-			    for (auto const& input : inputs) {
-				    inputs_ref.push_back(*input);
-			    }
-
 			    return run(
-			        *acquisor.executor, network_graphs_ref, configs_ref, inputs_ref,
-			        std::move(hooks));
+			        *acquisor.executor, network_graphs_ref, configs_ref, inputs, std::move(hooks));
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 		    pybind11::arg("inputs"), pybind11::arg("hooks"));
@@ -126,8 +120,7 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 		    "run",
 		    [](T& conn, std::vector<NetworkGraph*> const& network_graphs,
 		       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
-		       std::vector<signal_flow::InputData*> const& inputs)
-		        -> std::vector<signal_flow::OutputData> {
+		       signal_flow::InputData const& inputs) -> signal_flow::OutputData {
 			    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
 			        configs_ref;
 			    for (auto const& config : configs) {
@@ -137,13 +130,9 @@ struct RunUnrollPyBind11Helper<std::variant<T, Ts...>>
 			    for (auto const& network_graph : network_graphs) {
 				    network_graphs_ref.push_back(*network_graph);
 			    }
-			    std::vector<std::reference_wrapper<signal_flow::InputData const>> inputs_ref;
-			    for (auto const& input : inputs) {
-				    inputs_ref.push_back(*input);
-			    }
 
 			    execution::detail::ConnectionAcquisor<T> acquisor(conn);
-			    return run(*acquisor.executor, network_graphs_ref, configs_ref, inputs_ref);
+			    return run(*acquisor.executor, network_graphs_ref, configs_ref, inputs);
 		    },
 		    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 		    pybind11::arg("inputs"));
@@ -175,8 +164,8 @@ GENPYBIND_MANUAL({
 	    [](::pyhxcomm::Handle<execution::JITGraphExecutor>& conn,
 	       std::vector<network::NetworkGraph*> const& network_graphs,
 	       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
-	       std::vector<signal_flow::InputData*> const& inputs,
-	       execution::JITGraphExecutor::Hooks& hooks) -> std::vector<signal_flow::OutputData> {
+	       signal_flow::InputData const& inputs,
+	       execution::JITGraphExecutor::Hooks& hooks) -> signal_flow::OutputData {
 		    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
 		        configs_ref;
 		    for (auto const& config : configs) {
@@ -186,13 +175,9 @@ GENPYBIND_MANUAL({
 		    for (auto const& network_graph : network_graphs) {
 			    network_graphs_ref.push_back(*network_graph);
 		    }
-		    std::vector<std::reference_wrapper<signal_flow::InputData const>> inputs_ref;
-		    for (auto const& input : inputs) {
-			    inputs_ref.push_back(*input);
-		    }
 
 		    return network::run(
-		        conn.get(), network_graphs_ref, configs_ref, inputs_ref, std::move(hooks));
+		        conn.get(), network_graphs_ref, configs_ref, inputs, std::move(hooks));
 	    },
 	    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 	    pybind11::arg("inputs"), pybind11::arg("hooks"));
@@ -211,8 +196,7 @@ GENPYBIND_MANUAL({
 	    [](::pyhxcomm::Handle<execution::JITGraphExecutor>& conn,
 	       std::vector<network::NetworkGraph*> const& network_graphs,
 	       std::vector<execution::JITGraphExecutor::ChipConfigs> const& configs,
-	       std::vector<signal_flow::InputData*> const& inputs)
-	        -> std::vector<signal_flow::OutputData> {
+	       signal_flow::InputData const& inputs) -> signal_flow::OutputData {
 		    std::vector<std::reference_wrapper<execution::JITGraphExecutor::ChipConfigs const>>
 		        configs_ref;
 		    for (auto const& config : configs) {
@@ -222,12 +206,8 @@ GENPYBIND_MANUAL({
 		    for (auto const& network_graph : network_graphs) {
 			    network_graphs_ref.push_back(*network_graph);
 		    }
-		    std::vector<std::reference_wrapper<signal_flow::InputData const>> inputs_ref;
-		    for (auto const& input : inputs) {
-			    inputs_ref.push_back(*input);
-		    }
 
-		    return network::run(conn.get(), network_graphs_ref, configs_ref, inputs_ref);
+		    return network::run(conn.get(), network_graphs_ref, configs_ref, inputs);
 	    },
 	    pybind11::arg("connection"), pybind11::arg("network_graphs"), pybind11::arg("configs"),
 	    pybind11::arg("inputs"));

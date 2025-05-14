@@ -27,10 +27,9 @@ signal_flow::OutputData run(
     signal_flow::InputData const& input,
     JITGraphExecutor::Hooks&& hooks)
 {
-	return std::move(run(executor,
-	                     std::vector<std::reference_wrapper<signal_flow::Graph const>>{graph},
-	                     {initial_config}, {input}, std::move(hooks))
-	                     .at(0));
+	return std::move(
+	    run(executor, std::vector<std::reference_wrapper<signal_flow::Graph const>>{graph},
+	        {initial_config}, input, std::move(hooks)));
 }
 
 namespace {
@@ -50,15 +49,15 @@ bool value_equal(signal_flow::Graph::graph_type const& a, signal_flow::Graph::gr
 
 } // namespace
 
-std::vector<signal_flow::OutputData> run(
+signal_flow::OutputData run(
     JITGraphExecutor& executor,
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& inputs,
+    signal_flow::InputData const& inputs,
     JITGraphExecutor::Hooks&& hooks)
 {
 	// assure, that all vectors, which contain one element per realtime column are of the same size
-	if (graphs.size() != inputs.size() || graphs.size() != configs.size()) {
+	if (graphs.size() != inputs.snippets.size() || graphs.size() != configs.size()) {
 		throw std::logic_error(
 		    "Arguments 'graphs', 'inputs' and 'configs' must be of the same size");
 	}
@@ -138,7 +137,8 @@ std::vector<signal_flow::OutputData> run(
 	    nodes;
 
 	// global data maps (each for one realtime_column)
-	std::vector<signal_flow::OutputData> output_activation_maps(graphs.size());
+	signal_flow::OutputData output_activation_maps;
+	output_activation_maps.snippets.resize(graphs.size());
 
 	// build execution nodes
 	for (auto const vertex :
@@ -191,40 +191,38 @@ std::vector<signal_flow::OutputData> run(
 	start.try_put(tbb::flow::continue_msg());
 	execution_graph.wait_for_all();
 	std::chrono::nanoseconds execution_duration(timer.get_ns());
-	for (size_t i = 0; i < graphs.size(); i++) {
-		signal_flow::ExecutionTimeInfo execution_time_info;
-		execution_time_info.execution_duration = execution_duration;
-		if (output_activation_maps[i].execution_time_info) {
-			output_activation_maps[i].execution_time_info->merge(execution_time_info);
-		} else {
-			output_activation_maps[i].execution_time_info = execution_time_info;
-		}
-		if (!output_activation_maps[i].execution_health_info) {
-			output_activation_maps[i].execution_health_info = signal_flow::ExecutionHealthInfo();
-		}
+
+	signal_flow::ExecutionTimeInfo execution_time_info;
+	execution_time_info.execution_duration = execution_duration;
+	if (output_activation_maps.execution_time_info) {
+		output_activation_maps.execution_time_info->merge(execution_time_info);
+	} else {
+		output_activation_maps.execution_time_info = execution_time_info;
+	}
+	if (!output_activation_maps.execution_health_info) {
+		output_activation_maps.execution_health_info = signal_flow::ExecutionHealthInfo();
 	}
 
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	LOG4CXX_INFO(
 	    logger,
 	    "run(): Executed graph in "
-	        << hate::to_string(output_activation_maps[0].execution_time_info->execution_duration)
+	        << hate::to_string(output_activation_maps.execution_time_info->execution_duration)
 	        << ".");
 	for (auto const& [dls, duration] :
-	     output_activation_maps[0].execution_time_info->execution_duration_per_hardware) {
+	     output_activation_maps.execution_time_info->execution_duration_per_hardware) {
 		LOG4CXX_INFO(
-		    logger,
-		    "run(): Chip at "
-		        << dls << " spent " << hate::to_string(duration) << " in execution, which is "
-		        << (static_cast<double>(duration.count()) /
-		            static_cast<double>(
-		                output_activation_maps[0].execution_time_info->execution_duration.count()) *
-		            100.)
-		        << " % of total graph execution time.");
+		    logger, "run(): Chip at "
+		                << dls << " spent " << hate::to_string(duration)
+		                << " in execution, which is "
+		                << (static_cast<double>(duration.count()) /
+		                    static_cast<double>(output_activation_maps.execution_time_info
+		                                            ->execution_duration.count()) *
+		                    100.)
+		                << " % of total graph execution time.");
 	}
-	if (output_activation_maps[0].execution_health_info) {
-		LOG4CXX_TRACE(
-		    logger, "run(): " << *(output_activation_maps[0].execution_health_info) << ".");
+	if (output_activation_maps.execution_health_info) {
+		LOG4CXX_TRACE(logger, "run(): " << *(output_activation_maps.execution_health_info) << ".");
 	}
 
 	return output_activation_maps;

@@ -84,7 +84,8 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 		timed_inputs.at(i).resize(1);
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
-	input_map.data[m_input_vertex] = timed_inputs;
+	input_map.snippets.resize(1);
+	input_map.snippets[0].data[m_input_vertex] = timed_inputs;
 
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> others(inputs.size());
 	for (auto& o : others) {
@@ -92,13 +93,13 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 		// TODO: Think about what to do with timing information
 		o.at(0).data = m_other;
 	}
-	input_map.data[m_other_vertex] = others;
+	input_map.snippets[0].data[m_other_vertex] = others;
 
 	auto const output_map = execution::run(executor, m_graph, configs, input_map);
 
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
-	        output_map.data.at(m_output_vertex));
+	        output_map.snippets[0].data.at(m_output_vertex));
 	std::vector<std::vector<signal_flow::Int8>> outputs(timed_outputs.size());
 	for (size_t i = 0; i < outputs.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);

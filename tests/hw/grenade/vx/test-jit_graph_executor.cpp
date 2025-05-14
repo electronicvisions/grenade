@@ -25,6 +25,7 @@ TEST(JITGraphExecutor, Empty)
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config;
 
 	grenade::vx::signal_flow::InputData input_map;
+	input_map.snippets.resize(1);
 
 	auto const result_map = grenade::vx::execution::run(executor, g, initial_config, input_map);
 	EXPECT_TRUE(result_map.empty());
@@ -57,7 +58,8 @@ TEST(JITGraphExecutor, DifferentialConfig)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::InputData input_map;
-	input_map.runtime.push_back(
+	input_map.snippets.resize(1);
+	input_map.snippets.at(0).runtime.push_back(
 	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
@@ -125,7 +127,8 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::InputData input_map;
-	input_map.runtime.push_back(
+	input_map.snippets.resize(1);
+	input_map.snippets.at(0).runtime.push_back(
 	    {{grenade::common::ExecutionInstanceID(), grenade::vx::common::Time(100)}});
 
 	grenade::vx::execution::JITGraphExecutor::ChipConfigs initial_config{
@@ -190,7 +193,8 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 
 	// a single batch entry with some runtime to ensure use of hardware
 	grenade::vx::signal_flow::InputData input_map;
-	input_map.runtime.push_back(
+	input_map.snippets.resize(1);
+	input_map.snippets.at(0).runtime.push_back(
 	    {{grenade::common::ExecutionInstanceID(),
 	      grenade::vx::common::Time(10000 * grenade::vx::common::Time::fpga_clock_cycles_per_us)}});
 

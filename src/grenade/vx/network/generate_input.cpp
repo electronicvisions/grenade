@@ -193,9 +193,9 @@ void InputGenerator::add(
 	}
 }
 
-signal_flow::InputData InputGenerator::done()
+signal_flow::InputDataSnippet InputGenerator::done()
 {
-	signal_flow::InputData ret;
+	signal_flow::InputDataSnippet ret;
 	for (auto const& [id, execution_instance] :
 	     m_network_graph.get_graph_translation().execution_instances) {
 		if (!execution_instance.event_input_vertex) {

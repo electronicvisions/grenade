@@ -24,29 +24,30 @@
 
 namespace grenade::vx::execution::detail {
 
-std::vector<signal_flow::OutputData> ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
+std::vector<ExecutionInstanceSnippetRealtimeExecutor::Result>
+ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
     backend::PlaybackProgram const& playback_program)
 {
 	auto logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceRealtimeExecutor.PostProcessor");
 
-	std::vector<signal_flow::OutputData> result_data_maps;
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Result> results;
 	for (size_t i = 0; i < snippet_executors.size(); i++) {
 		// extract output data map
 		hate::Timer const post_timer;
-		auto result_data_map = snippet_executors[i].post_process(
+		auto result = snippet_executors[i].post_process(
 		    playback_program.programs, cadc_readout_tickets, cadc_readout_time_information[i]);
-		result_data_maps.push_back(std::move(result_data_map));
+		results.push_back(std::move(result));
 		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
 	}
-	return result_data_maps;
+	return results;
 }
 
 
 ExecutionInstanceRealtimeExecutor::ExecutionInstanceRealtimeExecutor(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<signal_flow::InputData const>> const& input_data,
-    std::vector<signal_flow::OutputData>& output_data,
+    std::vector<signal_flow::InputDataSnippet> const& input_data,
+    std::vector<signal_flow::OutputDataSnippet>& output_data,
     ExecutionInstancePPUProgramCompiler::Result const& ppu_program,
     grenade::common::ExecutionInstanceID const& execution_instance) :
     m_graphs(graphs),

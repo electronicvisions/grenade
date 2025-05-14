@@ -8,9 +8,8 @@
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/signal_flow/data.h"
-#include "grenade/vx/signal_flow/input_data.h"
-#include "grenade/vx/signal_flow/output_data.h"
+#include "grenade/vx/signal_flow/data_snippet.h"
+#include "grenade/vx/signal_flow/input_data_snippet.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/hemisphere.h"
 #include "haldls/vx/v3/barrier.h"
@@ -58,8 +57,8 @@ haldls::vx::v3::Timer::Value const ExecutionInstanceSnippetRealtimeExecutor::wai
 ExecutionInstanceSnippetRealtimeExecutor::ExecutionInstanceSnippetRealtimeExecutor(
     signal_flow::Graph const& graph,
     grenade::common::ExecutionInstanceID const& execution_instance,
-    signal_flow::InputData const& input_list,
-    signal_flow::Data const& data_output,
+    signal_flow::InputDataSnippet const& input_list,
+    signal_flow::DataSnippet const& data_output,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
     size_t realtime_column_index,
     std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const& timed_recording_index_offset) :
@@ -85,7 +84,7 @@ ExecutionInstanceSnippetRealtimeExecutor::ExecutionInstanceSnippetRealtimeExecut
 }
 
 bool ExecutionInstanceSnippetRealtimeExecutor::input_data_matches_graph(
-    signal_flow::InputData const& input_data) const
+    signal_flow::InputDataSnippet const& input_data) const
 {
 	if (input_data.empty()) {
 		return true;
@@ -110,7 +109,7 @@ bool ExecutionInstanceSnippetRealtimeExecutor::input_data_matches_graph(
 			}
 			auto const& input_vertex =
 			    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(vertex));
-			return !signal_flow::Data::is_match(
+			return !signal_flow::DataSnippet::is_match(
 			    input_data.data.find(vertex)->second, input_vertex.output());
 		}
 		return false;
@@ -454,7 +453,7 @@ void ExecutionInstanceSnippetRealtimeExecutor::process(
 			if (port_restriction) {
 				auto const restricted_local_data = apply_restriction(d, *port_restriction);
 				// check size match only for first because we know that the data map is valid
-				assert(signal_flow::Data::is_match(restricted_local_data, data.output()));
+				assert(signal_flow::DataSnippet::is_match(restricted_local_data, data.output()));
 				m_data.insert(vertex, restricted_local_data, true);
 				return;
 			}
@@ -594,7 +593,7 @@ void ExecutionInstanceSnippetRealtimeExecutor::process(
 		}
 		auto const in_vertex = boost::source(*edge_it, m_graph.get_graph());
 		auto const& input_values = m_data.at(in_vertex);
-		if (!signal_flow::Data::is_match(input_values, port)) {
+		if (!signal_flow::DataSnippet::is_match(input_values, port)) {
 			throw std::runtime_error("Data size does not match expectation.");
 		}
 		value_input.push_back(input_values);
@@ -603,7 +602,7 @@ void ExecutionInstanceSnippetRealtimeExecutor::process(
 	// execute transformation
 	auto value_output = data.apply(value_input);
 	// process output value
-	if (!signal_flow::Data::is_match(value_output, data.output())) {
+	if (!signal_flow::DataSnippet::is_match(value_output, data.output())) {
 		throw std::runtime_error("Data size does not match expectation.");
 	}
 	m_data.insert(vertex, std::move(value_output));
@@ -757,7 +756,8 @@ ExecutionInstanceSnippetRealtimeExecutor::pre_process()
 	    .cadc_recording = cadc_recording};
 }
 
-signal_flow::OutputData ExecutionInstanceSnippetRealtimeExecutor::post_process(
+ExecutionInstanceSnippetRealtimeExecutor::Result
+ExecutionInstanceSnippetRealtimeExecutor::post_process(
     std::vector<stadls::vx::v3::PlaybackProgram> const& realtime,
     std::vector<halco::common::typed_array<
         std::optional<stadls::vx::v3::ContainerTicket>,
@@ -840,11 +840,7 @@ signal_flow::OutputData ExecutionInstanceSnippetRealtimeExecutor::post_process(
 			    1000.));
 		}
 	}
-	signal_flow::ExecutionTimeInfo execution_time_info;
-	execution_time_info.realtime_duration_per_execution_instance[m_execution_instance] =
-	    total_realtime_duration;
-	signal_flow::OutputData local_data_output;
-	local_data_output.execution_time_info = execution_time_info;
+	signal_flow::DataSnippet local_data_output;
 
 	m_postprocessing = true;
 	for (auto const vertex : m_post_vertices) {
@@ -863,7 +859,7 @@ signal_flow::OutputData ExecutionInstanceSnippetRealtimeExecutor::post_process(
 
 	local_data_output.merge(m_data.done());
 
-	return local_data_output;
+	return {std::move(local_data_output), total_realtime_duration};
 }
 
 ExecutionInstanceSnippetRealtimeExecutor::Ret ExecutionInstanceSnippetRealtimeExecutor::generate(

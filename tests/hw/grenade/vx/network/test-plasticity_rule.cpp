@@ -91,10 +91,11 @@ TEST(PlasticityRule, RawRecording)
 	auto const network_graph = build_network_graph(network, routing_result);
 
 	grenade::vx::signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
-	inputs.runtime.push_back(
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
@@ -104,10 +105,11 @@ TEST(PlasticityRule, RawRecording)
 	// run graph with given inputs and return results
 	auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
-	auto const result = std::get<PlasticityRule::RawRecordingData>(
-	                        extract_plasticity_rule_recording_data(
-	                            result_map, network_graph, plasticity_rule_descriptor))
-	                        .data;
+	auto const result =
+	    std::get<PlasticityRule::RawRecordingData>(
+	        extract_plasticity_rule_recording_data(
+	            result_map.snippets.at(0), network_graph, plasticity_rule_descriptor))
+	        .data;
 
 	EXPECT_EQ(result.size(), inputs.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
@@ -128,10 +130,11 @@ TEST(PlasticityRule, TimedRecording)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	grenade::vx::signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
-	inputs.runtime.push_back(
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
 
@@ -461,7 +464,7 @@ TEST(PlasticityRule, TimedRecording)
 		auto const result_map = run(executor, network_graph, chip_configs, inputs);
 
 		auto const recording_data = extract_plasticity_rule_recording_data(
-		    result_map, network_graph, plasticity_rule_descriptor);
+		    result_map.snippets.at(0), network_graph, plasticity_rule_descriptor);
 		auto const& timed_recording_data =
 		    std::get<PlasticityRule::TimedRecordingData>(recording_data);
 
@@ -601,7 +604,8 @@ TEST(PlasticityRule, ExecutorInitialState)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
@@ -692,7 +696,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 		    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
 		        std::get<PlasticityRule::TimedRecordingData>(
 		            extract_plasticity_rule_recording_data(
-		                result_map, network_graph, plasticity_rule_descriptor))
+		                result_map.snippets.at(0), network_graph, plasticity_rule_descriptor))
 		            .data_per_synapse.at("w")
 		            .at(projection_descriptor));
 		assert(result.size() == inputs.batch_size());
@@ -717,7 +721,8 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
@@ -796,7 +801,8 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 
@@ -890,7 +896,8 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	chip_configs[instance] = lola::vx::v3::Chip();
 
 	signal_flow::InputData inputs;
-	inputs.runtime.push_back(
+	inputs.snippets.resize(1);
+	inputs.snippets.at(0).runtime.push_back(
 	    {{instance,
 	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
 

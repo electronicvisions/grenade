@@ -53,11 +53,12 @@ TEST(Subtraction, Single)
 
 	// fill graph inputs
 	grenade::vx::signal_flow::InputData input_list;
+	input_list.snippets.resize(1);
 	std::vector<grenade::vx::signal_flow::Int8> inputs(size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		inputs.at(i + 128) = grenade::vx::signal_flow::Int8(i);
 	}
-	input_list.data[v1] = std::vector<
+	input_list.snippets.at(0).data[v1] = std::vector<
 	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>{
 	    {{grenade::vx::common::Time(), inputs}}};
 
@@ -68,26 +69,26 @@ TEST(Subtraction, Single)
 	// run Graph with given inputs and return results
 	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
 
-	EXPECT_EQ(result_map.data.size(), 1);
+	EXPECT_EQ(result_map.snippets.at(0).data.size(), 1);
 
-	EXPECT_TRUE(result_map.data.find(v4) != result_map.data.end());
+	EXPECT_TRUE(result_map.snippets.at(0).data.find(v4) != result_map.snippets.at(0).data.end());
 	EXPECT_EQ(
 	    std::get<std::vector<
 	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	        result_map.data.at(v4))
+	        result_map.snippets.at(0).data.at(v4))
 	        .size(),
 	    1);
 	EXPECT_EQ(
 	    std::get<std::vector<
 	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	        result_map.data.at(v4))
+	        result_map.snippets.at(0).data.at(v4))
 	        .at(0)
 	        .size(),
 	    1);
 	EXPECT_EQ(
 	    std::get<std::vector<
 	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	        result_map.data.at(v4))
+	        result_map.snippets.at(0).data.at(v4))
 	        .at(0)
 	        .at(0)
 	        .data.size(),
@@ -95,7 +96,8 @@ TEST(Subtraction, Single)
 	for (intmax_t i = -128; i < 127; ++i) {
 		EXPECT_EQ(
 		    0, std::get<std::vector<grenade::vx::common::TimedDataSequence<
-		           std::vector<grenade::vx::signal_flow::Int8>>>>(result_map.data.at(v4))
+		           std::vector<grenade::vx::signal_flow::Int8>>>>(
+		           result_map.snippets.at(0).data.at(v4))
 		           .at(0)
 		           .at(0)
 		           .data.at(i + 128)
