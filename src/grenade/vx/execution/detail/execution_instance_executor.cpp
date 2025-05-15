@@ -21,6 +21,7 @@
 #include "hate/variant.h"
 #include "lola/vx/ppu.h"
 #include "stadls/vx/constants.h"
+#include "stadls/vx/v3/playback_program_builder.h"
 #include <filesystem>
 #include <iterator>
 #include <boost/range/combine.hpp>
@@ -139,26 +140,13 @@ ExecutionInstanceExecutor::operator()() const
 	    m_graphs, m_input_data.snippets, m_output_data.snippets, ppu_program,
 	    m_execution_instance)();
 
-	// storage for PPU read-hooks results to evaluate post-execution
-	std::vector<generator::PPUReadHooks::Result> ppu_read_hooks_results;
+	PostProcessor post_processor;
+	post_processor.execution_instance = m_execution_instance;
+	post_processor.realtime = std::move(realtime_post_processor);
 
 	// Experiment assembly
-	// TODO: move into separate method, change loops such that first all innermost builders are
-	// constructed and then they are reduced to builders per batch and then these are merged into
-	// programs. The merging into programs is also to be moved to another separate method.
-	std::vector<PlaybackProgram> programs;
-	PlaybackProgramBuilder final_builder;
-	std::vector<generator::HealthInfo::Result> health_info_results_pre;
-	std::vector<generator::HealthInfo::Result> health_info_results_post;
+	std::vector<PlaybackProgramBuilder> assembled_builders;
 	for (size_t i = 0; i < realtime_program.realtime_columns[0].realtimes.size(); i++) {
-		if (final_builder.empty()) {
-			auto [health_info_builder_pre, health_info_result_pre] =
-			    generate(generator::HealthInfo());
-			health_info_results_pre.push_back(health_info_result_pre);
-			final_builder.merge_back(health_info_builder_pre.done());
-			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		}
-
 		AbsoluteTimePlaybackProgramBuilder program_builder;
 		haldls::vx::v3::Timer::Value config_time =
 		    realtime_program.realtime_columns[0].realtimes[i].pre_realtime_duration;
@@ -199,89 +187,100 @@ ExecutionInstanceExecutor::operator()() const
 
 		// assemble playback_program from arm_madc and program_builder and if applicable, start_ppu,
 		// stop_ppu and the playback hooks
-		PlaybackProgramBuilder assemble_builder;
+		PlaybackProgramBuilder assembled_builder;
 		if (i == 0 && realtime_program.uses_madc) {
-			assemble_builder.merge_back(generate(generator::MADCArm()).builder);
+			assembled_builder.merge_back(generate(generator::MADCArm()).builder);
 		}
 		// for the first batch entry, append start_ppu, arm_madc and pre_realtime hook
 		if (i == 0) {
-			assemble_builder.merge_back(m_hooks.pre_realtime);
+			assembled_builder.merge_back(m_hooks.pre_realtime);
 		}
 		// append inside_realtime_begin hook
 		if (i < realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.copy_back(m_hooks.inside_realtime_begin);
+			assembled_builder.copy_back(m_hooks.inside_realtime_begin);
 		} else {
-			assemble_builder.merge_back(m_hooks.inside_realtime_begin);
+			assembled_builder.merge_back(m_hooks.inside_realtime_begin);
 		}
 		// append realtime section
-		assemble_builder.merge_back(std::move(program_builder.done()));
+		assembled_builder.merge_back(program_builder.done());
 		// append inside_realtime_end hook
 		if (i < realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.copy_back(m_hooks.inside_realtime_end);
+			assembled_builder.copy_back(m_hooks.inside_realtime_end);
 		} else {
-			assemble_builder.merge_back(m_hooks.inside_realtime_end);
+			assembled_builder.merge_back(m_hooks.inside_realtime_end);
 		}
 		// append ppu_finish_builders
 		for (size_t j = 0; j < realtime_column_count; j++) {
-			assemble_builder.merge_back(
+			assembled_builder.merge_back(
 			    realtime_program.realtime_columns[j].realtimes[i].ppu_finish_builder);
 		}
 		// append PPU read hooks
 		if (playback_program.ppu_symbols) {
 			auto [ppu_read_hooks_builder, ppu_read_hooks_result] = generate(
 			    generator::PPUReadHooks(m_hooks.read_ppu_symbols, *playback_program.ppu_symbols));
-			assemble_builder.merge_back(ppu_read_hooks_builder);
-			ppu_read_hooks_results.push_back(std::move(ppu_read_hooks_result));
+			assembled_builder.merge_back(ppu_read_hooks_builder);
+			post_processor.ppu_read_hooks_results.push_back(std::move(ppu_read_hooks_result));
 		}
 		// wait for response data
-		assemble_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+		assembled_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 		// for the last batch entry, append post_realtime hook
 		if (i == realtime_program.realtime_columns[0].realtimes.size() - 1) {
-			assemble_builder.merge_back(m_hooks.post_realtime);
+			assembled_builder.merge_back(m_hooks.post_realtime);
 		}
 		// append cadc_finazlize_builder for periodic_cadc data readout
-		assemble_builder.merge_back(realtime_program.cadc_finalize_builders.at(i));
+		assembled_builder.merge_back(realtime_program.cadc_finalize_builders.at(i));
 		// for the last batch entry, stop the PPU
 		if (i == realtime_program.realtime_columns[0].realtimes.size() - 1 &&
 		    playback_program.ppu_symbols) {
-			assemble_builder.merge_back(
+			assembled_builder.merge_back(
 			    generate(generator::PPUStop(*playback_program.ppu_symbols)).builder);
 		}
 		// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch entries)
 		if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
-			assemble_builder.block_until(
+			assembled_builder.block_until(
 			    TimerOnDLS(),
 			    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
 			                      .toTimerOnFPGAValue());
 		}
-		// Create playback programs with the maximal amount of batch entries that fit in as a whole
-		if ((final_builder.size_to_fpga() + assemble_builder.size_to_fpga() +
-		     generate(generator::HealthInfo()).builder.done().size_to_fpga()) >
-		    stadls::vx::playback_memory_size_to_fpga) {
-			auto [health_info_builder_post, health_info_result_post] =
-			    generate(generator::HealthInfo());
-			health_info_results_post.push_back(health_info_result_post);
-			final_builder.merge_back(health_info_builder_post.done());
-			final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-			programs.push_back(std::move(final_builder.done()));
-		}
-		final_builder.merge_back(assemble_builder);
+		assembled_builders.emplace_back(std::move(assembled_builder));
 	}
-	if (!final_builder.empty()) {
+
+	// chunk builders into maximally-sized builders, add pre & post measurements
+	std::vector<PlaybackProgramBuilder> chunked_assembled_builders;
+	size_t const pre_size_to_fpga = generate(generator::HealthInfo()).builder.done().size_to_fpga();
+	size_t const post_size_to_fpga = pre_size_to_fpga;
+	PlaybackProgramBuilder chunked_assembled_builder;
+	for (auto& assembled_builder : assembled_builders) {
+		if ((chunked_assembled_builder.size_to_fpga() + assembled_builder.size_to_fpga() +
+		     pre_size_to_fpga + post_size_to_fpga) > stadls::vx::playback_memory_size_to_fpga) {
+			chunked_assembled_builders.emplace_back(std::move(chunked_assembled_builder));
+		}
+		chunked_assembled_builder.merge_back(assembled_builder);
+	}
+	if (!chunked_assembled_builder.empty()) {
+		chunked_assembled_builders.emplace_back(std::move(chunked_assembled_builder));
+	}
+
+	// add pre and post measurements and construct finalized playback programs
+	for (auto& chunked_assembled_builder : chunked_assembled_builders) {
+		PlaybackProgramBuilder final_builder;
+
+		auto [health_info_builder_pre, health_info_result_pre] = generate(generator::HealthInfo());
+		post_processor.health_info_results_pre.push_back(health_info_result_pre);
+		final_builder.merge_back(health_info_builder_pre.done());
+		final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+
+		final_builder.merge_back(chunked_assembled_builder);
+
 		auto [health_info_builder_post, health_info_result_post] =
 		    generate(generator::HealthInfo());
-		health_info_results_post.push_back(health_info_result_post);
+		post_processor.health_info_results_post.push_back(health_info_result_post);
 		final_builder.merge_back(health_info_builder_post.done());
 		final_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
-		programs.push_back(std::move(final_builder.done()));
+		playback_program.programs.emplace_back(final_builder.done());
 	}
-	playback_program.programs = std::move(programs);
 
-	return {
-	    std::move(playback_program),
-	    PostProcessor{
-	        m_execution_instance, ppu_read_hooks_results, health_info_results_pre,
-	        health_info_results_post, std::move(realtime_post_processor)}};
+	return {std::move(playback_program), std::move(post_processor)};
 }
 
 } // namespace grenade::vx::execution::detail
