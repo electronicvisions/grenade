@@ -24,7 +24,7 @@ struct ExecutionInstanceRealtimeExecutor
 {
 	struct Program
 	{
-		std::vector<ExecutionInstanceSnippetRealtimeExecutor::Ret> realtime_columns;
+		std::vector<ExecutionInstanceSnippetRealtimeExecutor::Program> realtime_columns;
 
 		struct Chip
 		{

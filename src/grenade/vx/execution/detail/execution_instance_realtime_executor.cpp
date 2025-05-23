@@ -116,7 +116,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 
 	// vector for storing all execution_instance_snippet_realtime_executors
 	std::vector<ExecutionInstanceSnippetRealtimeExecutor> builders;
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Ret> realtime_columns;
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Program> realtime_columns;
 
 	std::map<common::ChipOnConnection, std::vector<bool>> periodic_cadc_recording;
 	std::map<common::ChipOnConnection, std::vector<bool>> periodic_cadc_dram_recording;

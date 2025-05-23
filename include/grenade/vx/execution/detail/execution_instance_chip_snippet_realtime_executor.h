@@ -79,7 +79,7 @@ public:
 		haldls::vx::v3::Timer::Value realtime_duration;
 	};
 
-	struct Ret
+	struct Program
 	{
 		std::vector<RealtimeSnippet> realtimes;
 	};
@@ -88,7 +88,7 @@ public:
 	 * Generate playback sequence.
 	 * @return PlaybackPrograms generated via local graph traversal
 	 */
-	Ret generate(Usages before, Usages after) SYMBOL_VISIBLE;
+	Program generate(Usages before, Usages after) SYMBOL_VISIBLE;
 
 	struct PostProcessable
 	{

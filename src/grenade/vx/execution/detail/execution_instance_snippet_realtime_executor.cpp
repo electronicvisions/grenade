@@ -337,17 +337,18 @@ ExecutionInstanceSnippetRealtimeExecutor::post_process(PostProcessable const& po
 	return {std::move(m_data->done()), total_realtime_duration};
 }
 
-ExecutionInstanceSnippetRealtimeExecutor::Ret ExecutionInstanceSnippetRealtimeExecutor::generate(
+ExecutionInstanceSnippetRealtimeExecutor::Program
+ExecutionInstanceSnippetRealtimeExecutor::generate(
     ExecutionInstanceSnippetRealtimeExecutor::Usages before,
     ExecutionInstanceSnippetRealtimeExecutor::Usages after)
 {
-	Ret ret;
+	Program program;
 	for (auto& [chip_on_connection, chip_executor] : m_chip_executors) {
-		ret.emplace(
+		program.emplace(
 		    chip_on_connection,
 		    chip_executor.generate(before.at(chip_on_connection), after.at(chip_on_connection)));
 	}
-	return ret;
+	return program;
 }
 
 } // namespace grenade::vx::execution::detail

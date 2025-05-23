@@ -648,7 +648,7 @@ std::chrono::nanoseconds ExecutionInstanceChipSnippetRealtimeExecutor::post_proc
 	return total_realtime_duration;
 }
 
-ExecutionInstanceChipSnippetRealtimeExecutor::Ret
+ExecutionInstanceChipSnippetRealtimeExecutor::Program
 ExecutionInstanceChipSnippetRealtimeExecutor::generate(
     ExecutionInstanceChipSnippetRealtimeExecutor::Usages before,
     ExecutionInstanceChipSnippetRealtimeExecutor::Usages after)
@@ -1045,7 +1045,7 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 		    .realtime_duration = realtime_duration});
 	}
 
-	return ExecutionInstanceChipSnippetRealtimeExecutor::Ret{std::move(realtimes)};
+	return Program{std::move(realtimes)};
 }
 
 } // namespace grenade::vx::execution::detail

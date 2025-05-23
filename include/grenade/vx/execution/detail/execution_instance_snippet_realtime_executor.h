@@ -75,14 +75,15 @@ public:
 	 */
 	Usages pre_process() SYMBOL_VISIBLE;
 
-	typedef std::map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor::Ret>
-	    Ret;
+	typedef std::
+	    map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor::Program>
+	        Program;
 
 	/**
 	 * Generate playback sequence.
 	 * @return PlaybackPrograms generated via local graph traversal
 	 */
-	Ret generate(Usages before, Usages after) SYMBOL_VISIBLE;
+	Program generate(Usages before, Usages after) SYMBOL_VISIBLE;
 
 	struct Result
 	{
