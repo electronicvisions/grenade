@@ -42,7 +42,7 @@ public:
 	 * @param execution_instance Local execution instance to build for
 	 * @param data Data accessor
 	 * @param ppu_symbols PPU symbols to use for PPU control
-	 * @param realtime_column_index Index of realtime column this builder generates
+	 * @param snippet_index Index of realtime snippet this builder generates
 	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
 	 * which the builder generates
 	 */
@@ -52,7 +52,7 @@ public:
 	    ExecutionInstanceSnippetData& data,
 	    std::vector<signal_flow::Graph::vertex_descriptor>& post_vertices,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-	    size_t realtime_column_index,
+	    size_t snippet_index,
 	    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const&
 	        timed_recording_index_offset) SYMBOL_VISIBLE;
 
@@ -135,7 +135,7 @@ private:
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
-	size_t m_realtime_column_index;
+	size_t m_snippet_index;
 
 	std::vector<signal_flow::Graph::vertex_descriptor>& m_post_vertices;
 

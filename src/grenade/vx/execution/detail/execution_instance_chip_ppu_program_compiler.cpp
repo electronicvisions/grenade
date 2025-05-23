@@ -92,11 +92,11 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 	using namespace haldls::vx::v3;
 
 	assert((std::set<size_t>{m_input_data.snippets.size(), m_graphs.size()}.size() == 1));
-	size_t const realtime_column_count = m_graphs.size();
+	size_t const snippet_count = m_graphs.size();
 
 	ExecutionInstanceChipSnippetPPUUsageVisitor::Result overall_ppu_usage;
 	std::vector<ExecutionInstanceChipSnippetPPUUsageVisitor::Result> ppu_usages;
-	for (size_t i = 0; i < realtime_column_count; i++) {
+	for (size_t i = 0; i < snippet_count; i++) {
 		auto ppu_usage = ExecutionInstanceChipSnippetPPUUsageVisitor(
 		    m_graphs[i], m_chip_on_connection, m_execution_instance, i)();
 		ppu_usages.push_back(ppu_usage);
@@ -104,7 +104,7 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 	}
 
 	std::vector<common::Time> maximal_periodic_cadc_runtimes(m_input_data.batch_size());
-	for (size_t i = 0; i < realtime_column_count; ++i) {
+	for (size_t i = 0; i < snippet_count; ++i) {
 		if (ppu_usages.at(i).has_periodic_cadc_readout ||
 		    ppu_usages.at(i).has_periodic_cadc_readout_on_dram) {
 			for (size_t b = 0; b < maximal_periodic_cadc_runtimes.size(); ++b) {
@@ -119,7 +119,7 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 		    maximal_periodic_cadc_runtimes.begin(), maximal_periodic_cadc_runtimes.end());
 	}
 
-	result.plasticity_rule_timed_recording_start_periods.resize(realtime_column_count);
+	result.plasticity_rule_timed_recording_start_periods.resize(snippet_count);
 	if (overall_ppu_usage.has_cadc_readout || !overall_ppu_usage.plasticity_rules.empty()) {
 		PPUMemoryBlockOnPPU ppu_status_coord;
 		PPUMemoryBlockOnPPU ppu_stopped_coord;
@@ -134,17 +134,16 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 			// below
 			PPUProgramGenerator ppu_program_generator;
 			std::vector<std::map<signal_flow::vertex::PlasticityRule::ID, size_t>>
-			    plasticity_rule_timed_recording_num_periods(realtime_column_count);
-			for (auto const& [descriptor, rule, synapses, neurons, realtime_column_index] :
+			    plasticity_rule_timed_recording_num_periods(snippet_count);
+			for (auto const& [descriptor, rule, synapses, neurons, snippet_index] :
 			     overall_ppu_usage.plasticity_rules) {
-				ppu_program_generator.add(
-				    descriptor, rule, synapses, neurons, realtime_column_index);
-				plasticity_rule_timed_recording_num_periods.at(
-				    realtime_column_index)[rule.get_id()] = rule.get_timer().num_periods;
+				ppu_program_generator.add(descriptor, rule, synapses, neurons, snippet_index);
+				plasticity_rule_timed_recording_num_periods.at(snippet_index)[rule.get_id()] =
+				    rule.get_timer().num_periods;
 			}
 			// sum up number of periods for different plasticity rules in order to get the index
 			// offset of the rule in the recording data for each realtime snippet.
-			for (size_t i = 0; i < realtime_column_count; ++i) {
+			for (size_t i = 0; i < snippet_count; ++i) {
 				for (size_t j = 0; j < i; ++j) {
 					for (auto const& [id, num_periods] :
 					     plasticity_rule_timed_recording_num_periods.at(j)) {
@@ -188,7 +187,7 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 			auto program = compiler.compile(ppu_program_generator.done());
 
 			result.internal.resize(
-			    realtime_column_count, {program.memory.internal, program.memory.internal});
+			    snippet_count, {program.memory.internal, program.memory.internal});
 			result.external = std::move(program.memory.external);
 			result.external_dram = std::move(program.memory.external_dram);
 			result.symbols = std::move(program.symbols);
@@ -204,7 +203,7 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 		}
 		LOG4CXX_TRACE(logger, "Generated PPU program in " << ppu_timer.print() << ".");
 
-		for (size_t i = 0; i < realtime_column_count; i++) {
+		for (size_t i = 0; i < snippet_count; i++) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				// set neuron reset mask
 				halco::common::typed_array<int8_t, NeuronColumnOnDLS> values;

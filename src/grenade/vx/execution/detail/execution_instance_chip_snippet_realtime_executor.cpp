@@ -50,13 +50,13 @@ ExecutionInstanceChipSnippetRealtimeExecutor::ExecutionInstanceChipSnippetRealti
     ExecutionInstanceSnippetData& data,
     std::vector<signal_flow::Graph::vertex_descriptor>& post_vertices,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
-    size_t realtime_column_index,
+    size_t snippet_index,
     std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const& timed_recording_index_offset) :
     m_graph(graph),
     m_execution_instance(execution_instance),
     m_data(data),
     m_ppu_symbols(ppu_symbols),
-    m_realtime_column_index(realtime_column_index),
+    m_snippet_index(snippet_index),
     m_post_vertices(post_vertices),
     m_madc_readout_vertex(),
     m_timed_recording_index_offset(timed_recording_index_offset)

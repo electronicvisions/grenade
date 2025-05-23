@@ -47,7 +47,7 @@ public:
 	 * @param input_list Input list to use for input data lookup
 	 * @param data_output Data output from depended-on executions to use for data lookup
 	 * @param chip_config Chip configuration to use
-	 * @param realtime_column_index Index of realtime column this builder generates
+	 * @param snippet_index Index of realtime snippet this builder generates
 	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
 	 * which the builder generates
 	 */
@@ -61,7 +61,7 @@ public:
 	        common::ChipOnConnection,
 	        std::reference_wrapper<
 	            std::optional<lola::vx::v3::PPUElfFile::symbols_type> const>> const& ppu_symbols,
-	    size_t realtime_column_index,
+	    size_t snippet_index,
 	    std::map<
 	        common::ChipOnConnection,
 	        std::map<signal_flow::vertex::PlasticityRule::ID, size_t>> const&

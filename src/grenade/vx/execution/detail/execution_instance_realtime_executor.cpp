@@ -87,7 +87,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 
 	assert(
 	    (std::set<size_t>{m_output_data.size(), m_input_data.size(), m_graphs.size()}.size() == 1));
-	size_t const realtime_column_count = m_output_data.size();
+	size_t const snippet_count = m_output_data.size();
 
 	Program program;
 	PostProcessor post_processor;
@@ -95,10 +95,8 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	// vectors for storing the information on what chip components are used in the realtime
 	// snippets before and after the current one (the according index) Example: usages_before[0]
 	// holds the usages needed before the first realtime snippet etc...
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_before(
-	    realtime_column_count);
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_after(
-	    realtime_column_count);
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_before(snippet_count);
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Usages> usages_after(snippet_count);
 	for (auto const& chip_on_connection : m_chips_on_connection) {
 		usages_before[0][chip_on_connection] = ExecutionInstanceChipSnippetRealtimeExecutor::Usages{
 		    .madc_recording = false,
@@ -116,7 +114,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 
 	// vector for storing all execution_instance_snippet_realtime_executors
 	std::vector<ExecutionInstanceSnippetRealtimeExecutor> builders;
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Program> realtime_columns;
+	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Program> snippets;
 
 	std::map<common::ChipOnConnection, std::vector<bool>> periodic_cadc_recording;
 	std::map<common::ChipOnConnection, std::vector<bool>> periodic_cadc_dram_recording;
@@ -129,19 +127,19 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	    ppu_symbols;
 	std::vector<std::map<
 	    common::ChipOnConnection, std::map<signal_flow::vertex::PlasticityRule::ID, size_t>>>
-	    plasticity_rule_timed_recording_start_periods(realtime_column_count);
+	    plasticity_rule_timed_recording_start_periods(snippet_count);
 	for (auto const& chip_on_connection : m_chips_on_connection) {
 		uses_top_cadc[chip_on_connection] = false;
 		uses_bot_cadc[chip_on_connection] = false;
 		uses_madc[chip_on_connection] = false;
 		ppu_symbols.emplace(chip_on_connection, m_ppu_program.at(chip_on_connection).symbols);
-		for (size_t i = 0; i < realtime_column_count; i++) {
+		for (size_t i = 0; i < snippet_count; i++) {
 			plasticity_rule_timed_recording_start_periods.at(i)[chip_on_connection] =
 			    m_ppu_program.at(chip_on_connection)
 			        .plasticity_rule_timed_recording_start_periods.at(i);
 		}
 	}
-	for (size_t i = 0; i < realtime_column_count; i++) {
+	for (size_t i = 0; i < snippet_count; i++) {
 		builders.emplace_back(
 		    m_graphs[i], m_execution_instance, m_chips_on_connection, m_input_data[i],
 		    m_output_data[i], ppu_symbols, i, plasticity_rule_timed_recording_start_periods.at(i));
@@ -183,17 +181,17 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		}
 
 		LOG4CXX_TRACE(
-		    logger, "operator(): Preprocessed local vertices for realtime column "
+		    logger, "operator(): Preprocessed local vertices for realtime snippet "
 		                << i << " in " << realtime_preprocess_timer.print() << ".");
 	}
 
-	for (size_t i = 0; i < realtime_column_count; i++) {
+	for (size_t i = 0; i < snippet_count; i++) {
 		// build realtime programs
 		hate::Timer const realtime_generate_timer;
-		auto realtime_column = builders[i].generate(usages_before[i], usages_after[i]);
-		realtime_columns.push_back(std::move(realtime_column));
+		auto snippet = builders[i].generate(usages_before[i], usages_after[i]);
+		snippets.push_back(std::move(snippet));
 		LOG4CXX_TRACE(
-		    logger, "operator(): Generated playback program builders for realtime column "
+		    logger, "operator(): Generated playback program builders for realtime snippet "
 		                << i << " in " << realtime_generate_timer.print() << ".");
 	}
 
@@ -206,32 +204,32 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		    current_times; // beginning of the realtime section of the snippets
 		std::vector<Timer::Value>
 		    subsequent_times; // beginning of the realtime section of the subsequent snippets
-		for (size_t i = 0; i < realtime_column_count; i++) {
-			auto const& local_realtime_column = realtime_columns.at(i).at(chip_on_connection);
+		for (size_t i = 0; i < snippet_count; i++) {
+			auto const& local_snippet = snippets.at(i).at(chip_on_connection);
 			// initialize current_times, subsequent_times and realtime_durations
 			if (i == 0) {
-				current_times = std::vector<Timer::Value>(
-				    local_realtime_column.realtimes.size(), Timer::Value(0));
-				subsequent_times = std::vector<Timer::Value>(
-				    local_realtime_column.realtimes.size(), Timer::Value(0));
+				current_times =
+				    std::vector<Timer::Value>(local_snippet.realtimes.size(), Timer::Value(0));
+				subsequent_times =
+				    std::vector<Timer::Value>(local_snippet.realtimes.size(), Timer::Value(0));
 			} else {
 				current_times = subsequent_times;
 			}
 			// Set subsequent times to the begin of the subsequent realtime snippet and collect the
 			// realtime durations for calculating the approximated CADC sample size
-			std::vector<Timer::Value> realtime_durations_local_column;
-			for (size_t j = 0; j < local_realtime_column.realtimes.size(); j++) {
-				realtime_durations_local_column.push_back(
-				    local_realtime_column.realtimes[j].realtime_duration);
+			std::vector<Timer::Value> realtime_durations_local_snippet;
+			for (size_t j = 0; j < local_snippet.realtimes.size(); j++) {
+				realtime_durations_local_snippet.push_back(
+				    local_snippet.realtimes[j].realtime_duration);
 				subsequent_times[j] =
-				    current_times[j] + local_realtime_column.realtimes[j].realtime_duration;
+				    current_times[j] + local_snippet.realtimes[j].realtime_duration;
 			}
-			realtime_durations.push_back(realtime_durations_local_column);
+			realtime_durations.push_back(realtime_durations_local_snippet);
 			if (periodic_cadc_recording.at(chip_on_connection)[i] ||
 			    periodic_cadc_dram_recording.at(chip_on_connection)[i]) {
 				if (!times_of_first_cadc_sample) {
 					std::vector<Timer::Value> determined_times_of_first_cadc_sample;
-					for (size_t j = 0; j < local_realtime_column.realtimes.size(); j++) {
+					for (size_t j = 0; j < local_snippet.realtimes.size(); j++) {
 						determined_times_of_first_cadc_sample.push_back(current_times[j]);
 					}
 					times_of_first_cadc_sample = std::move(determined_times_of_first_cadc_sample);
@@ -248,9 +246,9 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 
 		// Construct cadc_finalize_builders, which each are executed at the end of a batch entry
 		std::vector<PlaybackProgramBuilder> cadc_finalize_builders(
-		    realtime_columns[0].at(chip_on_connection).realtimes.size());
+		    snippets[0].at(chip_on_connection).realtimes.size());
 		std::vector<typed_array<std::optional<ContainerTicket>, PPUOnDLS>> cadc_readout_tickets(
-		    realtime_columns[0].at(chip_on_connection).realtimes.size(),
+		    snippets[0].at(chip_on_connection).realtimes.size(),
 		    typed_array<std::optional<ContainerTicket>, PPUOnDLS>{});
 		auto const has_periodic_cadc_recording =
 		    std::find(
@@ -265,8 +263,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		assert(!has_periodic_cadc_recording || !has_periodic_cadc_dram_recording);
 		if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
 			// generate tickets for extmem readout of periodic cadc recording data
-			for (size_t i = 0; i < realtime_columns[0].at(chip_on_connection).realtimes.size();
-			     i++) {
+			for (size_t i = 0; i < snippets[0].at(chip_on_connection).realtimes.size(); i++) {
 				auto [cadc_finalize_builder, local_cadc_readout_tickets] =
 				    generate(generator::PPUPeriodicCADCRead(
 				        {uses_top_cadc.at(chip_on_connection),
@@ -286,7 +283,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		post_processor.chips[chip_on_connection].cadc_readout_time_information =
 		    std::move(cadc_readout_time_information);
 	}
-	program.realtime_columns = std::move(realtime_columns);
+	program.snippets = std::move(snippets);
 	post_processor.snippet_executors = std::move(builders);
 
 	return {std::move(program), std::move(post_processor)};

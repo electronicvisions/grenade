@@ -56,13 +56,13 @@ public:
 	 * Construct visitor.
 	 * @param graph Graph to use for locality and property lookup
 	 * @param execution_instance Local execution instance to visit
-	 * @param realtime_column_index Index of realtime column
+	 * @param snippet_index Index of realtime snippet
 	 */
 	ExecutionInstanceChipSnippetPPUUsageVisitor(
 	    signal_flow::Graph const& graph,
 	    common::ChipOnConnection const& chip_on_connection,
 	    grenade::common::ExecutionInstanceID const& execution_instance,
-	    size_t realtime_column_index) SYMBOL_VISIBLE;
+	    size_t snippet_index) SYMBOL_VISIBLE;
 
 	/**
 	 * Perform visit operation.
@@ -74,7 +74,7 @@ private:
 	signal_flow::Graph const& m_graph;
 	common::ChipOnConnection m_chip_on_connection;
 	grenade::common::ExecutionInstanceID m_execution_instance;
-	size_t m_realtime_column_index;
+	size_t m_snippet_index;
 
 	/**
 	 * Process single vertex.

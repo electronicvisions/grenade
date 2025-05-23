@@ -20,9 +20,9 @@ void PPUProgramGenerator::add(
         synapses,
     std::vector<std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>> const&
         neurons,
-    size_t realtime_column_index)
+    size_t snippet_index)
 {
-	m_plasticity_rules.push_back({descriptor, rule, synapses, neurons, realtime_column_index});
+	m_plasticity_rules.push_back({descriptor, rule, synapses, neurons, snippet_index});
 }
 
 namespace {
@@ -96,15 +96,13 @@ std::vector<std::string> PPUProgramGenerator::done()
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
-	size_t max_realtime_column_index = 0;
-	for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
-	     m_plasticity_rules) {
-		max_realtime_column_index = std::max(max_realtime_column_index, realtime_column_index);
+	size_t max_snippet_index = 0;
+	for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] : m_plasticity_rules) {
+		max_snippet_index = std::max(max_snippet_index, snippet_index);
 	}
 
 	std::map<signal_flow::vertex::PlasticityRule::ID, size_t> timed_recording_num_periods;
-	for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
-	     m_plasticity_rules) {
+	for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] : m_plasticity_rules) {
 		timed_recording_num_periods[plasticity_rule.get_id()] +=
 		    plasticity_rule.get_timer().num_periods;
 	}
@@ -114,7 +112,7 @@ std::vector<std::string> PPUProgramGenerator::done()
 	std::map<signal_flow::vertex::PlasticityRule::ID, std::string> kernel_sources;
 	std::map<signal_flow::vertex::PlasticityRule::ID, std::string> recording_sources;
 	{
-		for (auto const& [_, plasticity_rule, synapses, neurons, realtime_column_index] :
+		for (auto const& [_, plasticity_rule, synapses, neurons, snippet_index] :
 		     m_plasticity_rules) {
 			std::stringstream kernel;
 			auto kernel_str = plasticity_rule.get_kernel();
@@ -218,10 +216,10 @@ Recording recorded_scratchpad_memory_{{id}} __attribute__((section("{{recording_
 		sources.push_back(recording_source);
 	}
 	// plasticity rules
-	// contains: kernel source, set(pair(plasticty vertex descriptor, realtime column index))
+	// contains: kernel source, set(pair(plasticty vertex descriptor, realtime snippet index))
 	std::map<std::string, std::set<std::pair<size_t, size_t>>> handles_sources;
 	{
-		for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+		for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] :
 		     m_plasticity_rules) {
 			// clang-format off
 			std::string handles_source_template = R"grenadeTemplate(
@@ -288,7 +286,7 @@ neuron_view_handle_INDEX = {
 				     {"enabled_columns", enabled_columns}});
 			}
 			handles_sources[inja::render(handles_source_template, parameters)].insert(
-			    {i, realtime_column_index});
+			    {i, snippet_index});
 		}
 	}
 	std::map<std::pair<size_t, size_t>, size_t> handles_indices;
@@ -313,7 +311,7 @@ neuron_view_handle_INDEX = {
 	    timers;
 	{
 		std::set<std::string> kernel_sources;
-		for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+		for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] :
 		     m_plasticity_rules) {
 			// clang-format off
 			std::string service_function_source_template = R"grenadeTemplate(
@@ -378,8 +376,8 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 			// clang-format on
 			inja::json parameters;
 			parameters["i"] = i;
-			parameters["max_realtime_column_index"] = max_realtime_column_index;
-			parameters["realtime_column_index"] = realtime_column_index;
+			parameters["max_snippet_index"] = max_snippet_index;
+			parameters["snippet_index"] = snippet_index;
 			parameters["recorded_memory_declaration"] =
 			    plasticity_rule.get_recorded_memory_declaration();
 			parameters["has_raw_recording"] =
@@ -421,8 +419,8 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 				    {{"hemisphere", row.value()}, {"enabled_columns", neuron_view_handle.columns}});
 			}
 			parameters["id"] = plasticity_rule.get_id().value();
-			auto const handles_index = handles_indices.at({i, realtime_column_index});
-			parameters["handles_index"] = handles_indices.at({i, realtime_column_index});
+			auto const handles_index = handles_indices.at({i, snippet_index});
+			parameters["handles_index"] = handles_indices.at({i, snippet_index});
 			timers[std::make_pair(handles_index, plasticity_rule.get_id())].push_back(
 			    plasticity_rule.get_timer());
 			kernel_sources.insert(inja::render(service_function_source_template, parameters));
@@ -432,9 +430,9 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 			merge_timers(local_timers);
 		}
 		std::set<std::string> scheduling_sources;
-		for (auto const& [i, plasticity_rule, synapses, neurons, realtime_column_index] :
+		for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] :
 		     m_plasticity_rules) {
-			auto const handles_index = handles_indices.at({i, realtime_column_index});
+			auto const handles_index = handles_indices.at({i, snippet_index});
 			for (size_t j = 0; auto const& timer :
 			                   timers.at(std::pair{handles_index, plasticity_rule.get_id()})) {
 				// clang-format off
@@ -451,8 +449,8 @@ Timer timer_{{handles_index}}_{{id}}_{{i}} = [](){
 				// clang-format on
 				inja::json parameters;
 				parameters["i"] = j;
-				parameters["max_realtime_column_index"] = max_realtime_column_index;
-				parameters["realtime_column_index"] = realtime_column_index;
+				parameters["max_snippet_index"] = max_snippet_index;
+				parameters["snippet_index"] = snippet_index;
 				parameters["recorded_memory_declaration"] =
 				    plasticity_rule.get_recorded_memory_declaration();
 				parameters["has_raw_recording"] =
@@ -477,7 +475,7 @@ Timer timer_{{handles_index}}_{{id}}_{{i}} = [](){
 				parameters["plasticity_rule"]["timer"]["num_periods"] = timer.num_periods;
 				parameters["plasticity_rule"]["timer"]["period"] = timer.period.value();
 				parameters["id"] = plasticity_rule.get_id().value();
-				parameters["handles_index"] = handles_indices.at({i, realtime_column_index});
+				parameters["handles_index"] = handles_indices.at({i, snippet_index});
 				scheduling_sources.insert(inja::render(scheduling_source_template, parameters));
 				++j;
 			}

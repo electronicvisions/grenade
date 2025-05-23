@@ -35,9 +35,9 @@ signal_flow::OutputData run(
 /**
  * Run the specified graphs with specified inputs on the supplied executor.
  * @param executor Executor to use
- * @param graphs Graphs to execute (one per realtime_column)
- * @param configs Maps of configurations (one per realtime_column)
- * @param input Lists of input values to use (one per realtime_column)
+ * @param graphs Graphs to execute (one per snippet)
+ * @param configs Maps of configurations (one per snippet)
+ * @param input Lists of input values to use (one per snippet)
  * @param hooks Map of playback sequence collections to be inserted at specified
  * execution instances
  */

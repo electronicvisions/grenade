@@ -123,7 +123,7 @@ ExecutionInstanceExecutor::operator()() const
 	         m_output_data.snippets.size(), m_input_data.snippets.size(), m_graphs.size(),
 	         m_configs.size()}
 	         .size() == 1));
-	size_t const realtime_column_count = m_output_data.snippets.size();
+	size_t const snippet_count = m_output_data.snippets.size();
 
 	hate::Timer const configs_timer;
 
@@ -143,7 +143,7 @@ ExecutionInstanceExecutor::operator()() const
 		playback_program.chips[chip_on_connection].pre_initial_config_hook =
 		    std::move(m_hooks.chips.at(chip_on_connection).pre_static_config);
 
-		for (size_t j = 0; j < realtime_column_count; j++) {
+		for (size_t j = 0; j < snippet_count; j++) {
 			playback_program.chips[chip_on_connection].chip_configs.push_back(
 			    m_configs.at(j).at(chip_on_connection).get());
 
@@ -177,13 +177,13 @@ ExecutionInstanceExecutor::operator()() const
 			auto& local_hooks = m_hooks.chips.at(chip_on_connection);
 			auto& local_playback_program = playback_program.chips.at(chip_on_connection);
 			AbsoluteTimePlaybackProgramBuilder program_builder;
-			haldls::vx::v3::Timer::Value config_time = realtime_program.realtime_columns[0]
+			haldls::vx::v3::Timer::Value config_time = realtime_program.snippets[0]
 			                                               .at(chip_on_connection)
 			                                               .realtimes[i]
 			                                               .pre_realtime_duration;
-			for (size_t j = 0; j < realtime_column_count; j++) {
+			for (size_t j = 0; j < snippet_count; j++) {
 				if (j > 0) {
-					config_time += realtime_program.realtime_columns[j - 1]
+					config_time += realtime_program.snippets[j - 1]
 					                   .at(chip_on_connection)
 					                   .realtimes[i]
 					                   .realtime_duration;
@@ -191,15 +191,13 @@ ExecutionInstanceExecutor::operator()() const
 					    config_time, ChipOnDLS(), local_playback_program.chip_configs[j],
 					    local_playback_program.chip_configs[j - 1]);
 				}
-				realtime_program.realtime_columns[j].at(chip_on_connection).realtimes[i].builder +=
-				    (config_time - realtime_program.realtime_columns[j]
+				realtime_program.snippets[j].at(chip_on_connection).realtimes[i].builder +=
+				    (config_time - realtime_program.snippets[j]
 				                       .at(chip_on_connection)
 				                       .realtimes[i]
 				                       .pre_realtime_duration);
-				program_builder.merge(realtime_program.realtime_columns[j]
-				                          .at(chip_on_connection)
-				                          .realtimes[i]
-				                          .builder);
+				program_builder.merge(
+				    realtime_program.snippets[j].at(chip_on_connection).realtimes[i].builder);
 			}
 
 			// insert inside_realtime hook
@@ -211,12 +209,11 @@ ExecutionInstanceExecutor::operator()() const
 
 			// reset config to initial config at end of each realtime_row if experiment has multiple
 			// configs
-			if (realtime_program.realtime_columns.size() > 1) {
-				config_time +=
-				    realtime_program.realtime_columns[realtime_program.realtime_columns.size() - 1]
-				        .at(chip_on_connection)
-				        .realtimes[i]
-				        .realtime_duration;
+			if (realtime_program.snippets.size() > 1) {
+				config_time += realtime_program.snippets[realtime_program.snippets.size() - 1]
+				                   .at(chip_on_connection)
+				                   .realtimes[i]
+				                   .realtime_duration;
 				if (i < batch_size - 1) {
 					program_builder.write(
 					    config_time, ChipOnDLS(), local_playback_program.chip_configs[0],
@@ -250,8 +247,8 @@ ExecutionInstanceExecutor::operator()() const
 				assembled_builder.merge_back(local_hooks.inside_realtime_end);
 			}
 			// append ppu_finish_builders
-			for (size_t j = 0; j < realtime_column_count; j++) {
-				assembled_builder.merge_back(realtime_program.realtime_columns[j]
+			for (size_t j = 0; j < snippet_count; j++) {
+				assembled_builder.merge_back(realtime_program.snippets[j]
 				                                 .at(chip_on_connection)
 				                                 .realtimes[i]
 				                                 .ppu_finish_builder);

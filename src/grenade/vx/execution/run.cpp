@@ -56,7 +56,7 @@ signal_flow::OutputData run(
     signal_flow::InputData const& inputs,
     JITGraphExecutor::Hooks&& hooks)
 {
-	// assure, that all vectors, which contain one element per realtime column are of the same size
+	// assure, that all vectors, which contain one element per realtime snippet are of the same size
 	if (graphs.size() != inputs.snippets.size() || graphs.size() != configs.size()) {
 		throw std::logic_error(
 		    "Arguments 'graphs', 'inputs' and 'configs' must be of the same size");
@@ -137,7 +137,7 @@ signal_flow::OutputData run(
 	    signal_flow::Graph::vertex_descriptor, tbb::flow::continue_node<tbb::flow::continue_msg>>
 	    nodes;
 
-	// global data maps (each for one realtime_column)
+	// global data maps (each for one snippet)
 	signal_flow::OutputData output_activation_maps;
 	output_activation_maps.snippets.resize(graphs.size());
 

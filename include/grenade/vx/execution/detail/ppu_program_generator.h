@@ -25,7 +25,7 @@ public:
 	    std::vector<
 	        std::pair<halco::hicann_dls::vx::v3::NeuronRowOnDLS, ppu::NeuronViewHandle>> const&
 	        neurons,
-	    size_t realtime_column_index) SYMBOL_VISIBLE;
+	    size_t snippet_index) SYMBOL_VISIBLE;
 
 	std::vector<std::string> done() SYMBOL_VISIBLE;
 

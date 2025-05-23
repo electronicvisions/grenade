@@ -76,11 +76,11 @@ ExecutionInstanceChipSnippetPPUUsageVisitor::ExecutionInstanceChipSnippetPPUUsag
     signal_flow::Graph const& graph,
     common::ChipOnConnection const& chip_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance,
-    size_t realtime_column_index) :
+    size_t snippet_index) :
     m_graph(graph),
     m_chip_on_connection(chip_on_connection),
     m_execution_instance(execution_instance),
-    m_realtime_column_index(realtime_column_index)
+    m_snippet_index(snippet_index)
 {
 }
 
@@ -135,7 +135,7 @@ void ExecutionInstanceChipSnippetPPUUsageVisitor::process(
 	}
 	// store on-PPU handles for later PPU source code generation
 	result.plasticity_rules.push_back(
-	    {vertex, data, std::move(synapses), std::move(neurons), m_realtime_column_index});
+	    {vertex, data, std::move(synapses), std::move(neurons), m_snippet_index});
 }
 
 template <>
