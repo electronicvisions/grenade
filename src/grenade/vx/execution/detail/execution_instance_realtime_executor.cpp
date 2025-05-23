@@ -142,7 +142,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	for (size_t i = 0; i < snippet_count; i++) {
 		builders.emplace_back(
 		    m_graphs[i], m_execution_instance, m_chips_on_connection, m_input_data[i],
-		    m_output_data[i], ppu_symbols, i, plasticity_rule_timed_recording_start_periods.at(i));
+		    m_output_data[i], ppu_symbols, plasticity_rule_timed_recording_start_periods.at(i));
 
 		hate::Timer const realtime_preprocess_timer;
 		ExecutionInstanceSnippetRealtimeExecutor::Usages usages = builders[i].pre_process();

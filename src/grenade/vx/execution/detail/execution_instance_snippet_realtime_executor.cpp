@@ -49,7 +49,6 @@ ExecutionInstanceSnippetRealtimeExecutor::ExecutionInstanceSnippetRealtimeExecut
         common::ChipOnConnection,
         std::reference_wrapper<std::optional<lola::vx::v3::PPUElfFile::symbols_type> const>> const&
         ppu_symbols,
-    size_t snippet_index,
     std::map<
         common::ChipOnConnection,
         std::map<signal_flow::vertex::PlasticityRule::ID, size_t>> const&
@@ -64,7 +63,7 @@ ExecutionInstanceSnippetRealtimeExecutor::ExecutionInstanceSnippetRealtimeExecut
 		m_chip_executors.emplace(
 		    chip_on_connection, ExecutionInstanceChipSnippetRealtimeExecutor(
 		                            graph, execution_instance, *m_data, *m_post_vertices,
-		                            ppu_symbols.at(chip_on_connection).get(), snippet_index,
+		                            ppu_symbols.at(chip_on_connection).get(),
 		                            timed_recording_index_offset.at(chip_on_connection)));
 	}
 	// check that input list provides all requested input for local graph
