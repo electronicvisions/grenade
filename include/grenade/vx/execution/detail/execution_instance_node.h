@@ -3,7 +3,7 @@
 #include <vector>
 #include <tbb/flow_graph.h>
 
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
+#include "grenade/vx/execution/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/output_data.h"
@@ -40,7 +40,7 @@ struct ExecutionInstanceNode
 	        common::ChipOnConnection,
 	        std::reference_wrapper<lola::vx::v3::Chip const>>> const& configs,
 	    backend::StatefulConnection& connection,
-	    signal_flow::ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
+	    ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
@@ -70,7 +70,7 @@ private:
 	    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>>
 	    configs;
 	backend::StatefulConnection& connection;
-	signal_flow::ExecutionInstanceHooks& hooks;
+	ExecutionInstanceHooks& hooks;
 	log4cxx::LoggerPtr logger;
 };
 

@@ -171,7 +171,7 @@ signal_flow::OutputData run(
 			}
 		}
 		if (!hooks.contains(execution_instance)) {
-			hooks[execution_instance] = std::make_shared<signal_flow::ExecutionInstanceHooks>();
+			hooks[execution_instance] = std::make_shared<ExecutionInstanceHooks>();
 			for (auto const& [chip_on_connection, _] : configs.at(0).get().at(execution_instance)) {
 				hooks.at(execution_instance)->chips[chip_on_connection] = {};
 			}

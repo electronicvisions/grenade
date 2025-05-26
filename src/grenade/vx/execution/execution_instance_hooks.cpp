@@ -1,6 +1,6 @@
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
+#include "grenade/vx/execution/execution_instance_hooks.h"
 
-namespace grenade::vx::signal_flow {
+namespace grenade::vx::execution {
 
 ExecutionInstanceHooks::Chip::Chip(
     stadls::vx::v3::PlaybackProgramBuilder& pre_static_config,
@@ -19,7 +19,8 @@ ExecutionInstanceHooks::Chip::Chip(
     post_realtime(std::move(post_realtime)),
     write_ppu_symbols(write_ppu_symbols),
     read_ppu_symbols(read_ppu_symbols)
-{}
+{
+}
 
 
 ExecutionInstanceHooks::ExecutionInstanceHooks(
@@ -29,4 +30,4 @@ ExecutionInstanceHooks::ExecutionInstanceHooks(
 	chips.emplace(chip_on_connection, std::move(chip));
 }
 
-} // namespace grenade::vx::signal_flow
+} // namespace grenade::vx::execution

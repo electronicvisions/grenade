@@ -2,7 +2,7 @@
 #include "grenade/common/connection_on_executor.h"
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
+#include "grenade/vx/execution/execution_instance_hooks.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 #include <memory>
@@ -41,9 +41,7 @@ public:
 	    std::map<common::ChipOnConnection, lola::vx::v3::Chip>>
 	    ChipConfigs;
 
-	typedef std::map<
-	    grenade::common::ExecutionInstanceID,
-	    std::shared_ptr<signal_flow::ExecutionInstanceHooks>>
+	typedef std::map<grenade::common::ExecutionInstanceID, std::shared_ptr<ExecutionInstanceHooks>>
 	    Hooks;
 
 	/**

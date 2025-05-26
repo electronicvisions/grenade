@@ -11,13 +11,13 @@
 #include <variant>
 
 namespace grenade::vx {
-namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
+namespace execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
 
 /**
  * Hooks for an execution instance for complementing the graph-based experiment notation.
  */
 struct GENPYBIND(
-    visible, holder_type("std::shared_ptr<grenade::vx::signal_flow::ExecutionInstanceHooks>"))
+    visible, holder_type("std::shared_ptr<grenade::vx::execution::ExecutionInstanceHooks>"))
     ExecutionInstanceHooks
 {
 	struct Chip
@@ -77,5 +77,5 @@ struct GENPYBIND(
 	ExecutionInstanceHooks& operator=(ExecutionInstanceHooks&&) = default;
 };
 
-} // namespace signal_flow
+} // namespace execution
 } // namespace grenade::vx

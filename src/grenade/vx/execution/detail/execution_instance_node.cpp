@@ -19,7 +19,7 @@ ExecutionInstanceNode::ExecutionInstanceNode(
         std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
         configs,
     backend::StatefulConnection& connection,
-    signal_flow::ExecutionInstanceHooks& hooks) :
+    ExecutionInstanceHooks& hooks) :
     data_maps(data_maps),
     input_data_maps(input_data_maps),
     graphs(graphs),

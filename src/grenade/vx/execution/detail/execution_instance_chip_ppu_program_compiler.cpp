@@ -67,7 +67,7 @@ void ExecutionInstanceChipPPUProgramCompiler::Result::apply(
 ExecutionInstanceChipPPUProgramCompiler::ExecutionInstanceChipPPUProgramCompiler(
     std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
     signal_flow::InputData const& input_data,
-    signal_flow::ExecutionInstanceHooks const& hooks,
+    ExecutionInstanceHooks const& hooks,
     common::ChipOnConnection const& chip_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance) :
     m_graphs(graphs),

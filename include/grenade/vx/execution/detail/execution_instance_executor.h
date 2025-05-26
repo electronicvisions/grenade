@@ -5,7 +5,7 @@
 #include "grenade/vx/execution/detail/execution_instance_realtime_executor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
+#include "grenade/vx/execution/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "halco/common/typed_array.h"
@@ -59,7 +59,7 @@ struct ExecutionInstanceExecutor
 	    std::vector<std::map<
 	        common::ChipOnConnection,
 	        std::reference_wrapper<lola::vx::v3::Chip const>>> const& configs,
-	    signal_flow::ExecutionInstanceHooks& hooks,
+	    ExecutionInstanceHooks& hooks,
 	    std::vector<common::ChipOnConnection> const& chips_on_connection,
 	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
@@ -72,7 +72,7 @@ private:
 	std::vector<
 	    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
 	    m_configs;
-	signal_flow::ExecutionInstanceHooks& m_hooks;
+	ExecutionInstanceHooks& m_hooks;
 	std::vector<common::ChipOnConnection> m_chips_on_connection;
 	grenade::common::ExecutionInstanceID m_execution_instance;
 };

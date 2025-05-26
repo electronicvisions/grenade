@@ -12,7 +12,6 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/signal_flow/data_snippet.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_health_info.h"
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/execution_time_info.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"

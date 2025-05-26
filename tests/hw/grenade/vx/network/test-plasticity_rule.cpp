@@ -962,7 +962,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	expectation.at(0) =
 	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
 	hooks[grenade::common::ExecutionInstanceID()] =
-	    std::make_shared<signal_flow::ExecutionInstanceHooks>();
+	    std::make_shared<execution::ExecutionInstanceHooks>();
 	hooks[grenade::common::ExecutionInstanceID()]
 	    ->chips[grenade::vx::common::ChipOnConnection()]
 	    .write_ppu_symbols["test"] =

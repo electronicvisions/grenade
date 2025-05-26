@@ -9,4 +9,5 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("_pygrenade_vx_signal_flow");
 })
 
+#include "grenade/vx/execution/execution_instance_hooks.h"
 #include "grenade/vx/execution/jit_graph_executor.h"

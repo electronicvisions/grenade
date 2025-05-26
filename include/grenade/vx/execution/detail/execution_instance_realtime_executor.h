@@ -4,7 +4,7 @@
 #include "grenade/vx/execution/detail/execution_instance_chip_ppu_program_compiler.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
+#include "grenade/vx/execution/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
 #include "halco/common/typed_array.h"

@@ -94,7 +94,7 @@ ExecutionInstanceExecutor::ExecutionInstanceExecutor(
     std::vector<
         std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
         configs,
-    signal_flow::ExecutionInstanceHooks& hooks,
+    ExecutionInstanceHooks& hooks,
     std::vector<common::ChipOnConnection> const& chips_on_connection,
     grenade::common::ExecutionInstanceID const& execution_instance) :
     m_graphs(graphs),

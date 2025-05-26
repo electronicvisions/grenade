@@ -1,6 +1,6 @@
 #pragma once
 #include "grenade/vx/common/chip_on_connection.h"
-#include "grenade/vx/signal_flow/execution_instance_hooks.h"
+#include "grenade/vx/execution/execution_instance_hooks.h"
 #include "lola/vx/v3/chip.h"
 #include "lola/vx/v3/ppu.h"
 #include "stadls/vx/v3/playback_program.h"
