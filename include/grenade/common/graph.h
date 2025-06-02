@@ -384,7 +384,8 @@ struct SYMBOL_VISIBLE Graph
 
 	/**
 	 * Get whether graphs are equal except their descriptors.
-	 * This is the case exactly if all vertex and edge properties as well as the topology matches.
+	 * This is the case exactly if all vertex and edge properties are equal and in the same order as
+	 * well as the edges connect the same vertices in the same order.
 	 */
 	bool equal_except_descriptors(Graph const& other) const;
 
