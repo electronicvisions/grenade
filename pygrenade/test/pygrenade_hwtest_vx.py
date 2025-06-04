@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import unittest
-from dlens_vx_v3 import halco, hxcomm, sta, hal, lola, logger
+from dlens_vx_v3 import halco, hxcomm, hal, lola, logger
 import pygrenade_vx as grenade
 
 logger_grenade = logger.get("grenade")
@@ -83,8 +83,6 @@ class HwTestPygrenadeVx(unittest.TestCase):
             network_graph).done()
 
         with hxcomm.ManagedConnection() as connection:
-            init, _ = sta.generate(sta.DigitalInit())
-            sta.run(connection, init.done())
             outputs = grenade.network.run(
                 connection, network_graph, config, inputs)
 
@@ -105,8 +103,6 @@ class HwTestPygrenadeVx(unittest.TestCase):
             network, grenade.network.routing.PortfolioRouter()(network))
         inputs = grenade.signal_flow.InputData()
         with hxcomm.ManagedConnection() as connection:
-            init, _ = sta.generate(sta.DigitalInit())
-            sta.run(connection, init.done())
             grenade.network.run(
                 connection,
                 network_graph,
@@ -203,8 +199,6 @@ class HwTestPygrenadeVx(unittest.TestCase):
             int(hal.Timer.Value.fpga_clock_cycles_per_us) * 100}] * batch_size
 
         with hxcomm.ManagedConnection() as connection:
-            init, _ = sta.generate(sta.ExperimentInit())
-            sta.run(connection, init.done())
             result_map = grenade.network.run(
                 connection, network_graph, config, inputs)
 
