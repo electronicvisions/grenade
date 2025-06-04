@@ -11,7 +11,7 @@ namespace common GENPYBIND_TAG_GRENADE_COMMON {
  * Identifier of edge on graph.
  */
 template <typename Derived, typename Backend>
-struct GENPYBIND(visible) EdgeOnGraph
+struct EdgeOnGraph
 {
 	typedef EdgeOnGraph Base;
 
