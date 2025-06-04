@@ -44,7 +44,7 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 namespace grenade::vx::execution::backend {
 
 InitializedConnection::InitializedConnection(
-    hxcomm::vx::ConnectionVariant&& connection, Init const& init) :
+    hxcomm::vx::ConnectionVariant&& connection, stadls::vx::v3::DigitalInit const& init) :
     m_connection(std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection))),
     m_expected_link_notification_count(halco::hicann_dls::vx::v3::PhyConfigFPGAOnDLS::size),
     m_init(*m_connection)
@@ -65,8 +65,7 @@ InitializedConnection::InitializedConnection(
 		config.set_enable_event_recording(false);
 		init_builder.write(EventRecordingConfigOnFPGA(), config);
 	}
-	init_builder.merge_back(
-	    std::visit([](auto const& i) { return stadls::vx::generate(i).builder; }, init));
+	init_builder.merge_back(stadls::vx::generate(init).builder);
 	m_init.set(init_builder.done(), std::nullopt, true);
 
 	m_expected_link_notification_count = 0;
@@ -79,7 +78,7 @@ InitializedConnection::InitializedConnection(
 InitializedConnection::InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) :
     InitializedConnection(
         std::move(connection),
-        stadls::vx::v3::ExperimentInit(std::visit(
+        stadls::vx::v3::DigitalInit(std::visit(
             [](auto const& connection) { return connection.get_hwdb_entry(); }, connection)))
 {
 }

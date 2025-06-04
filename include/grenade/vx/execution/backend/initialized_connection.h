@@ -26,17 +26,14 @@ stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProg
  */
 struct InitializedConnection
 {
-	/** Accepted initialization generators. */
-	typedef std::variant<stadls::vx::v3::ExperimentInit, stadls::vx::v3::DigitalInit> Init;
-
 	/**
-	 * Construct connection from environment and initialize with default constructed ExperimentInit.
+	 * Construct connection from environment and initialize with default constructed DigitalInit.
 	 */
 	InitializedConnection() SYMBOL_VISIBLE;
 
 	/**
 	 * Construct connection from hxcomm connection and initialize with default constructed
-	 * ExperimentInit. Ownership of the hxcomm connection is transferred to this object.
+	 * DigitalInit. Ownership of the hxcomm connection is transferred to this object.
 	 * @param connection Connection from hxcomm to use
 	 */
 	InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) SYMBOL_VISIBLE;
@@ -47,8 +44,9 @@ struct InitializedConnection
 	 * @param connection Connection from hxcomm to use
 	 * @param init Initialization to use
 	 */
-	InitializedConnection(hxcomm::vx::ConnectionVariant&& connection, Init const& init)
-	    SYMBOL_VISIBLE;
+	InitializedConnection(
+	    hxcomm::vx::ConnectionVariant&& connection,
+	    stadls::vx::v3::DigitalInit const& init) SYMBOL_VISIBLE;
 
 	/**
 	 * Get time information of execution(s).
