@@ -7,6 +7,13 @@
 #include <queue>
 #include <random>
 
+namespace log4cxx {
+
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+
+} // namespace log4cxx
+
 namespace grenade::vx::network::abstract {
 
 /**
@@ -27,6 +34,8 @@ struct SYMBOL_VISIBLE NeuronWithEnvironment
  */
 struct SYMBOL_VISIBLE NeuronGenerator
 {
+	NeuronGenerator(size_t seed = 0);
+
 	/**
 	 * Generate an empty neuron.
 	 */
@@ -54,6 +63,17 @@ private:
 	 *Check if generated neuron contains cycles.
 	 */
 	bool cyclic(Neuron const& neuron) const;
+	/**
+	 * Check if a path exists on the neuron between the given compartments.
+	 */
+	bool path(
+	    Neuron const& neuron,
+	    CompartmentOnNeuron const& compartment_a,
+	    CompartmentOnNeuron const& compartment_b) const;
+
+private:
+	std::mt19937 m_generator;
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace grenade::vx::network::abstract

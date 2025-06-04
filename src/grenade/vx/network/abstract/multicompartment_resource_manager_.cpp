@@ -85,6 +85,15 @@ NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& co
 	return *(resource_map.at(compartment));
 }
 
+std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const
+{
+	std::vector<CompartmentOnNeuron> compartments;
+	for (auto [compartment, _] : resource_map) {
+		compartments.push_back(compartment);
+	}
+	return compartments;
+}
+
 void ResourceManager::add_config(Neuron const& neuron, Environment const& environment)
 {
 	for (auto i = neuron.compartment_iterators().first; i != neuron.compartment_iterators().second;
@@ -96,6 +105,29 @@ void ResourceManager::add_config(Neuron const& neuron, Environment const& enviro
 NumberTopBottom const& ResourceManager::get_total() const
 {
 	return m_total;
+}
+
+void ResourceManager::write_graphviz(std::ostream& file, Neuron const& neuron, std::string name)
+{
+	file << "graph " << name << " {\n";
+	for (auto connection : boost::make_iterator_range(neuron.compartment_connection_iterators())) {
+		auto compartment_a = neuron.source(connection);
+		auto compartment_b = neuron.target(connection);
+		file << compartment_a << "(" << get_config(compartment_a) << ")"
+		     << "--" << compartment_b << "(" << get_config(compartment_b) << ")"
+		     << "\n";
+	}
+	file << "}\n";
+}
+
+std::ostream& operator<<(std::ostream& os, ResourceManager const& resources)
+{
+	os << "\n ResourceManager (\n";
+	for (auto compartment : resources.get_compartments()) {
+		os << "\t" << compartment << " : " << resources.get_config(compartment) << "\n";
+	}
+	os << ")";
+	return os;
 }
 
 } // namespace grenade::vx::network::abstract

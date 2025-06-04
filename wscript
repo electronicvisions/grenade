@@ -60,7 +60,7 @@ def build(bld):
 
     bld(
         target = 'grenade_inc',
-        export_includes = 'include',
+        export_includes = ['include']
     )
 
     bld.install_files(

@@ -2,24 +2,24 @@
 
 namespace grenade::vx::network::abstract {
 
-void CoordinateSystem::set(int x, int y, NeuronCircuit const& neuron_circuit)
+void CoordinateSystem::set(size_t x, size_t y, NeuronCircuit const& neuron_circuit)
 {
 	coordinate_system[y][x] = neuron_circuit;
 }
 
-NeuronCircuit CoordinateSystem::get(int x, int y) const
+NeuronCircuit CoordinateSystem::get(size_t x, size_t y) const
 {
 	return coordinate_system[y][x];
 }
 
 
-void CoordinateSystem::set_compartment(int x, int y, CompartmentOnNeuron const& compartment)
+void CoordinateSystem::set_compartment(size_t x, size_t y, CompartmentOnNeuron const& compartment)
 {
 	coordinate_system[y][x].compartment = compartment;
 }
 
 void CoordinateSystem::set_config(
-    int x, int y, UnplacedNeuronCircuit const& neuron_circuit_config_in)
+    size_t x, size_t y, UnplacedNeuronCircuit const& neuron_circuit_config_in)
 {
 	coordinate_system[y][x].switch_shared_right = neuron_circuit_config_in.switch_shared_right;
 	coordinate_system[y][x].switch_right = neuron_circuit_config_in.switch_right;
@@ -30,12 +30,12 @@ void CoordinateSystem::set_config(
 	coordinate_system[y][x].get_status();
 }
 
-std::optional<CompartmentOnNeuron> CoordinateSystem::get_compartment(int x, int y) const
+std::optional<CompartmentOnNeuron> CoordinateSystem::get_compartment(size_t x, size_t y) const
 {
 	return coordinate_system[y][x].compartment;
 }
 
-UnplacedNeuronCircuit CoordinateSystem::get_config(int x, int y) const
+UnplacedNeuronCircuit CoordinateSystem::get_config(size_t x, size_t y) const
 {
 	UnplacedNeuronCircuit switch_config;
 	switch_config.switch_shared_right = coordinate_system[y][x].switch_shared_right;
@@ -54,8 +54,8 @@ std::vector<std::pair<int, int>> CoordinateSystem::find_compartment(
     CompartmentOnNeuron const compartment) const
 {
 	std::vector<std::pair<int, int>> results;
-	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 256; j++) {
+	for (size_t i = 0; i < 2; i++) {
+		for (size_t j = 0; j < coordinate_system[i].size(); j++) {
 			const std::optional<CompartmentOnNeuron> temp_compartment_on_neuron =
 			    coordinate_system[i][j].compartment;
 			if (temp_compartment_on_neuron == compartment) {
@@ -82,33 +82,33 @@ bool CoordinateSystem::connected(size_t x, size_t y) const
 {
 	return (
 	    connected_left_shared(x, y) || connected_right_shared(x, y) || connected_top_bottom(x, y) ||
-	    connected_left(x, y) || connected_right(x, y));
+	    connected_left(x, y) || connected_right(x, y) ||
+	    (connected_shared_short(x, y).size() != 0) ||
+	    (connected_shared_conductance(x, y).size() != 0));
+}
+bool CoordinateSystem::connected_right_shared(size_t x, size_t y) const
+{
+	if (x == coordinate_system[y].size() - 1) {
+		return false;
+	}
+	return (
+	    (coordinate_system[y][x].switch_circuit_shared &&
+	     !coordinate_system[y][x].switch_circuit_shared_conductance &&
+	     coordinate_system[y][x].switch_shared_right &&
+	     !coordinate_system[y][x + 1].switch_circuit_shared &&
+	     coordinate_system[y][x + 1].switch_circuit_shared_conductance) ||
+	    (!coordinate_system[y][x].switch_circuit_shared &&
+	     coordinate_system[y][x].switch_circuit_shared_conductance &&
+	     coordinate_system[y][x].switch_shared_right &&
+	     coordinate_system[y][x + 1].switch_circuit_shared &&
+	     !coordinate_system[y][x + 1].switch_circuit_shared_conductance));
 }
 bool CoordinateSystem::connected_left_shared(size_t x, size_t y) const
 {
 	if (x == 0) {
 		return false;
 	}
-	return (
-	    (coordinate_system[y][x - 1].switch_circuit_shared &&
-	     coordinate_system[y][x - 1].switch_shared_right &&
-	     coordinate_system[y][x].switch_circuit_shared_conductance) ||
-	    (coordinate_system[y][x].switch_circuit_shared &&
-	     coordinate_system[y][x - 1].switch_shared_right &&
-	     coordinate_system[y][x - 1].switch_circuit_shared_conductance));
-}
-bool CoordinateSystem::connected_right_shared(size_t x, size_t y) const
-{
-	if (x == 255) {
-		return false;
-	}
-	return (
-	    (coordinate_system[y][x].switch_circuit_shared &&
-	     coordinate_system[y][x].switch_shared_right &&
-	     coordinate_system[y][x + 1].switch_circuit_shared_conductance) ||
-	    (coordinate_system[y][x + 1].switch_circuit_shared &&
-	     coordinate_system[y][x].switch_shared_right &&
-	     coordinate_system[y][x].switch_circuit_shared_conductance));
+	return (connected_right_shared(x - 1, y));
 }
 bool CoordinateSystem::connected_top_bottom(size_t x, size_t y) const
 {
@@ -117,7 +117,7 @@ bool CoordinateSystem::connected_top_bottom(size_t x, size_t y) const
 }
 bool CoordinateSystem::connected_right(size_t x, size_t y) const
 {
-	if (x == 255) {
+	if (x == coordinate_system[y].size() - 1) {
 		return false;
 	}
 	return (coordinate_system[y][x].switch_right);
@@ -131,43 +131,26 @@ bool CoordinateSystem::connected_left(size_t x, size_t y) const
 }
 bool CoordinateSystem::has_empty_connections(size_t x_max) const
 {
-	// std::cout << "Checking for empty Connections up to: " << x_max << std::endl;
-	// std::cout << std::endl;
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
 			// Top Bottom Only connected from one side
 			if ((coordinate_system[y][x].switch_top_bottom &&
 			     !coordinate_system[1 - y][x].switch_top_bottom)
-			    // Connected to shared Line but Shared Line not connected to left or right
+			    // Connected to shared Line but shared line not connected to left or right
 			    || ((coordinate_system[y][x].switch_circuit_shared ||
 			         coordinate_system[y][x].switch_circuit_shared_conductance) &&
 			        !(coordinate_system[y][x].switch_shared_right ||
 			          (x != 0 && coordinate_system[y][x - 1].switch_shared_right)))
-
-			    // Connected to shared line directly and shared line connected right but not
-			    // with other compartment
-			    || (coordinate_system[y][x].switch_circuit_shared &&
-			        coordinate_system[y][x].switch_shared_right && x != 255 &&
-			        !coordinate_system[y][x + 1].switch_circuit_shared_conductance)
-			    // Connected to shared line directly and shared line connected left but not
-			    // with other compartment
-			    || (coordinate_system[y][x].switch_circuit_shared && x != 0 &&
-			        coordinate_system[y][x - 1].switch_shared_right &&
-			        !coordinate_system[y][x - 1].switch_circuit_shared_conductance)
-			    // Connected to shared via resistance and shared line connected right but
-			    // not with other compartment
-			    || (coordinate_system[y][x].switch_circuit_shared_conductance &&
-			        coordinate_system[y][x].switch_shared_right && x != 255 &&
-			        !coordinate_system[y][x + 1].switch_circuit_shared)
-			    // Connected to shared line via resistance and shared line connected left but not
-			    // with other compartment
-			    || (coordinate_system[y][x].switch_circuit_shared_conductance && x != 0 &&
-			        coordinate_system[y][x - 1].switch_shared_right &&
-			        !coordinate_system[y][x - 1].switch_circuit_shared)
-			    // Shared Line Closed but not connected
+			    // Shared line goes to empty
 			    || (coordinate_system[y][x].switch_shared_right &&
-			        !coordinate_system[y][x].switch_circuit_shared &&
-			        !coordinate_system[y][x].switch_circuit_shared_conductance)) {
+			        // No connection on the right
+			        (!(coordinate_system[y][x + 1].switch_circuit_shared ||
+			           coordinate_system[y][x + 1].switch_circuit_shared_conductance ||
+			           coordinate_system[y][x + 1].switch_shared_right) ||
+			         // No connection on the left
+			         !(coordinate_system[y][x].switch_circuit_shared ||
+			           coordinate_system[y][x].switch_circuit_shared_conductance ||
+			           ((x != 0) && coordinate_system[y][x - 1].switch_shared_right))))) {
 				return true;
 			}
 		}
@@ -188,6 +171,44 @@ bool CoordinateSystem::has_double_connections(size_t x_max) const
 }
 void CoordinateSystem::clear_empty_connections(size_t x_max)
 {
+	// Deleting empty shared lines from right to left
+	for (size_t x = x_max; x > 0; x--) {
+		for (size_t y = 0; y < 2; y++) {
+			// Shared line closed but not connected
+			if ((coordinate_system[y][x].switch_shared_right &&
+			     // No connection on the right
+			     (!(coordinate_system[y][x + 1].switch_circuit_shared ||
+			        coordinate_system[y][x + 1].switch_circuit_shared_conductance ||
+			        coordinate_system[y][x + 1].switch_shared_right) ||
+			      // No connection on the left
+			      !(coordinate_system[y][x].switch_circuit_shared ||
+			        coordinate_system[y][x].switch_circuit_shared_conductance ||
+			        ((x != 0) && coordinate_system[y][x - 1].switch_shared_right))))) {
+				// Clear shared line to left until connection
+				coordinate_system[y][x].switch_shared_right = false;
+			}
+		}
+	}
+
+	// Deleting empty shared lines from left to right
+	for (size_t x = 0; x < x_max; x++) {
+		for (size_t y = 0; y < 2; y++) {
+			// Shared line closed but not connected
+			if ((coordinate_system[y][x].switch_shared_right &&
+			     // No connection on the right
+			     (!(coordinate_system[y][x + 1].switch_circuit_shared ||
+			        coordinate_system[y][x + 1].switch_circuit_shared_conductance ||
+			        coordinate_system[y][x + 1].switch_shared_right) ||
+			      // No connection on the left
+			      !(coordinate_system[y][x].switch_circuit_shared ||
+			        coordinate_system[y][x].switch_circuit_shared_conductance ||
+			        ((x != 0) && coordinate_system[y][x - 1].switch_shared_right))))) {
+				// Clear shared line to left until connection
+				coordinate_system[y][x].switch_shared_right = false;
+			}
+		}
+	}
+
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
 			// One Circuit connects to other row but circuit in other row does not connect
@@ -203,61 +224,43 @@ void CoordinateSystem::clear_empty_connections(size_t x_max)
 				coordinate_system[y][x].switch_circuit_shared = false;
 				coordinate_system[y][x].switch_circuit_shared_conductance = false;
 			}
-			// Connected to shared line directly and shared line connected right but not
-			// with other compartment
-			if (coordinate_system[y][x].switch_circuit_shared &&
-			    coordinate_system[y][x].switch_shared_right && x != 255 &&
-			    !coordinate_system[y][x + 1].switch_circuit_shared_conductance) {
-				coordinate_system[y][x].switch_shared_right = false;
-				coordinate_system[y][x].switch_circuit_shared = false;
-				coordinate_system[y][x].switch_circuit_shared_conductance = false;
-			}
-			// Connected to shared line directly and shared line connected left but not
-			// with other compartment
-			if (coordinate_system[y][x].switch_circuit_shared && x != 0 &&
-			    coordinate_system[y][x - 1].switch_shared_right &&
-			    !coordinate_system[y][x - 1].switch_circuit_shared_conductance) {
-				coordinate_system[y][x - 1].switch_shared_right = false;
-				coordinate_system[y][x].switch_circuit_shared = false;
-				coordinate_system[y][x].switch_circuit_shared_conductance = false;
-			}
-			// Connected to shared via resistance and shared line connected right but
-			// not with other compartment
-			if (coordinate_system[y][x].switch_circuit_shared_conductance &&
-			    coordinate_system[y][x].switch_shared_right && x != 255 &&
-			    !coordinate_system[y][x + 1].switch_circuit_shared) {
-				coordinate_system[y][x].switch_shared_right = false;
-				coordinate_system[y][x].switch_circuit_shared = false;
-				coordinate_system[y][x].switch_circuit_shared_conductance = false;
-			}
-			// Connected to shared line via resistance and shared line connected left but not
-			// with other compartment
-			if (coordinate_system[y][x].switch_circuit_shared_conductance && x != 0 &&
-			    coordinate_system[y][x - 1].switch_shared_right &&
-			    !coordinate_system[y][x - 1].switch_circuit_shared) {
-				coordinate_system[y][x - 1].switch_shared_right = false;
-				coordinate_system[y][x].switch_circuit_shared = false;
-				coordinate_system[y][x].switch_circuit_shared_conductance = false;
-			}
-			// Shared Line Closed but not connected
-			if (coordinate_system[y][x].switch_shared_right &&
-			    !coordinate_system[y][x].switch_circuit_shared &&
-			    !coordinate_system[y][x].switch_circuit_shared_conductance) {
-				coordinate_system[y][x].switch_shared_right = false;
-			}
 		}
 	}
 }
 
+void CoordinateSystem::clear_invalid_connections(size_t x_max)
+{
+	clear_empty_connections(x_max);
+	for (size_t x = 0; x < x_max; x++) {
+		for (size_t y = 0; y < 2; y++) {
+			// Connected via double conductance
+			if (coordinate_system[y][x].switch_circuit_shared_conductance &&
+			    coordinate_system[y][x].switch_shared_right &&
+			    coordinate_system[y][x + 1].switch_circuit_shared_conductance) {
+				coordinate_system[y][x].switch_circuit_shared_conductance = false;
+				coordinate_system[y][x].switch_shared_right = false;
+				coordinate_system[y][x + 1].switch_circuit_shared_conductance = false;
+			}
+			// Double connection
+			if (coordinate_system[y][x].switch_circuit_shared_conductance &&
+			    coordinate_system[y][x].switch_circuit_shared) {
+				coordinate_system[y][x].switch_circuit_shared_conductance = false;
+				coordinate_system[y][x].switch_circuit_shared = false;
+			}
+		}
+	}
+}
 
 bool CoordinateSystem::short_circuit(size_t x_max) const
 {
 	for (size_t y = 0; y < 2; y++) {
 		for (size_t x = 0; x < x_max; x++) {
 			if (coordinate_system[y][x].switch_circuit_shared) {
+				CompartmentOnNeuron temp_compartment = coordinate_system[y][x].compartment.value();
 				size_t x_temp = x;
 				while (coordinate_system[y][x_temp].switch_shared_right) {
-					if (coordinate_system[y][x_temp].switch_circuit_shared) {
+					if (coordinate_system[y][x_temp].switch_circuit_shared &&
+					    coordinate_system[y][x_temp].compartment.value() != temp_compartment) {
 						return true;
 					}
 					x_temp++;
@@ -268,6 +271,68 @@ bool CoordinateSystem::short_circuit(size_t x_max) const
 	return false;
 }
 
+std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_short(
+    size_t x, size_t y) const
+{
+	std::vector<std::pair<size_t, size_t>> connected_circuits;
+	if (!coordinate_system[y][x].switch_circuit_shared) {
+		return connected_circuits;
+	}
+
+	// Check for connected compartments on the right
+	size_t x_temp = x;
+	while (x_temp < coordinate_system[y].size() - 1 &&
+	       coordinate_system[y][x_temp].switch_shared_right) {
+		if (coordinate_system[y][x_temp + 1].switch_circuit_shared) {
+			connected_circuits.push_back(std::make_pair(x_temp + 1, y));
+		}
+		x_temp++;
+	}
+	// Check for connected compartments on the left
+	x_temp = x;
+	while (x_temp > 0 && coordinate_system[y][x_temp - 1].switch_shared_right) {
+		if (coordinate_system[y][x_temp - 1].switch_circuit_shared) {
+			connected_circuits.push_back(std::make_pair(x_temp - 1, y));
+		}
+		x_temp--;
+	}
+
+	return connected_circuits;
+}
+
+std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conductance(
+    size_t x, size_t y) const
+{
+	std::vector<std::pair<size_t, size_t>> connected_circuits;
+	if (!coordinate_system[y][x].switch_circuit_shared) {
+		return connected_circuits;
+	}
+
+	// Check for connected compartments on the right. This compartment needs to be connected
+	// directly to the shared line and the other compartment needs to be connected via conductance.
+	size_t x_temp = x;
+	while (x_temp < coordinate_system[y].size() - 1 &&
+	       coordinate_system[y][x_temp].switch_shared_right) {
+		if (coordinate_system[y][x_temp + 1].switch_circuit_shared_conductance) {
+			connected_circuits.push_back(std::make_pair(x_temp + 1, y));
+		}
+		x_temp++;
+	}
+
+	// Check for connected compartments on the left. This compartment needs to be connected
+	// directly to the shared line and the other compartment needs to be connected via conductance.
+	if (x == 0) {
+		return connected_circuits;
+	}
+	x_temp = x - 1;
+	while (x_temp > 0 && coordinate_system[y][x_temp].switch_shared_right) {
+		if (coordinate_system[y][x_temp].switch_circuit_shared_conductance) {
+			connected_circuits.push_back(std::make_pair(x_temp, y));
+		}
+		x_temp--;
+	}
+	return connected_circuits;
+}
 
 NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
     size_t x, size_t y, CompartmentOnNeuron compartment)
@@ -291,6 +356,16 @@ NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
 
 	return number_neuron_circuits;
 }
+
+void CoordinateSystem::clear()
+{
+	for (size_t y = 0; y < 2; y++) {
+		for (size_t x = 0; x < coordinate_system[y].size(); x++) {
+			coordinate_system[y][x] = NeuronCircuit();
+		}
+	}
+}
+
 
 std::array<NeuronCircuit, 256>& CoordinateSystem::operator[](size_t y)
 {

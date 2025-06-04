@@ -77,10 +77,35 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	void clear_empty_connections(size_t x_max);
 
 	/**
+	 * Clear empty and double connections in given part of coordinate system.
+	 * Double connections occur if a neuron circuit connects to the shared line directly and via a
+	 * resistor at the same time. Both connections are deleted then.
+	 * @param x_max Upper limit to check.
+	 */
+	void clear_invalid_connections(size_t x_max);
+
+	/**
 	 * Check if any compartments are short circuited.
 	 * @param x_xmax Upper limit to check.
 	 */
 	bool short_circuit(size_t x_max) const;
+
+	/**
+	 * Return coordinates of all neuron circuits directly connected to the given one via the shared
+	 * line.
+	 * @param x X-coordinate of the neuron circuit to check for connections.
+	 * @param y Y-coordinate of the neuron circuit to check for connections.
+	 */
+	std::vector<std::pair<size_t, size_t>> connected_shared_short(size_t x, size_t y) const;
+
+	/**
+	 * Return coordinates of all neuron circuits connected to the given one via the shared
+	 * line. The check only includes those connections starting from the given neuron circuit with a
+	 * direct connection to the shared line and ending at another neuron circuit with a resistor.
+	 * @param x X-coordinate of the neuron circuit to check for connections.
+	 * @param y Y-coordinate of the neuron circuit to check for connections.
+	 */
+	std::vector<std::pair<size_t, size_t>> connected_shared_conductance(size_t x, size_t y) const;
 
 	/**
 	 * Assign Compartment ID to connected(via switches) neuron-circuits.
@@ -97,13 +122,17 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	CoordinateSystem() = default;
 
 	// Set and get Compartments and Configurations
-	void set(int x, int y, NeuronCircuit const& neuron_circuit);
-	NeuronCircuit get(int x, int y) const;
+	void set(size_t x, size_t y, NeuronCircuit const& neuron_circuit);
+	NeuronCircuit get(size_t x, size_t y) const;
 	void set_compartment(
-	    int coordinate_x, int coordinate_y, CompartmentOnNeuron const& compartment);
-	void set_config(int x, int y, UnplacedNeuronCircuit const& neuron_circuit_config_in);
-	std::optional<CompartmentOnNeuron> get_compartment(int coordinate_x, int coordinate_y) const;
-	UnplacedNeuronCircuit get_config(int x, int y) const;
+	    size_t coordinate_x, size_t coordinate_y, CompartmentOnNeuron const& compartment);
+	void set_config(size_t x, size_t y, UnplacedNeuronCircuit const& neuron_circuit_config_in);
+	std::optional<CompartmentOnNeuron> get_compartment(
+	    size_t coordinate_x, size_t coordinate_y) const;
+	UnplacedNeuronCircuit get_config(size_t x, size_t y) const;
+
+	// Clears coordiante system to empty coordinate system
+	void clear();
 
 	// Find coordinates of compartment
 	std::vector<std::pair<int, int>> find_compartment(CompartmentOnNeuron const compartment) const;

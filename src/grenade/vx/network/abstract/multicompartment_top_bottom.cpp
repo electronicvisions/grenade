@@ -69,7 +69,7 @@ bool NumberTopBottom::is_equal_to(NumberTopBottom const& other) const
 
 std::ostream& NumberTopBottom::print(std::ostream& os) const
 {
-	return os << " NumberTotal: " << number_total << " NumberTop: " << number_top
+	return os << "NumberTotal: " << number_total << " NumberTop: " << number_top
 	          << " NumberBottom: " << number_bottom;
 }
 

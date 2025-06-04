@@ -46,6 +46,11 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	NumberTopBottom const& get_total() const;
 
 	/**
+	 * Returns all compartments for which resource requirements are stored.
+	 */
+	std::vector<CompartmentOnNeuron> get_compartments() const;
+
+	/**
 	 * Adds the configuration for all compartments of a neuron.
 	 * @param neuron Neuron for which configuration is added.
 	 * @param environment Environment which specifies the synaptic inputs on the compartments of the
@@ -53,11 +58,19 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	 */
 	void add_config(Neuron const& neuron, Environment const& environment);
 
+	/**
+	 * Writes neuron topology in graphviz format.
+	 * Contains information about the resources required by each compartment of the neuron.
+	 */
+	void write_graphviz(std::ostream& file, Neuron const& neuron, std::string name);
+
+
 private:
 	std::map<CompartmentOnNeuron, dapr::PropertyHolder<NumberTopBottom>> resource_map;
 	NumberTopBottom m_total;
 };
 
+std::ostream& operator<<(std::ostream& os, ResourceManager const& resources) SYMBOL_VISIBLE;
 
 } // namespace abstract
 } // namespace grenade::vx::network

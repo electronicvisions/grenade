@@ -21,6 +21,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm.h"
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm_brute_force.h"
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm_dummy.h"
+#include "grenade/vx/network/abstract/multicompartment_placement_algorithm_evolutionary.h"
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm_result.h"
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm_ruleset.h"
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"

@@ -1,13 +1,29 @@
 #pragma once
 
+#include "grenade/vx/network/abstract/evolutionary/multicompartment_evolutionary_chromosome.h"
+#include "grenade/vx/network/abstract/evolutionary/multicompartment_evolutionary_population.h"
+#include "grenade/vx/network/abstract/multicompartment_evolutionary_helper.h"
+#include "grenade/vx/network/abstract/multicompartment_evolutionary_parameters.h"
+#include "grenade/vx/network/abstract/multicompartment_evolutionary_placement_result.h"
 #include "grenade/vx/network/abstract/multicompartment_placement_algorithm.h"
+#include "hate/timer.h"
 #include <array>
 #include <atomic>
+#include <fstream>
+#include <future>
+#include <random>
+
+namespace log4cxx {
+
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+
+} // namespace log4cxx
 
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-struct GENPYBIND(visible) PlacementAlgorithmEvolutionary : public PlacementAlgorithm
+struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmEvolutionary : public PlacementAlgorithm
 {
 	// Runs Algorithm
 	AlgorithmResult run(
@@ -15,42 +31,121 @@ struct GENPYBIND(visible) PlacementAlgorithmEvolutionary : public PlacementAlgor
 	    Neuron const& neuron,
 	    ResourceManager const& resources);
 
+	PlacementAlgorithmEvolutionary();
+
+	PlacementAlgorithmEvolutionary(EvolutionaryParameters run_parameters);
+
 private:
-	// Parts of Validation Step by step to determine overall fitness
-	void construct_neuron(size_t result_index, size_t x_max);
-	double fitness_number_compartments(size_t result_index, Neuron const& neuron) const;
-	double fitness_number_compartment_connections(size_t result_index, Neuron const& neuron) const;
-	double fitness_resources_total(size_t result_index, ResourceManager const& resources) const;
+	/**
+	 * Construct a neuron based on the state of the coordinate-system represented by the genome of
+	 * an individual.
+	 * @param placement_result Placement result containing the coordinate-system.
+	 * @param x_max Upper limit in x-direction to check for connections.
+	 */
+	void construct_neuron(PlacementResult& placement_result, size_t x_max);
+
+	/**
+	 * Calculate fitness based on the number of compartments.
+	 * Compares the number of compartments in the given placement result with the number of
+	 * compartments on the target neuron.
+	 * @param placement_result Placement result.
+	 * @param neuron Target neuron.
+	 */
+	double fitness_number_compartments(
+	    PlacementResult const& placement_result, Neuron const& neuron) const;
+
+	/**
+	 * Calculate fitness based on the number of connections.
+	 * Compares the number of connections in the given placement result with the number of
+	 * connnections on the target neuron.
+	 * @param placement_result Placement result.
+	 * @param neuron Target neuron.
+	 */
+	double fitness_number_compartment_connections(
+	    PlacementResult const& placement_result, Neuron const& neuron) const;
+
+	/**
+	 * Calculate fitness based on the total number of allocated neuron circuits.
+	 * Compares the number of neuron circuits with the number of neuron circuits required by the
+	 * target neuron.
+	 * If fewer neuron circuits are allocated the penalty is higher than for more circuits than
+	 * required. The penaltiy for larger than required placements is required to avoid uncontrolled
+	 * growth of the placement result. There is a buffer value that accounts for the fact that the
+	 * placement results needs to allocate more neuron circuits than requried by the target neurons
+	 * properties to make interconnections possible. Therfore the penalty for to large neurons is
+	 * only applied if the number of allocated neuron circuits execeeds the required resources plus
+	 * the buffer value.
+	 * @param placement_result Placement result.
+	 * @param resources Minimal required resources.
+	 */
+	double fitness_resources_total(
+	    PlacementResult const& placement_result, ResourceManager const& resources) const;
+
+	/**
+	 * Calculate fitness based on what fraction of the neuron constructed from the placement result
+	 * and the target neuron match topologically.
+	 * @param parallal_result Placement result.
+	 * @param neuron Target neuron.
+	 * @param resources Minimal required resources.
+	 */
 	double fitness_isomorphism(
-	    size_t result_index, Neuron const& neuron, ResourceManager const& resources) const;
+	    PlacementResult const& placement_result,
+	    Neuron const& neuron,
+	    ResourceManager const& resources) const;
+
+	/**
+	 * Construct coordinate system out of boolean vector retrieved by evolutionary algorithm.
+	 * @param placement_result Result of a placement step.
+	 * @param x_max Upper limit of the coordinate system
+	 * @param individual Vector of boolean values that represent the configuration of the
+	 * switches
+	 */
+	void build_coordinate_system(
+	    PlacementResult& placement_result, size_t x_max, std::vector<bool> individual);
+
+	/**
+	 * Returns fitness of current placement.
+	 * @param placement_result Result of a placement step.
+	 * @param x_max Upper limit of the coordinate system.
+	 * @param neuron Target neuron.
+	 * @param resources Resources required by target neuron.
+	 */
+	double GENPYBIND(hidden) fitness(
+	    PlacementResult& placement_result,
+	    size_t x_max,
+	    Neuron const& neuron,
+	    ResourceManager const& resources);
 
 	/**
 	 * Validates if Placement in coordinate_system matches target neuron
-	 * @param result_index current configuration coordinate system with placed neuron in m_results
+	 * @param best_result Result of a placement step.
 	 * @param x_max upper limit to which coordinate system is checked for validity
 	 * @param neuron target neuron
 	 * @param resources required resources for neuron-placement
 	 */
 	bool GENPYBIND(hidden) valid(
-	    size_t result_index, size_t x_max, Neuron const& neuron, ResourceManager const& resources);
+	    AlgorithmResult best_result,
+	    size_t x_max,
+	    Neuron const& neuron,
+	    ResourceManager const& resources);
 
-	/**
-	 * Returns fitness of current placement
-	 */
-	double GENPYBIND(hidden) fitness(
-	    size_t result_index, size_t x_max, Neuron const& neuron, ResourceManager const& resources);
+	EvolutionaryParameters m_run_parameters;
 
+	// Testing
+	std::vector<CoordinateSystem> get_best_in_pops() const;
+	AlgorithmResult get_final_result() const;
 
 	std::atomic<bool> m_terminate_parallel;
-	static const size_t m_parallel = 1;
 
+	// Saving best in pop for testing purpose
+	std::vector<AlgorithmResult> m_best_in_pop;
+	std::vector<double> m_fitness_best_in_pop;
 
-	std::array<AlgorithmResult, m_parallel> m_results;
-	std::array<AlgorithmResult, m_parallel> m_results_temp;
-	std::array<Neuron, m_parallel> m_constructed_neurons;
-	std::array<std::map<CompartmentOnNeuron, NumberTopBottom>, m_parallel> m_constructed_resources;
-	std::array<NumberTopBottom, m_parallel> m_constructed_resources_total;
-	std::array<std::map<CompartmentOnNeuron, CompartmentOnNeuron>, m_parallel> m_descriptor_map;
+	AlgorithmResult m_result_final;
+
+	std::vector<PlacementResult> m_placement_results;
+
+	log4cxx::LoggerPtr m_logger;
 };
 } // namepsace abstract
 } // namespace grenade::vx::network

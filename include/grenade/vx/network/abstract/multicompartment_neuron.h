@@ -69,6 +69,9 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	void set(
 	    CompartmentConnectionOnNeuron const& descriptor, CompartmentConnection const& connection);
 
+	// Clear Neuron. Removes all compartments and connections.
+	void clear();
+
 	// Number of Compartments and CompartmentConnections
 	size_t num_compartments() const;
 	size_t num_compartment_connections() const;
@@ -140,6 +143,13 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 
 	// Checks if neuron contains a given compartment.
 	bool contains(CompartmentOnNeuron const& descriptor) const;
+
+	/**
+	 * Writes neuron topology in graphviz format.
+	 * @param file File to write graphviz-graph to.
+	 * @param name Name of the graph.
+	 */
+	void write_graphviz(std::ostream& file, std::string name);
 };
 
 std::ostream& operator<<(std::ostream& os, Neuron const& neuron);
