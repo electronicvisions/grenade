@@ -206,6 +206,12 @@ bool Vertex::valid_input_port_data(
 	return false;
 }
 
+bool Vertex::valid_output_port_data(
+    size_t /* output_port_on_vertex */, PortData const& /* data */) const
+{
+	return false;
+}
+
 std::optional<TimeDomainOnTopology> Vertex::get_time_domain() const
 {
 	return std::nullopt;

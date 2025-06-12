@@ -210,6 +210,13 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	virtual bool valid_input_port_data(size_t input_port_on_vertex, PortData const& data) const;
 
 	/**
+	 * Get whether given data is valid for output port on vertex.
+	 * @param data Data to check
+	 * @returns Validity of data
+	 */
+	virtual bool valid_output_port_data(size_t output_port_on_vertex, PortData const& data) const;
+
+	/**
 	 * Get identifier of time domain of vertex.
 	 * All vertices onto the same time domain are expected to share the time dimension and are
 	 * allowed to interact instantaneously with each other.
