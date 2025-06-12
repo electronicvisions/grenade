@@ -24,6 +24,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/population_cell/uncalibrated.h"
 #include "grenade/vx/network/abstract/projection_synapse/uncalibrated.h"
 #include "grenade/vx/network/abstract/projection_synapse/uncalibrated_signed.h"
+#include "grenade/vx/network/abstract/recorder.h"
 #include "grenade/vx/network/abstract/vertex_port_type/analog_observable.h"
 #include "grenade/vx/network/abstract/vertex_port_type/madc_samples.h"
 #include "grenade/vx/network/abstract/vertex_port_type/spike.h"

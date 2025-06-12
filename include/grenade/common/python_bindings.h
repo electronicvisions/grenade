@@ -28,6 +28,7 @@ GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 #include "grenade/common/projection_connector/sequence.h"
 #include "grenade/common/projection_connector/static.h"
 #include "grenade/common/receptor_on_compartment.h"
+#include "grenade/common/recorder.h"
 #include "grenade/common/resource_estimator.h"
 #include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/time_domain_runtimes.h"
