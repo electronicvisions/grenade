@@ -6,32 +6,6 @@
 namespace grenade::common {
 
 template <typename Key, typename Value>
-void Map<Key, Value>::add(Key const& key, Value const& value)
-{
-	if (m_values.contains(key)) {
-		std::stringstream ss;
-		ss << "Map already contains entry for key " << key << ". Use set(key, value) instead.";
-		throw std::invalid_argument(ss.str());
-	}
-	auto value_ptr = value.copy();
-	assert(value_ptr);
-	m_values.emplace(key, std::move(*value_ptr));
-}
-
-template <typename Key, typename Value>
-void Map<Key, Value>::add(Key const& key, Value&& value)
-{
-	if (m_values.contains(key)) {
-		std::stringstream ss;
-		ss << "Map already contains entry for key " << key << ". Use set(key, value) instead.";
-		throw std::invalid_argument(ss.str());
-	}
-	auto value_ptr = value.move();
-	assert(value_ptr);
-	m_values.emplace(key, std::move(*value_ptr));
-}
-
-template <typename Key, typename Value>
 Value const& Map<Key, Value>::get(Key const& key) const
 {
 	if (!m_values.contains(key)) {
@@ -46,22 +20,20 @@ template <typename Key, typename Value>
 void Map<Key, Value>::set(Key const& key, Value const& value)
 {
 	if (!m_values.contains(key)) {
-		std::stringstream ss;
-		ss << "Map doesn't contain entry for key " << key << ".";
-		throw std::out_of_range(ss.str());
+		m_values.emplace(key, value);
+	} else {
+		m_values.at(key) = value;
 	}
-	m_values.at(key) = value;
 }
 
 template <typename Key, typename Value>
 void Map<Key, Value>::set(Key const& key, Value&& value)
 {
 	if (!m_values.contains(key)) {
-		std::stringstream ss;
-		ss << "Map doesn't contain entry for key " << key << ".";
-		throw std::out_of_range(ss.str());
+		m_values.emplace(key, std::move(value));
+	} else {
+		m_values.at(key) = std::move(value);
 	}
-	m_values.at(key) = std::move(value);
 }
 
 template <typename Key, typename Value>

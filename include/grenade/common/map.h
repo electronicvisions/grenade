@@ -23,22 +23,6 @@ struct GENPYBIND(visible) Map
 	Map() = default;
 
 	/**
-	 * Add element to map.
-	 * @param key Key for which to add value
-	 * @param value Value to add
-	 * @throws std::out_of_range On map already containing entry for given key
-	 */
-	void add(Key const& key, Value const& value);
-
-	/**
-	 * Add element to map.
-	 * @param key Key for which to add value
-	 * @param value Value to add
-	 * @throws std::out_of_range On map already containing entry for given key
-	 */
-	void add(Key const& key, Value&& value) GENPYBIND(hidden);
-
-	/**
 	 * Get value of element present in map.
 	 * @param key Key for which to get value
 	 * @return Value to get
@@ -56,18 +40,16 @@ struct GENPYBIND(visible) Map
 	})
 
 	/**
-	 * Set value of element present in map.
+	 * Add or set value of element in map.
 	 * @param key Key for which to get value
 	 * @param value Value to get
-	 * @throws std::out_of_range On no element for key present in map
 	 */
 	void set(Key const& key, Value const& value);
 
 	/**
-	 * Set value of element present in map.
+	 * Add or set value of element in map.
 	 * @param key Key for which to get value
 	 * @param value Value to get
-	 * @throws std::out_of_range On no element for key present in map
 	 */
 	void set(Key const& key, Value&& value) GENPYBIND(hidden);
 
