@@ -5,8 +5,8 @@
 #include "grenade/common/movable.h"
 #include "grenade/common/printable.h"
 
-namespace grenade::common GENPYBIND_TAG_GRENADE_COMMON {
-
+namespace grenade {
+namespace common GENPYBIND_TAG_GRENADE_COMMON {
 /**
  * Property, which we define to have the following properties:
  *  - copyable
@@ -21,5 +21,5 @@ struct SYMBOL_VISIBLE Property
     , public Printable
     , public EqualityComparable<Derived>
 {};
-
-} // namespace grenade::common
+} // namespace common
+} // namespace grenade
