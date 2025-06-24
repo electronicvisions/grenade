@@ -77,7 +77,10 @@ InitializedConnection::InitializedConnection(
 }
 
 InitializedConnection::InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) :
-    InitializedConnection(std::move(connection), stadls::vx::v3::ExperimentInit())
+    InitializedConnection(
+        std::move(connection),
+        stadls::vx::v3::ExperimentInit(std::visit(
+            [](auto const& connection) { return connection.get_hwdb_entry(); }, connection)))
 {
 }
 

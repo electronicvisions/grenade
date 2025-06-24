@@ -34,8 +34,12 @@ TEST(InitializedConnection, General)
 		EXPECT_GE(time_info_second.execution_duration, time_info_first.execution_duration);
 	}
 	{
+		auto hxcomm_connection = hxcomm::vx::get_connection_from_env();
 		grenade::vx::execution::backend::InitializedConnection connection(
-		    hxcomm::vx::get_connection_from_env(), stadls::vx::v3::DigitalInit());
+		    std::move(hxcomm_connection),
+		    stadls::vx::v3::DigitalInit(std::visit(
+		        [](auto const& connection) { return connection.get_hwdb_entry(); },
+		        hxcomm_connection)));
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
 	}
 }
