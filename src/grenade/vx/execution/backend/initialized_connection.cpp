@@ -108,6 +108,11 @@ std::string InitializedConnection::get_remote_repo_state() const
 	return std::visit([](auto const& c) { return c.get_remote_repo_state(); }, m_connection);
 }
 
+hxcomm::HwdbEntry InitializedConnection::get_hwdb_entry() const
+{
+	return std::visit([](auto const& c) { return c.get_hwdb_entry(); }, m_connection);
+}
+
 hxcomm::vx::ConnectionVariant&& InitializedConnection::release()
 {
 	return std::move(m_connection);

@@ -87,6 +87,9 @@ public:
 	std::map<halco::hicann_dls::vx::v3::DLSGlobal, std::string> get_remote_repo_state() const
 	    SYMBOL_VISIBLE;
 
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> get_hwdb_entry() const
+	    SYMBOL_VISIBLE;
+
 	bool get_enable_differential_config() const;
 
 private:

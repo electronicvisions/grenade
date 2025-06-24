@@ -77,6 +77,12 @@ struct InitializedConnection
 	std::string get_remote_repo_state() const SYMBOL_VISIBLE;
 
 	/**
+	 * Get hwdb entry information.
+	 * @return Hwdb entry
+	 */
+	hxcomm::HwdbEntry get_hwdb_entry() const SYMBOL_VISIBLE;
+
+	/**
 	 * Release ownership of hxcomm connection.
 	 * @return Previously owned hxcomm connection
 	 */

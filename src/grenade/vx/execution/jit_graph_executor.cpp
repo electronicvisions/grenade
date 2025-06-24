@@ -99,6 +99,16 @@ JITGraphExecutor::get_remote_repo_state() const
 	return ret;
 }
 
+std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> JITGraphExecutor::get_hwdb_entry()
+    const
+{
+	std::map<halco::hicann_dls::vx::v3::DLSGlobal, hxcomm::HwdbEntry> ret;
+	for (auto const& [identifier, connection] : m_connections) {
+		ret.emplace(identifier, connection.get_hwdb_entry());
+	}
+	return ret;
+}
+
 bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 {
 	auto const connection_dls_globals = boost::adaptors::keys(m_connections);
