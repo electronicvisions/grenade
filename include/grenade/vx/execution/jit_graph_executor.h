@@ -71,20 +71,20 @@ public:
 	std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&&
 	release_connections() SYMBOL_VISIBLE;
 
-	std::map<grenade::common::ConnectionOnExecutor, hxcomm::ConnectionTimeInfo> get_time_info()
-	    const SYMBOL_VISIBLE;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::ConnectionTimeInfo>>
+	get_time_info() const SYMBOL_VISIBLE;
 
-	std::map<grenade::common::ConnectionOnExecutor, std::string> get_unique_identifier(
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>> get_unique_identifier(
 	    std::optional<std::string> const& hwdb_path) const SYMBOL_VISIBLE;
 
-	std::map<grenade::common::ConnectionOnExecutor, std::string> get_bitfile_info() const
-	    SYMBOL_VISIBLE;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>> get_bitfile_info()
+	    const SYMBOL_VISIBLE;
 
-	std::map<grenade::common::ConnectionOnExecutor, std::string> get_remote_repo_state() const
-	    SYMBOL_VISIBLE;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>>
+	get_remote_repo_state() const SYMBOL_VISIBLE;
 
-	std::map<grenade::common::ConnectionOnExecutor, hxcomm::HwdbEntry> get_hwdb_entry() const
-	    SYMBOL_VISIBLE;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::HwdbEntry>> get_hwdb_entry()
+	    const SYMBOL_VISIBLE;
 
 private:
 	std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection> m_connections;

@@ -49,50 +49,50 @@ JITGraphExecutor::release_connections()
 	return std::move(m_connections);
 }
 
-std::map<grenade::common::ConnectionOnExecutor, hxcomm::ConnectionTimeInfo>
+std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::ConnectionTimeInfo>>
 JITGraphExecutor::get_time_info() const
 {
-	std::map<grenade::common::ConnectionOnExecutor, hxcomm::ConnectionTimeInfo> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::ConnectionTimeInfo>> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_time_info());
 	}
 	return ret;
 }
 
-std::map<grenade::common::ConnectionOnExecutor, std::string>
+std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>>
 JITGraphExecutor::get_unique_identifier(std::optional<std::string> const& hwdb_path) const
 {
-	std::map<grenade::common::ConnectionOnExecutor, std::string> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_unique_identifier(hwdb_path));
 	}
 	return ret;
 }
 
-std::map<grenade::common::ConnectionOnExecutor, std::string> JITGraphExecutor::get_bitfile_info()
-    const
+std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>>
+JITGraphExecutor::get_bitfile_info() const
 {
-	std::map<grenade::common::ConnectionOnExecutor, std::string> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_bitfile_info());
 	}
 	return ret;
 }
 
-std::map<grenade::common::ConnectionOnExecutor, std::string>
+std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>>
 JITGraphExecutor::get_remote_repo_state() const
 {
-	std::map<grenade::common::ConnectionOnExecutor, std::string> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<std::string>> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_remote_repo_state());
 	}
 	return ret;
 }
 
-std::map<grenade::common::ConnectionOnExecutor, hxcomm::HwdbEntry>
+std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::HwdbEntry>>
 JITGraphExecutor::get_hwdb_entry() const
 {
-	std::map<grenade::common::ConnectionOnExecutor, hxcomm::HwdbEntry> ret;
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::HwdbEntry>> ret;
 	for (auto const& [identifier, connection] : m_connections) {
 		ret.emplace(identifier, connection.get_hwdb_entry());
 	}

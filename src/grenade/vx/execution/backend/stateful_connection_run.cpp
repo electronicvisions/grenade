@@ -135,7 +135,8 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		}
 
 		// we are locked here in any case
-		connection_execution_duration_before = connection.get_time_info().execution_duration;
+		connection_execution_duration_before =
+		    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
 
 		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
@@ -186,7 +187,8 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 		// unlock execution section for non-differential config mode
 		if (!connection.get_enable_differential_config()) {
-			connection_execution_duration_after = connection.get_time_info().execution_duration;
+			connection_execution_duration_after =
+			    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
 			connection_lock.unlock();
 		}
 	}
@@ -214,7 +216,8 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	// unlock execution section for differential config mode
 	if (connection.get_enable_differential_config()) {
 		if (!local_program.programs.empty() || !base_program.empty()) {
-			connection_execution_duration_after = connection.get_time_info().execution_duration;
+			connection_execution_duration_after =
+			    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
 		}
 		connection_lock.unlock();
 	}

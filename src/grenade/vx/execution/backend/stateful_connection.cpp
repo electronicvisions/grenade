@@ -21,28 +21,28 @@ StatefulConnection::StatefulConnection(bool const enable_differential_config) :
 {
 }
 
-hxcomm::ConnectionTimeInfo StatefulConnection::get_time_info() const
+std::vector<hxcomm::ConnectionTimeInfo> StatefulConnection::get_time_info() const
 {
 	return m_initialized_connection.get_time_info();
 }
 
-std::string StatefulConnection::get_unique_identifier(
+std::vector<std::string> StatefulConnection::get_unique_identifier(
     std::optional<std::string> const& hwdb_path) const
 {
 	return m_initialized_connection.get_unique_identifier(hwdb_path);
 }
 
-std::string StatefulConnection::get_bitfile_info() const
+std::vector<std::string> StatefulConnection::get_bitfile_info() const
 {
 	return m_initialized_connection.get_bitfile_info();
 }
 
-std::string StatefulConnection::get_remote_repo_state() const
+std::vector<std::string> StatefulConnection::get_remote_repo_state() const
 {
 	return m_initialized_connection.get_remote_repo_state();
 }
 
-hxcomm::HwdbEntry StatefulConnection::get_hwdb_entry() const
+std::vector<hxcomm::HwdbEntry> StatefulConnection::get_hwdb_entry() const
 {
 	return m_initialized_connection.get_hwdb_entry();
 }

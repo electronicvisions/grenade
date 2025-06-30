@@ -16,7 +16,7 @@ namespace {
 
 void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 {
-	if (std::holds_alternative<hxcomm::vx::ZeroMockConnection>(connection)) {
+	if (std::holds_alternative<hxcomm::vx::MultiZeroMockConnection>(connection)) {
 		return;
 	}
 
@@ -79,7 +79,7 @@ InitializedConnection::InitializedConnection(hxcomm::vx::ConnectionVariant&& con
     InitializedConnection(
         std::move(connection),
         stadls::vx::v3::DigitalInit(std::visit(
-            [](auto const& connection) { return connection.get_hwdb_entry(); }, connection)))
+            [](auto const& connection) { return connection.get_hwdb_entry().at(0); }, connection)))
 {
 }
 
@@ -96,12 +96,12 @@ hxcomm::vx::ConnectionVariant& InitializedConnection::get_connection() const
 	return *m_connection;
 }
 
-hxcomm::ConnectionTimeInfo InitializedConnection::get_time_info() const
+std::vector<hxcomm::ConnectionTimeInfo> InitializedConnection::get_time_info() const
 {
 	return std::visit([](auto const& c) { return c.get_time_info(); }, get_connection());
 }
 
-std::string InitializedConnection::get_unique_identifier(
+std::vector<std::string> InitializedConnection::get_unique_identifier(
     std::optional<std::string> const& hwdb_path) const
 {
 	return std::visit(
@@ -109,17 +109,17 @@ std::string InitializedConnection::get_unique_identifier(
 	    get_connection());
 }
 
-std::string InitializedConnection::get_bitfile_info() const
+std::vector<std::string> InitializedConnection::get_bitfile_info() const
 {
 	return std::visit([](auto const& c) { return c.get_bitfile_info(); }, get_connection());
 }
 
-std::string InitializedConnection::get_remote_repo_state() const
+std::vector<std::string> InitializedConnection::get_remote_repo_state() const
 {
 	return std::visit([](auto const& c) { return c.get_remote_repo_state(); }, get_connection());
 }
 
-hxcomm::HwdbEntry InitializedConnection::get_hwdb_entry() const
+std::vector<hxcomm::HwdbEntry> InitializedConnection::get_hwdb_entry() const
 {
 	return std::visit([](auto const& c) { return c.get_hwdb_entry(); }, get_connection());
 }

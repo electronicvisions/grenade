@@ -52,34 +52,34 @@ struct InitializedConnection
 	 * Get time information of execution(s).
 	 * @return Time information
 	 */
-	hxcomm::ConnectionTimeInfo get_time_info() const SYMBOL_VISIBLE;
+	std::vector<hxcomm::ConnectionTimeInfo> get_time_info() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get unique identifier from hwdb.
 	 * @param hwdb_path Optional path to hwdb
 	 * @return Unique identifier
 	 */
-	std::string get_unique_identifier(std::optional<std::string> const& hwdb_path) const
-	    SYMBOL_VISIBLE;
+	std::vector<std::string> get_unique_identifier(
+	    std::optional<std::string> const& hwdb_path) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get bitfile information.
 	 * @return Bitfile info
 	 */
-	std::string get_bitfile_info() const SYMBOL_VISIBLE;
+	std::vector<std::string> get_bitfile_info() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get server-side remote repository state information.
 	 * Only non-empty for hxcomm connection being QuiggeldyConnection.
 	 * @return Repository state
 	 */
-	std::string get_remote_repo_state() const SYMBOL_VISIBLE;
+	std::vector<std::string> get_remote_repo_state() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get hwdb entry information.
 	 * @return Hwdb entry
 	 */
-	hxcomm::HwdbEntry get_hwdb_entry() const SYMBOL_VISIBLE;
+	std::vector<hxcomm::HwdbEntry> get_hwdb_entry() const SYMBOL_VISIBLE;
 
 	/**
 	 * Release ownership of hxcomm connection.
