@@ -57,7 +57,8 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
     m_backend(std::move(other.m_backend)),
     m_vertices(std::move(other.m_vertices)),
     m_edges(std::move(other.m_edges))
-{}
+{
+}
 
 template <
     typename Derived,
@@ -322,6 +323,24 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 	boost::remove_vertex(descriptor.value(), backend());
 }
 
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::clear()
+{
+	for (auto vertex : boost::make_iterator_range(vertices())) {
+		clear_vertex(vertex);
+	}
+	while (!m_vertices.empty()) {
+		remove_vertex(m_vertices.begin()->first);
+	}
+}
 
 template <
     typename Derived,

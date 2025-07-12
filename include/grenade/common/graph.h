@@ -164,7 +164,7 @@ struct SYMBOL_VISIBLE Graph
 	/**
 	 * Clear graph. Removes all edges and vertices of graph.
 	 */
-	void clear_graph();
+	void clear();
 
 	/**
 	 * Get vertex property.
