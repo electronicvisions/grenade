@@ -251,7 +251,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 			    old_columns.begin(), old_columns.end()};
 			signal_flow::vertex::SynapseArrayViewSparse synapse_array_view(
 			    old_synapse_array_view.get_synram(), std::move(rows), std::move(columns),
-			    std::move(synapses.at(vertex_descriptor)));
+			    std::move(synapses.at(vertex_descriptor)), old_synapse_array_view.chip_coordinate);
 			network_graph.m_graph.update(vertex_descriptor, std::move(synapse_array_view));
 		}
 	};
@@ -302,7 +302,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		        signal_flow::vertex::PlasticityRule::Timer::Value(new_rule.timer.period.value()),
 		        new_rule.timer.num_periods},
 		    old_rule.get_synapse_view_shapes(), old_rule.get_neuron_view_shapes(),
-		    new_rule.recording, new_rule.id);
+		    new_rule.recording, new_rule.id, old_rule.chip_coordinate);
 		network_graph.m_graph.update_and_relocate(vertex_descriptor, std::move(vertex), inputs);
 	};
 
