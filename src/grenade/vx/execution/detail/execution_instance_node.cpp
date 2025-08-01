@@ -144,9 +144,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 			size_t const approx_sample_duration =
 			    static_cast<size_t>(1.7 * Timer::Value::fpga_clock_cycles_per_us);
 			estimated_cadc_recording_size = (maximal_periodic_cadc_runtime +
-			                                 Timer::Value::fpga_clock_cycles_per_us *
-			                                     (ExecutionInstanceBuilder::wait_before_realtime +
-			                                      ExecutionInstanceBuilder::wait_after_realtime) +
+			                                 (ExecutionInstanceBuilder::wait_before_realtime +
+			                                  ExecutionInstanceBuilder::wait_after_realtime) +
 			                                 periodic_cadc_fpga_wait_clock_cycles -
 			                                 (periodic_cadc_ppu_wait_clock_cycles /
 			                                  2 /* 250MHz vs. 125 MHz PPU vs. FPGA clock */)) /
