@@ -119,12 +119,8 @@ TEST(multicompartment_neuron, General)
 	        compartment_a_on_neuron, compartment_c_on_neuron, connection_conductance_2);
 
 	EXPECT_EQ(neuron.num_compartment_connections(), 2);
-	EXPECT_EQ(
-	    neuron.in_degree(compartment_a_on_neuron), neuron.out_degree(compartment_a_on_neuron));
-	EXPECT_EQ(neuron.out_degree(compartment_a_on_neuron), 2);
-	EXPECT_EQ(
-	    neuron.in_degree(compartment_b_on_neuron), neuron.out_degree(compartment_b_on_neuron));
-	EXPECT_EQ(neuron.out_degree(compartment_b_on_neuron), 1);
+	EXPECT_EQ(neuron.get_compartment_degree(compartment_a_on_neuron), 2);
+	EXPECT_EQ(neuron.get_compartment_degree(compartment_b_on_neuron), 1);
 	EXPECT_NE(compartment_connection_ab_on_neuron, compartment_connection_ac_on_neuron);
 
 	neuron.remove_compartment_connection(compartment_connection_ac_on_neuron);

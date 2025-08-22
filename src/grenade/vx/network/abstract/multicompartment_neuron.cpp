@@ -29,6 +29,7 @@ CompartmentOnNeuron Neuron::add_compartment(Compartment const& compartment)
 {
 	return this->add_vertex(compartment);
 }
+
 void Neuron::remove_compartment(CompartmentOnNeuron descriptor)
 {
 	this->remove_vertex(descriptor);
@@ -39,6 +40,7 @@ CompartmentConnectionOnNeuron Neuron::add_compartment_connection(
 {
 	return this->add_edge(source, target, edge);
 }
+
 void Neuron::remove_compartment_connection(CompartmentConnectionOnNeuron descriptor)
 {
 	this->remove_edge(descriptor);
@@ -48,6 +50,7 @@ Compartment const& Neuron::get(CompartmentOnNeuron const& descriptor) const
 {
 	return Graph::get(descriptor);
 }
+
 void Neuron::set(CompartmentOnNeuron const& descriptor, Compartment const& compartment)
 {
 	Graph::set(descriptor, compartment);
@@ -57,6 +60,7 @@ CompartmentConnection const& Neuron::get(CompartmentConnectionOnNeuron const& de
 {
 	return Graph::get(descriptor);
 }
+
 void Neuron::set(
     CompartmentConnectionOnNeuron const& descriptor, CompartmentConnection const& connection)
 {
@@ -72,17 +76,15 @@ size_t Neuron::num_compartments() const
 {
 	return this->num_vertices();
 }
+
 size_t Neuron::num_compartment_connections() const
 {
 	return this->num_edges();
 }
 
-int Neuron::in_degree(CompartmentOnNeuron const& descriptor) const
+size_t Neuron::get_compartment_degree(CompartmentOnNeuron const& descriptor) const
 {
-	return Graph::in_degree(descriptor);
-}
-int Neuron::out_degree(CompartmentOnNeuron const& descriptor) const
-{
+	assert(Graph::out_degree(descriptor) == Graph::in_degree(descriptor));
 	return Graph::out_degree(descriptor);
 }
 
@@ -90,7 +92,7 @@ CompartmentOnNeuron Neuron::get_max_degree_compartment() const
 {
 	CompartmentOnNeuron compartment_max_degree = *(compartments().first);
 	for (auto compartment : boost::make_iterator_range(compartments())) {
-		if (out_degree(compartment) > out_degree(compartment_max_degree)) {
+		if (get_compartment_degree(compartment) > get_compartment_degree(compartment_max_degree)) {
 			compartment_max_degree = compartment;
 		}
 	}
@@ -101,6 +103,7 @@ CompartmentOnNeuron Neuron::source(CompartmentConnectionOnNeuron const& descript
 {
 	return Graph::source(descriptor);
 }
+
 CompartmentOnNeuron Neuron::target(CompartmentConnectionOnNeuron const& descriptor) const
 {
 	return Graph::target(descriptor);
@@ -155,7 +158,7 @@ int Neuron::chain_length(
     std::set<CompartmentOnNeuron>& marked_compartments) const
 {
 	// Branching
-	if (out_degree(compartment) > 2) {
+	if (get_compartment_degree(compartment) > 2) {
 		return -1;
 	}
 
@@ -192,7 +195,7 @@ std::vector<CompartmentOnNeuron> Neuron::chain_compartments(
 		     boost::make_iterator_range(adjacent_compartments(chain.back()))) {
 			if (!marked_compartments.contains(adjacent_compartment) &&
 			    adjacent_compartment != blacklist_compartment) {
-				if (out_degree(adjacent_compartment) == 1 || in_degree(adjacent_compartment) == 1) {
+				if (get_compartment_degree(adjacent_compartment) == 1) {
 					chain_end = true;
 				}
 				chain.push_back(adjacent_compartment);
@@ -223,7 +226,7 @@ CompartmentNeighbours Neuron::classify_neighbours(
 			continue;
 		}
 		// Leaf
-		if (out_degree(adjacent_compartment) == 1) {
+		if (get_compartment_degree(adjacent_compartment) == 1) {
 			neighbours.leafs.push_back(adjacent_compartment);
 		}
 		// Branch

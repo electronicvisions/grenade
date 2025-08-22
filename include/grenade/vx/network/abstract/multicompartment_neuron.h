@@ -35,7 +35,10 @@ extern template class SYMBOL_VISIBLE Graph<
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
-// Neuron uses Graph-Representation
+/**
+ * Graph representation of a multicompartment Neuron.
+ * Compartments are represented as graph vertices and connections as graph edges.
+ */
 struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
     : private common::Graph<
           Neuron,
@@ -46,58 +49,153 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
           CompartmentConnectionOnNeuron,
           std::unique_ptr>
 {
-	// Constructor
 	Neuron() = default;
 
-	// Check Neuron Structure for Rulebreaks: Strongly Connected
+	/**
+	 * Copy constructors.
+	 * Deleted since the descriptors of the compartments on the neuron need to be unique and
+	 * therfore can not be copied.
+	 */
+	Neuron(Neuron const& other) = delete;
+	Neuron& operator=(Neuron const& other) = delete;
+
+	/**
+	 * Move constructors.
+	 */
+	Neuron(Neuron&& other) = default;
+	Neuron& operator=(Neuron&& other) = default;
+
+	/**
+	 * Check wether the neuron only contains valid compartments.
+	 */
 	bool valid();
 
-	// Add and Remove Compartment
+	/**
+	 * Adds a compartment to the neuron.
+	 * @param compartment Compartment to add to the neuron.
+	 * @return Compartment descriptor on the neuron.
+	 */
 	CompartmentOnNeuron add_compartment(Compartment const& compartment);
+
+	/**
+	 * Removes a compartment from the neuron.
+	 * @param descriptor Descriptor of the compartment to remove.
+	 */
 	void remove_compartment(CompartmentOnNeuron descriptor);
 
-	// Add and Remove CompartmentConnection
+	/**
+	 * Add a compartment connection to the neuron.
+	 * @param source Source compartment descriptor.
+	 * @param target Target compartment descriptor.
+	 * @param edge Connection.
+	 * @return Descriptor of the connection on the neuron.
+	 */
 	CompartmentConnectionOnNeuron add_compartment_connection(
 	    CompartmentOnNeuron source, CompartmentOnNeuron target, CompartmentConnection const& edge);
+
+	/**
+	 * Remove a connection from the neuron.
+	 * @param descriptor Connecion descriptor of the connection to remove.
+	 */
 	void remove_compartment_connection(CompartmentConnectionOnNeuron descriptor);
 
-	// Get and Set Compartment via Compartment-ID
+	/**
+	 * Get a compartment via its descriptor.
+	 * @param descriptor Descriptor of the requested compartment.
+	 * @return Compartment corresponding to the descriptor.
+	 */
 	Compartment const& get(CompartmentOnNeuron const& descriptor) const;
+
+	/**
+	 * Set a compartment via a descriptor.
+	 * @param descriptor Descriptor of the compartment to be set.
+	 * @param compartment Compartment to be set for the given descriptor.
+	 */
 	void set(CompartmentOnNeuron const& descriptor, Compartment const& compartment);
 
-	// Get and Set CompartmentConnection via CompartmentConnection-ID
+	/**
+	 * Get a compartment connection via its descriptor.
+	 * @param descriptor Descriptor of the requested connection.
+	 * @return Connection corresponding to the descriptor.
+	 */
 	CompartmentConnection const& get(CompartmentConnectionOnNeuron const& descriptor) const;
+
+	/**
+	 * Set a compartment connection via a descriptor.
+	 * @param descriptor Descriptor of the connection to be set.
+	 * @param conection Connection to be set for the given descriptor.
+	 */
 	void set(
 	    CompartmentConnectionOnNeuron const& descriptor, CompartmentConnection const& connection);
 
-	// Clear Neuron. Removes all compartments and connections.
+	/**
+	 * Clear the neuron.
+	 * Remove all compartments and connections.
+	 */
 	void clear();
 
-	// Number of Compartments and CompartmentConnections
+	/**
+	 * Return number of compartments on the neuron.
+	 * @return Number of compartments on the neuron.
+	 */
 	size_t num_compartments() const;
+
+	/**
+	 * Return number of connections on the neuron.
+	 * @return Number of connections on the neuron.
+	 */
 	size_t num_compartment_connections() const;
 
-	// Number of in and out-going Connections of Compartment
-	int in_degree(CompartmentOnNeuron const& descriptor) const;
-	int out_degree(CompartmentOnNeuron const& descriptor) const;
+	/**
+	 * Return number of outgoing connections on a compartment.
+	 * Since the neuron has a undirected graph representation the ingoing and outgoing degree is
+	 * equal.
+	 * @param descriptor Descriptor of the compartment to give degree.
+	 * @return Number of outgoing connections.
+	 */
+	size_t get_compartment_degree(CompartmentOnNeuron const& descriptor) const;
 
-	// Returns compartment with largest outdegree
+	/**
+	 * Return compartment with largest degree.
+	 * Since the neuron has a undirected graph representation the ingoing and outgoing degree is
+	 * equal.
+	 * @return Descriptor of the compartment with the highest degree.
+	 */
 	CompartmentOnNeuron get_max_degree_compartment() const;
 
-	// Source and Target of CompartmentConnection via CompartmentConnection-ID
+	/**
+	 * Return source of the given connection.
+	 * @param descriptor Descriptor of the connection.
+	 * @return Descriptor of the source compartment.
+	 */
 	CompartmentOnNeuron source(CompartmentConnectionOnNeuron const& descriptor) const;
+
+	/**
+	 * Return target of the given connection.
+	 * @param descriptor Descriptor of the connection.
+	 * @return Descriptor of the target compartment.
+	 */
 	CompartmentOnNeuron target(CompartmentConnectionOnNeuron const& descriptor) const;
 
-	// Return Iterator to begin and end of all compartments.
+	/**
+	 * Return iterators to begin and end of all compartments.
+	 * @return Pair of iterators to begin and end of all compartments.
+	 */
 	typedef VertexIterator CompartmentIterator;
 	std::pair<CompartmentIterator, CompartmentIterator> compartments() const;
 
-	// Return Iterator to begin and end of all compartment-connections
+	/**
+	 * Return iterators to begin and end of all connections.
+	 * @return Pair of iterators to begin and end of all connections.
+	 */
 	typedef EdgeIterator CompartmentConnectionIterator;
 	std::pair<CompartmentConnectionIterator, CompartmentConnectionIterator>
 	compartment_connections() const;
 
-	// Return Iterator to begin and end of adjecent compartments to given compartment
+	/**
+	 * Return iterators to begin and end of adjacent compartments.
+	 * @return Pair of iterators to begin and end of adjacent compartments.
+	 */
 	std::pair<AdjacencyIterator, AdjacencyIterator> adjacent_compartments(
 	    CompartmentOnNeuron const& descriptor) const;
 
@@ -155,6 +253,7 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	int chain_length(
 	    CompartmentOnNeuron const& compartment,
 	    std::set<CompartmentOnNeuron>& marked_compartments) const;
+
 	/**
 	 * Return ordered list of compartments inside a chain.
 	 * @param compartment Arbitrary compartment inside a chain.
@@ -163,6 +262,7 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	std::vector<CompartmentOnNeuron> chain_compartments(
 	    CompartmentOnNeuron const& compartment,
 	    CompartmentOnNeuron const& blacklist_compartment = CompartmentOnNeuron()) const;
+
 	/**
 	 * Classify neighbours into parts of branches, chains or as a leaf.
 	 * @param compartment Compartment whichs neighbours are beeing classified.
@@ -174,10 +274,15 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	    std::set<CompartmentOnNeuron> neighbours_whitelist =
 	        std::set<grenade::vx::network::abstract::CompartmentOnNeuron>()) const;
 
-	// Check if all compartments are interconnected.
+	/**
+	 * Check if all compartments are connected.
+	 */
 	bool compartments_connected() const;
 
-	// Checks if neuron contains a given compartment.
+	/**
+	 * Check if neuron contains a compartment.
+	 * @param descriptor Descriptor of the compartment to check for.
+	 */
 	bool contains(CompartmentOnNeuron const& descriptor) const;
 
 	/**

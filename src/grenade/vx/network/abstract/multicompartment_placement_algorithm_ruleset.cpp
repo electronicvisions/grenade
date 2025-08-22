@@ -407,10 +407,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	NumberTopBottom required_resources = resources.get_config(compartment);
 
 	// If not leaf increase size
-	if (neuron.out_degree(compartment) > 1 && required_resources.number_total < 2) {
+	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total < 2) {
 		required_resources.number_total = 2;
 	}
-	if (neuron.out_degree(compartment) > 2) {
+	if (neuron.get_compartment_degree(compartment) > 2) {
 		if (required_resources.number_total < 4) {
 			required_resources.number_total = 4;
 		}
@@ -480,10 +480,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	NumberTopBottom required_resources = resources.get_config(compartment);
 
 	// If not leaf increase size
-	if (neuron.out_degree(compartment) > 1 && required_resources.number_total == 1) {
+	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total == 1) {
 		required_resources.number_total = 2;
 	}
-	if (neuron.out_degree(compartment) > 2) {
+	if (neuron.get_compartment_degree(compartment) > 2) {
 		if (required_resources.number_total < 4) {
 			required_resources.number_total = 4;
 		}
@@ -1011,7 +1011,8 @@ void PlacementAlgorithmRuleset::connect_adjacent(
 
 	// Chose Compartment with more connections as source for connection (no resistor)
 	CompartmentOnNeuron compartment_source, compartment_target;
-	if (neuron.out_degree(compartment_a) > neuron.out_degree(compartment_b)) {
+	if (neuron.get_compartment_degree(compartment_a) >
+	    neuron.get_compartment_degree(compartment_b)) {
 		compartment_source = compartment_a;
 		compartment_target = compartment_b;
 	} else {
@@ -1208,7 +1209,9 @@ void PlacementAlgorithmRuleset::connect_distant(
 		coordinates.connect_shared(x_a, x_b, y);
 	} else if (coordinates.coordinate_system[y][x_b].switch_circuit_shared) {
 		coordinates.connect_shared(x_b, x_a, y);
-	} else if (neuron.out_degree(compartment_a) > neuron.out_degree(compartment_b)) {
+	} else if (
+	    neuron.get_compartment_degree(compartment_a) >
+	    neuron.get_compartment_degree(compartment_b)) {
 		coordinates.connect_shared(x_a, x_b, y);
 	} else {
 		coordinates.connect_shared(x_b, x_a, y);
