@@ -18,6 +18,11 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/property_map/property_map.hpp>
 
+namespace cereal {
+struct access;
+} // namespace cereal
+
+
 namespace grenade {
 namespace common GENPYBIND_TAG_GRENADE_COMMON {
 
@@ -477,6 +482,12 @@ private:
 	static_assert(halco::common::detail::IsBaseType<typename EdgeDescriptor::base_t>::value);
 	static_assert(std::is_same_v<typename EdgeDescriptor::value_type, size_t>);
 	static_assert(detail::IsSupportedGraph<Backend>::value);
+
+	friend struct cereal::access;
+	template <typename Archive>
+	void save(Archive& ar, std::uint32_t) const;
+	template <typename Archive>
+	void load(Archive& ar, std::uint32_t);
 };
 
 template <

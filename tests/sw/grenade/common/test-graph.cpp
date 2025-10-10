@@ -1,20 +1,25 @@
 #include "grenade/common/graph.h"
 
+#include "cereal/types/grenade/common/graph.h"
+#include "cereal/types/halco/common/geometry.h"
 #include "dapr/property.h"
 #include "grenade/common/detail/graph.h"
 #include "grenade/common/graph_impl.tcc"
 #include "halco/common/geometry.h"
 #include "halco/common/geometry_numeric_limits.h"
 #include <memory>
+#include <cereal/archives/json.hpp>
 #include <gtest/gtest.h>
 
 using namespace grenade::common;
 
+namespace grenade_common_graph_tests {
 
 struct DummyVertex : public dapr::Property<DummyVertex>
 {
-	int value;
+	int value{};
 
+	DummyVertex() = default;
 	DummyVertex(int value) : value(value) {}
 
 	virtual std::unique_ptr<DummyVertex> copy() const override
@@ -37,13 +42,21 @@ protected:
 	{
 		return value == other.value;
 	}
+
+	friend struct cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar)
+	{
+		ar(value);
+	}
 };
 
 
 struct DummyEdge : public dapr::Property<DummyEdge>
 {
-	int value;
+	int value{};
 
+	DummyEdge() = default;
 	DummyEdge(int value) : value(value) {}
 
 	virtual std::unique_ptr<DummyEdge> copy() const override
@@ -66,6 +79,13 @@ protected:
 	{
 		return value == other.value;
 	}
+
+	friend struct cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar)
+	{
+		ar(value);
+	}
 };
 
 
@@ -73,6 +93,7 @@ struct DerivedDummyVertex : public DummyVertex
 {
 	int derived_value;
 
+	DerivedDummyVertex() = default;
 	DerivedDummyVertex(int value, int derived_value) :
 	    DummyVertex(value), derived_value(derived_value)
 	{}
@@ -98,13 +119,22 @@ protected:
 		return derived_value == static_cast<DerivedDummyVertex const&>(other).derived_value &&
 		       DummyVertex::is_equal_to(other);
 	}
+
+	friend struct cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<DummyVertex>(this));
+		ar(derived_value);
+	}
 };
 
 
 struct DerivedDummyEdge : public DummyEdge
 {
-	int derived_value;
+	int derived_value{};
 
+	DerivedDummyEdge() = default;
 	DerivedDummyEdge(int value, int derived_value) : DummyEdge(value), derived_value(derived_value)
 	{}
 
@@ -129,6 +159,14 @@ protected:
 		return derived_value == static_cast<DerivedDummyEdge const&>(other).derived_value &&
 		       DummyEdge::is_equal_to(other);
 	}
+
+	friend struct cereal::access;
+	template <typename Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<DummyEdge>(this));
+		ar(derived_value);
+	}
 };
 
 
@@ -143,13 +181,17 @@ struct EdgeOnDummyGraph : public halco::common::detail::BaseType<EdgeOnDummyGrap
 	constexpr EdgeOnDummyGraph(value_type const& value = 0) : base_t(value) {}
 };
 
+} // namespace grenade_common_graph_tests
+
+using namespace grenade_common_graph_tests;
+
 namespace std {
 
-HALCO_GEOMETRY_HASH_CLASS(VertexOnDummyGraph)
-HALCO_GEOMETRY_HASH_CLASS(EdgeOnDummyGraph)
+HALCO_GEOMETRY_HASH_CLASS(grenade_common_graph_tests::VertexOnDummyGraph)
+HALCO_GEOMETRY_HASH_CLASS(grenade_common_graph_tests::EdgeOnDummyGraph)
 
-HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(VertexOnDummyGraph)
-HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(EdgeOnDummyGraph)
+HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(grenade_common_graph_tests::VertexOnDummyGraph)
+HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(grenade_common_graph_tests::EdgeOnDummyGraph)
 
 } // namespace std
 
@@ -655,4 +697,46 @@ TEST(Graph, Move)
 	for (auto const& edge : boost::make_iterator_range(graph_moved.edges())) {
 		EXPECT_TRUE(edges.contains(edge));
 	}
+}
+
+CEREAL_REGISTER_TYPE(grenade_common_graph_tests::DummyVertex)
+CEREAL_REGISTER_TYPE(grenade_common_graph_tests::DummyEdge)
+CEREAL_REGISTER_TYPE(grenade_common_graph_tests::DerivedDummyVertex)
+CEREAL_REGISTER_TYPE(grenade_common_graph_tests::DerivedDummyEdge)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(
+    grenade_common_graph_tests::DummyEdge, grenade_common_graph_tests::DerivedDummyEdge)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(
+    grenade_common_graph_tests::DummyVertex, grenade_common_graph_tests::DerivedDummyVertex)
+
+TEST(Graph, Cerealization)
+{
+	UndirectedDummyGraph obj1;
+
+	DummyVertex vertex_1(1);
+	auto const vertex_on_graph_1 = obj1.add_vertex(vertex_1);
+	DerivedDummyVertex vertex_2(2, 1);
+	auto const vertex_on_graph_2 = obj1.add_vertex(vertex_2);
+	DummyVertex vertex_3(3);
+	auto const vertex_on_graph_3 = obj1.add_vertex(vertex_3);
+
+	DummyEdge edge_1(1);
+	obj1.add_edge(vertex_on_graph_1, vertex_on_graph_2, edge_1);
+	DerivedDummyEdge edge_2(1, 1);
+	obj1.add_edge(vertex_on_graph_2, vertex_on_graph_3, edge_2);
+
+	UndirectedDummyGraph obj2;
+
+	std::ostringstream ostream;
+	{
+		cereal::JSONOutputArchive oa(ostream);
+		oa(obj1);
+	}
+
+	std::istringstream istream(ostream.str());
+	{
+		cereal::JSONInputArchive ia(istream);
+		ia(obj2);
+	}
+
+	ASSERT_EQ(obj2, obj1);
 }
