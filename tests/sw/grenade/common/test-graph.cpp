@@ -2,11 +2,9 @@
 
 #include "dapr/property.h"
 #include "grenade/common/detail/graph.h"
-#include "grenade/common/edge_on_graph.h"
-#include "grenade/common/edge_on_graph_impl.tcc"
 #include "grenade/common/graph_impl.tcc"
-#include "grenade/common/vertex_on_graph.h"
-#include "grenade/common/vertex_on_graph_impl.tcc"
+#include "halco/common/geometry.h"
+#include "halco/common/geometry_numeric_limits.h"
 #include <memory>
 #include <gtest/gtest.h>
 
@@ -134,42 +132,26 @@ protected:
 };
 
 
-struct VertexOnBidirectionalDummyGraph
-    : public VertexOnGraph<VertexOnBidirectionalDummyGraph, detail::BidirectionalGraph>
+struct VertexOnDummyGraph : public halco::common::detail::BaseType<VertexOnDummyGraph, size_t>
 {
-	VertexOnBidirectionalDummyGraph(Value const& value) : VertexOnGraph(value) {}
+	constexpr VertexOnDummyGraph(value_type const& value = 0) : base_t(value) {}
 };
 
 
-struct EdgeOnBidirectionalDummyGraph
-    : public EdgeOnGraph<EdgeOnBidirectionalDummyGraph, detail::BidirectionalGraph>
+struct EdgeOnDummyGraph : public halco::common::detail::BaseType<EdgeOnDummyGraph, size_t>
 {
-	EdgeOnBidirectionalDummyGraph(Value const& value) : EdgeOnGraph(value) {}
+	constexpr EdgeOnDummyGraph(value_type const& value = 0) : base_t(value) {}
 };
-
 
 namespace std {
 
-template <>
-struct hash<VertexOnBidirectionalDummyGraph>
-{
-	size_t operator()(VertexOnBidirectionalDummyGraph const& value) const
-	{
-		return std::hash<typename VertexOnBidirectionalDummyGraph::Base>{}(value);
-	}
-};
+HALCO_GEOMETRY_HASH_CLASS(VertexOnDummyGraph)
+HALCO_GEOMETRY_HASH_CLASS(EdgeOnDummyGraph)
 
-template <>
-struct hash<EdgeOnBidirectionalDummyGraph>
-{
-	size_t operator()(EdgeOnBidirectionalDummyGraph const& value) const
-	{
-		return std::hash<typename EdgeOnBidirectionalDummyGraph::Base>{}(value);
-	}
-};
+HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(VertexOnDummyGraph)
+HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(EdgeOnDummyGraph)
 
 } // namespace std
-
 
 struct BidirectionalDummyGraph
     : public Graph<
@@ -177,8 +159,8 @@ struct BidirectionalDummyGraph
           detail::BidirectionalGraph,
           DummyVertex,
           DummyEdge,
-          VertexOnBidirectionalDummyGraph,
-          EdgeOnBidirectionalDummyGraph,
+          VertexOnDummyGraph,
+          EdgeOnDummyGraph,
           std::unique_ptr>
 {};
 
@@ -220,7 +202,7 @@ TEST(BidirectionalGraph, General)
 	EXPECT_NE(graph.get(vertex_on_graph_2), vertex_2);
 	graph.set(vertex_on_graph_2, vertex_2);
 
-	std::unordered_set<VertexOnBidirectionalDummyGraph> vertices;
+	std::unordered_set<VertexOnDummyGraph> vertices;
 	for (auto const& vertex : boost::make_iterator_range(graph.vertices())) {
 		vertices.insert(vertex);
 	}
@@ -267,7 +249,7 @@ TEST(BidirectionalGraph, General)
 	EXPECT_EQ(graph.get(edge_on_graph_2), edge_2_2);
 	graph.set(edge_on_graph_2, edge_2);
 
-	std::unordered_set<EdgeOnBidirectionalDummyGraph> edges;
+	std::unordered_set<EdgeOnDummyGraph> edges;
 	for (auto const& edge : boost::make_iterator_range(graph.edges())) {
 		edges.insert(edge);
 	}
@@ -275,7 +257,7 @@ TEST(BidirectionalGraph, General)
 	EXPECT_TRUE(edges.contains(edge_on_graph_1));
 	EXPECT_TRUE(edges.contains(edge_on_graph_2));
 
-	std::unordered_set<VertexOnBidirectionalDummyGraph> adjacent_vertices;
+	std::unordered_set<VertexOnDummyGraph> adjacent_vertices;
 	for (auto const& vertex :
 	     boost::make_iterator_range(graph.adjacent_vertices(vertex_on_graph_1))) {
 		adjacent_vertices.insert(vertex);
@@ -283,7 +265,7 @@ TEST(BidirectionalGraph, General)
 	EXPECT_EQ(adjacent_vertices.size(), 1);
 	EXPECT_TRUE(adjacent_vertices.contains(vertex_on_graph_2));
 
-	std::unordered_set<VertexOnBidirectionalDummyGraph> inv_adjacent_vertices;
+	std::unordered_set<VertexOnDummyGraph> inv_adjacent_vertices;
 	for (auto const& vertex :
 	     boost::make_iterator_range(graph.inv_adjacent_vertices(vertex_on_graph_1))) {
 		inv_adjacent_vertices.insert(vertex);
@@ -291,21 +273,21 @@ TEST(BidirectionalGraph, General)
 	EXPECT_EQ(inv_adjacent_vertices.size(), 1);
 	EXPECT_TRUE(inv_adjacent_vertices.contains(vertex_on_graph_2));
 
-	std::unordered_set<EdgeOnBidirectionalDummyGraph> out_edges;
+	std::unordered_set<EdgeOnDummyGraph> out_edges;
 	for (auto const& edge : boost::make_iterator_range(graph.out_edges(vertex_on_graph_1))) {
 		out_edges.insert(edge);
 	}
 	EXPECT_EQ(out_edges.size(), 1);
 	EXPECT_TRUE(out_edges.contains(edge_on_graph_1));
 
-	std::unordered_set<EdgeOnBidirectionalDummyGraph> in_edges;
+	std::unordered_set<EdgeOnDummyGraph> in_edges;
 	for (auto const& edge : boost::make_iterator_range(graph.in_edges(vertex_on_graph_1))) {
 		in_edges.insert(edge);
 	}
 	EXPECT_EQ(in_edges.size(), 1);
 	EXPECT_TRUE(in_edges.contains(edge_on_graph_2));
 
-	std::unordered_set<EdgeOnBidirectionalDummyGraph> edge_range;
+	std::unordered_set<EdgeOnDummyGraph> edge_range;
 	for (auto const& edge :
 	     boost::make_iterator_range(graph.edge_range(vertex_on_graph_1, vertex_on_graph_2))) {
 		edge_range.insert(edge);
@@ -321,13 +303,13 @@ TEST(BidirectionalGraph, General)
 
 	Graph graph_copy = graph;
 
-	std::vector<VertexOnBidirectionalDummyGraph> vertices_copy;
+	std::vector<VertexOnDummyGraph> vertices_copy;
 	for (auto const& vertex : boost::make_iterator_range(graph_copy.vertices())) {
 		vertices_copy.push_back(vertex);
 	}
 	EXPECT_EQ(vertices_copy.size(), 2);
 
-	std::vector<EdgeOnBidirectionalDummyGraph> edges_copy;
+	std::vector<EdgeOnDummyGraph> edges_copy;
 	for (auto const& vertex : boost::make_iterator_range(graph_copy.edges())) {
 		edges_copy.push_back(vertex);
 	}
@@ -410,51 +392,14 @@ TEST(BidirectionalGraph, General)
 }
 
 
-struct VertexOnUndirectedDummyGraph
-    : public VertexOnGraph<VertexOnUndirectedDummyGraph, detail::UndirectedGraph>
-{
-	VertexOnUndirectedDummyGraph(Value const& value) : VertexOnGraph(value) {}
-};
-
-
-struct EdgeOnUndirectedDummyGraph
-    : public EdgeOnGraph<EdgeOnUndirectedDummyGraph, detail::UndirectedGraph>
-{
-	EdgeOnUndirectedDummyGraph(Value const& value) : EdgeOnGraph(value) {}
-};
-
-
-namespace std {
-
-template <>
-struct hash<VertexOnUndirectedDummyGraph>
-{
-	size_t operator()(VertexOnUndirectedDummyGraph const& value) const
-	{
-		return std::hash<typename VertexOnUndirectedDummyGraph::Base>{}(value);
-	}
-};
-
-template <>
-struct hash<EdgeOnUndirectedDummyGraph>
-{
-	size_t operator()(EdgeOnUndirectedDummyGraph const& value) const
-	{
-		return std::hash<typename EdgeOnUndirectedDummyGraph::Base>{}(value);
-	}
-};
-
-} // namespace std
-
-
 struct UndirectedDummyGraph
     : public Graph<
           UndirectedDummyGraph,
           detail::UndirectedGraph,
           DummyVertex,
           DummyEdge,
-          VertexOnUndirectedDummyGraph,
-          EdgeOnUndirectedDummyGraph,
+          VertexOnDummyGraph,
+          EdgeOnDummyGraph,
           std::unique_ptr>
 {};
 
@@ -496,7 +441,7 @@ TEST(UndirectedGraph, General)
 	EXPECT_NE(graph.get(vertex_on_graph_2), vertex_2);
 	graph.set(vertex_on_graph_2, vertex_2);
 
-	std::unordered_set<VertexOnUndirectedDummyGraph> vertices;
+	std::unordered_set<VertexOnDummyGraph> vertices;
 	for (auto const& vertex : boost::make_iterator_range(graph.vertices())) {
 		vertices.insert(vertex);
 	}
@@ -529,14 +474,14 @@ TEST(UndirectedGraph, General)
 	EXPECT_EQ(graph.get(edge_on_graph_1), edge_1_2);
 	graph.set(edge_on_graph_1, edge_1);
 
-	std::unordered_set<EdgeOnUndirectedDummyGraph> edges;
+	std::unordered_set<EdgeOnDummyGraph> edges;
 	for (auto const& edge : boost::make_iterator_range(graph.edges())) {
 		edges.insert(edge);
 	}
 	EXPECT_EQ(edges.size(), 1);
 	EXPECT_TRUE(edges.contains(edge_on_graph_1));
 
-	std::unordered_set<VertexOnUndirectedDummyGraph> adjacent_vertices;
+	std::unordered_set<VertexOnDummyGraph> adjacent_vertices;
 	for (auto const& vertex :
 	     boost::make_iterator_range(graph.adjacent_vertices(vertex_on_graph_1))) {
 		adjacent_vertices.insert(vertex);
@@ -544,7 +489,7 @@ TEST(UndirectedGraph, General)
 	EXPECT_EQ(adjacent_vertices.size(), 1);
 	EXPECT_TRUE(adjacent_vertices.contains(vertex_on_graph_2));
 
-	std::unordered_set<VertexOnUndirectedDummyGraph> inv_adjacent_vertices;
+	std::unordered_set<VertexOnDummyGraph> inv_adjacent_vertices;
 	for (auto const& vertex :
 	     boost::make_iterator_range(graph.inv_adjacent_vertices(vertex_on_graph_1))) {
 		inv_adjacent_vertices.insert(vertex);
@@ -552,21 +497,21 @@ TEST(UndirectedGraph, General)
 	EXPECT_EQ(inv_adjacent_vertices.size(), 1);
 	EXPECT_TRUE(inv_adjacent_vertices.contains(vertex_on_graph_2));
 
-	std::unordered_set<EdgeOnUndirectedDummyGraph> out_edges;
+	std::unordered_set<EdgeOnDummyGraph> out_edges;
 	for (auto const& edge : boost::make_iterator_range(graph.out_edges(vertex_on_graph_1))) {
 		out_edges.insert(edge);
 	}
 	EXPECT_EQ(out_edges.size(), 1);
 	EXPECT_TRUE(out_edges.contains(edge_on_graph_1));
 
-	std::unordered_set<EdgeOnUndirectedDummyGraph> in_edges;
+	std::unordered_set<EdgeOnDummyGraph> in_edges;
 	for (auto const& edge : boost::make_iterator_range(graph.in_edges(vertex_on_graph_1))) {
 		in_edges.insert(edge);
 	}
 	EXPECT_EQ(in_edges.size(), 1);
 	EXPECT_TRUE(in_edges.contains(edge_on_graph_1));
 
-	std::unordered_set<EdgeOnUndirectedDummyGraph> edge_range;
+	std::unordered_set<EdgeOnDummyGraph> edge_range;
 	for (auto const& edge :
 	     boost::make_iterator_range(graph.edge_range(vertex_on_graph_1, vertex_on_graph_2))) {
 		edge_range.insert(edge);
@@ -582,13 +527,13 @@ TEST(UndirectedGraph, General)
 
 	Graph graph_copy = graph;
 
-	std::vector<VertexOnUndirectedDummyGraph> vertices_copy;
+	std::vector<VertexOnDummyGraph> vertices_copy;
 	for (auto const& vertex : boost::make_iterator_range(graph_copy.vertices())) {
 		vertices_copy.push_back(vertex);
 	}
 	EXPECT_EQ(vertices_copy.size(), 2);
 
-	std::vector<EdgeOnUndirectedDummyGraph> edges_copy;
+	std::vector<EdgeOnDummyGraph> edges_copy;
 	for (auto const& vertex : boost::make_iterator_range(graph_copy.edges())) {
 		edges_copy.push_back(vertex);
 	}
@@ -694,8 +639,8 @@ TEST(Graph, Move)
 	graph.add_edge(vertex_on_graph_2, vertex_on_graph_3, edge_2);
 
 
-	std::unordered_set<VertexOnUndirectedDummyGraph> vertices;
-	std::unordered_set<EdgeOnUndirectedDummyGraph> edges;
+	std::unordered_set<VertexOnDummyGraph> vertices;
+	std::unordered_set<EdgeOnDummyGraph> edges;
 	for (auto const& vertex : boost::make_iterator_range(graph.vertices())) {
 		vertices.insert(vertex);
 	}

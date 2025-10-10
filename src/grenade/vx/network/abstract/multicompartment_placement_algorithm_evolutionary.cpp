@@ -43,13 +43,18 @@ void PlacementAlgorithmEvolutionary::construct_neuron(size_t result_index, size_
 	CompartmentConnectionConductance connection_temp;
 	for (size_t x = 0; x < x_max && x < 128 - 1; x++) {
 		for (size_t y = 0; y < 2; y++) {
+			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment ||
+			    !result_temp.coordinate_system.coordinate_system[y][x + 1].compartment) {
+				continue;
+			}
 			if (result_temp.coordinate_system.connected_right_shared(x, y) &&
 			    !neuron_constructed.neighbour(
-			        result_temp.coordinate_system.coordinate_system[y][x].compartment,
-			        result_temp.coordinate_system.coordinate_system[y][x + 1].compartment)) {
+			        result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
+			        result_temp.coordinate_system.coordinate_system[y][x + 1]
+			            .compartment.value())) {
 				neuron_constructed.add_compartment_connection(
-				    result_temp.coordinate_system.coordinate_system[y][x].compartment,
-				    result_temp.coordinate_system.coordinate_system[y][x + 1].compartment,
+				    result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
+				    result_temp.coordinate_system.coordinate_system[y][x + 1].compartment.value(),
 				    connection_temp);
 			}
 		}
@@ -197,10 +202,13 @@ bool PlacementAlgorithmEvolutionary::valid(
 	CompartmentConnectionConductance connection_temp;
 	for (size_t x = 0; x < x_max && x < 128 - 1; x++) {
 		for (size_t y = 0; y < 2; y++) {
+			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment) {
+				continue;
+			}
 			if (result_temp.coordinate_system.connected_left_shared(x, y)) {
 				neuron_constructed.add_compartment_connection(
-				    result_temp.coordinate_system.coordinate_system[y][x].compartment,
-				    result_temp.coordinate_system.coordinate_system[y][x].compartment,
+				    result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
+				    result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
 				    connection_temp);
 			}
 		}
@@ -221,9 +229,12 @@ bool PlacementAlgorithmEvolutionary::valid(
 	// Assing correct compartment-IDs to coordinate system
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
+			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment) {
+				continue;
+			}
 			result_temp.coordinate_system.coordinate_system[y][x].compartment =
-			    isomorphism
-			        .second[result_temp.coordinate_system.coordinate_system[y][x].compartment];
+			    isomorphism.second[result_temp.coordinate_system.coordinate_system[y][x]
+			                           .compartment.value()];
 		}
 	}
 

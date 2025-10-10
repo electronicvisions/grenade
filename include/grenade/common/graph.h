@@ -1,14 +1,17 @@
 #pragma once
+#include "dapr/auto_key_map.h"
+#include "dapr/map.h"
 #include "dapr/property.h"
 #include "dapr/property_holder.h"
-#include "grenade/common/detail/constructor_transform.h"
+#include "grenade/common/detail/descriptor_transform.h"
 #include "grenade/common/detail/graph.h"
-#include "grenade/common/edge_on_graph.h"
 #include "grenade/common/genpybind.h"
-#include "grenade/common/vertex_on_graph.h"
+#include "halco/common/traits.h"
 #include "hate/visibility.h"
 #include <memory>
 #include <unordered_map>
+#include <boost/bimap.hpp>
+#include <boost/bimap/set_of.hpp>
 #include <boost/graph/connected_components.hpp>
 #include <boost/graph/isomorphism.hpp>
 #include <boost/graph/vf2_sub_graph_iso.hpp>
@@ -228,27 +231,27 @@ struct SYMBOL_VISIBLE Graph
 	void set(EdgeDescriptor const& descriptor, Edge&& vertex) GENPYBIND(hidden);
 
 	typedef boost::transform_iterator<
-	    typename detail::ConstructorTransform<VertexDescriptor>,
+	    typename detail::DescriptorTransform<VertexDescriptor, typename Backend::vertex_descriptor>,
 	    typename Backend::vertex_iterator>
 	    VertexIterator;
 	typedef boost::transform_iterator<
-	    typename detail::ConstructorTransform<VertexDescriptor>,
+	    typename detail::DescriptorTransform<VertexDescriptor, typename Backend::vertex_descriptor>,
 	    typename Backend::adjacency_iterator>
 	    AdjacencyIterator;
 	typedef boost::transform_iterator<
-	    typename detail::ConstructorTransform<VertexDescriptor>,
+	    typename detail::DescriptorTransform<VertexDescriptor, typename Backend::vertex_descriptor>,
 	    typename Backend::inv_adjacency_iterator>
 	    InvAdjacencyIterator;
 	typedef boost::transform_iterator<
-	    typename detail::ConstructorTransform<EdgeDescriptor>,
+	    typename detail::DescriptorTransform<EdgeDescriptor, typename Backend::edge_descriptor>,
 	    typename Backend::edge_iterator>
 	    EdgeIterator;
 	typedef boost::transform_iterator<
-	    typename detail::ConstructorTransform<EdgeDescriptor>,
+	    typename detail::DescriptorTransform<EdgeDescriptor, typename Backend::edge_descriptor>,
 	    typename Backend::out_edge_iterator>
 	    OutEdgeIterator;
 	typedef boost::transform_iterator<
-	    typename detail::ConstructorTransform<EdgeDescriptor>,
+	    typename detail::DescriptorTransform<EdgeDescriptor, typename Backend::edge_descriptor>,
 	    typename Backend::in_edge_iterator>
 	    InEdgeIterator;
 
@@ -399,7 +402,7 @@ struct SYMBOL_VISIBLE Graph
 	/**
 	 * Return Mapping of Vertex Descriptors to indices
 	 */
-	std::map<typename VertexDescriptor::Value, size_t> get_vertex_index_map() const;
+	std::map<VertexDescriptor, size_t> get_vertex_index_map() const;
 
 	/**
 	 * Return one possible mapping of vertices of compared graphs.
@@ -437,16 +440,9 @@ struct SYMBOL_VISIBLE Graph
 	    Graph const& other, Callback&& callback, VertexEquivalent&& vertex_equivalent) const;
 
 	/**
-	 * Get whether graphs are equal except their descriptors.
-	 * This is the case exactly if all vertex and edge properties are equal and in the same order as
-	 * well as the edges connect the same vertices in the same order.
-	 */
-	bool equal_except_descriptors(Graph const& other) const;
-
-	/**
 	 * Get whether graphs are equal.
 	 * This is the case exactly if all vertex descriptors and properties as well as all edge
-	 * properties match in order and the edges connect the same vertices.
+	 * descriptors and properties match in order and the edges connect the same vertices.
 	 */
 	bool operator==(Graph const& other) const;
 	bool operator!=(Graph const& other) const;
@@ -454,8 +450,18 @@ struct SYMBOL_VISIBLE Graph
 private:
 	Backend& backend() const;
 	std::unique_ptr<Backend> m_backend;
-	std::unordered_map<VertexDescriptor, dapr::PropertyHolder<Vertex, Holder>> m_vertices;
-	std::unordered_map<EdgeDescriptor, dapr::PropertyHolder<Edge, Holder>> m_edges;
+	dapr::AutoKeyMap<VertexDescriptor, Vertex, dapr::Map<VertexDescriptor, Vertex, Holder>>
+	    m_vertices;
+	dapr::AutoKeyMap<EdgeDescriptor, Edge, dapr::Map<EdgeDescriptor, Edge, Holder>> m_edges;
+
+	boost::bimap<
+	    boost::bimaps::set_of<VertexDescriptor>,
+	    boost::bimaps::set_of<typename Backend::vertex_descriptor>>
+	    m_vertex_descriptors;
+	boost::bimap<
+	    boost::bimaps::set_of<EdgeDescriptor>,
+	    boost::bimaps::set_of<typename Backend::edge_descriptor>>
+	    m_edge_descriptors;
 
 	void check_contains(VertexDescriptor const& descriptor, char const* description) const;
 	void check_contains(EdgeDescriptor const& descriptor, char const* description) const;
@@ -463,8 +469,13 @@ private:
 	void is_connected_rec(
 	    VertexDescriptor const& vertex, std::set<VertexDescriptor>& marked_vertices) const;
 
-	static_assert(std::is_base_of_v<VertexOnGraph<VertexDescriptor, Backend>, VertexDescriptor>);
-	static_assert(std::is_base_of_v<EdgeOnGraph<EdgeDescriptor, Backend>, EdgeDescriptor>);
+	std::map<typename Backend::vertex_descriptor, size_t> get_backend_vertex_index_map() const;
+
+	// TODO: unsafe to check for base_t
+	static_assert(halco::common::detail::IsBaseType<typename VertexDescriptor::base_t>::value);
+	static_assert(std::is_same_v<typename VertexDescriptor::value_type, size_t>);
+	static_assert(halco::common::detail::IsBaseType<typename EdgeDescriptor::base_t>::value);
+	static_assert(std::is_same_v<typename EdgeDescriptor::value_type, size_t>);
 	static_assert(detail::IsSupportedGraph<Backend>::value);
 };
 

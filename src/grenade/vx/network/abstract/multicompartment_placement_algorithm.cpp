@@ -14,14 +14,18 @@ bool PlacementAlgorithm::valid(
 	// Iterate over CoordinateSystem
 	for (int y = 0; y < 2; y++) {
 		for (int x = 0; x < 255; x++) {
+			if (!configuration.coordinate_system[y][x].compartment) {
+				continue;
+			}
 			if (configuration_compartments.find(
-			        configuration.coordinate_system[y][x].compartment) !=
+			        configuration.coordinate_system[y][x].compartment.value()) !=
 			    configuration_compartments.end()) {
-				configuration_compartments[configuration.coordinate_system[y][x].compartment] +=
+				configuration_compartments[configuration.coordinate_system[y][x]
+				                               .compartment.value()] +=
 				    NumberTopBottom(1, 1 - y, y);
-			} else if (configuration.coordinate_system[y][x].compartment != CompartmentOnNeuron()) {
+			} else if (configuration.coordinate_system[y][x].compartment) {
 				configuration_compartments.emplace(
-				    configuration.coordinate_system[y][x].compartment,
+				    configuration.coordinate_system[y][x].compartment.value(),
 				    NumberTopBottom(1, 1 - y, y));
 			}
 		}
@@ -84,7 +88,7 @@ bool PlacementAlgorithm::valid(
 				for (auto j = neuron_constructed.adjacent_compartments(id_map[key]).first;
 				     j != neuron_constructed.adjacent_compartments(id_map[key]).second; j++) {
 					if (*j == id_map[configuration.coordinate_system[i.second][i.first + 1]
-					                     .compartment]) {
+					                     .compartment.value()]) {
 						connected = true;
 						break;
 					}
@@ -93,7 +97,8 @@ bool PlacementAlgorithm::valid(
 					CompartmentConnectionConductance connection;
 					neuron_constructed.add_compartment_connection(
 					    id_map[key],
-					    id_map[configuration.coordinate_system[i.second][i.first + 1].compartment],
+					    id_map[configuration.coordinate_system[i.second][i.first + 1]
+					               .compartment.value()],
 					    connection);
 				}
 			}
@@ -112,7 +117,7 @@ bool PlacementAlgorithm::valid(
 				for (auto j = neuron_constructed.adjacent_compartments(id_map[key]).first;
 				     j != neuron_constructed.adjacent_compartments(id_map[key]).second; j++) {
 					if (*j == id_map[configuration.coordinate_system[i.second][i.first - 1]
-					                     .compartment]) {
+					                     .compartment.value()]) {
 						connected = true;
 						break;
 					}
@@ -121,7 +126,8 @@ bool PlacementAlgorithm::valid(
 					CompartmentConnectionConductance connection;
 					neuron_constructed.add_compartment_connection(
 					    id_map[key],
-					    id_map[configuration.coordinate_system[i.second][i.first - 1].compartment],
+					    id_map[configuration.coordinate_system[i.second][i.first - 1]
+					               .compartment.value()],
 					    connection);
 				}
 			}

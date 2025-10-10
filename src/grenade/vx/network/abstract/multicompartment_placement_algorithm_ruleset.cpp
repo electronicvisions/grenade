@@ -177,8 +177,12 @@ void PlacementAlgorithmRuleset::add_additional_resources(
 	} else if (y == 0) {
 		additional_resources[coordinates.coordinate_system[y][x].compartment].number_top++;
 	}
-	std::cout << "additional_resources_compartments.push_back: "
-	          << coordinates.coordinate_system[y][x].compartment << std::endl;
+	std::cout << "additional_resources_compartments.push_back: ";
+	if (coordinates.coordinate_system[y][x].compartment) {
+		std::cout << coordinates.coordinate_system[y][x].compartment.value() << std::endl;
+	} else {
+		std::cout << "None" << std::endl;
+	}
 	additional_resources_compartments.push_back(coordinates.coordinate_system[y][x].compartment);
 }
 
@@ -225,14 +229,14 @@ void PlacementAlgorithmRuleset::place_simple_right(
 	bool overlap = 0;
 	// Start at x_start and place to right in top row (only bottom if requested explicitly)
 	for (int j = x_start; j < x_start + num_top; j++) {
-		if (coordinate_system.coordinate_system[0][j].compartment != CompartmentOnNeuron(0)) {
+		if (coordinate_system.coordinate_system[0][j].compartment) {
 			add_additional_resources(coordinate_system, x_start, 1);
 			overlap = 1;
 		}
 		coordinate_system.set_compartment(j, 0, temp_compartment);
 	}
 	for (int j = x_start; j < x_start + num_bottom; j++) {
-		if (coordinate_system.coordinate_system[1][j].compartment != CompartmentOnNeuron(0)) {
+		if (coordinate_system.coordinate_system[1][j].compartment) {
 			add_additional_resources(coordinate_system, x_start, 0);
 			overlap = 1;
 		}
@@ -240,11 +244,12 @@ void PlacementAlgorithmRuleset::place_simple_right(
 	}
 	if (num_total > num_bottom + num_top) {
 		for (int j = x_start + num_top; j < x_start + num_total - num_bottom; j++) {
-			if (coordinate_system.coordinate_system[y][j].compartment != CompartmentOnNeuron()) {
+			if (coordinate_system.coordinate_system[y][j].compartment) {
 				add_additional_resources(coordinate_system, x_start, 1 - y);
 				overlap = 1;
 				std::cout << "Overlap total: " << j << " , " << y
-				          << coordinate_system.coordinate_system[y][j].compartment << std::endl;
+				          << coordinate_system.coordinate_system[y][j].compartment.value()
+				          << std::endl;
 			}
 			coordinate_system.set_compartment(j, y, temp_compartment);
 		}
@@ -302,14 +307,14 @@ void PlacementAlgorithmRuleset::place_simple_left(
 	bool overlap = 0;
 	// Start at x_start and place to left in top row (only bottom if requested explicitly)
 	for (int j = x_start; j > x_start - num_top; j--) {
-		if (coordinate_system.coordinate_system[0][j].compartment != CompartmentOnNeuron()) {
+		if (coordinate_system.coordinate_system[0][j].compartment) {
 			add_additional_resources(coordinate_system, x_start, 1);
 			overlap = 1;
 		}
 		coordinate_system.set_compartment(j, 0, temp_compartment);
 	}
 	for (int j = x_start; j > x_start - num_bottom; j--) {
-		if (coordinate_system.coordinate_system[1][j].compartment != CompartmentOnNeuron()) {
+		if (coordinate_system.coordinate_system[1][j].compartment) {
 			add_additional_resources(coordinate_system, x_start, 0);
 			overlap = 1;
 		}
@@ -317,7 +322,7 @@ void PlacementAlgorithmRuleset::place_simple_left(
 	}
 	if (num_total > num_bottom + num_top) {
 		for (int j = x_start - num_top; j > x_start - num_total + num_bottom; j--) {
-			if (coordinate_system.coordinate_system[y][j].compartment != CompartmentOnNeuron()) {
+			if (coordinate_system.coordinate_system[y][j].compartment) {
 				add_additional_resources(coordinate_system, x_start, 1 - y);
 				overlap = 1;
 			}
@@ -380,11 +385,10 @@ void PlacementAlgorithmRuleset::place_bridge_right(
 	          << std::endl;
 
 	// Check for overlap
-	if (coordinate_system.coordinate_system[0][x_start].compartment != CompartmentOnNeuron()) {
+	if (coordinate_system.coordinate_system[0][x_start].compartment) {
 		add_additional_resources(coordinate_system, x_start, 0);
 		throw std::logic_error("Overlap during Bridge Placement");
-	} else if (
-	    coordinate_system.coordinate_system[1][x_start].compartment != CompartmentOnNeuron()) {
+	} else if (coordinate_system.coordinate_system[1][x_start].compartment) {
 		add_additional_resources(coordinate_system, x_start, 0);
 		throw std::logic_error("Overlap during Bridge Placement");
 	}
@@ -523,11 +527,10 @@ void PlacementAlgorithmRuleset::place_bridge_left(
 	          << std::endl;
 
 	// Check for overlap
-	if (coordinate_system.coordinate_system[0][x_start].compartment != CompartmentOnNeuron()) {
+	if (coordinate_system.coordinate_system[0][x_start].compartment) {
 		add_additional_resources(coordinate_system, x_start, 0);
 		throw std::logic_error("Overlap during Bridge Placement");
-	} else if (
-	    coordinate_system.coordinate_system[1][x_start].compartment != CompartmentOnNeuron()) {
+	} else if (coordinate_system.coordinate_system[1][x_start].compartment) {
 		add_additional_resources(coordinate_system, x_start, 0);
 		throw std::logic_error("Overlap during Bridge Placement");
 	}
@@ -732,11 +735,11 @@ AlgorithmResult PlacementAlgorithmRuleset::connect_leafs(
 	// Top Right Connection
 	for (auto i = neuron
 	                  .adjacent_compartments(
-	                      coordinate_system.coordinate_system[0][x_pos_top + 1].compartment)
+	                      coordinate_system.coordinate_system[0][x_pos_top + 1].compartment.value())
 	                  .first;
 	     i != neuron
 	              .adjacent_compartments(
-	                  coordinate_system.coordinate_system[0][x_pos_top + 1].compartment)
+	                  coordinate_system.coordinate_system[0][x_pos_top + 1].compartment.value())
 	              .second;
 	     i++) {
 		if (*i == compartment_node) {
@@ -748,11 +751,11 @@ AlgorithmResult PlacementAlgorithmRuleset::connect_leafs(
 	// Top Left Connection
 	for (auto i = neuron
 	                  .adjacent_compartments(
-	                      coordinate_system.coordinate_system[0][x_pos_top - 1].compartment)
+	                      coordinate_system.coordinate_system[0][x_pos_top - 1].compartment.value())
 	                  .first;
 	     i != neuron
 	              .adjacent_compartments(
-	                  coordinate_system.coordinate_system[0][x_pos_top - 1].compartment)
+	                  coordinate_system.coordinate_system[0][x_pos_top - 1].compartment.value())
 	              .second;
 	     i++) {
 		if (*i == compartment_node) {
@@ -762,13 +765,14 @@ AlgorithmResult PlacementAlgorithmRuleset::connect_leafs(
 		}
 	}
 	// Bottom Right Connection
-	for (auto i = neuron
-	                  .adjacent_compartments(
-	                      coordinate_system.coordinate_system[1][x_pos_bottom + 1].compartment)
-	                  .first;
+	for (auto i =
+	         neuron
+	             .adjacent_compartments(
+	                 coordinate_system.coordinate_system[1][x_pos_bottom + 1].compartment.value())
+	             .first;
 	     i != neuron
 	              .adjacent_compartments(
-	                  coordinate_system.coordinate_system[1][x_pos_bottom + 1].compartment)
+	                  coordinate_system.coordinate_system[1][x_pos_bottom + 1].compartment.value())
 	              .second;
 	     i++) {
 		if (*i == compartment_node) {
@@ -778,13 +782,14 @@ AlgorithmResult PlacementAlgorithmRuleset::connect_leafs(
 		}
 	}
 	// Bottom Left Connection
-	for (auto i = neuron
-	                  .adjacent_compartments(
-	                      coordinate_system.coordinate_system[1][x_pos_bottom - 1].compartment)
-	                  .first;
+	for (auto i =
+	         neuron
+	             .adjacent_compartments(
+	                 coordinate_system.coordinate_system[1][x_pos_bottom - 1].compartment.value())
+	             .first;
 	     i != neuron
 	              .adjacent_compartments(
-	                  coordinate_system.coordinate_system[1][x_pos_bottom - 1].compartment)
+	                  coordinate_system.coordinate_system[1][x_pos_bottom - 1].compartment.value())
 	              .second;
 	     i++) {
 		if (*i == compartment_node) {
@@ -971,8 +976,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 						          << ", LTU: " << limit_top.upper << std::endl;
 
 						// Try place Top Right
-						if (result.coordinate_system.coordinate_system[0][x_limit_upper_top + 1]
-						        .compartment == CompartmentOnNeuron()) {
+						if (!result.coordinate_system.coordinate_system[0][x_limit_upper_top + 1]
+						         .compartment) {
 							std::cout << std::endl
 							          << "Placing next top right: " << temp_compartment
 							          << std::endl;
@@ -983,9 +988,9 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 							break;
 						}
 						// Try place Top Left
-						else if (
-						    result.coordinate_system.coordinate_system[0][x_limit_lower_top - 1]
-						        .compartment == CompartmentOnNeuron()) {
+						else if (!result.coordinate_system
+						              .coordinate_system[0][x_limit_lower_top - 1]
+						              .compartment) {
 							std::cout << std::endl
 							          << "Placing next top left: " << temp_compartment << std::endl;
 							place_simple_left(
@@ -1008,8 +1013,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 
 						// Try place Bottom Right
 						if (!placed &&
-						    result.coordinate_system.coordinate_system[1][x_limit_upper_bottom + 1]
-						            .compartment == CompartmentOnNeuron()) {
+						    !result.coordinate_system.coordinate_system[1][x_limit_upper_bottom + 1]
+						         .compartment) {
 							std::cout << std::endl
 							          << "Placing next bottom right: " << temp_compartment
 							          << std::endl;
@@ -1022,8 +1027,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 						// Try place Bottom Left
 						else if (
 						    !placed &&
-						    result.coordinate_system.coordinate_system[1][x_limit_lower_bottom - 1]
-						            .compartment == CompartmentOnNeuron()) {
+						    !result.coordinate_system.coordinate_system[1][x_limit_lower_bottom - 1]
+						         .compartment) {
 							std::cout << std::endl
 							          << "Placing next bottom left: " << temp_compartment
 							          << std::endl;
@@ -1051,9 +1056,13 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 				std::cout << "Catch Overlap" << std::endl;
 				std::cout << "additional_resources_compartments.size()= "
 				          << additional_resources_compartments.size() << std::endl;
-				std::cout << "additional_resources_compartments.back()"
-				          << additional_resources_compartments.back()
-				          << additional_resources[additional_resources_compartments.back()]
+				std::cout << "additional_resources_compartments.back()";
+				if (additional_resources_compartments.back()) {
+					std::cout << *additional_resources_compartments.back();
+				} else {
+					std::cout << "None";
+				}
+				std::cout << additional_resources[additional_resources_compartments.back()]
 				          << std::endl;
 				bool remove = 0;
 				for (std::vector<AlgorithmResult>::iterator it = m_results.begin();

@@ -34,7 +34,8 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		// Number of unmappable vertices
 		size_t unmapped_vertices = 0;
 		for (auto vertex : boost::make_iterator_range(other.vertices())) {
-			if (boost::get(f, vertex.value()) == detail::UndirectedGraph::null_vertex()) {
+			if (boost::get(f, other.m_vertex_descriptors.left.at(vertex)) ==
+			    detail::UndirectedGraph::null_vertex()) {
 				unmapped_vertices++;
 			}
 		}
@@ -43,8 +44,10 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		vertex_mapping.clear();
 		vertex_mapping_reverse.clear();
 		for (auto vertex : boost::make_iterator_range(other.vertices())) {
-			vertex_mapping[vertex] = VertexDescriptor(boost::get(f, vertex.value()));
-			vertex_mapping_reverse[VertexDescriptor(boost::get(f, vertex.value()))] = vertex;
+			vertex_mapping[vertex] = VertexDescriptor(m_vertex_descriptors.right.at(
+			    boost::get(f, other.m_vertex_descriptors.left.at(vertex))));
+			vertex_mapping_reverse[VertexDescriptor(m_vertex_descriptors.right.at(
+			    boost::get(f, other.m_vertex_descriptors.left.at(vertex))))] = vertex;
 		}
 
 		// Adjusts smallest number of unmappable vertices for all callbacks.
@@ -63,19 +66,28 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		}
 	};
 
-	std::vector<typename VertexDescriptor::Value> vertex_order;
+	auto const backend_vertex_equivalent =
+	    [vertex_equivalent, this, other](
+	        typename Backend::vertex_descriptor const& descriptor,
+	        typename Backend::vertex_descriptor const& other_descriptor) {
+		    return vertex_equivalent(
+		        m_vertex_descriptors.right.at(descriptor),
+		        other.m_vertex_descriptors.right.at(other_descriptor));
+	    };
+
+	std::vector<typename Backend::vertex_descriptor> vertex_order;
 	for (auto vertex : boost::make_iterator_range(other.vertices())) {
-		vertex_order.push_back(vertex.value());
+		vertex_order.push_back(other.m_vertex_descriptors.left.at(vertex));
 	}
 
-	auto vertex_index_map_this = get_vertex_index_map();
-	auto vertex_index_map_other = other.get_vertex_index_map();
+	auto vertex_index_map_this = get_backend_vertex_index_map();
+	auto vertex_index_map_other = other.get_backend_vertex_index_map();
 
 	boost::vf2_graph_iso(
 	    other.backend(), backend(), vertex_mapping_callback, vertex_order,
 	    boost::vertex_index1_map(boost::make_assoc_property_map(vertex_index_map_other))
 	        .vertex_index2_map(boost::make_assoc_property_map(vertex_index_map_this))
-	        .vertices_equivalent(vertex_equivalent));
+	        .vertices_equivalent(backend_vertex_equivalent));
 }
 template <
     typename Derived,
@@ -109,7 +121,8 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		// Number of unmappable vertices
 		size_t unmapped_vertices = 0;
 		for (auto vertex : boost::make_iterator_range(other.vertices())) {
-			if (boost::get(f, vertex.value()) == detail::UndirectedGraph::null_vertex()) {
+			if (boost::get(f, other.m_vertex_descriptors.left.at(vertex)) ==
+			    detail::UndirectedGraph::null_vertex()) {
 				unmapped_vertices++;
 			}
 		}
@@ -118,8 +131,10 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		vertex_mapping.clear();
 		vertex_mapping_reverse.clear();
 		for (auto vertex : boost::make_iterator_range(other.vertices())) {
-			vertex_mapping[vertex] = VertexDescriptor(boost::get(f, vertex.value()));
-			vertex_mapping_reverse[VertexDescriptor(boost::get(f, vertex.value()))] = vertex;
+			vertex_mapping[vertex] = VertexDescriptor(m_vertex_descriptors.right.at(
+			    boost::get(f, other.m_vertex_descriptors.left.at(vertex))));
+			vertex_mapping_reverse[VertexDescriptor(m_vertex_descriptors.right.at(
+			    boost::get(f, other.m_vertex_descriptors.left.at(vertex))))] = vertex;
 		}
 
 		// Adjusts smallest number of unmappable vertices for all callbacks.
@@ -138,18 +153,27 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		}
 	};
 
-	std::vector<typename VertexDescriptor::Value> vertex_order;
+	auto const backend_vertex_equivalent =
+	    [vertex_equivalent, this, other](
+	        typename Backend::vertex_descriptor const& descriptor,
+	        typename Backend::vertex_descriptor const& other_descriptor) {
+		    return vertex_equivalent(
+		        m_vertex_descriptors.right.at(descriptor),
+		        other.m_vertex_descriptors.right.at(other_descriptor));
+	    };
+
+	std::vector<typename Backend::vertex_descriptor> vertex_order;
 	for (auto vertex : boost::make_iterator_range(other.vertices())) {
-		vertex_order.push_back(vertex.value());
+		vertex_order.push_back(other.m_vertex_descriptors.left.at(vertex));
 	}
 
-	auto vertex_index_map_this = get_vertex_index_map();
-	auto vertex_index_map_other = other.get_vertex_index_map();
+	auto vertex_index_map_this = get_backend_vertex_index_map();
+	auto vertex_index_map_other = other.get_backend_vertex_index_map();
 
 	boost::vf2_graph_iso(
 	    other.backend(), backend(), vertex_mapping_callback, vertex_order,
 	    boost::vertex_index1_map(boost::make_assoc_property_map(vertex_index_map_other))
 	        .vertex_index2_map(boost::make_assoc_property_map(vertex_index_map_this))
-	        .vertices_equivalent(vertex_equivalent));
+	        .vertices_equivalent(backend_vertex_equivalent));
 }
 } // namespace grenade::common

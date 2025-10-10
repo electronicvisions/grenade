@@ -6,7 +6,7 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct GENPYBIND(visible) NeuronCircuit : public UnplacedNeuronCircuit
 {
-	CompartmentOnNeuron compartment;
+	std::optional<CompartmentOnNeuron> compartment;
 
 	NeuronCircuit() = default;
 };

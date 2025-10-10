@@ -30,8 +30,7 @@ bool PlacementAlgorithmBruteForce::valid(
 	std::map<CompartmentOnNeuron, NumberTopBottom> resources_constructed;
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
-			if (result_temp.coordinate_system.coordinate_system[y][x].compartment ==
-			        CompartmentOnNeuron() &&
+			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment &&
 			    result_temp.coordinate_system.connected(x, y)) {
 				// Add Compartment to Neuron
 				Compartment temp_compartment;
@@ -58,13 +57,18 @@ bool PlacementAlgorithmBruteForce::valid(
 	CompartmentConnectionConductance connection_temp;
 	for (size_t x = 0; x < x_max && x < 128 - 1; x++) {
 		for (size_t y = 0; y < 2; y++) {
+			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment ||
+			    !result_temp.coordinate_system.coordinate_system[y][x + 1].compartment) {
+				continue;
+			}
 			if (result_temp.coordinate_system.connected_right_shared(x, y) &&
 			    !neuron_constructed.neighbour(
-			        result_temp.coordinate_system.coordinate_system[y][x].compartment,
-			        result_temp.coordinate_system.coordinate_system[y][x + 1].compartment)) {
+			        result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
+			        result_temp.coordinate_system.coordinate_system[y][x + 1]
+			            .compartment.value())) {
 				neuron_constructed.add_compartment_connection(
-				    result_temp.coordinate_system.coordinate_system[y][x].compartment,
-				    result_temp.coordinate_system.coordinate_system[y][x + 1].compartment,
+				    result_temp.coordinate_system.coordinate_system[y][x].compartment.value(),
+				    result_temp.coordinate_system.coordinate_system[y][x + 1].compartment.value(),
 				    connection_temp);
 			}
 		}
@@ -85,9 +89,12 @@ bool PlacementAlgorithmBruteForce::valid(
 	// Assing correct compartment-IDs to coordinate system
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
+			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment) {
+				continue;
+			}
 			result_temp.coordinate_system.coordinate_system[y][x].compartment =
-			    isomorphism
-			        .second[result_temp.coordinate_system.coordinate_system[y][x].compartment];
+			    isomorphism.second[result_temp.coordinate_system.coordinate_system[y][x]
+			                           .compartment.value()];
 		}
 	}
 

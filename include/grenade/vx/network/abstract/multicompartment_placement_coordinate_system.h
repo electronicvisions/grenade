@@ -102,7 +102,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	void set_compartment(
 	    int coordinate_x, int coordinate_y, CompartmentOnNeuron const& compartment);
 	void set_config(int x, int y, UnplacedNeuronCircuit const& neuron_circuit_config_in);
-	CompartmentOnNeuron get_compartment(int coordinate_x, int coordinate_y) const;
+	std::optional<CompartmentOnNeuron> get_compartment(int coordinate_x, int coordinate_y) const;
 	UnplacedNeuronCircuit get_config(int x, int y) const;
 
 	// Find coordinates of compartment

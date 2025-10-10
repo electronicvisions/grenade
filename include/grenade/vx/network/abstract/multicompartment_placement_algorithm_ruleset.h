@@ -203,8 +203,8 @@ private:
 	// List of IDs of placed compartments
 	std::vector<CompartmentOnNeuron> placed_compartments;
 	// List of additional required resources
-	std::map<CompartmentOnNeuron, NumberTopBottom> additional_resources;
-	std::vector<CompartmentOnNeuron> additional_resources_compartments;
+	std::map<std::optional<CompartmentOnNeuron>, NumberTopBottom> additional_resources;
+	std::vector<std::optional<CompartmentOnNeuron>> additional_resources_compartments;
 	// Results
 	std::vector<AlgorithmResult> m_results;
 };

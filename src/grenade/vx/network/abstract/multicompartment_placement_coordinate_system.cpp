@@ -30,7 +30,7 @@ void CoordinateSystem::set_config(
 	coordinate_system[y][x].get_status();
 }
 
-CompartmentOnNeuron CoordinateSystem::get_compartment(int x, int y) const
+std::optional<CompartmentOnNeuron> CoordinateSystem::get_compartment(int x, int y) const
 {
 	return coordinate_system[y][x].compartment;
 }
@@ -56,7 +56,7 @@ std::vector<std::pair<int, int>> CoordinateSystem::find_compartment(
 	std::vector<std::pair<int, int>> results;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 256; j++) {
-			const CompartmentOnNeuron temp_compartment_on_neuron =
+			const std::optional<CompartmentOnNeuron> temp_compartment_on_neuron =
 			    coordinate_system[i][j].compartment;
 			if (temp_compartment_on_neuron == compartment) {
 				results.push_back(std::pair<int, int>(j, i));
