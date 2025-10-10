@@ -122,7 +122,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/cereal/types/grenade/vx/**/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_vx', 'haldls_vx_v3_serealization', 'lola_vx_v3_serealization', 'stadls_vx_v3_serialization', 'TBB'],
+        use = ['grenade_vx', 'haldls_vx_v3_serealization', 'lola_vx_v3_serealization', 'stadls_vx_v3_serialization', 'TBB', 'grenade_common_serialization'],
         depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )

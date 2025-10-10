@@ -200,7 +200,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @throws std::out_of_range On vertex not being present in graph
 	 * @throws std::runtime_error On vertex property change yielding invalid graph
 	 */
-	void set(VertexDescriptor const& descriptor, Vertex const& vertex);
+	virtual void set(VertexDescriptor const& descriptor, Vertex const& vertex);
 
 	/**
 	 * Set vertex property.
@@ -209,7 +209,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @throws std::out_of_range On vertex not being present in graph
 	 * @throws std::runtime_error On vertex property change yielding invalid graph
 	 */
-	void set(VertexDescriptor const& descriptor, Vertex&& vertex) GENPYBIND(hidden);
+	virtual void set(VertexDescriptor const& descriptor, Vertex&& vertex) GENPYBIND(hidden);
 
 	/**
 	 * Get edge property.
@@ -221,20 +221,20 @@ struct SYMBOL_VISIBLE Graph
 	/**
 	 * Set edge property.
 	 * @param descriptor Edge descriptor
-	 * @param vertex Edge property
+	 * @param edge Edge property
 	 * @throws std::out_of_range On edge not being present in graph
 	 * @throws std::runtime_error On edge property change yielding invalid graph
 	 */
-	void set(EdgeDescriptor const& descriptor, Edge const& vertex);
+	virtual void set(EdgeDescriptor const& descriptor, Edge const& edge);
 
 	/**
 	 * Set edge property.
 	 * @param descriptor Edge descriptor
-	 * @param vertex Edge property
+	 * @param edge Edge property
 	 * @throws std::out_of_range On edge not being present in graph
 	 * @throws std::runtime_error On edge property change yielding invalid graph
 	 */
-	void set(EdgeDescriptor const& descriptor, Edge&& vertex) GENPYBIND(hidden);
+	virtual void set(EdgeDescriptor const& descriptor, Edge&& edge) GENPYBIND(hidden);
 
 	typedef boost::transform_iterator<
 	    typename detail::DescriptorTransform<VertexDescriptor, typename Backend::vertex_descriptor>,

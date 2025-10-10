@@ -4,9 +4,15 @@ GENPYBIND_TAG_GRENADE_COMMON
 GENPYBIND_MANUAL({ parent.attr("__variant__") = "pybind11"; })
 
 #include "grenade/common/connection_on_executor.h"
+#include "grenade/common/edge.h"
+#include "grenade/common/edge_on_topology.h"
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/multi_index.h"
 #include "grenade/common/multi_index_sequence.h"
 #include "grenade/common/multi_index_sequence/cartesian_product.h"
 #include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/topology.h"
+#include "grenade/common/vertex.h"
+#include "grenade/common/vertex_on_topology.h"
+#include "grenade/common/vertex_port_type.h"
