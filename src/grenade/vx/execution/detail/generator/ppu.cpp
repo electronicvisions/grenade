@@ -1,5 +1,6 @@
 #include "grenade/vx/execution/detail/generator/ppu.h"
 
+#include "grenade/vx/ppu.h"
 #include "halco/common/iter_all.h"
 #include "halco/hicann-dls/vx/v3/fpga.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
@@ -202,11 +203,13 @@ PPUPeriodicCADCRead::generate() const
 {
 	Builder builder;
 	Result result;
+	builder.push_back({});
 
 	InstructionTimeoutConfig instruction_timeout;
 	instruction_timeout.set_value(InstructionTimeoutConfig::Value(
 	    100000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
-	builder.write(halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
+	builder.back().write(
+	    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
 
 	// wait for ppu command idle
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
@@ -219,13 +222,33 @@ PPUPeriodicCADCRead::generate() const
 		polling_config.set_target(
 		    PollingOmnibusBlockConfig::Value(static_cast<uint32_t>(ppu::detail::Status::idle)));
 		polling_config.set_mask(PollingOmnibusBlockConfig::Value(0xffffffff));
-		builder.write(PollingOmnibusBlockConfigOnFPGA(), polling_config);
-		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-		builder.block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
+		builder.back().write(PollingOmnibusBlockConfigOnFPGA(), polling_config);
+		builder.back().block_until(BarrierOnFPGA(), Barrier::omnibus);
+		builder.back().block_until(PollingOmnibusBlockOnFPGA(), PollingOmnibusBlock());
 	}
 
-	builder.write(
+	builder.back().write(
 	    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), InstructionTimeoutConfig());
+
+	// wait for response data
+	builder.back().block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+
+	auto const split_coord = [](auto const& coord) {
+		std::vector<std::decay_t<decltype(coord)>> ret;
+		auto const min = coord.toMin();
+		auto const max = coord.toMax();
+		auto current = min;
+		for (; current.value() + ticket_split_size_in_bytes < max.value();
+		     current += std::decay_t<decltype(current)>(ticket_split_size_in_bytes)) {
+			ret.push_back(std::decay_t<decltype(coord)>(
+			    current,
+			    std::min(
+			        current + std::decay_t<decltype(current)>(ticket_split_size_in_bytes - 1),
+			        max)));
+		}
+		ret.push_back(std::decay_t<decltype(coord)>(current, max));
+		return ret;
+	};
 
 	// generate tickets for extmem readout of periodic cadc recording data
 	std::visit(
@@ -233,19 +256,47 @@ PPUPeriodicCADCRead::generate() const
 	        [&](ExternalPPUMemoryBlockOnFPGA const& coord_top,
 	            ExternalPPUMemoryBlockOnFPGA const& coord_bot) {
 		        if (m_used_hemispheres[HemisphereOnDLS::top]) {
-			        result.tickets[PPUOnDLS::top] = builder.read(coord_top);
+			        auto const split_coord_top = split_coord(coord_top);
+			        for (auto const& c : split_coord_top) {
+				        builder.push_back({});
+				        result.tickets[PPUOnDLS::top].push_back(builder.back().read(c));
+				        // wait for response data
+				        builder.back().block_until(
+				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			        }
 		        }
 		        if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
-			        result.tickets[PPUOnDLS::bottom] = builder.read(coord_bot);
+			        auto const split_coord_bot = split_coord(coord_bot);
+			        for (auto const& c : split_coord_bot) {
+				        builder.push_back({});
+				        result.tickets[PPUOnDLS::bottom].push_back(builder.back().read(c));
+				        // wait for response data
+				        builder.back().block_until(
+				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			        }
 		        }
 	        },
 	        [&](ExternalPPUDRAMMemoryBlockOnFPGA const& coord_top,
 	            ExternalPPUDRAMMemoryBlockOnFPGA const& coord_bot) {
 		        if (m_used_hemispheres[HemisphereOnDLS::top]) {
-			        result.tickets[PPUOnDLS::top] = builder.read(coord_top);
+			        auto const split_coord_top = split_coord(coord_top);
+			        for (auto const& c : split_coord_top) {
+				        builder.push_back({});
+				        result.tickets[PPUOnDLS::top].push_back(builder.back().read(c));
+				        // wait for response data
+				        builder.back().block_until(
+				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			        }
 		        }
 		        if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
-			        result.tickets[PPUOnDLS::bottom] = builder.read(coord_bot);
+			        auto const split_coord_bot = split_coord(coord_bot);
+			        for (auto const& c : split_coord_bot) {
+				        builder.push_back({});
+				        result.tickets[PPUOnDLS::bottom].push_back(builder.back().read(c));
+				        // wait for response data
+				        builder.back().block_until(
+				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+			        }
 		        }
 	        },
 	        [&](auto const&, auto const&) {
@@ -256,8 +307,9 @@ PPUPeriodicCADCRead::generate() const
 	    m_symbols.at("periodic_cadc_samples_bot").coordinate);
 
 	// Reset the offset, from where the PPU begins to write the recorded CADC data
+	builder.push_back({});
 	for (auto const ppu : iter_all<PPUOnDLS>()) {
-		builder.write(
+		builder.back().write(
 		    PPUMemoryWordOnDLS(
 		        std::get<PPUMemoryBlockOnPPU>(
 		            m_symbols.at("periodic_cadc_readout_memory_offset").coordinate)
@@ -267,7 +319,7 @@ PPUPeriodicCADCRead::generate() const
 	}
 
 	// wait for response data
-	builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
+	builder.back().block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 
 	return {std::move(builder), std::move(result)};
 }
