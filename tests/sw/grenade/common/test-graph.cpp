@@ -1,10 +1,10 @@
 #include "grenade/common/graph.h"
 
+#include "dapr/property.h"
 #include "grenade/common/detail/graph.h"
 #include "grenade/common/edge_on_graph.h"
 #include "grenade/common/edge_on_graph_impl.tcc"
 #include "grenade/common/graph_impl.tcc"
-#include "grenade/common/property.h"
 #include "grenade/common/vertex_on_graph.h"
 #include "grenade/common/vertex_on_graph_impl.tcc"
 #include <memory>
@@ -13,7 +13,7 @@
 using namespace grenade::common;
 
 
-struct DummyVertex : public Property<DummyVertex>
+struct DummyVertex : public dapr::Property<DummyVertex>
 {
 	int value;
 
@@ -42,7 +42,7 @@ protected:
 };
 
 
-struct DummyEdge : public Property<DummyEdge>
+struct DummyEdge : public dapr::Property<DummyEdge>
 {
 	int value;
 

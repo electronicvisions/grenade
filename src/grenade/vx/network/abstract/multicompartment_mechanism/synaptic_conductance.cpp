@@ -38,10 +38,10 @@ HardwareResourcesWithConstraints MechanismSynapticInputConductance::get_hardware
 {
 	// Return Object and Input
 	HardwareResourcesWithConstraints resources_with_constraints;
-	std::vector<common::PropertyHolder<HardwareResource>> resource_list;
-	std::vector<common::PropertyHolder<HardwareConstraint>> constraint_list;
+	std::vector<dapr::PropertyHolder<HardwareResource>> resource_list;
+	std::vector<dapr::PropertyHolder<HardwareConstraint>> constraint_list;
 
-	std::vector<common::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
+	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
 	    environment.get(compartment);
 
 	if (synaptic_inputs.size() == 0) {

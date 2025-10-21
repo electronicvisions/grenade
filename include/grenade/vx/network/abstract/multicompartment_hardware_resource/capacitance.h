@@ -6,18 +6,18 @@ namespace grenade::vx::network::abstract {
 struct HardwareResourceCapacity;
 } // namespace grenade::vx::network::abstract
 
-namespace grenade::common {
+namespace dapr {
 
-extern template struct SYMBOL_VISIBLE common::EmptyProperty<
-    vx::network::abstract::HardwareResourceCapacity,
-    vx::network::abstract::HardwareResource>;
+extern template struct SYMBOL_VISIBLE EmptyProperty<
+    grenade::vx::network::abstract::HardwareResourceCapacity,
+    grenade::vx::network::abstract::HardwareResource>;
 
-} // namespace grenade::common
+} // namespace dapr
 
 namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourceCapacity
-    : public common::EmptyProperty<HardwareResourceCapacity, HardwareResource>
+    : public dapr::EmptyProperty<HardwareResourceCapacity, HardwareResource>
 {
 	HardwareResourceCapacity() = default;
 };

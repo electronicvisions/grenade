@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grenade/common/property_holder.h"
+#include "dapr/property_holder.h"
 #include "grenade/vx/network/abstract/multicompartment_compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment_synaptic_input_environment.h"
 #include <map>
@@ -14,13 +14,13 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Environment
 	    CompartmentOnNeuron const& compartment, SynapticInputEnvironment const& synaptic_input);
 	void add(
 	    CompartmentOnNeuron const& compartment,
-	    std::vector<common::PropertyHolder<SynapticInputEnvironment>> const& synaptic_inputs);
+	    std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> const& synaptic_inputs);
 
-	std::vector<common::PropertyHolder<SynapticInputEnvironment>> get(
+	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> get(
 	    CompartmentOnNeuron const& compartment) const;
 
 private:
-	std::map<CompartmentOnNeuron, std::vector<common::PropertyHolder<SynapticInputEnvironment>>>
+	std::map<CompartmentOnNeuron, std::vector<dapr::PropertyHolder<SynapticInputEnvironment>>>
 	    m_synaptic_connections;
 };
 

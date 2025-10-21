@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/common/property.h"
+#include "dapr/property.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
 
@@ -8,7 +8,7 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 // CompartmentConnection
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) CompartmentConnection
-    : public common::Property<CompartmentConnection>
+    : public dapr::Property<CompartmentConnection>
 {
 	CompartmentConnection() = default;
 	struct ParameterSpace

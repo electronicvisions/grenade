@@ -1,11 +1,11 @@
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource/synaptic_input_inhibitory.h"
 
-#include "grenade/common/empty_property_impl.tcc"
+#include "dapr/empty_property_impl.tcc"
 
-namespace grenade::common {
+namespace dapr {
 
 template struct EmptyProperty<
-    vx::network::abstract::HardwareResourceSynapticInputInhibitory,
-    vx::network::abstract::HardwareResource>;
+    grenade::vx::network::abstract::HardwareResourceSynapticInputInhibitory,
+    grenade::vx::network::abstract::HardwareResource>;
 
-} // namespace::grenade::common
+} // namespace dapr

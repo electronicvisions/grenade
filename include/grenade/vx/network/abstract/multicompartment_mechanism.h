@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grenade/common/property.h"
+#include "dapr/property.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment_hardware_resource.h"
 
@@ -11,7 +11,7 @@ struct Environment;
 struct CompartmentOnNeuron;
 
 // Mechanism Base-Class
-struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public common::Property<Mechanism>
+struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Property<Mechanism>
 {
 	virtual bool conflict(Mechanism const& other) const = 0;
 	virtual HardwareResourcesWithConstraints get_hardware(

@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/common/property.h"
+#include "dapr/property.h"
 #include "grenade/vx/genpybind.h"
 #include <cstddef>
 #include <ostream>
@@ -9,7 +9,7 @@ namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) NumberTopBottom
-    : public common::Property<NumberTopBottom>
+    : public dapr::Property<NumberTopBottom>
 {
 	NumberTopBottom();
 	NumberTopBottom(size_t number_total_in, size_t number_top_in, size_t number_bottom_in);

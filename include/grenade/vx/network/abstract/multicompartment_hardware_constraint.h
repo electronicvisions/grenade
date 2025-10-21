@@ -7,10 +7,10 @@
 
 namespace grenade::vx::network::abstract {
 
-struct SYMBOL_VISIBLE HardwareConstraint : common::Property<HardwareConstraint>
+struct SYMBOL_VISIBLE HardwareConstraint : dapr::Property<HardwareConstraint>
 {
 	NumberTopBottom numbers;
-	common::PropertyHolder<HardwareResource> resource;
+	dapr::PropertyHolder<HardwareResource> resource;
 
 	// Property Methods
 	std::unique_ptr<HardwareConstraint> copy() const;

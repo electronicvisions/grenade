@@ -6,16 +6,16 @@ namespace grenade::vx::network::abstract {
 struct HardwareResourceSynapticInputExitatory;
 } // namespace grenade::vx::network::abstract
 
-namespace grenade::common {
+namespace dapr {
 extern template struct SYMBOL_VISIBLE EmptyProperty<
-    vx::network::abstract::HardwareResourceSynapticInputExitatory,
-    vx::network::abstract::HardwareResource>;
-} // namespace grenade::common
+    grenade::vx::network::abstract::HardwareResourceSynapticInputExitatory,
+    grenade::vx::network::abstract::HardwareResource>;
+} // namespace dapr
 
 namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourceSynapticInputExitatory
-    : public common::EmptyProperty<HardwareResourceSynapticInputExitatory, HardwareResource>
+    : public dapr::EmptyProperty<HardwareResourceSynapticInputExitatory, HardwareResource>
 {
 	HardwareResourceSynapticInputExitatory() = default;
 };

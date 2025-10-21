@@ -83,17 +83,16 @@ TEST(multicompartment_neuron, Resources)
 	SynapticInputEnvironmentCurrent synaptic_input_current_a(true, 128);
 	SynapticInputEnvironmentCurrent synaptic_input_current_b(false, 512);
 
-	std::vector<grenade::common::PropertyHolder<SynapticInputEnvironment>>
-	    synaptic_input_on_compartment_a = {synaptic_input_current_a, synaptic_input_current_b};
+	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_input_on_compartment_a = {
+	    synaptic_input_current_a, synaptic_input_current_b};
 	environment.add(compartment_a_on_neuron, synaptic_input_on_compartment_a);
 
 	SynapticInputEnvironmentConductance synaptic_input_conductance_a(true, 700);
 	SynapticInputEnvironmentConductance synaptic_input_conductance_b(
 	    true, NumberTopBottom(200, 100, 0));
 
-	std::vector<grenade::common::PropertyHolder<SynapticInputEnvironment>>
-	    synaptic_input_on_compartment_b = {
-	        synaptic_input_conductance_a, synaptic_input_conductance_b};
+	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_input_on_compartment_b = {
+	    synaptic_input_conductance_a, synaptic_input_conductance_b};
 	environment.add(compartment_b_on_neuron, synaptic_input_on_compartment_b);
 
 

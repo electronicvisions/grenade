@@ -7,6 +7,7 @@ from waflib.extras.symwaf2ic import get_toplevel_path
 
 def depends(ctx):
     ctx('code-format')
+    ctx('dapr')
     ctx('logger')
     ctx('halco')
     ctx('haldls')
@@ -94,7 +95,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/common/**/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'halco_common', 'hate'],
+        use = ['grenade_inc', 'halco_common', 'hate', 'dapr'],
         uselib = 'GRENADE_LIBRARIES',
     )
 

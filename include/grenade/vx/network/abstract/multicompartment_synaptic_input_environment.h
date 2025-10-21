@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/common/property.h"
+#include "dapr/property.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/multicompartment_top_bottom.h"
 #include <utility>
@@ -9,7 +9,7 @@ namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
 
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) SynapticInputEnvironment
-    : public common::Property<SynapticInputEnvironment>
+    : public dapr::Property<SynapticInputEnvironment>
 {
 	SynapticInputEnvironment() = default;
 	SynapticInputEnvironment(bool exitatory, int number);
