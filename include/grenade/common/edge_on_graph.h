@@ -41,9 +41,6 @@ private:
 
 namespace std {
 
-template <typename T>
-struct hash;
-
 template <typename Derived, typename Backend>
 struct hash<grenade::common::EdgeOnGraph<Derived, Backend>>
 {
