@@ -1025,7 +1025,8 @@ std::ostream& operator<<(
 		ios << descriptor << ": " << value.get(descriptor) << "\n";
 	}
 	for (auto const descriptor : boost::make_iterator_range(value.edges())) {
-		ios << descriptor << ": " << value.get(descriptor) << "\n";
+		ios << descriptor << " (" << value.source(descriptor) << " -> " << value.target(descriptor)
+		    << "): " << value.get(descriptor) << "\n";
 	}
 	ios << hate::Indentation();
 	ios << ")";
