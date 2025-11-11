@@ -115,7 +115,7 @@ def build(bld):
 
     bld(
         name='pygrenade_swtest_vx',
-        tests='test/pygrenade_swtest_vx.py',
+        tests= bld.path.ant_glob('test/sw/*.py'),
         features='use pytest pylint pycodestyle',
         use=['pygrenade_vx', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin',
