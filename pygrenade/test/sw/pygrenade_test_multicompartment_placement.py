@@ -142,10 +142,13 @@ def plot_grid(*, limits, title="", caption="", step="",
                                  facecolor=color, alpha=0.3)
             axis.add_patch(rect)
             if plot_ids:
-                axis.text(j + 0.5, i + 0.5,
-                          dictionary[coordinate_system
-                                     .coordinate_system[1 - i][j].compartment],
-                          va='center', ha='center')
+                if coordinate_system.coordinate_system[1 - i][j].compartment\
+                        is not None:
+                    axis.text(j + 0.5, i + 0.5,
+                              dictionary[coordinate_system
+                                         .coordinate_system[1 - i][j]
+                                         .compartment],
+                              va='center', ha='center')
             if (coordinate_system.coordinate_system[1 - i][j]
                     .neuron_circuit_config.switch_right):
                 plot_switch_right(axis, i, j)
