@@ -68,16 +68,7 @@ std::vector<std::pair<int, int>> CoordinateSystem::find_compartment(
 
 bool CoordinateSystem::operator==(CoordinateSystem const& other) const
 {
-	for (size_t y = 0; y < 2; y++) {
-		for (size_t x = 0; x < 256; x++) {
-			if ((coordinate_system[y][x].compartment !=
-			     other.coordinate_system[y][x].compartment) ||
-			    (coordinate_system[y][x] != other.coordinate_system[y][x])) {
-				return false;
-			}
-		}
-	}
-	return true;
+	return coordinate_system == other.coordinate_system;
 }
 
 bool CoordinateSystem::operator!=(CoordinateSystem const& other) const
