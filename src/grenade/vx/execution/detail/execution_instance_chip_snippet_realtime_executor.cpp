@@ -208,6 +208,7 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				e.at(0).data.resize(data.output().size);
 			}
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+				assert(m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
 				auto const block = dynamic_cast<PPUMemoryBlock const&>(
 				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get());
 				auto const values = from_vector_unit_row(block);
@@ -225,25 +226,24 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 		} else {
 			size_t total_num_samples = 0;
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
+				assert(m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]);
 				std::vector<uint8_t> local_bytes;
 				if (*m_cadc_readout_mode ==
 				    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
-					for (auto const& ticket :
-					     m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]) {
-						auto const local_block =
-						    dynamic_cast<ExternalPPUMemoryBlock const&>(ticket.get());
-						for (auto const& byte : local_block.get_bytes()) {
-							local_bytes.push_back(byte.get_value().value());
-						}
+					auto const local_block = dynamic_cast<ExternalPPUMemoryBlock const&>(
+					    m_batch_entries.at(batch_index)
+					        .m_extmem_result[synram.toPPUOnDLS()]
+					        ->get());
+					for (auto const& byte : local_block.get_bytes()) {
+						local_bytes.push_back(byte.get_value().value());
 					}
 				} else {
-					for (auto const& ticket :
-					     m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]) {
-						auto const local_block =
-						    dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(ticket.get());
-						for (auto const& byte : local_block.get_bytes()) {
-							local_bytes.push_back(byte.get_value().value());
-						}
+					auto const local_block = dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(
+					    m_batch_entries.at(batch_index)
+					        .m_extmem_result[synram.toPPUOnDLS()]
+					        ->get());
+					for (auto const& byte : local_block.get_bytes()) {
+						local_bytes.push_back(byte.get_value().value());
 					}
 				}
 				uint32_t const local_block_size_expectation =
@@ -450,7 +450,7 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 			    "Recorded scratchpad memory size needs to be a multiple of four.");
 		}
 		for (auto& batch_entry : m_batch_entries) {
-			batch_entry.m_plasticity_rule_recorded_scratchpad_memory[vertex] = {};
+			batch_entry.m_plasticity_rule_recorded_scratchpad_memory[vertex] = std::nullopt;
 		}
 		m_post_vertices.push_back(vertex);
 	} else {
@@ -461,27 +461,26 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 		    m_data.batch_size());
 		for (size_t i = 0; i < values.size(); ++i) {
 			auto& local_values = values.at(i);
+			auto const& local_ticket =
+			    m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(vertex);
+			assert(local_ticket);
 			std::vector<uint8_t> bytes;
 
-			for (auto const& local_ticket :
-			     m_batch_entries.at(i).m_plasticity_rule_recorded_scratchpad_memory.at(vertex)) {
-				if (auto const ptr = dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const*>(
-				        &local_ticket.get());
-				    ptr) {
-					for (auto const& byte : ptr->get_bytes()) {
-						bytes.push_back(byte.get_value().value());
-					}
-				} else if (auto const ptr =
-				               dynamic_cast<lola::vx::v3::ExternalPPUDRAMMemoryBlock const*>(
-				                   &local_ticket.get());
-				           ptr) {
-					for (auto const& byte : ptr->get_bytes()) {
-						bytes.push_back(byte.get_value().value());
-					}
-				} else {
-					throw std::logic_error(
-					    "Recording scratchpad on internal memory not supported.");
+			if (auto const ptr =
+			        dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const*>(&local_ticket->get());
+			    ptr) {
+				for (auto const& byte : ptr->get_bytes()) {
+					bytes.push_back(byte.get_value().value());
 				}
+			} else if (auto const ptr =
+			               dynamic_cast<lola::vx::v3::ExternalPPUDRAMMemoryBlock const*>(
+			                   &local_ticket->get());
+			           ptr) {
+				for (auto const& byte : ptr->get_bytes()) {
+					bytes.push_back(byte.get_value().value());
+				}
+			} else {
+				throw std::logic_error("Recording scratchpad on internal memory not supported.");
 			}
 			if (std::holds_alternative<signal_flow::vertex::PlasticityRule::RawRecording>(
 			        *data.get_recording())) {
@@ -796,8 +795,7 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 	for (size_t b = 0; b < m_batch_entries.size(); ++b) {
 		AbsoluteTimePlaybackProgramBuilder builder;
 		Timer::Value current_time = Timer::Value(0);
-		std::vector<PlaybackProgramBuilder> ppu_finish_builder;
-		ppu_finish_builder.push_back({});
+		PlaybackProgramBuilder ppu_finish_builder;
 		auto& batch_entry = m_batch_entries.at(b);
 		// enable event recording
 		if ((m_event_output_vertex || m_madc_readout_vertex) && !before.event_recording) {
@@ -982,25 +980,24 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 			InstructionTimeoutConfig instruction_timeout;
 			instruction_timeout.set_value(InstructionTimeoutConfig::Value(
 			    100000 * InstructionTimeoutConfig::Value::fpga_clock_cycles_per_us));
-			ppu_finish_builder.back().write(
+			ppu_finish_builder.write(
 			    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), instruction_timeout);
 			// wait for PPUs being idle
-			ppu_finish_builder.back().copy_back(wait_for_ppu_command_idle);
+			ppu_finish_builder.copy_back(wait_for_ppu_command_idle);
 			// reset instruction timeout to default after wait until scheduler finished
-			ppu_finish_builder.back().write(
+			ppu_finish_builder.write(
 			    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(),
 			    InstructionTimeoutConfig());
 			// readout stats
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				batch_entry.m_ppu_scheduler_finished[ppu] =
-				    ppu_finish_builder.back().read(PPUMemoryBlockOnDLS(
+				    ppu_finish_builder.read(PPUMemoryBlockOnDLS(
 				        PPUMemoryBlockOnPPU(ppu_status_coord, ppu_status_coord), ppu));
 			}
 			if (ppu_scheduler_event_drop_count_coord) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
-					batch_entry.m_ppu_scheduler_event_drop_count[ppu] =
-					    ppu_finish_builder.back().read(
-					        PPUMemoryBlockOnDLS(*ppu_scheduler_event_drop_count_coord, ppu));
+					batch_entry.m_ppu_scheduler_event_drop_count[ppu] = ppu_finish_builder.read(
+					    PPUMemoryBlockOnDLS(*ppu_scheduler_event_drop_count_coord, ppu));
 				}
 			}
 			batch_entry.m_ppu_timer_event_drop_count.resize(
@@ -1009,61 +1006,29 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 			for (auto const& coord : ppu_timer_event_drop_count_coord) {
 				for (auto const ppu : iter_all<PPUOnDLS>()) {
 					batch_entry.m_ppu_timer_event_drop_count.at(i)[ppu] =
-					    ppu_finish_builder.back().read(PPUMemoryBlockOnDLS(coord, ppu));
+					    ppu_finish_builder.read(PPUMemoryBlockOnDLS(coord, ppu));
 				}
 				i++;
 			}
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
-				batch_entry.m_ppu_mailbox[ppu] = ppu_finish_builder.back().read(
-				    PPUMemoryBlockOnDLS(PPUMemoryBlockOnPPU::mailbox, ppu));
+				batch_entry.m_ppu_mailbox[ppu] =
+				    ppu_finish_builder.read(PPUMemoryBlockOnDLS(PPUMemoryBlockOnPPU::mailbox, ppu));
 			}
 		}
 		// readout recorded scratchpad memory for plasticity rules
 		if (m_has_plasticity_rule) {
 			for (auto const& [descriptor, coord] :
 			     ppu_plasticity_rule_recorded_scratchpad_memory_coord) {
-				auto const split_coord = [](auto const& coord) {
-					std::vector<std::decay_t<decltype(coord)>> ret;
-					auto const min = coord.toMin();
-					auto const max = coord.toMax();
-					auto current = min;
-					for (; current.value() + ticket_split_size_in_bytes < max.value();
-					     current += std::decay_t<decltype(current)>(ticket_split_size_in_bytes)) {
-						ret.push_back(std::decay_t<decltype(coord)>(
-						    current, std::min(
-						                 current + std::decay_t<decltype(current)>(
-						                               ticket_split_size_in_bytes - 1),
-						                 max)));
-					}
-					ret.push_back(std::decay_t<decltype(coord)>(current, max));
-					return ret;
-				};
-
 				batch_entry.m_plasticity_rule_recorded_scratchpad_memory.at(descriptor) =
 				    std::visit(
 				        hate::overloaded{
-				            [&ppu_finish_builder,
-				             split_coord](ExternalPPUMemoryBlockOnFPGA const& c) {
-					            std::vector<ContainerTicket> ret;
-					            auto const split_c = split_coord(c);
-					            for (auto const& cc : split_c) {
-						            ppu_finish_builder.push_back({});
-						            ret.push_back(ppu_finish_builder.back().read(cc));
-					            }
-					            return ret;
+				            [&ppu_finish_builder](ExternalPPUMemoryBlockOnFPGA const& c) {
+					            return ppu_finish_builder.read(c);
 				            },
-				            [&ppu_finish_builder,
-				             split_coord](ExternalPPUDRAMMemoryBlockOnFPGA const& c) {
-					            std::vector<ContainerTicket> ret;
-					            auto const split_c = split_coord(c);
-					            for (auto const& cc : split_c) {
-						            ppu_finish_builder.push_back({});
-						            ret.push_back(ppu_finish_builder.back().read(cc));
-					            }
-					            return ret;
+				            [&ppu_finish_builder](ExternalPPUDRAMMemoryBlockOnFPGA const& c) {
+					            return ppu_finish_builder.read(c);
 				            },
-				            [](PPUMemoryBlockOnPPU const&)
-				                -> std::vector<stadls::vx::v3::ContainerTicket> {
+				            [](PPUMemoryBlockOnPPU const&) -> stadls::vx::v3::ContainerTicket {
 					            throw std::logic_error(
 					                "Recording scratchpad on internal memory not uspported.");
 				            },

@@ -169,9 +169,9 @@ ExecutionInstanceExecutor::operator()() const
 	size_t const batch_size = m_input_data.batch_size();
 
 	// Experiment assembly
-	std::vector<std::map<common::ChipOnConnection, PlaybackProgramBuilder>> assembled_builders;
+	std::vector<std::map<common::ChipOnConnection, PlaybackProgramBuilder>> assembled_builders(
+	    batch_size);
 	for (size_t i = 0; i < batch_size; i++) {
-		assembled_builders.push_back({});
 		for (auto const& chip_on_connection : m_chips_on_connection) {
 			auto& local_realtime_program = realtime_program.chips.at(chip_on_connection);
 			auto& local_hooks = m_hooks.chips.at(chip_on_connection);
@@ -246,6 +246,13 @@ ExecutionInstanceExecutor::operator()() const
 			} else {
 				assembled_builder.merge_back(local_hooks.inside_realtime_end);
 			}
+			// append ppu_finish_builders
+			for (size_t j = 0; j < snippet_count; j++) {
+				assembled_builder.merge_back(realtime_program.snippets[j]
+				                                 .at(chip_on_connection)
+				                                 .realtimes[i]
+				                                 .ppu_finish_builder);
+			}
 			// append PPU read hooks
 			if (local_playback_program.ppu_symbols) {
 				auto [ppu_read_hooks_builder, ppu_read_hooks_result] =
@@ -260,6 +267,13 @@ ExecutionInstanceExecutor::operator()() const
 			// for the last batch entry, append post_realtime hook
 			if (i == batch_size - 1) {
 				assembled_builder.merge_back(local_hooks.post_realtime);
+			}
+			// append cadc_finazlize_builder for periodic_cadc data readout
+			assembled_builder.merge_back(local_realtime_program.cadc_finalize_builders.at(i));
+			// for the last batch entry, stop the PPU
+			if (i == batch_size - 1 && local_playback_program.ppu_symbols) {
+				assembled_builder.merge_back(
+				    generate(generator::PPUStop(*local_playback_program.ppu_symbols)).builder);
 			}
 			// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch
 			// entries)
@@ -281,76 +295,7 @@ ExecutionInstanceExecutor::operator()() const
 				}
 				assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 			}
-			assembled_builders.back()[chip_on_connection] = std::move(assembled_builder);
-		}
-		// Append cadc_finalize_builder for periodic_cadc data readout
-		size_t max_num_cadc_builders = 0;
-		for (auto const& chip_on_connection : m_chips_on_connection) {
-			max_num_cadc_builders = std::max(
-			    max_num_cadc_builders,
-			    realtime_program.chips.at(chip_on_connection).cadc_finalize_builders.at(i).size());
-		}
-		for (size_t c = 0; c < max_num_cadc_builders; ++c) {
-			assembled_builders.push_back({});
-			for (auto const& chip_on_connection : m_chips_on_connection) {
-				auto& local_cadc_finalize_builders =
-				    realtime_program.chips.at(chip_on_connection).cadc_finalize_builders.at(i);
-				if (local_cadc_finalize_builders.size() > c) {
-					assembled_builders.back()[chip_on_connection] =
-					    std::move(local_cadc_finalize_builders.at(c));
-				} else {
-					assembled_builders.back()[chip_on_connection] = {};
-				}
-			}
-		}
-		// append ppu_finish_builders
-		size_t max_num_ppu_finish_builders = 0;
-		for (auto const& chip_on_connection : m_chips_on_connection) {
-			size_t local_num_ppu_finish_builders = 0;
-			for (size_t j = 0; j < snippet_count; j++) {
-				local_num_ppu_finish_builders += realtime_program.snippets[j]
-				                                     .at(chip_on_connection)
-				                                     .realtimes[i]
-				                                     .ppu_finish_builder.size();
-			}
-			max_num_ppu_finish_builders =
-			    std::max(max_num_ppu_finish_builders, local_num_ppu_finish_builders);
-		}
-		std::map<grenade::vx::common::ChipOnConnection, std::vector<PlaybackProgramBuilder>>
-		    local_ppu_finish_builders;
-		for (auto const& chip_on_connection : m_chips_on_connection) {
-			for (size_t j = 0; j < snippet_count; j++) {
-				for (auto& builder : realtime_program.snippets[j]
-				                         .at(chip_on_connection)
-				                         .realtimes[i]
-				                         .ppu_finish_builder) {
-					local_ppu_finish_builders[chip_on_connection].push_back(std::move(builder));
-				}
-			}
-		}
-		for (size_t c = 0; c < max_num_ppu_finish_builders; ++c) {
-			assembled_builders.push_back({});
-			for (auto const& chip_on_connection : m_chips_on_connection) {
-				auto& local_builders = local_ppu_finish_builders.at(chip_on_connection);
-				if (local_builders.size() > c) {
-					assembled_builders.back()[chip_on_connection] = std::move(local_builders.at(c));
-				} else {
-					assembled_builders.back()[chip_on_connection] = {};
-				}
-			}
-		}
-		// for the last batch entry, stop the PPU
-		if (i == batch_size - 1) {
-			assembled_builders.push_back({});
-			for (auto const& chip_on_connection : m_chips_on_connection) {
-				auto& local_playback_program = playback_program.chips.at(chip_on_connection);
-				if (local_playback_program.ppu_symbols) {
-					assembled_builders.back()[chip_on_connection].merge_back(
-					    generate(generator::PPUStop(*local_playback_program.ppu_symbols)).builder);
-				} else {
-					assembled_builders.back()[chip_on_connection] = {};
-				}
-			}
+			assembled_builders.at(i)[chip_on_connection] = std::move(assembled_builder);
 		}
 	}
 

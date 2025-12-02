@@ -72,7 +72,7 @@ public:
 	struct RealtimeSnippet
 	{
 		stadls::vx::v3::AbsoluteTimePlaybackProgramBuilder builder;
-		std::vector<stadls::vx::v3::PlaybackProgramBuilder> ppu_finish_builder;
+		stadls::vx::v3::PlaybackProgramBuilder ppu_finish_builder;
 		haldls::vx::v3::Timer::Value pre_realtime_duration;
 		haldls::vx::v3::Timer::Value realtime_duration;
 	};
@@ -92,7 +92,7 @@ public:
 	{
 		std::vector<stadls::vx::v3::PlaybackProgram> realtime;
 		std::vector<halco::common::typed_array<
-		    std::vector<stadls::vx::v3::ContainerTicket>,
+		    std::optional<stadls::vx::v3::ContainerTicket>,
 		    halco::hicann_dls::vx::PPUOnDLS>>
 		    cadc_readout_tickets;
 		std::optional<ExecutionInstanceNode::PeriodicCADCReadoutTimes> periodic_cadc_readout_times;
@@ -166,7 +166,7 @@ private:
 		event_guard_ticket_type m_ticket_events_end;
 
 		typedef halco::common::typed_array<
-		    std::vector<stadls::vx::v3::ContainerTicket>,
+		    std::optional<stadls::vx::v3::ContainerTicket>,
 		    halco::hicann_dls::vx::PPUOnDLS>
 		    ticket_extmem_type;
 
@@ -176,9 +176,10 @@ private:
 		std::vector<ticket_ppu_type> m_ppu_timer_event_drop_count;
 		ticket_ppu_type m_ppu_scheduler_finished;
 		ticket_ppu_type m_ppu_mailbox;
-		std::
-		    map<signal_flow::Graph::vertex_descriptor, std::vector<stadls::vx::v3::ContainerTicket>>
-		        m_plasticity_rule_recorded_scratchpad_memory;
+		std::map<
+		    signal_flow::Graph::vertex_descriptor,
+		    std::optional<stadls::vx::v3::ContainerTicket>>
+		    m_plasticity_rule_recorded_scratchpad_memory;
 
 		std::vector<generator::PPUCommand::Result> ppu_command_results;
 	};

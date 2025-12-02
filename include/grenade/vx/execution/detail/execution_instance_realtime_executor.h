@@ -28,7 +28,7 @@ struct ExecutionInstanceRealtimeExecutor
 
 		struct Chip
 		{
-			std::vector<std::vector<stadls::vx::v3::PlaybackProgramBuilder>> cadc_finalize_builders;
+			std::vector<stadls::vx::v3::PlaybackProgramBuilder> cadc_finalize_builders;
 			bool uses_madc;
 		};
 
@@ -43,7 +43,7 @@ struct ExecutionInstanceRealtimeExecutor
 		struct Chip
 		{
 			std::vector<halco::common::typed_array<
-			    std::vector<stadls::vx::v3::ContainerTicket>,
+			    std::optional<stadls::vx::v3::ContainerTicket>,
 			    halco::hicann_dls::vx::v3::PPUOnDLS>>
 			    cadc_readout_tickets;
 			std::vector<std::optional<ExecutionInstanceNode::PeriodicCADCReadoutTimes>>

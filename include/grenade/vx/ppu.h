@@ -1,5 +1,4 @@
 #pragma once
-#include "fisch/vx/constants.h"
 #include "halco/common/typed_array.h"
 #include "haldls/vx/v3/neuron.h"
 #include "haldls/vx/v3/ppu.h"
@@ -24,12 +23,6 @@ static haldls::vx::v3::Timer::Value const periodic_cadc_fpga_wait_clock_cycles(
 static haldls::vx::v3::Timer::Value const periodic_cadc_ppu_wait_clock_cycles(
     10 * haldls::vx::v3::Timer::Value::fpga_clock_cycles_per_us *
     2 /* 250MHz PPU clock vs. 125 MHz FPGA clock. */);
-constexpr static size_t ticket_split_size_in_bytes =
-    fisch::vx::playback_memory_size_to_fpga /* trace memory size == playback memory size */ *
-    4 /* 4 byte read per 8 byte instruction */ /
-    8 /* split into 1/8 max size for reasonably well ability to maximize usage of available
-         memory when merging builders again */
-    ;
 
 /**
  * Convert column byte values to PPUMemoryBlock.
