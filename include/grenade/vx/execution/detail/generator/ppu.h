@@ -168,12 +168,12 @@ struct PPUPeriodicCADCRead
 	struct Result
 	{
 		halco::common::typed_array<
-		    std::optional<stadls::vx::v3::ContainerTicket>,
+		    std::vector<stadls::vx::v3::ContainerTicket>,
 		    halco::hicann_dls::vx::v3::PPUOnDLS>
 		    tickets;
 	};
 
-	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;
+	typedef std::vector<stadls::vx::v3::PlaybackProgramBuilder> Builder;
 
 	/**
 	 * Construct generator for read hooks.

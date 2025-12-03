@@ -245,11 +245,11 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		}
 
 		// Construct cadc_finalize_builders, which each are executed at the end of a batch entry
-		std::vector<PlaybackProgramBuilder> cadc_finalize_builders(
+		std::vector<std::vector<PlaybackProgramBuilder>> cadc_finalize_builders(
 		    snippets[0].at(chip_on_connection).realtimes.size());
-		std::vector<typed_array<std::optional<ContainerTicket>, PPUOnDLS>> cadc_readout_tickets(
+		std::vector<typed_array<std::vector<ContainerTicket>, PPUOnDLS>> cadc_readout_tickets(
 		    snippets[0].at(chip_on_connection).realtimes.size(),
-		    typed_array<std::optional<ContainerTicket>, PPUOnDLS>{});
+		    typed_array<std::vector<ContainerTicket>, PPUOnDLS>{});
 		auto const has_periodic_cadc_recording =
 		    std::find(
 		        periodic_cadc_recording.at(chip_on_connection).begin(),
@@ -264,12 +264,12 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		if (has_periodic_cadc_recording || has_periodic_cadc_dram_recording) {
 			// generate tickets for extmem readout of periodic cadc recording data
 			for (size_t i = 0; i < snippets[0].at(chip_on_connection).realtimes.size(); i++) {
-				auto [cadc_finalize_builder, local_cadc_readout_tickets] =
+				auto [local_cadc_finalize_builders, local_cadc_readout_tickets] =
 				    generate(generator::PPUPeriodicCADCRead(
 				        {uses_top_cadc.at(chip_on_connection),
 				         uses_bot_cadc.at(chip_on_connection)},
 				        *m_ppu_program.at(chip_on_connection).symbols));
-				cadc_finalize_builders.at(i) = std::move(cadc_finalize_builder);
+				cadc_finalize_builders.at(i) = std::move(local_cadc_finalize_builders);
 				cadc_readout_tickets[i] = std::move(local_cadc_readout_tickets.tickets);
 			}
 		}
