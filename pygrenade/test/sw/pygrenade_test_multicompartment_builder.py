@@ -46,15 +46,17 @@ class SwTestPygrenadeVxMulticompartmentBuilder(unittest.TestCase):
         comp_c = builder.add_compartment(Compartment(), label="comp_b")
         comp_d = builder.add_compartment(Compartment(), label="comp_b")
 
-        branch_a = builder.connect([(comp_a, comp_b)], label="branch_a")
-        builder.connect([(comp_b, comp_c)], label="branch_b")
-        builder.connect([(comp_c, comp_d)], label="branch_c")
+        branch_a = builder.connect([Connection(comp_a, comp_b, 1)],
+                                   label="branch_a")
+        builder.connect([Connection(comp_b, comp_c, 1)], label="branch_b")
+        builder.connect([Connection(comp_c, comp_d, 1)], label="branch_c")
 
         branch_d = builder.clone(branch_a, label="branch_d")
 
         comp_a_copy = builder.get_ref_in_node(branch_d, comp_a)
 
-        branch_e = builder.connect([(comp_a, comp_a_copy)], label="branch_e")
+        branch_e = builder.connect([Connection(comp_a, comp_a_copy, 1)],
+                                   label="branch_e")
         self.assertEqual(len(builder.nodes), 1)
         self.assertIn(branch_e, builder.nodes)
 

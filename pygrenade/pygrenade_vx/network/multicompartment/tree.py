@@ -97,11 +97,13 @@ class Node:
             if leaf_labels:
                 connections_full_label.append(Connection(
                     full_labels[next(iter(connection.source.children))],
-                    full_labels[next(iter(connection.target.children))]))
+                    full_labels[next(iter(connection.target.children))],
+                    connection.strength))
             else:
                 connections_full_label.append(Connection(
                     full_labels[connection.source],
-                    full_labels[connection.target]))
+                    full_labels[connection.target],
+                    connection.strength))
 
         for child in self.children:
             if isinstance(child, Node):
@@ -153,6 +155,8 @@ class Connection:
     '''
     def __init__(self,
                  source,
-                 target):
+                 target,
+                 strength=None):
         self.source = source
         self.target = target
+        self.strength = strength
