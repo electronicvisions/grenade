@@ -65,10 +65,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		          "[&](auto& correlation_causal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
-		kernel << "                  vector_row_t causal;\n";
-		kernel << "                  get_causal_correlation(&(causal.even.data), "
-		          "                    &(causal.odd.data), synapse.rows[i]);\n";
-		kernel << "                  do_not_optimize_away(causal);\n";
+		kernel << "                  vector_row_t causal = synapse.get_causal_correlation(i);\n";
 		kernel << "                  reset_correlation(synapse.rows[i]);\n";
 		kernel << "                  VectorRowFracSat8 const tmp = "
 		          "causal.convert_contiguous();\n";
@@ -88,10 +85,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		          "[&](auto& correlation_acausal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
-		kernel << "                  vector_row_t acausal;\n";
-		kernel << "                  get_acausal_correlation(&(acausal.even.data), "
-		          "                    &(acausal.odd.data), synapse.rows[i]);\n";
-		kernel << "                  do_not_optimize_away(acausal);\n";
+		kernel << "                  vector_row_t acausal = synapse.get_acausal_correlation(i);\n";
 		kernel << "                  reset_correlation(synapse.rows[i]);\n";
 		kernel << "                  VectorRowFracSat8 const tmp = "
 		          "acausal.convert_contiguous();\n";
@@ -112,18 +106,11 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		          "correlation_acausal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
 		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
-		kernel << "                  vector_row_t causal;\n";
-		kernel << "                  vector_row_t acausal;\n";
-		kernel << "                  get_correlation(&(causal.even.data), "
-		          "                    &(causal.odd.data), &(acausal.even.data), "
-		          "&(acausal.odd.data), synapse.rows[i]);\n";
-		kernel << "                  do_not_optimize_away(causal);\n";
-		kernel << "                  do_not_optimize_away(acausal);\n";
-		kernel << "                  reset_correlation(synapse.rows[i]);\n";
+		kernel << "                  auto correlation = synapse.get_correlation(i, true);\n";
 		kernel << "                  VectorRowFracSat8 const tmp_causal = "
-		          "causal.convert_contiguous();\n";
+		          "correlation.causal.convert_contiguous();\n";
 		kernel << "                  VectorRowFracSat8 const tmp_acausal = "
-		          "acausal.convert_contiguous();\n";
+		          "correlation.acausal.convert_contiguous();\n";
 		kernel << "                  for (size_t j = 0; j < synapse.columns.size(); ++j) {\n";
 		kernel << "                      correlation_causal_per_synapse_view[i][j] "
 		          "= tmp_causal[synapse.columns[j]];\n";
