@@ -1,6 +1,7 @@
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 
 #include "halco/hicann-dls/vx/v3/synapse.h"
+#include "haldls/vx/v3/synapse.h"
 #include "libnux/vx/correlation.h"
 #include "libnux/vx/dls.h"
 #include "libnux/vx/vector.h"
@@ -35,7 +36,11 @@ SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_causal_correlation(size_
 	}
 	// set switch row to synapse CADC readout on causal channel
 	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b00100000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
+	    libnux::vx::VectorRowMod8(0b0100'0000),
+	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
+	// disable connections to neuron CADC readout on causal channel
+	libnux::vx::set_row_via_vector(
+	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
 	    libnux::vx::dls_weight_base);
 
 	Row ret;
@@ -50,7 +55,11 @@ SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_acausal_correlation(size
 	}
 	// set switch row to synapse CADC readout on acausal channel
 	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b00100000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
+	    libnux::vx::VectorRowMod8(0b1000'0000),
+	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
+	// disable connections to neuron CADC readout on acausal channel
+	libnux::vx::set_row_via_vector(
+	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
 	    libnux::vx::dls_decoder_base);
 
 	Row ret;
@@ -66,10 +75,15 @@ SynapseArrayViewHandle::CorrelationRow SynapseArrayViewHandle::get_correlation(
 	}
 	// set switch row to synapse CADC readout on causal and acausal channel
 	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b00100000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
-	    libnux::vx::dls_weight_base);
+	    libnux::vx::VectorRowMod8(0b1100'0000),
+	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
+	// disable connections to neuron CADC readout on causal channel
 	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b00100000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
+	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
+	    libnux::vx::dls_weight_base);
+	// disable connections to neuron CADC readout on acausal channel
+	libnux::vx::set_row_via_vector(
+	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
 	    libnux::vx::dls_decoder_base);
 
 	CorrelationRow ret;

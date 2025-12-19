@@ -85,6 +85,10 @@ NeuronViewHandle::Row NeuronViewHandle::get_analog_readouts() const
 	libnux::vx::set_row_via_vector(
 	    libnux::vx::VectorRowMod8(0b00100000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
 	    libnux::vx::dls_weight_base);
+	// disable connections to synapse CADC readout on causal and acausal channel
+	libnux::vx::set_row_via_vector(
+	    libnux::vx::VectorRowMod8(0b0000'0000),
+	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
 
 	Row ret;
 	libnux::vx::get_causal_correlation(&ret.even.data, &ret.odd.data, 0);
