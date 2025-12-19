@@ -64,7 +64,7 @@ PlasticityRule OnlyRecordingPlasticityRuleGenerator::generate() const
 		kernel << "          hate::for_each("
 		          "[&](auto& correlation_causal_per_synapse_view, auto const& synapse) {\n";
 		kernel << "            if (synapse.hemisphere == ppu) {\n";
-		kernel << "              for (size_t i = 0; i < synapse.rows.size; ++i) {\n";
+		kernel << "              for (size_t i = 0; i < synapse.rows.size(); ++i) {\n";
 		kernel << "                  vector_row_t causal;\n";
 		kernel << "                  get_causal_correlation(&(causal.even.data), "
 		          "                    &(causal.odd.data), synapse.rows[i]);\n";
