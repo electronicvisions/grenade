@@ -46,13 +46,12 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	/**
 	 * Returns total resources required by the contents of the resource manager.
 	 */
-	NumberTopBottom const& get_total() const;
+	NumberTopBottom get_total() const;
 
 	/**
 	 * Returns descriptors for all compartments for which a configuration is stored.
 	 */
 	std::vector<CompartmentOnNeuron> get_compartments() const;
-
 
 	/**
 	 * Writes neuron topology in graphviz format.
@@ -82,7 +81,6 @@ private:
 	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> m_recordable_pairs;
 
 	std::map<CompartmentOnNeuron, dapr::PropertyHolder<NumberTopBottom>> resource_map;
-	NumberTopBottom m_total;
 };
 
 std::ostream& operator<<(std::ostream& os, ResourceManager const& resources) SYMBOL_VISIBLE;

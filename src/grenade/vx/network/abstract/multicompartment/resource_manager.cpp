@@ -39,9 +39,13 @@ std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const
 	return compartments;
 }
 
-NumberTopBottom const& ResourceManager::get_total() const
+NumberTopBottom ResourceManager::get_total() const
 {
-	return m_total;
+	NumberTopBottom total;
+	for (auto [_, resources] : resource_map) {
+		total += *resources;
+	}
+	return total;
 }
 
 void ResourceManager::write_graphviz(
@@ -85,8 +89,6 @@ void ResourceManager::add_config_compartment(
 	    hardware_resources_with_constraints_on_mechanims =
 	        neuron.get(compartment).get_hardware(compartment, parameter_space, environment);
 
-	// Circuit Configuration
-	NumberTopBottom neuron_circuit_config;
 	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
 	// PropertyHolder is neither comparable nor hashable)
 	std::vector<dapr::PropertyHolder<HardwareResource>> resource_request_counter_hardware = {
@@ -137,10 +139,10 @@ void ResourceManager::add_config_compartment(
 			max_request_top = Value.number_top;
 		}
 	}
+
 	// Add Configuration to Resource Map in ResourceManager
-	neuron_circuit_config = NumberTopBottom(max_request_total, max_request_top, max_request_bottom);
-	resource_map.emplace(compartment, neuron_circuit_config);
-	m_total += NumberTopBottom(max_request_total, max_request_top, max_request_bottom);
+	resource_map.emplace(
+	    compartment, NumberTopBottom(max_request_total, max_request_top, max_request_bottom));
 }
 
 void ResourceManager::remove_config_compartment(CompartmentOnNeuron const& compartment)
