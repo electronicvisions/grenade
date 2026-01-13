@@ -275,25 +275,39 @@ ExecutionInstanceExecutor::operator()() const
 				assembled_builder.merge_back(
 				    generate(generator::PPUStop(*local_playback_program.ppu_symbols)).builder);
 			}
-			// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch
-			// entries)
-			if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
-				// disable internal event routing to silence network activity and state
-				for (auto const crossbar_node_coord : iter_all<CrossbarNodeOnDLS>()) {
-					assembled_builder.write(crossbar_node_coord, CrossbarNode::drop_all);
+			// Inter-batch-entry procedures: disable routing and/or wait
+			{
+				bool disable_routing = true;
+				if (m_input_data.inter_batch_entry_routing_disabled.contains(
+				        m_execution_instance)) {
+					disable_routing =
+					    m_input_data.inter_batch_entry_routing_disabled.at(m_execution_instance);
 				}
-				assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-				assembled_builder.block_until(
-				    TimerOnDLS(),
-				    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
-				                      .toTimerOnFPGAValue());
-				// enable internal event routing for next batch entry
-				for (auto const crossbar_node_coord : iter_all<CrossbarNodeOnDLS>()) {
-					assembled_builder.write(
-					    crossbar_node_coord,
-					    local_playback_program.chip_configs[0].crossbar.nodes[crossbar_node_coord]);
+
+				if (disable_routing) {
+					// disable internal event routing to silence network activity and state
+					for (auto const crossbar_node_coord : iter_all<CrossbarNodeOnDLS>()) {
+						assembled_builder.write(crossbar_node_coord, CrossbarNode::drop_all);
+					}
+					assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 				}
-				assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+				// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch
+				// entries)
+				if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
+					assembled_builder.block_until(
+					    TimerOnDLS(),
+					    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
+					                      .toTimerOnFPGAValue());
+				}
+				if (disable_routing) {
+					// re-enable internal event routing for next batch entry
+					for (auto const crossbar_node_coord : iter_all<CrossbarNodeOnDLS>()) {
+						assembled_builder.write(
+						    crossbar_node_coord, local_playback_program.chip_configs[0]
+						                             .crossbar.nodes[crossbar_node_coord]);
+					}
+					assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
+				}
 			}
 			assembled_builders.at(i)[chip_on_connection] = std::move(assembled_builder);
 		}

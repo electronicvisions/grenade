@@ -22,6 +22,11 @@ struct GENPYBIND(visible) InputData
 	std::vector<InputDataSnippet> snippets;
 
 	/**
+	 * Disable event routing between batch entries (resetting recurrent state)
+	 */
+	std::map<grenade::common::ExecutionInstanceID, bool> inter_batch_entry_routing_disabled;
+
+	/**
 	 * Minimal waiting time between batch entries.
 	 */
 	std::map<grenade::common::ExecutionInstanceID, common::Time> inter_batch_entry_wait;

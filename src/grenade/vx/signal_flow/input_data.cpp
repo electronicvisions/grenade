@@ -4,16 +4,20 @@
 
 namespace grenade::vx::signal_flow {
 
-InputData::InputData() : snippets(), inter_batch_entry_wait() {}
+InputData::InputData() : snippets(), inter_batch_entry_routing_disabled(), inter_batch_entry_wait()
+{
+}
 
 InputData::InputData(InputData&& other) :
     snippets(std::move(other.snippets)),
+    inter_batch_entry_routing_disabled(std::move(other.inter_batch_entry_routing_disabled)),
     inter_batch_entry_wait(std::move(other.inter_batch_entry_wait))
 {}
 
 InputData& InputData::operator=(InputData&& other)
 {
 	snippets = std::move(other.snippets);
+	inter_batch_entry_routing_disabled = std::move(other.inter_batch_entry_routing_disabled);
 	inter_batch_entry_wait = std::move(other.inter_batch_entry_wait);
 	return *this;
 }
@@ -37,6 +41,9 @@ void InputData::merge(InputData&& other)
 			}
 		}
 	}
+	if (!other.inter_batch_entry_routing_disabled.empty()) {
+		inter_batch_entry_routing_disabled.merge(other.inter_batch_entry_routing_disabled);
+	}
 	if (!other.inter_batch_entry_wait.empty()) {
 		inter_batch_entry_wait.merge(other.inter_batch_entry_wait);
 	}
@@ -52,6 +59,7 @@ void InputData::clear()
 	for (auto& snippet : snippets) {
 		snippet.clear();
 	}
+	inter_batch_entry_routing_disabled.clear();
 	inter_batch_entry_wait.clear();
 }
 
@@ -60,7 +68,7 @@ bool InputData::empty() const
 	return std::all_of(
 	           snippets.begin(), snippets.end(),
 	           [](auto const& snippet) { return snippet.empty(); }) &&
-	       inter_batch_entry_wait.empty();
+	       inter_batch_entry_routing_disabled.empty() && inter_batch_entry_wait.empty();
 }
 
 size_t InputData::batch_size() const
