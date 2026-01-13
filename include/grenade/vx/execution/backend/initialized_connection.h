@@ -27,13 +27,13 @@ stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProg
 struct InitializedConnection
 {
 	/**
-	 * Construct connection from environment and initialize with default constructed DigitalInit.
+	 * Construct connection from environment and initialize with default constructed SystemInit.
 	 */
 	InitializedConnection() SYMBOL_VISIBLE;
 
 	/**
 	 * Construct connection from hxcomm connection and initialize with default constructed
-	 * DigitalInit. Ownership of the hxcomm connection is transferred to this object.
+	 * SystemInit. Ownership of the hxcomm connection is transferred to this object.
 	 * @param connection Connection from hxcomm to use
 	 */
 	InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) SYMBOL_VISIBLE;
@@ -46,7 +46,7 @@ struct InitializedConnection
 	 */
 	InitializedConnection(
 	    hxcomm::vx::ConnectionVariant&& connection,
-	    stadls::vx::v3::DigitalInit const& init) SYMBOL_VISIBLE;
+	    stadls::vx::v3::SystemInit const& init) SYMBOL_VISIBLE;
 
 	/**
 	 * Get time information of execution(s).

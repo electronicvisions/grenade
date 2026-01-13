@@ -38,7 +38,7 @@ TEST(InitializedConnection, General)
 		auto hxcomm_connection = hxcomm::vx::get_connection_from_env();
 		grenade::vx::execution::backend::InitializedConnection connection(
 		    std::move(hxcomm_connection),
-		    stadls::vx::v3::DigitalInit(std::visit(
+		    stadls::vx::v3::SystemInit(std::visit(
 		        [](auto const& connection) { return connection.get_hwdb_entry().at(0); },
 		        hxcomm_connection)));
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);

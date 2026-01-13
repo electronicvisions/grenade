@@ -44,7 +44,7 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 namespace grenade::vx::execution::backend {
 
 InitializedConnection::InitializedConnection(
-    hxcomm::vx::ConnectionVariant&& connection, stadls::vx::v3::DigitalInit const& init) :
+    hxcomm::vx::ConnectionVariant&& connection, stadls::vx::v3::SystemInit const& init) :
     m_connection(std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection))),
     m_expected_link_notification_count(halco::hicann_dls::vx::v3::PhyConfigFPGAOnDLS::size),
     m_init(*m_connection)
@@ -78,7 +78,7 @@ InitializedConnection::InitializedConnection(
 InitializedConnection::InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) :
     InitializedConnection(
         std::move(connection),
-        stadls::vx::v3::DigitalInit(std::visit(
+        stadls::vx::v3::SystemInit(std::visit(
             [](auto const& connection) { return connection.get_hwdb_entry().at(0); }, connection)))
 {
 }
