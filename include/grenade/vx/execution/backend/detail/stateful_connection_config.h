@@ -1,5 +1,6 @@
 #pragma once
 #include "fisch/vx/word_access/type/omnibus.h"
+#include "grenade/vx/execution/detail/system.h"
 #include "halco/common/coordinate.h"
 #include "halco/common/geometry.h"
 #include "haldls/vx/container.h"
@@ -20,6 +21,8 @@ namespace grenade::vx::execution::backend::detail {
  */
 struct StatefulConnectionConfig
 {
+	using System = ::grenade::vx::execution::detail::System;
+
 	StatefulConnectionConfig() = default;
 
 	bool get_enable_differential_config() const SYMBOL_VISIBLE;
@@ -28,7 +31,7 @@ struct StatefulConnectionConfig
 	/**
 	 * Set chip which is to be applied next.
 	 */
-	void set_chip(lola::vx::v3::Chip const& value, bool split_base_differential) SYMBOL_VISIBLE;
+	void set_chip(System const& value, bool split_base_differential) SYMBOL_VISIBLE;
 
 	/**
 	 * Set external PPU DRAM memory which is to be applied next.
@@ -60,7 +63,7 @@ struct StatefulConnectionConfig
 private:
 	bool m_enable_differential_config;
 
-	lola::vx::v3::Chip m_last_chip;
+	System m_last_system;
 	Words m_chip_words;
 	Words m_last_chip_words;
 	Words m_chip_base_words;

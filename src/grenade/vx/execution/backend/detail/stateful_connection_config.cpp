@@ -33,16 +33,20 @@ static const std::vector<halco::hicann_dls::vx::OmnibusAddress> chip_addresses =
 
 } // namespace
 
-void StatefulConnectionConfig::set_chip(
-    lola::vx::v3::Chip const& value, bool const split_base_differential)
+void StatefulConnectionConfig::set_chip(System const& value, bool const split_base_differential)
 {
-	auto const encode_value = [value, this]() {
+	auto const& chip_value =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip const& { return system.chip; }, value);
+	auto& last_chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, m_last_system);
+
+	auto const encode_value = [chip_value, this]() {
 		std::swap(m_last_chip_words, m_chip_words);
 
 		m_chip_words.clear();
 		m_chip_words.reserve(chip_addresses.size());
 		haldls::vx::visit_preorder(
-		    value, hate::Empty<halco::hicann_dls::vx::v3::ChipOnDLS>(),
+		    chip_value, hate::Empty<halco::hicann_dls::vx::v3::ChipOnDLS>(),
 		    stadls::EncodeVisitor<Words>{m_chip_words});
 	};
 
@@ -63,9 +67,9 @@ void StatefulConnectionConfig::set_chip(
 
 			m_chip_base_addresses = chip_addresses;
 			m_chip_base_words = m_chip_words;
-			m_last_chip = value;
+			last_chip = chip_value;
 		} else {
-			if (m_last_chip != value) {
+			if (last_chip != chip_value) {
 				encode_value();
 				assert(m_chip_words.size() == chip_addresses.size());
 				assert(m_last_chip_words.size() == chip_addresses.size());
@@ -83,15 +87,15 @@ void StatefulConnectionConfig::set_chip(
 						m_chip_base_words.push_back(m_chip_words[i]);
 					}
 				}
-				m_last_chip = value;
+				last_chip = chip_value;
 			} else {
 				m_last_chip_words = m_chip_words;
 			}
 		}
 	} else {
-		if (m_last_chip != value) {
+		if (last_chip != chip_value) {
 			encode_value();
-			m_last_chip = value;
+			last_chip = chip_value;
 		} else {
 			m_last_chip_words = m_chip_words;
 		}

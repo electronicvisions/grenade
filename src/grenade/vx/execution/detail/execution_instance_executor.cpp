@@ -71,8 +71,11 @@ signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
 
 		for (size_t i = 0; i < output_data.snippets.size(); i++) {
 			// add pre-execution config to result data map
-			output_data.snippets.at(i).pre_execution_chips[execution_instance] =
-			    playback_program.chips.at(chip_on_connection).chip_configs[i];
+			output_data.snippets.at(i).pre_execution_chips.emplace(
+			    execution_instance,
+			    std::visit(
+			        [](auto const& system) -> lola::vx::v3::Chip { return system.chip; },
+			        playback_program.chips.at(chip_on_connection).system_configs[i]));
 		}
 	}
 
@@ -108,7 +111,8 @@ ExecutionInstanceExecutor::ExecutionInstanceExecutor(
 }
 
 std::pair<backend::PlaybackProgram, ExecutionInstanceExecutor::PostProcessor>
-ExecutionInstanceExecutor::operator()() const
+ExecutionInstanceExecutor::operator()(
+    std::map<common::ChipOnConnection, hxcomm::HwdbEntry> const& chip_hwdb_entries) const
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceExecutor");
 
@@ -144,12 +148,23 @@ ExecutionInstanceExecutor::operator()() const
 		    std::move(m_hooks.chips.at(chip_on_connection).pre_static_config);
 
 		for (size_t j = 0; j < snippet_count; j++) {
-			playback_program.chips[chip_on_connection].chip_configs.push_back(
-			    m_configs.at(j).at(chip_on_connection).get());
+			if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(
+			        chip_hwdb_entries.at(chip_on_connection))) {
+				playback_program.chips[chip_on_connection].system_configs.emplace_back(
+				    lola::vx::v3::ChipAndSinglechipFPGA(
+				        m_configs.at(j).at(chip_on_connection).get()));
+			} else if (std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
+			               chip_hwdb_entries.at(chip_on_connection))) {
+				playback_program.chips[chip_on_connection].system_configs.emplace_back(
+				    lola::vx::v3::ChipAndMultichipJboaLeafFPGA(
+				        m_configs.at(j).at(chip_on_connection).get()));
+			} else {
+				throw std::logic_error("Invalid hwdb entry.");
+			}
 
 			ExecutionInstanceChipSnippetConfigVisitor(
 			    m_graphs[j], chip_on_connection, m_execution_instance)(
-			    playback_program.chips.at(chip_on_connection).chip_configs[j]);
+			    playback_program.chips.at(chip_on_connection).system_configs[j]);
 		}
 
 		auto const ppu_program = ExecutionInstanceChipPPUProgramCompiler(
@@ -188,8 +203,17 @@ ExecutionInstanceExecutor::operator()() const
 					                   .realtimes[i]
 					                   .realtime_duration;
 					program_builder.write(
-					    config_time, ChipOnDLS(), local_playback_program.chip_configs[j],
-					    local_playback_program.chip_configs[j - 1]);
+					    config_time, ChipOnDLS(),
+					    std::visit(
+					        [](auto const& system) -> lola::vx::v3::Chip const& {
+						        return system.chip;
+					        },
+					        local_playback_program.system_configs[j]),
+					    std::visit(
+					        [](auto const& system) -> lola::vx::v3::Chip const& {
+						        return system.chip;
+					        },
+					        local_playback_program.system_configs[j - 1]));
 				}
 				realtime_program.snippets[j].at(chip_on_connection).realtimes[i].builder +=
 				    (config_time - realtime_program.snippets[j]
@@ -216,9 +240,18 @@ ExecutionInstanceExecutor::operator()() const
 				                   .realtime_duration;
 				if (i < batch_size - 1) {
 					program_builder.write(
-					    config_time, ChipOnDLS(), local_playback_program.chip_configs[0],
-					    local_playback_program
-					        .chip_configs[local_playback_program.chip_configs.size() - 1]);
+					    config_time, ChipOnDLS(),
+					    std::visit(
+					        [](auto const& system) -> lola::vx::v3::Chip const& {
+						        return system.chip;
+					        },
+					        local_playback_program.system_configs[0]),
+					    std::visit(
+					        [](auto const& system) -> lola::vx::v3::Chip const& {
+						        return system.chip;
+					        },
+					        local_playback_program
+					            .system_configs[local_playback_program.system_configs.size() - 1]));
 				}
 			}
 
@@ -285,8 +318,13 @@ ExecutionInstanceExecutor::operator()() const
 					// re-enable internal event routing for next batch entry
 					for (auto const crossbar_node_coord : iter_all<CrossbarNodeOnDLS>()) {
 						assembled_builder.write(
-						    crossbar_node_coord, local_playback_program.chip_configs[0]
-						                             .crossbar.nodes[crossbar_node_coord]);
+						    crossbar_node_coord,
+						    std::visit(
+						        [](auto const& system) -> lola::vx::v3::Chip const& {
+							        return system.chip;
+						        },
+						        local_playback_program.system_configs[0])
+						        .crossbar.nodes[crossbar_node_coord]);
 					}
 					assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 				}

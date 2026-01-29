@@ -1,5 +1,6 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/vx/execution/detail/system.h"
 #include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
 #include "grenade/vx/signal_flow/graph.h"
@@ -37,7 +38,7 @@ public:
 	/**
 	 * Perform visit operation and generate initial configuration.
 	 */
-	void operator()(lola::vx::v3::Chip& chip) const SYMBOL_VISIBLE;
+	void operator()(System& system) const SYMBOL_VISIBLE;
 
 private:
 	signal_flow::Graph const& m_graph;
@@ -55,7 +56,7 @@ private:
 	void process(
 	    signal_flow::Graph::vertex_descriptor const vertex,
 	    Vertex const& data,
-	    lola::vx::v3::Chip& chip) const;
+	    System& system) const;
 };
 
 } // namespace grenade::vx::execution::detail

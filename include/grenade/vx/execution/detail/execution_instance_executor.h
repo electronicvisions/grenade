@@ -5,6 +5,7 @@
 #include "grenade/vx/execution/detail/execution_instance_realtime_executor.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
+#include "grenade/vx/execution/detail/system.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/input_data.h"
@@ -12,6 +13,7 @@
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/ppu.h"
 #include "hate/visibility.h"
+#include "hxcomm/common/hwdb_entry.h"
 #include "lola/vx/v3/ppu.h"
 #include <vector>
 
@@ -63,7 +65,9 @@ struct ExecutionInstanceExecutor
 	    std::vector<common::ChipOnConnection> const& chips_on_connection,
 	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
 
-	std::pair<backend::PlaybackProgram, PostProcessor> operator()() const SYMBOL_VISIBLE;
+	std::pair<backend::PlaybackProgram, PostProcessor> operator()(
+	    std::map<common::ChipOnConnection, hxcomm::HwdbEntry> const& chip_hwdb_entries) const
+	    SYMBOL_VISIBLE;
 
 private:
 	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;

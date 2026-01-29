@@ -74,7 +74,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 	hate::Timer const initial_config_program_timer;
 	bool const is_fresh_connection_config = connection.m_config.get_is_fresh();
-	connection.m_config.set_chip(local_program.chip_configs[0], true);
+	connection.m_config.set_chip(local_program.system_configs[0], true);
 	if (local_program.external_ppu_dram_memory_config) {
 		connection.m_config.set_external_ppu_dram_memory(
 		    local_program.external_ppu_dram_memory_config);
@@ -196,11 +196,12 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	LOG4CXX_TRACE(logger, "Executed built PlaybackPrograms in " << exec_timer.print() << ".");
 
 	// update connection state
-	if (local_program.chip_configs.size() > 1 || local_program.ppu_symbols) {
+	if (local_program.system_configs.size() > 1 || local_program.ppu_symbols) {
 		hate::Timer const update_state_timer;
-		auto current_config = local_program.chip_configs[local_program.chip_configs.size() - 1];
+		auto current_config = local_program.system_configs[local_program.system_configs.size() - 1];
 		if (get_state_result) {
-			get_state_result->apply(current_config);
+			get_state_result->apply(std::visit(
+			    [](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, current_config));
 		}
 		if (runs_successful) {
 			connection.m_config.set_chip(current_config, false);

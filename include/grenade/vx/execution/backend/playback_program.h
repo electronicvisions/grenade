@@ -1,7 +1,7 @@
 #pragma once
 #include "grenade/vx/common/chip_on_connection.h"
+#include "grenade/vx/execution/detail/system.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
-#include "lola/vx/v3/chip.h"
 #include "lola/vx/v3/ppu.h"
 #include "stadls/vx/v3/playback_program.h"
 #include <optional>
@@ -17,9 +17,9 @@ struct PlaybackProgram
 	struct Chip
 	{
 		/**
-		 * Chip configs per realtime snippet.
+		 * System configs per realtime snippet.
 		 */
-		std::vector<lola::vx::v3::Chip> chip_configs;
+		std::vector<detail::System> system_configs;
 
 		/**
 		 * Initial external PPU DRAM memory config.

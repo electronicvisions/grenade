@@ -37,7 +37,7 @@ template <typename T>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     T const& /* data */,
-    lola::vx::v3::Chip& /* chip */) const
+    System& /* system */) const
 {
 	// Spezialize for types which change static configuration
 }
@@ -46,8 +46,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::CADCMembraneReadoutView const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	// Configure neurons
 	for (size_t i = 0; i < data.get_columns().size(); ++i) {
 		for (size_t j = 0; j < data.get_columns().at(i).size(); ++j) {
@@ -65,8 +67,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const,
     signal_flow::vertex::NeuronEventOutputView const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	for (auto const& [row, columns] : data.get_neurons()) {
 		for (auto const& cs : columns) {
 			for (auto const& column : cs) {
@@ -84,8 +88,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::MADCReadoutView const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
@@ -149,8 +155,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::PadReadoutView const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
@@ -206,8 +214,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::SynapseArrayView const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	auto& config = chip;
 	auto const& columns = data.get_columns();
 	auto const synram = data.get_synram();
@@ -232,8 +242,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::SynapseArrayViewSparse const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	auto& config = chip;
 	auto const& columns = data.get_columns();
 	auto const& rows = data.get_rows();
@@ -252,8 +264,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor,
     signal_flow::vertex::PlasticityRule const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	// handle setting neuron readout parameters
 	for (auto const& neuron_view : data.get_neuron_view_shapes()) {
 		for (size_t i = 0; i < neuron_view.columns.size(); ++i) {
@@ -272,8 +286,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::SynapseDriver const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	auto& synapse_driver_config =
 	    chip.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
 	        .synapse_drivers[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
@@ -290,8 +306,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::PADIBus const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	auto const bus = data.get_coordinate();
 	auto& config =
 	    chip.synapse_driver_blocks[bus.toPADIBusBlockOnDLS().toSynapseDriverBlockOnDLS()].padi_bus;
@@ -304,8 +322,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::CrossbarNode const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	chip.crossbar.nodes[data.get_coordinate()] = data.get_config();
 	// enable drop counter for accumulated measure in health info
 	chip.crossbar.nodes[data.get_coordinate()].set_enable_drop_counter(true);
@@ -319,8 +339,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const /* vertex */,
     signal_flow::vertex::BackgroundSpikeSource const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	chip.background_spike_sources[data.get_coordinate()] = data.get_config();
 }
 
@@ -328,8 +350,10 @@ template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
     signal_flow::Graph::vertex_descriptor const vertex,
     signal_flow::vertex::NeuronView const& data,
-    lola::vx::v3::Chip& chip) const
+    System& system) const
 {
+	auto& chip =
+	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 	size_t i = 0;
@@ -379,12 +403,14 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	}
 }
 
-void ExecutionInstanceChipSnippetConfigVisitor::operator()(lola::vx::v3::Chip& chip) const
+void ExecutionInstanceChipSnippetConfigVisitor::operator()(System& system) const
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor");
 
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
+
+	auto& chip = std::visit([](auto& sys) -> lola::vx::v3::Chip& { return sys.chip; }, system);
 
 	/** Silence everything which is not set in the graph. */
 	for (auto& node : chip.crossbar.nodes) {
@@ -432,7 +458,7 @@ void ExecutionInstanceChipSnippetConfigVisitor::operator()(lola::vx::v3::Chip& c
 			    typedef hate::remove_all_qualifiers_t<decltype(value)> Value;
 			    if constexpr (std::is_base_of_v<signal_flow::vertex::EntityOnChip, Value>) {
 				    if (value.chip_on_executor.first == m_chip_on_connection) {
-					    process(vertex, value, chip);
+					    process(vertex, value, system);
 					    LOG4CXX_TRACE(
 					        logger, "process(): Processed " << hate::name<Value>() << " in "
 					                                        << timer.print() << ".");

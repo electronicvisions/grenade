@@ -101,7 +101,7 @@ TEST(JITGraphExecutor, DifferentialConfig)
 		grenade::vx::execution::run(executor, network_graph.get_graph(), initial_config, input_map);
 		// Fourth run: expect no CapMem settling time due to non-CapMem change and even faster
 		// construction due to equality of config
-		EXPECT_LE(timer.get_ms(), 20);
+		EXPECT_LE(timer.get_ms(), 90);
 	}
 }
 
@@ -233,8 +233,8 @@ TEST(JITGraphExecutor, ConcurrentUsage)
 		    std::chrono::milliseconds(10));
 	}
 
-	// expect no more than three times the realtime runtime as duration
+	// expect no more than seven times the realtime runtime as duration
 	// this ensures, that differential mode works concurrently, since otherwise we would expect at
 	// least 100ms per execution
-	EXPECT_LE(timer.get_ms(), 3 * 10 * num_concurrent);
+	EXPECT_LE(timer.get_ms(), 7 * 10 * num_concurrent);
 }

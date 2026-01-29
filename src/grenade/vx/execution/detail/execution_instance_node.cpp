@@ -45,7 +45,16 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 
 	hate::Timer const compile_timer;
 
-	auto [playback_program, post_processor] = executor();
+	std::map<common::ChipOnConnection, hxcomm::HwdbEntry> chip_hwdb_entries;
+	auto chips_on_connection = connection.get_chips_on_connection();
+	auto hwdb_entries = connection.get_hwdb_entry();
+	assert(chips_on_connection.size() == hwdb_entries.size());
+
+	for (size_t i = 0; i < chips_on_connection.size(); i++) {
+		chip_hwdb_entries.emplace(chips_on_connection.at(i), std::move(hwdb_entries.at(i)));
+	}
+
+	auto [playback_program, post_processor] = executor(chip_hwdb_entries);
 
 	LOG4CXX_TRACE(
 	    logger, "operator(): Compiled playback program in " << compile_timer.print() << ".");

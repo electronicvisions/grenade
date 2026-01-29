@@ -30,29 +30,27 @@ void ExecutionInstanceChipPPUProgramCompiler::Result::apply(
     backend::PlaybackProgram& playback_program) const
 {
 	if (!internal.empty() &&
-	    playback_program.chips.at(chip_on_connection).chip_configs.size() != internal.size()) {
+	    playback_program.chips.at(chip_on_connection).system_configs.size() != internal.size()) {
 		throw std::invalid_argument(
 		    "Number of realtime snippets in playback program doesn't match PPU program.");
 	}
 
 	for (size_t i = 0; i < internal.size(); ++i) {
+		auto& chip = std::visit(
+		    [](auto& config) -> lola::vx::v3::Chip& { return config.chip; },
+		    playback_program.chips.at(chip_on_connection).system_configs[i]);
 		// set internal PPU program
 		for (auto const ppu : halco::common::iter_all<halco::hicann_dls::vx::v3::PPUOnDLS>()) {
-			playback_program.chips.at(chip_on_connection)
-			    .chip_configs[i]
-			    .ppu_memory[ppu.toPPUMemoryOnDLS()]
-			    .set_block(
-			        halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU(
-			            halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(0),
-			            halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(internal[i][ppu].size() - 1)),
-			        internal[i][ppu]);
+			chip.ppu_memory[ppu.toPPUMemoryOnDLS()].set_block(
+			    halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU(
+			        halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(0),
+			        halco::hicann_dls::vx::v3::PPUMemoryWordOnPPU(internal[i][ppu].size() - 1)),
+			    internal[i][ppu]);
 		}
 
 		// set external PPU program
 		if (external) {
-			playback_program.chips.at(chip_on_connection)
-			    .chip_configs[i]
-			    .external_ppu_memory.set_subblock(0, external.value());
+			chip.external_ppu_memory.set_subblock(0, external.value());
 		}
 	}
 
