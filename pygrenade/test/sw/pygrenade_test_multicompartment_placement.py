@@ -1137,6 +1137,88 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             placement_algorithm.run(
                 grenade.CoordinateSystem(), neuron, resources)
 
+    def test_spiny_dendrite(self):
+        comp_branch, param_space_branch = get_cap_compartment(0, 1)
+        comp_spine = grenade.Compartment()
+
+        # Parameter
+        param_interval_syn = grenade.ParameterIntervalDouble(0, 7)
+        param_interval_cap = grenade.ParameterIntervalDouble(0, 1)
+
+        parameter_space_a = grenade.MechanismSynapticInputCurrent\
+            .ParameterSpace(param_interval_syn, param_interval_syn)
+
+        parameter_space_b = grenade.MechanismCapacitance\
+            .ParameterSpace(param_interval_cap)
+
+        # Mechansims
+        mechanism_capacitance = grenade.MechanismCapacitance()
+        mechanism_synaptic_input = grenade.MechanismSynapticInputCurrent()
+
+        # Add Mechanisms to compartments
+        syn_on_spine = comp_spine.add(mechanism_synaptic_input)
+        cap_on_spine = comp_spine.add(mechanism_capacitance)
+
+        param_space_spine = grenade.Compartment.ParameterSpace()
+
+        # pylint: disable=locally-disabled, no-member
+        param_space_spine.mechanisms.set(syn_on_spine, parameter_space_a)
+        param_space_spine.mechanisms.set(cap_on_spine, parameter_space_b)
+
+        neuron = grenade.Neuron()
+        resources = grenade.ResourceManager()
+        environment = grenade.Environment()
+        syn_input = pygrenade_vx.network\
+            .SynapticInputEnvironmentCurrent(
+                True, grenade.NumberTopBottom(5, 0, 5))
+
+        chain_length = 5
+        spine_positions = [1, 3]
+
+        compartments = {}
+        dictionary = {}
+        branch = []
+        for pos in range(chain_length):
+            comp = neuron.add_compartment(comp_branch)
+            compartments[comp] = param_space_branch
+            dictionary[comp] = f"C{pos}"
+            if pos > 0:
+                neuron.add_compartment_connection(
+                    branch[-1], comp,
+                    grenade.CompartmentConnectionConductance())
+            branch.append(comp)
+
+        for pos in spine_positions:
+            comp = neuron.add_compartment(comp_spine)
+            compartments[comp] = param_space_spine
+            dictionary[comp] = f"S{pos}"
+            neuron.add_compartment_connection(
+                branch[pos], comp, grenade.CompartmentConnectionConductance())
+            environment.add(comp, syn_input)
+
+        neuron_parameter_space = grenade.Neuron.ParameterSpace()
+        neuron_parameter_space.compartments = compartments
+
+        resources.add_config(neuron, neuron_parameter_space, environment)
+
+        placement_algorithm = pygrenade_vx.network.PlacementAlgorithmRuleset()
+        placement_result = placement_algorithm.run(
+            grenade.CoordinateSystem(), neuron, resources)
+
+        title = "spiny_dendrite"
+        limits = [120, 135]
+
+        if placement_result.finished and self.save_plot:
+            plot_grid(limits=limits, title=title,
+                      coordinate_system=placement_result
+                      .coordinate_system, dictionary=dictionary)
+        if not placement_result.finished:
+            print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
+
 
 if __name__ == "__main__":
     pygrenade_vx.logger.default_config(
