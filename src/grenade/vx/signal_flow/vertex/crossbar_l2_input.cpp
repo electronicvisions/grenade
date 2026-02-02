@@ -86,7 +86,7 @@ std::vector<grenade::common::Vertex::Port> CrossbarL2Input::get_input_ports() co
 	return {Port(
 	    VertexPortType(ConnectionType::TimedSpikeToChipSequence),
 	    grenade::common::Vertex::Port::SumOrSplitSupport::yes,
-	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::supported,
 	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
 	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
 }

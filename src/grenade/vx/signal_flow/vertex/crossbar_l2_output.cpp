@@ -96,7 +96,7 @@ std::vector<grenade::common::Vertex::Port> CrossbarL2Output::get_output_ports() 
 	return {grenade::common::Vertex::Port(
 	    VertexPortType(ConnectionType::TimedSpikeFromChipSequence),
 	    grenade::common::Vertex::Port::SumOrSplitSupport::yes,
-	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::supported,
 	    m_generates_output_port_data ? grenade::common::Vertex::Port::RequiresOrGeneratesData::yes
 	                                 : grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
 	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
