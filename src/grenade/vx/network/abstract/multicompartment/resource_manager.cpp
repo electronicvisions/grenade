@@ -25,9 +25,18 @@ void ResourceManager::remove_config(Neuron const& neuron)
 NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& compartment) const
 {
 	if (resource_map.find(compartment) == resource_map.end()) {
-		throw std::invalid_argument("Invalid Compartment: No Configuration");
+		throw std::invalid_argument("Invalid compartment: compartment not part of the resources");
 	}
 	return *(resource_map.at(compartment));
+}
+
+void ResourceManager::set_config(
+    CompartmentOnNeuron const& compartment, NumberTopBottom const& config) const
+{
+	if (!resource_map.contains(compartment)) {
+		throw std::invalid_argument("Invalid compartment: compartment not part of the resources");
+	}
+	*resource_map.at(compartment) = config;
 }
 
 std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const

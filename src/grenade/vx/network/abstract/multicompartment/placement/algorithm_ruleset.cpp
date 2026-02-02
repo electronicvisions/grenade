@@ -873,6 +873,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 	LOG4CXX_DEBUG(m_logger, "Placing Leafs");
 
 	CoordinateSystem coordinates_copy = coordinates;
+	ResourceManager resources_copy = resources;
 
 	NumberTopBottom total_placed;
 	// Connect directly to shared line from this compartment
@@ -886,18 +887,30 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 
 	// Assign NCs to leafs and connect them to shared line via conductance
 	for (auto leaf : leafs) {
+		// Add extra resource requirement for leaf compartment if no resources in the required row
+		// are requested via the compartments mechanisms.
+		if (y == 0 && resources_copy.get_config(leaf).number_top == 0) {
+			NumberTopBottom config = resources_copy.get_config(leaf);
+			config += NumberTopBottom(1, 1, 0);
+			resources_copy.set_config(leaf, config);
+		} else if (y == 1 && resources_copy.get_config(leaf).number_bottom == 0) {
+			NumberTopBottom config = resources_copy.get_config(leaf);
+			config += NumberTopBottom(1, 0, 1);
+			resources_copy.set_config(leaf, config);
+		}
+
 		if (direction == 1) {
-			total_placed +=
-			    place_simple_right(coordinates_copy, neuron, resources, x_temp, y, leaf, virtually);
+			total_placed += place_simple_right(
+			    coordinates_copy, neuron, resources_copy, x_temp, y, leaf, virtually);
 			coordinates_copy.coordinate_system[y][x_temp].switch_circuit_shared_conductance = true;
-			x_temp +=
-			    resources.get_config(leaf).number_total - resources.get_config(leaf).number_bottom;
+			x_temp += resources_copy.get_config(leaf).number_total -
+			          resources_copy.get_config(leaf).number_bottom;
 		} else if (direction == -1) {
-			total_placed +=
-			    place_simple_left(coordinates_copy, neuron, resources, x_temp, y, leaf, virtually);
+			total_placed += place_simple_left(
+			    coordinates_copy, neuron, resources_copy, x_temp, y, leaf, virtually);
 			coordinates_copy.coordinate_system[y][x_temp].switch_circuit_shared_conductance = true;
-			x_temp -=
-			    resources.get_config(leaf).number_total - resources.get_config(leaf).number_bottom;
+			x_temp -= resources_copy.get_config(leaf).number_total -
+			          resources_copy.get_config(leaf).number_bottom;
 		}
 
 		if (!virtually) {

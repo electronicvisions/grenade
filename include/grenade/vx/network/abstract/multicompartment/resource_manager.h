@@ -37,11 +37,19 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	void remove_config(Neuron const& neuron);
 
 	/**
-	 * Return the configuration for a compartment in the resource maanger.
+	 * Return the configuration for a compartment in the resource manager.
 	 *
 	 * @param compartment Compartment of which configuration is returned.
 	 */
 	NumberTopBottom const& get_config(CompartmentOnNeuron const& compartment) const;
+
+	/**
+	 * Set the configuration for a compartment in the resource manager.
+	 *
+	 * @param compartment Compartment of which configuration is returned.
+	 * @param config Config to be set for the compartment.
+	 */
+	void set_config(CompartmentOnNeuron const& compartment, NumberTopBottom const& config) const;
 
 	/**
 	 * Returns total resources required by the contents of the resource manager.
