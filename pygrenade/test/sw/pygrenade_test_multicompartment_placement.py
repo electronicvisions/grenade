@@ -1,6 +1,6 @@
 # !/usr/bin/env python
 # pylint: disable=too-many-locals, too-many-statements, too-many-lines
-from typing import Tuple
+from typing import Set, Tuple
 import unittest
 
 import matplotlib.pyplot as plt
@@ -8,6 +8,7 @@ from matplotlib import lines
 
 import pygrenade_vx.network as grenade
 import pygrenade_vx
+from _pygrenade_vx_network import CoordinateSystem, CompartmentOnNeuron
 
 
 def plot_switch_shared_conductance(axis, i, j):
@@ -239,6 +240,22 @@ def get_syn_compartment(
     return comp, param_space_comp
 
 
+def get_compartment_ids(
+        coordinate_system: CoordinateSystem) -> Set[CompartmentOnNeuron]:
+    """
+    Extract all compartment IDs from the given coordinate_system.
+    :param coordinate_system: Coordinate system.
+    :return: Set of compartment IDs.
+    """
+    comp_list = []
+    for row in coordinate_system.coordinate_system:
+        for circuit in row:
+            comp_list.append(circuit.compartment)
+    comp_set = set(comp_list)
+    comp_set.remove(None)
+    return comp_set
+
+
 class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
     save_plot = False
 
@@ -274,6 +291,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         if not placement_result.finished:
             print("Placement failed.")
 
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
+
     def test_multiple_neuron_circuits(self):
         """
         Test a single comaprtment which is made up of several neuron
@@ -308,6 +329,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                       .coordinate_system, dictionary=dictionary)
         if not placement_result.finished:
             print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_two_connected(self):
         neuron = grenade.Neuron()
@@ -348,6 +373,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                       .coordinate_system, dictionary=dictionary)
         if not placement_result.finished:
             print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_compartment_chain(self):
         neuron = grenade.Neuron()
@@ -403,6 +432,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         if not placement_result.finished:
             print("Placement failed.")
 
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
+
     def test_synaptic_input(self):
         neuron = grenade.Neuron()
         resources = grenade.ResourceManager()
@@ -438,6 +471,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                       .coordinate_system, dictionary=dictionary)
         if not placement_result.finished:
             print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_change_shape(self):
         neuron = grenade.Neuron()
@@ -504,6 +541,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .SynapticInputEnvironmentCurrent(
                 True, grenade.NumberTopBottom(1200, 0, 257))
         environment.add(compartment_a_on_neuron, synaptic_input_a)
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_seven_connections(self):
         neuron = grenade.Neuron()
@@ -585,6 +626,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                       .coordinate_system, dictionary=dictionary)
         if not placement_result.finished:
             print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_combination(self):
         neuron = grenade.Neuron()
@@ -701,6 +746,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                       .coordinate_system, dictionary=dictionary)
         if not placement_result.finished:
             print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_pyramid(self):
         neuron = grenade.Neuron()
@@ -831,6 +880,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                       .coordinate_system, dictionary=dictionary)
         if not placement_result.finished:
             print("Placement failed.")
+
+        self.assertEqual(
+            get_compartment_ids(placement_result.coordinate_system),
+            set(dictionary.keys()))
 
     def test_purkinje(self):
         neuron = grenade.Neuron()
