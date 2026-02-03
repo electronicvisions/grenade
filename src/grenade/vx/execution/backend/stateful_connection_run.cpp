@@ -112,7 +112,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	    logger, "Generated playback program of initial config after "
 	                << initial_config_program_timer.print() << ".");
 
-	auto const trigger_program =
+	auto trigger_program =
 	    local_program.ppu_symbols
 	        ? stadls::vx::v3::generate(execution::detail::generator::PPUStart(
 	                                       std::get<halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU>(
@@ -140,17 +140,17 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
-			connection.m_reinit_base.set(base_program, std::nullopt, enforce_base);
+			connection.m_reinit_base.set(std::move(base_program), std::nullopt, enforce_base);
 
 			// Only enforce when not empty to support non-differential mode.
 			// In differential mode it is always enforced on changes.
 			connection.m_reinit_differential.set(
-			    differential_program, std::nullopt, !differential_program.empty());
+			    std::move(differential_program), std::nullopt, !differential_program.empty());
 		}
 
 		// Never enforce, since the reinit is only filled after a schedule-out operation.
 		connection.m_reinit_schedule_out_replacement.set(
-		    stadls::vx::v3::PlaybackProgram(), schedule_out_replacement_program, false);
+		    stadls::vx::v3::PlaybackProgram(), std::move(schedule_out_replacement_program), false);
 
 		// Always write capmem settling wait reinit, but only enforce it when the wait is
 		// immediately required, i.e. after changes to the capmem.
@@ -160,7 +160,8 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		    std::nullopt, has_capmem_changes);
 
 		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
-		connection.m_reinit_start_ppus.set(trigger_program, std::nullopt, !trigger_program.empty());
+		connection.m_reinit_start_ppus.set(
+		    std::move(trigger_program), std::nullopt, !trigger_program.empty());
 
 		// Execute realtime sections
 		for (auto& p : local_program.programs) {
