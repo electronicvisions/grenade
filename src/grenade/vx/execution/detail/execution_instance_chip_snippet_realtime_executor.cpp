@@ -208,8 +208,10 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				e.at(0).data.resize(data.output().size);
 			}
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
-				auto const block = dynamic_cast<PPUMemoryBlock const&>(
-				    m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]->get());
+				// move ticket to consume it
+				auto const local_ticket =
+				    std::move(*m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
+				auto const& block = dynamic_cast<PPUMemoryBlock const&>(local_ticket.get());
 				auto const values = from_vector_unit_row(block);
 				auto& samples = sample_batches.at(batch_index).at(0).data;
 
@@ -228,19 +230,23 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				std::vector<uint8_t> local_bytes;
 				if (*m_cadc_readout_mode ==
 				    signal_flow::vertex::CADCMembraneReadoutView::Mode::periodic) {
-					for (auto const& ticket :
+					for (auto& ticket :
 					     m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]) {
-						auto const local_block =
-						    dynamic_cast<ExternalPPUMemoryBlock const&>(ticket.get());
+						// move ticket to consume it
+						auto const local_ticket = std::move(ticket);
+						auto const& local_block =
+						    dynamic_cast<ExternalPPUMemoryBlock const&>(local_ticket.get());
 						for (auto const& byte : local_block.get_bytes()) {
 							local_bytes.push_back(byte.get_value().value());
 						}
 					}
 				} else {
-					for (auto const& ticket :
+					for (auto& ticket :
 					     m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]) {
-						auto const local_block =
-						    dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(ticket.get());
+						// move ticket to consume it
+						auto const local_ticket = std::move(ticket);
+						auto const& local_block =
+						    dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(local_ticket.get());
 						for (auto const& byte : local_block.get_bytes()) {
 							local_bytes.push_back(byte.get_value().value());
 						}
