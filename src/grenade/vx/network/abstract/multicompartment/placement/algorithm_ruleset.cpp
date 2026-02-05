@@ -597,12 +597,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 		throw std::logic_error("Not all chains measured for length.");
 	}
 
-	// Calculate Space required for placement of leafs
-	NumberTopBottom leafs_size;
-	for (auto leaf : neighbours_classified.leafs) {
-		leafs_size += resources.get_config(leaf);
-	}
-
 	size_t x_temp = x_start;
 
 	// Place bridge compartments at left limit
@@ -610,10 +604,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
 
 	// Place leafs inside
-	total_placed += place_leafs(
+	NumberTopBottom leafs_size = place_leafs(
 	    coordinates_copy, neuron, resources, x_temp, 0, compartment, neighbours_classified.leafs, 1,
 	    virtually);
-	number_placed += leafs_size;
+	total_placed += leafs_size;
 
 	x_temp += leafs_size.number_total - leafs_size.number_bottom;
 
@@ -749,12 +743,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 		throw std::logic_error("Not all chains measured for length.");
 	}
 
-	// Calculate Space required for placement of leafs
-	NumberTopBottom leafs_size;
-	for (auto leaf : neighbours_classified.leafs) {
-		leafs_size += resources.get_config(leaf);
-	}
-
 	size_t x_temp = x_start;
 
 	// Place bridge compartments at right limit
@@ -762,10 +750,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
 
 	// Place leafs inside
-	total_placed += place_leafs(
+	NumberTopBottom leafs_size = place_leafs(
 	    coordinates_copy, neuron, resources, x_temp, 0, compartment, neighbours_classified.leafs,
 	    -1, virtually);
-	number_placed += leafs_size;
+	total_placed += leafs_size;
 
 	x_temp -= leafs_size.number_total - leafs_size.number_bottom;
 
@@ -890,10 +878,16 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 		// Add extra resource requirement for leaf compartment if no resources in the required row
 		// are requested via the compartments mechanisms.
 		if (y == 0 && resources_copy.get_config(leaf).number_top == 0) {
+			LOG4CXX_TRACE(
+			    m_logger, "Leaf placement of leaf in row where no resources are requested. Adding "
+			              "resources.");
 			NumberTopBottom config = resources_copy.get_config(leaf);
 			config += NumberTopBottom(1, 1, 0);
 			resources_copy.set_config(leaf, config);
 		} else if (y == 1 && resources_copy.get_config(leaf).number_bottom == 0) {
+			LOG4CXX_TRACE(
+			    m_logger, "Leaf placement of leaf in row where no resources are requested. Adding "
+			              "resources.");
 			NumberTopBottom config = resources_copy.get_config(leaf);
 			config += NumberTopBottom(1, 0, 1);
 			resources_copy.set_config(leaf, config);
