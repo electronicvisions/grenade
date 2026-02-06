@@ -259,21 +259,36 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	bool neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const;
 
 	/**
-	 *  Check if compartment is part of a chain and return chain length if it is part of one.
-	 * @param compartment Compartment to check.
-	 * @param marked_compartments Visited compartments in chain.
-	 * @return Length of chain. -1 if not in chain.
+	 *  Return the number of compartments on a branch starting from the given compartment.
+	 * @param compartment Compartment from which the branch starts.
+	 * @param marked_compartments Compartments to ignore for the branch. Filled with visited during
+	 * check of branch.
+	 * @return Number of compartments inside the branch. Returns nullopt if chain_only is true and a
+	 * branch is found.
 	 */
-	int chain_length(
+	size_t branch_size(
 	    CompartmentOnNeuron const& compartment,
 	    std::set<CompartmentOnNeuron>& marked_compartments) const;
 
 	/**
-	 * Return ordered list of compartments inside a chain.
-	 * @param compartment Arbitrary compartment inside a chain.
-	 * @param blacklist_compartment compartment not to consider for chain to prevent looping.
+	 * Distinguishes chains from branches.
+	 * @param compartment Compartment from which the potential chain starts.
+	 * @param marked_compartments Compartments to ignore for the branch.
+	 * @return True if a chain and fasle if a branch.
 	 */
-	std::vector<CompartmentOnNeuron> chain_compartments(
+	bool is_chain(
+	    CompartmentOnNeuron const& compartment,
+	    std::set<CompartmentOnNeuron>& marked_compartments) const;
+
+	/**
+	 * Return ordered list of compartments inside a branch or chain.
+	 *
+	 * The branches are ordered in depth first order.
+	 * @param compartment Arbitrary compartment inside a chain.
+	 * @param blacklist_compartment Compartment which should not be considered in order to prevent
+	 * looping.
+	 */
+	std::vector<CompartmentOnNeuron> branch_compartments(
 	    CompartmentOnNeuron const& compartment,
 	    CompartmentOnNeuron const& blacklist_compartment = CompartmentOnNeuron()) const;
 

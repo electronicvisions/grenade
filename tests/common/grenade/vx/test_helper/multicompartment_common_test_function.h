@@ -77,7 +77,7 @@ inline auto test_neuron_placement = [](std::string file_name,
 			try {
 				placement_result = algorithm->run(coordinates, generated.neuron, resources);
 				result.success = placement_result.finished;
-			} catch (std::logic_error&) {
+			} catch (std::runtime_error&) {
 				result.success = false;
 			}
 

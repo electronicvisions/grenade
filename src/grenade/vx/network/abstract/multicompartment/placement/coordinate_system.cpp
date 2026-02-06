@@ -157,7 +157,6 @@ bool CoordinateSystem::has_double_connections(size_t x_max) const
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
 			if (connected_right(x, y) && connected_right_shared(x, y)) {
-				// std::cout << "Double Connection" << std::endl;
 				return true;
 			}
 		}
@@ -453,7 +452,6 @@ void CoordinateSystem::connect_shared(size_t x_source, size_t x_target, size_t y
 	if (x_source < x_target) {
 		for (size_t x = x_source; x < x_target; x++) {
 			if (coordinate_system[y][x].switch_shared_right) {
-				std::cout << x << "\n";
 				throw std::logic_error("Shared line already used. Can not use to connect.");
 			}
 			coordinate_system[y][x].switch_shared_right = true;
@@ -461,7 +459,6 @@ void CoordinateSystem::connect_shared(size_t x_source, size_t x_target, size_t y
 	} else {
 		for (size_t x = x_target; x < x_source; x++) {
 			if (coordinate_system[y][x].switch_shared_right) {
-				std::cout << x << "\n";
 				throw std::logic_error("Shared line already used. Can not use to connect.");
 			}
 			coordinate_system[y][x].switch_shared_right = true;

@@ -13,8 +13,8 @@ TEST(MulticompartmentNeuron, RandomNeuronsRuleset)
 	log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger("grenade.test.multicompartment.ruleset");
 
 	// Test parameters
-	const size_t num_runs = 100;
-	const size_t max_num_compartments = 10;
+	const size_t num_runs = 1000;
+	const size_t max_num_compartments = 30;
 	const size_t max_num_synaptic_inputs = 5000;
 	const std::string file_name = "";
 

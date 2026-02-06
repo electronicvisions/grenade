@@ -153,16 +153,12 @@ bool Neuron::neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron co
 	return false;
 }
 
-int Neuron::chain_length(
+
+size_t Neuron::branch_size(
     CompartmentOnNeuron const& compartment,
     std::set<CompartmentOnNeuron>& marked_compartments) const
 {
-	// Branching
-	if (get_compartment_degree(compartment) > 2) {
-		return -1;
-	}
-
-	int length = 0;
+	size_t size = 1;
 	marked_compartments.emplace(compartment);
 
 	for (auto adjacent_compartment :
@@ -170,44 +166,65 @@ int Neuron::chain_length(
 		if (marked_compartments.contains(adjacent_compartment)) {
 			continue;
 		}
-		int count = chain_length(adjacent_compartment, marked_compartments);
-		// Branching
-		if (count == -1) {
-			return -1;
-		}
-		length += count;
+		size += branch_size(adjacent_compartment, marked_compartments);
 	}
-
-	return length;
+	return size;
 }
 
-std::vector<CompartmentOnNeuron> Neuron::chain_compartments(
-    CompartmentOnNeuron const& compartment, CompartmentOnNeuron const& blacklist_compartment) const
+bool Neuron::is_chain(
+    CompartmentOnNeuron const& compartment,
+    std::set<CompartmentOnNeuron>& marked_compartments) const
 {
-	std::vector<CompartmentOnNeuron> chain;
-	std::set<CompartmentOnNeuron> marked_compartments;
-	chain.push_back(compartment);
+	if (get_compartment_degree(compartment) > 2) {
+		return false;
+	}
+
 	marked_compartments.emplace(compartment);
 
-	bool chain_end = false;
-	while (!chain_end) {
+	for (auto adjacent_compartment :
+	     boost::make_iterator_range(adjacent_compartments(compartment))) {
+		if (marked_compartments.contains(adjacent_compartment)) {
+			continue;
+		}
+		if (!is_chain(adjacent_compartment, marked_compartments)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+std::vector<CompartmentOnNeuron> Neuron::branch_compartments(
+    CompartmentOnNeuron const& compartment, CompartmentOnNeuron const& blacklist_compartment) const
+{
+	std::vector<CompartmentOnNeuron> branch;
+	branch.push_back(compartment);
+
+	std::set<CompartmentOnNeuron> marked_compartments;
+	marked_compartments.emplace(compartment);
+	marked_compartments.emplace(blacklist_compartment);
+
+	std::stack<CompartmentOnNeuron> compartment_queue;
+	compartment_queue.push(compartment);
+
+	while (!compartment_queue.empty()) {
+		auto current_compartment = compartment_queue.top();
+		compartment_queue.pop();
+
 		for (auto adjacent_compartment :
-		     boost::make_iterator_range(adjacent_compartments(chain.back()))) {
-			if (!marked_compartments.contains(adjacent_compartment) &&
-			    adjacent_compartment != blacklist_compartment) {
-				if (get_compartment_degree(adjacent_compartment) == 1) {
-					chain_end = true;
-				}
-				chain.push_back(adjacent_compartment);
+		     boost::make_iterator_range(adjacent_compartments(current_compartment))) {
+			if (!marked_compartments.contains(adjacent_compartment)) {
+				branch.push_back(adjacent_compartment);
 				marked_compartments.emplace(adjacent_compartment);
-				break;
+
+				compartment_queue.push(adjacent_compartment);
 			}
 		}
-		if (chain.size() > num_compartments()) {
+
+		if (branch.size() > num_compartments()) {
 			throw std::logic_error("Chain is looped.");
 		}
 	}
-	return chain;
+	return branch;
 }
 
 CompartmentNeighbours Neuron::classify_neighbours(
@@ -229,13 +246,13 @@ CompartmentNeighbours Neuron::classify_neighbours(
 		if (get_compartment_degree(adjacent_compartment) == 1) {
 			neighbours.leafs.push_back(adjacent_compartment);
 		}
-		// Branch
-		else if (chain_length(adjacent_compartment, marked_compartments) == -1) {
-			neighbours.branches.push_back(adjacent_compartment);
-		}
 		// Chain
-		else {
+		else if (is_chain(adjacent_compartment, marked_compartments)) {
 			neighbours.chains.push_back(adjacent_compartment);
+		}
+		// Branch
+		else {
+			neighbours.branches.push_back(adjacent_compartment);
 		}
 	}
 

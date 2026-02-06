@@ -177,7 +177,7 @@ def plot_grid(*, limits, title="", caption="", step="",
     axis.set_aspect(1)
     axis.set_title(title)
     axis.grid(True)
-    plt.savefig(directory + title + "_CoordinatePlot_"
+    plt.savefig(directory + title.replace(" ", "_") + "_CoordinatePlot_"
                 + str(step) + ".png", dpi=300)
     plt.close()
 
@@ -996,9 +996,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         placement_algorithm = pygrenade_vx.network\
             .PlacementAlgorithmRuleset()
-        with self.assertRaises(RuntimeError):
-            placement_algorithm.run(
-                grenade.CoordinateSystem(), neuron, resources)
+        placement_algorithm.run(
+            grenade.CoordinateSystem(), neuron, resources)
 
     def test_many_branches(self):
         neuron = grenade.Neuron()

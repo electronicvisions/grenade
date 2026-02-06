@@ -13,7 +13,21 @@ typedef std::shared_ptr<Logger> LoggerPtr;
 
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
-
+/**
+ * Placement algorithm for multicopartmen neurons.
+ *
+ * This algorithms follows a set of rules and places a logical neuron on a virtual coordinate system
+ * by iteratively placing its compartments.
+ *
+ * The first compartment is placed at the center of the coordinate system to allow for maximum
+ * flexibility in placement direction.
+ * For each placed compartment, all of its neighbour compartments are placed by searching for free
+ * spots on the coordinate system that can be interconneced with the placed compartment.
+ * The algorithm follows a depth first pattern for the placement and prioritizes the placement of
+ * smaller structures over more complex structures.
+ *
+ * In the current state the algorithm does not support cyclic neuron topologies.
+ */
 struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmRuleset : public PlacementAlgorithm
 {
 	PlacementAlgorithmRuleset();
@@ -83,14 +97,14 @@ private:
 	/**
 	 * Finds all free spots next to a placed compartment.
 	 * @param coordiantes Current configuration.
-	 * @param compartment Compartment to search free spots for.
+	 * @param compartment Compartment to search free spots next to.
 	 */
 	std::vector<PlacementSpot> find_free_spots(
 	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment);
 
 
 	/**
-	 * Selects a sufficiently large free spot.
+	 * Select a sufficiently large free spot.
 	 * @param spots Free spots.
 	 * @param min_spot_size Spot size required.
 	 * @param closest Prioritize closer spots.
@@ -261,6 +275,22 @@ private:
 	    bool virtually = false);
 
 	/**
+	 * Place a branch of compartments. This can include simple placements and bridge placements.
+	 * @param coordinates Current configuration. (Or empty for virtual placement)
+	 * @param neuron Neuron to be placed.
+	 * @param resources Resources required by compartments of neuron.
+	 * @param search_start Adjacent compartment from where on free space is searched.
+	 * @param branch List of compartments which should be placed. The compartments have to form
+	 * a branch for the algorithm to work
+	 */
+	NumberTopBottom place_branch(
+	    CoordinateSystem& coordinates,
+	    Neuron const& neuron,
+	    ResourceManager const& resources,
+	    CompartmentOnNeuron const& search_start,
+	    std::vector<CompartmentOnNeuron> const& branch);
+
+	/**
 	 * Connect all neuron circuits belonging to one compartment directly.
 	 * @param coordinates Current configuration.
 	 * @param compartment Compartment to be connected.
@@ -308,6 +338,17 @@ private:
 	void output_placed(
 	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
 
+	/**
+	 * Helper function for trying to connect and catching the error. This makes a runtime error out
+	 * of a logic error raised by the coordinate system. The error type is important for automatic
+	 * placement testing, as only runtime errors are caught.
+	 * @param coordinates Coordiante system to place the connection on.
+	 * @param x_first First circuits x-coordinate.
+	 * @param x_second Second circuits x-coordiante.
+	 *@param y Y-Coordinate for connection.
+	 */
+	void try_connect_shared(CoordinateSystem& coordiantes, size_t x_left, size_t x_right, size_t y);
+
 
 	// List of IDs of placed compartments
 	std::vector<CompartmentOnNeuron> m_placed_compartments;
@@ -320,7 +361,7 @@ private:
 	log4cxx::LoggerPtr m_logger;
 
 	// Wether algorithm should search first in breadth or depth.
-	bool m_breadth_first_search = true;
+	bool m_depth_search_first = false;
 };
 
 } // namespace abstract
