@@ -267,15 +267,24 @@ ExecutionInstanceExecutor::operator()(
 	std::vector<std::map<common::ChipOnConnection, PlaybackProgramBuilder>> assembled_builders;
 	for (size_t i = 0; i < batch_size; i++) {
 		assembled_builders.push_back({});
+
+		// Find maximum pre realtime duration for syncing of multi-chip setups.
+		haldls::vx::v3::Timer::Value max_pre_realtime_duration(0);
+		for (auto const& chip : m_chips_on_connection) {
+			max_pre_realtime_duration = std::max(
+			    realtime_program.snippets[0].at(chip).realtimes[i].pre_realtime_duration,
+			    max_pre_realtime_duration);
+		}
+
 		for (auto const& chip_on_connection : m_chips_on_connection) {
 			auto& local_realtime_program = realtime_program.chips.at(chip_on_connection);
 			auto& local_hooks = m_hooks.chips.at(chip_on_connection);
 			auto& local_playback_program = playback_program.chips.at(chip_on_connection);
 			AbsoluteTimePlaybackProgramBuilder program_builder;
-			haldls::vx::v3::Timer::Value config_time = realtime_program.snippets[0]
-			                                               .at(chip_on_connection)
-			                                               .realtimes[i]
-			                                               .pre_realtime_duration;
+			// This ensures that all realtime sections start at the same time, even with different
+			// pre realtime durations
+			haldls::vx::v3::Timer::Value config_time = max_pre_realtime_duration;
+
 			// Neuron resets
 			for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
 				auto backend = std::visit(
@@ -338,8 +347,8 @@ ExecutionInstanceExecutor::operator()(
 			inside_realtime_hook += config_time;
 			program_builder.merge(inside_realtime_hook);
 
-			// reset config to initial config at end of each realtime_row if experiment has multiple
-			// configs
+			// reset config to initial config at end of each realtime_row if experiment has
+			// multiple configs
 			if (realtime_program.snippets.size() > 1) {
 				config_time += realtime_program.snippets[realtime_program.snippets.size() - 1]
 				                   .at(chip_on_connection)
@@ -378,6 +387,16 @@ ExecutionInstanceExecutor::operator()(
 			} else {
 				assembled_builder.merge_back(local_hooks.inside_realtime_begin);
 			}
+			// For multichip execution add barrier for synchronisation
+			if (std::all_of(
+			        chip_hwdb_entries.begin(), chip_hwdb_entries.end(),
+			        [](auto& chip_and_hwdb_entry) {
+				        return std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
+				            chip_and_hwdb_entry.second);
+			        })) {
+				assembled_builder.block_until(
+				    halco::hicann_dls::vx::BarrierOnFPGA(), Barrier::multi_fpga);
+			}
 			// append realtime section
 			assembled_builder.merge_back(program_builder.done());
 			// append inside_realtime_end hook
@@ -409,8 +428,8 @@ ExecutionInstanceExecutor::operator()(
 					}
 					assembled_builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
 				}
-				// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch
-				// entries)
+				// Implement inter_batch_entry_wait (ensures minimal waiting time in between
+				// batch entries)
 				if (inter_batch_entry_wait) {
 					assembled_builder.block_until(
 					    TimerOnDLS(), config_time + inter_batch_entry_wait->toTimerOnFPGAValue());
