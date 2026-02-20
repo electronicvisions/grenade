@@ -2,6 +2,7 @@
 
 #include "grenade/vx/network/abstract/multicompartment/evolutionary/population.h"
 #include <algorithm>
+#include <stdexcept>
 
 namespace grenade::vx::network::abstract {
 

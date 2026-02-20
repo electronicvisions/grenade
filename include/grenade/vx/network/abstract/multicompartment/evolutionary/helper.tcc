@@ -1,6 +1,8 @@
 #pragma once
 #include "grenade/vx/network/abstract/multicompartment/evolutionary/helper.h"
 
+#include <stdexcept>
+
 namespace grenade::vx::network::abstract {
 
 template <class EOT>
