@@ -23,15 +23,20 @@ struct StatefulConnectionConfig
 {
 	using System = ::grenade::vx::execution::detail::System;
 
-	StatefulConnectionConfig() = default;
+	StatefulConnectionConfig(System system);
 
 	bool get_enable_differential_config() const SYMBOL_VISIBLE;
 	void set_enable_differential_config(bool value) SYMBOL_VISIBLE;
 
 	/**
-	 * Set chip which is to be applied next.
+	 * Reset the config but keep an default constructed system to ensure type continuity.
 	 */
-	void set_chip(System const& value, bool split_base_differential) SYMBOL_VISIBLE;
+	void reset() SYMBOL_VISIBLE;
+
+	/**
+	 * Set system config chich is to be applied next.
+	 */
+	void set_system(System const& value, bool split_base_differential) SYMBOL_VISIBLE;
 
 	/**
 	 * Set external PPU DRAM memory which is to be applied next.
@@ -64,12 +69,13 @@ private:
 	bool m_enable_differential_config;
 
 	System m_last_system;
-	Words m_chip_words;
-	Words m_last_chip_words;
-	Words m_chip_base_words;
-	Words m_chip_differential_words;
-	Addresses m_chip_base_addresses;
-	Addresses m_chip_differential_addresses;
+
+	Words m_system_words;
+	Words m_last_system_words;
+	Words m_system_base_words;
+	Words m_system_differential_words;
+	Addresses m_system_base_addresses;
+	Addresses m_system_differential_addresses;
 
 	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> m_external_ppu_dram_memory;
 	std::optional<lola::vx::v3::ExternalPPUDRAMMemoryBlock> m_last_external_ppu_dram_memory;

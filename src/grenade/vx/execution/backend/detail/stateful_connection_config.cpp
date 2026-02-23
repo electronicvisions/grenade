@@ -6,6 +6,10 @@
 
 namespace grenade::vx::execution::backend::detail {
 
+StatefulConnectionConfig::StatefulConnectionConfig(System system) : m_last_system(std::move(system))
+{
+}
+
 bool StatefulConnectionConfig::get_enable_differential_config() const
 {
 	return m_enable_differential_config;
@@ -16,88 +20,154 @@ void StatefulConnectionConfig::set_enable_differential_config(bool const value)
 	m_enable_differential_config = value;
 }
 
+void StatefulConnectionConfig::reset()
+{
+	if (std::holds_alternative<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(m_last_system)) {
+		m_last_system = lola::vx::v3::ChipAndMultichipJboaLeafFPGA();
+	} else if (std::holds_alternative<lola::vx::v3::ChipAndSinglechipFPGA>(m_last_system)) {
+		m_last_system = lola::vx::v3::ChipAndSinglechipFPGA();
+	} else {
+		throw std::logic_error("Invalid system tpye.");
+	}
+
+	m_system_words.clear();
+	m_last_system_words.clear();
+	m_system_base_words.clear();
+	m_system_differential_addresses.clear();
+	m_system_base_addresses.clear();
+	m_system_differential_addresses.clear();
+
+	m_external_ppu_dram_memory_words.clear();
+	m_external_ppu_dram_memory_addresses.clear();
+	m_last_external_ppu_dram_memory_words.clear();
+	m_external_ppu_dram_memory_base_words.clear();
+	m_external_ppu_dram_memory_differential_words.clear();
+	m_external_ppu_dram_memory_base_addresses.clear();
+	m_external_ppu_dram_memory_differential_addresses.clear();
+}
+
 namespace {
 
 /**
- * Helper to only encode the constant addresses of the lola Chip object once.
+ * Helper to only encode the constant addresses of the lola single chip system object once.
  */
-static const std::vector<halco::hicann_dls::vx::OmnibusAddress> chip_addresses = []() {
+static const std::vector<halco::hicann_dls::vx::OmnibusAddress> cube_system_addresses = []() {
 	using namespace halco::hicann_dls::vx::v3;
 	typedef std::vector<OmnibusAddress> addresses_type;
 	addresses_type storage;
-	hate::Empty<lola::vx::v3::Chip> config;
+	hate::Empty<lola::vx::v3::ChipAndSinglechipFPGA> config;
 	haldls::vx::visit_preorder(
-	    config, ChipOnDLS(), stadls::WriteAddressVisitor<addresses_type>{storage});
+	    config, ChipAndSinglechipFPGAOnSystem(),
+	    stadls::WriteAddressVisitor<addresses_type>{storage});
+	return storage;
+}();
+
+/**
+ * Helper to only encode the constant addresses of the lola multi chip system object once.
+ */
+static const std::vector<halco::hicann_dls::vx::OmnibusAddress> jboa_system_addresses = []() {
+	using namespace halco::hicann_dls::vx::v3;
+	typedef std::vector<OmnibusAddress> addresses_type;
+	addresses_type storage;
+	hate::Empty<lola::vx::v3::ChipAndMultichipJboaLeafFPGA> config;
+	haldls::vx::visit_preorder(
+	    config, ChipAndMultichipJboaLeafFPGAOnSystem(),
+	    stadls::WriteAddressVisitor<addresses_type>{storage});
 	return storage;
 }();
 
 } // namespace
 
-void StatefulConnectionConfig::set_chip(System const& value, bool const split_base_differential)
+void StatefulConnectionConfig::set_system(System const& value, bool split_base_differential)
 {
-	auto const& chip_value =
-	    std::visit([](auto& system) -> lola::vx::v3::Chip const& { return system.chip; }, value);
-	auto& last_chip =
-	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, m_last_system);
+	std::vector<halco::hicann_dls::vx::OmnibusAddress> const& system_addresses =
+	    [this, &value]() -> std::vector<halco::hicann_dls::vx::OmnibusAddress> const& {
+		if (std::holds_alternative<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(value)) {
+			if (!std::holds_alternative<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(
+			        m_last_system)) {
+				throw std::logic_error("Last system and new system are of different type.");
+			}
+			return jboa_system_addresses;
+		} else if (std::holds_alternative<lola::vx::v3::ChipAndSinglechipFPGA>(value)) {
+			if (!std::holds_alternative<lola::vx::v3::ChipAndSinglechipFPGA>(m_last_system)) {
+				throw std::logic_error("Last system and new system are of different type.");
+			}
+			return cube_system_addresses;
+		} else {
+			throw std::logic_error("Invalid system type.");
+		}
+	}();
 
-	auto const encode_value = [chip_value, this]() {
-		std::swap(m_last_chip_words, m_chip_words);
 
-		m_chip_words.clear();
-		m_chip_words.reserve(chip_addresses.size());
-		haldls::vx::visit_preorder(
-		    chip_value, hate::Empty<halco::hicann_dls::vx::v3::ChipOnDLS>(),
-		    stadls::EncodeVisitor<Words>{m_chip_words});
+	auto const encode_value = [value, this]() {
+		std::swap(m_last_system_words, m_system_words);
+
+		m_system_words.clear();
+		m_system_words.reserve(jboa_system_addresses.size());
+
+		if (std::holds_alternative<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(value)) {
+			haldls::vx::visit_preorder(
+			    std::get<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(value),
+			    hate::Empty<lola::vx::v3::ChipAndMultichipJboaLeafFPGA::coordinate_type>(),
+			    stadls::EncodeVisitor<Words>{m_system_words});
+		} else if (std::holds_alternative<lola::vx::v3::ChipAndSinglechipFPGA>(value)) {
+			haldls::vx::visit_preorder(
+			    std::get<lola::vx::v3::ChipAndSinglechipFPGA>(value),
+			    hate::Empty<lola::vx::v3::ChipAndSinglechipFPGA::coordinate_type>(),
+			    stadls::EncodeVisitor<Words>{m_system_words});
+		} else {
+			throw std::logic_error("Invalid system type.");
+		}
 	};
 
 	if (split_base_differential) {
 		if (!m_enable_differential_config) {
 			encode_value();
-			m_chip_differential_words.clear();
-			m_chip_differential_addresses.clear();
+			m_system_differential_words.clear();
+			m_system_differential_addresses.clear();
 
-			m_chip_base_addresses = chip_addresses;
-			m_chip_base_words = m_chip_words;
+			m_system_base_addresses = system_addresses;
+			m_system_base_words = m_system_words;
 		} else if (get_is_fresh()) {
 			encode_value();
-			assert(m_chip_base_words.empty());
-			assert(m_chip_differential_words.empty());
-			assert(m_chip_base_addresses.empty());
-			assert(m_chip_differential_addresses.empty());
+			assert(m_system_base_words.empty());
+			assert(m_system_differential_words.empty());
+			assert(m_system_base_addresses.empty());
+			assert(m_system_differential_addresses.empty());
 
-			m_chip_base_addresses = chip_addresses;
-			m_chip_base_words = m_chip_words;
-			last_chip = chip_value;
+			m_system_base_addresses = system_addresses;
+			m_system_base_words = m_system_words;
+			m_last_system = value;
 		} else {
-			if (last_chip != chip_value) {
+			if (m_last_system != value) {
 				encode_value();
-				assert(m_chip_words.size() == chip_addresses.size());
-				assert(m_last_chip_words.size() == chip_addresses.size());
+				assert(m_system_words.size() == system_addresses.size());
+				assert(m_last_system_words.size() == system_addresses.size());
 
-				m_chip_base_words.clear();
-				m_chip_differential_words.clear();
-				m_chip_base_addresses.clear();
-				m_chip_differential_addresses.clear();
-				for (size_t i = 0; i < chip_addresses.size(); ++i) {
-					if (m_last_chip_words[i] != m_chip_words[i]) {
-						m_chip_differential_addresses.push_back(chip_addresses[i]);
-						m_chip_differential_words.push_back(m_chip_words[i]);
+				m_system_base_words.clear();
+				m_system_differential_words.clear();
+				m_system_base_addresses.clear();
+				m_system_differential_addresses.clear();
+				for (size_t i = 0; i < system_addresses.size(); ++i) {
+					if (m_last_system_words[i] != m_system_words[i]) {
+						m_system_differential_addresses.push_back(system_addresses[i]);
+						m_system_differential_words.push_back(m_system_words[i]);
 					} else {
-						m_chip_base_addresses.push_back(chip_addresses[i]);
-						m_chip_base_words.push_back(m_chip_words[i]);
+						m_system_base_addresses.push_back(system_addresses[i]);
+						m_system_base_words.push_back(m_system_words[i]);
 					}
 				}
-				last_chip = chip_value;
+				m_last_system = value;
 			} else {
-				m_last_chip_words = m_chip_words;
+				m_last_system_words = m_system_words;
 			}
 		}
 	} else {
-		if (last_chip != chip_value) {
+		if (m_last_system != value) {
 			encode_value();
-			last_chip = chip_value;
+			m_last_system = value;
 		} else {
-			m_last_chip_words = m_chip_words;
+			m_last_system_words = m_system_words;
 		}
 	}
 }
@@ -173,25 +243,24 @@ void StatefulConnectionConfig::set_external_ppu_dram_memory(
 
 bool StatefulConnectionConfig::get_is_fresh() const
 {
-	return m_chip_words.empty();
+	return m_system_words.empty();
 }
 
 bool StatefulConnectionConfig::get_has_differential() const
 {
-	return !m_chip_differential_words.empty() ||
+	return !m_system_differential_words.empty() ||
 	       !m_external_ppu_dram_memory_differential_words.empty();
 }
-
 
 bool StatefulConnectionConfig::get_differential_changes_capmem() const
 {
 	// iterate over all addresses and check whether the base matches one of the CapMem base
 	// addresses.
-	for (auto const& address : m_chip_differential_addresses) {
+	for (auto const& address : m_system_differential_addresses) {
 		// select only the upper 16 bit and compare to the CapMem base address.
 		auto const base = (address.value() & 0xffff0000);
-		// north-west and south-west base addresses suffice because east base addresses only have
-		// another bit set in the lower 16 bit.
+		// north-west and south-west base addresses suffice because east base addresses only
+		// have another bit set in the lower 16 bit.
 		if ((base == haldls::vx::v3::capmem_nw_sram_base_address) ||
 		    (base == haldls::vx::v3::capmem_sw_sram_base_address)) {
 			return true;
@@ -202,11 +271,11 @@ bool StatefulConnectionConfig::get_differential_changes_capmem() const
 
 haldls::vx::Encodable::BackendCocoListVariant StatefulConnectionConfig::get_base()
 {
-	Addresses addresses(m_chip_base_addresses);
+	Addresses addresses(m_system_base_addresses);
 	addresses.insert(
 	    addresses.end(), m_external_ppu_dram_memory_base_addresses.begin(),
 	    m_external_ppu_dram_memory_base_addresses.end());
-	Words words(m_chip_base_words);
+	Words words(m_system_base_words);
 	words.insert(
 	    words.end(), m_external_ppu_dram_memory_base_words.begin(),
 	    m_external_ppu_dram_memory_base_words.end());
@@ -215,11 +284,11 @@ haldls::vx::Encodable::BackendCocoListVariant StatefulConnectionConfig::get_base
 
 haldls::vx::Encodable::BackendCocoListVariant StatefulConnectionConfig::get_differential()
 {
-	Addresses addresses(m_chip_differential_addresses);
+	Addresses addresses(m_system_differential_addresses);
 	addresses.insert(
 	    addresses.end(), m_external_ppu_dram_memory_differential_addresses.begin(),
 	    m_external_ppu_dram_memory_differential_addresses.end());
-	Words words(m_chip_differential_words);
+	Words words(m_system_differential_words);
 	words.insert(
 	    words.end(), m_external_ppu_dram_memory_differential_words.begin(),
 	    m_external_ppu_dram_memory_differential_words.end());

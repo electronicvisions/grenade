@@ -74,7 +74,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 	hate::Timer const initial_config_program_timer;
 	bool const is_fresh_connection_config = connection.m_config.get_is_fresh();
-	connection.m_config.set_chip(local_program.system_configs[0], true);
+	connection.m_config.set_system(local_program.system_configs[0], true);
 	if (local_program.external_ppu_dram_memory_config) {
 		connection.m_config.set_external_ppu_dram_memory(
 		    local_program.external_ppu_dram_memory_config);
@@ -204,12 +204,12 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 			    [](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, current_config));
 		}
 		if (runs_successful) {
-			connection.m_config.set_chip(current_config, false);
+			connection.m_config.set_system(current_config, false);
 		} else {
 			// reset connection state storage since no assumptions can be made after failure
 			// TODO: create reset mechanism in class
 			bool const enable_differential_config = connection.get_enable_differential_config();
-			connection.m_config = detail::StatefulConnectionConfig();
+			connection.m_config.reset();
 			connection.m_config.set_enable_differential_config(enable_differential_config);
 		}
 		LOG4CXX_TRACE(logger, "Updated connection state in " << update_state_timer.print() << ".");

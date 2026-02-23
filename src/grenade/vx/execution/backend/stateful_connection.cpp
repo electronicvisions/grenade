@@ -1,11 +1,22 @@
 #include "grenade/vx/execution/backend/stateful_connection.h"
+#include "grenade/vx/execution/detail/system.h"
 
 namespace grenade::vx::execution::backend {
 
 StatefulConnection::StatefulConnection(
     InitializedConnection&& connection, bool const enable_differential_config) :
     m_initialized_connection(std::move(connection)),
-    m_config(),
+    m_config([this]() -> grenade::vx::execution::detail::System {
+	    auto hwdb_entries = get_hwdb_entry();
+
+	    if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(hwdb_entries.at(0))) {
+		    return lola::vx::v3::ChipAndSinglechipFPGA();
+	    } else if (std::holds_alternative<hwdb4cpp::JboaSetupEntry>(hwdb_entries.at(0))) {
+		    return lola::vx::v3::ChipAndMultichipJboaLeafFPGA();
+	    } else {
+		    throw std::logic_error("Invalid hwdb entry.");
+	    }
+    }()),
     m_reinit_base(m_initialized_connection.create_reinit_stack_entry()),
     m_reinit_differential(m_initialized_connection.create_reinit_stack_entry()),
     m_reinit_schedule_out_replacement(m_initialized_connection.create_reinit_stack_entry()),
