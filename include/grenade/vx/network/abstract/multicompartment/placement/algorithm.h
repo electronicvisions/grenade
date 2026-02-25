@@ -26,6 +26,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithm
 {
 	PlacementAlgorithm();
 
+	virtual ~PlacementAlgorithm() = default;
+
 	/**
 	 * Execute Placement Algorithm.
 	 * @param coordinate_system Initial state of coordinate system.
