@@ -17,7 +17,6 @@
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/variant.h"
 #include <gtest/gtest.h>
-#include <log4cxx/logger.h>
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;

@@ -21,13 +21,11 @@
 #include "haldls/vx/v3/timer.h"
 #include "helper.h"
 #include "hxcomm/vx/connection_from_env.h"
-#include "logging_ctrl.h"
 #include "lola/vx/v3/chip.h"
 #include "stadls/vx/v3/init_generator.h"
 #include "stadls/vx/v3/playback_generator.h"
 #include "stadls/vx/v3/run.h"
 #include <gtest/gtest.h>
-#include <log4cxx/logger.h>
 
 
 using namespace halco::common;

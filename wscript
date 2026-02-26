@@ -124,7 +124,7 @@ def build(bld):
         features = 'gtest cxx cxxprogram',
         source = bld.path.ant_glob('tests/sw/grenade/common/**/test-*.cpp'),
         test_main = 'tests/common/grenade/main.cpp',
-        use = ['grenade_common', 'GTEST', 'grenade_test_common_inc', 'logger_obj'],
+        use = ['grenade_common', 'GTEST', 'grenade_test_common_inc', 'logger'],
         linkflags = ['-lboost_program_options-mt'],
         test_timeout=240,
         install_path = '${PREFIX}/bin',

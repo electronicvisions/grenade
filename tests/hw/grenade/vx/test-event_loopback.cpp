@@ -10,7 +10,6 @@
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "haldls/vx/v3/systime.h"
-#include "logging_ctrl.h"
 #include "lola/vx/v3/chip.h"
 #include "stadls/vx/v3/init_generator.h"
 #include "stadls/vx/v3/playback_generator.h"
