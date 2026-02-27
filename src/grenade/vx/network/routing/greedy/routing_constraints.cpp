@@ -200,10 +200,14 @@ std::vector<RoutingConstraints::ExternalConnection> RoutingConstraints::get_exte
 {
 	std::vector<ExternalConnection> ret;
 	for (auto const& [descriptor, projection] : m_network.projections) {
-		if (!std::holds_alternative<ExternalSourcePopulation>(
-		        m_network.populations.at(projection.population_pre))) {
+		bool const is_external_like = std::holds_alternative<ExternalSourcePopulation>(
+		                                  m_network.populations.at(projection.population_pre)) ||
+		                              std::holds_alternative<SpikeIOSourcePopulation>(
+		                                  m_network.populations.at(projection.population_pre));
+		if (!is_external_like) {
 			continue;
 		}
+
 		auto const& population_post =
 		    std::get<Population>(m_network.populations.at(projection.population_post));
 		size_t i = 0;

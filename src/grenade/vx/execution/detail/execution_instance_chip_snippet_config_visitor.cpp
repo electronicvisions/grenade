@@ -6,6 +6,7 @@
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
+#include "grenade/vx/signal_flow/vertex/spikeio_source_population.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
@@ -344,6 +345,70 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	chip.background_spike_sources[data.get_coordinate()] = data.get_config();
+}
+
+template <>
+void ExecutionInstanceChipSnippetConfigVisitor::process(
+    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    signal_flow::vertex::SpikeIOSourcePopulation const& data,
+    System& system) const
+{
+	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor");
+	auto* sys = std::get_if<lola::vx::v3::ChipAndSinglechipFPGA>(&system);
+	if (!sys) {
+		throw std::logic_error("SpikeIOSource requires ChipAndSingleChipFPGA!");
+	}
+	auto& fpga = sys->fpga;
+
+	auto const& config = data.get_config();
+	LOG4CXX_TRACE(
+	    logger, "process(SpikeIOSourcePopulation): enable_tx="
+	                << config.get_enable_tx() << " enable_rx=" << config.get_enable_rx()
+	                << " loopback=" << config.get_enable_internal_loopback() << "dataratescaler"
+	                << config.get_data_rate_scaler());
+
+
+	auto const& in = data.get_input_routing();
+	for (auto const& [coord, lbl] : in) {
+		LOG4CXX_TRACE(
+		    logger, "    input_routing[" << coord << "] -> label=" << lbl
+		                                 << " neuron_label=" << lbl.get_neuron_label()
+		                                 << " row=" << lbl.get_row_select_address()
+		                                 << " synapse=" << lbl.get_synapse_label()
+		                                 << " spl1=" << lbl.get_spl1_address());
+	}
+
+	auto& fpga_cfg = fpga.spikeio_config;
+
+	fpga_cfg.set_enable_tx(fpga_cfg.get_enable_tx() || config.get_enable_tx());
+	fpga_cfg.set_enable_rx(fpga_cfg.get_enable_rx() || config.get_enable_rx());
+	fpga_cfg.set_enable_internal_loopback(
+	    fpga_cfg.get_enable_internal_loopback() || config.get_enable_internal_loopback());
+	fpga_cfg.set_data_rate_scaler(config.get_data_rate_scaler());
+	// data rate consistency check moved to network_builder
+	{
+		for (auto const& [serial_addr, lbl] : data.get_input_routing()) {
+			auto const coord = serial_addr.toSpikeIOInputRouteOnFPGA();
+			auto& entry = fpga.spikeio_input_routes[coord];
+			auto const cur = entry.get_target();
+
+			if (cur != haldls::vx::SpikeIOInputRoute::SILENT && cur != lbl) {
+				std::ostringstream oss;
+				oss << "SpikeIO input_routing conflict at coord " << coord;
+				throw std::runtime_error(oss.str());
+			}
+
+			entry.set_target(lbl);
+
+			auto const after = entry.get_target();
+			if (after != lbl) {
+				throw std::logic_error("SpikeIO input route did not stick in LoLA container");
+			}
+
+			LOG4CXX_TRACE(
+			    logger, "SpikeIO RX: " << serial_addr << " -> " << coord << " = " << after);
+		}
+	}
 }
 
 template <>

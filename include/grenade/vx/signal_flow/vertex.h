@@ -14,6 +14,7 @@
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "grenade/vx/signal_flow/vertex/padi_bus.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
+#include "grenade/vx/signal_flow/vertex/spikeio_source_population.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"
 #include "grenade/vx/signal_flow/vertex/synapse_driver.h"
@@ -41,7 +42,8 @@ typedef std::variant<
     vertex::NeuronEventOutputView,
     vertex::MADCReadoutView,
     vertex::PadReadoutView,
-    vertex::CADCMembraneReadoutView>
+    vertex::CADCMembraneReadoutView,
+    vertex::SpikeIOSourcePopulation>
     Vertex;
 
 static_assert(

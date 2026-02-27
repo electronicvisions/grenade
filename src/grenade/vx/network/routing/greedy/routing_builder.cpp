@@ -1,9 +1,11 @@
 #include "grenade/vx/network/routing/greedy/routing_builder.h"
 
+#include "fisch/vx/playback_program_builder.h"
 #include "grenade/vx/network/build_connection_weight_split.h"
 #include "grenade/vx/network/exception.h"
 #include "grenade/vx/network/routing/greedy/routing_constraints.h"
 #include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
+#include "grenade/vx/network/spikeio_source_population.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/routing_crossbar.h"
@@ -260,13 +262,28 @@ RoutingBuilder::get_external_sources(
 			}
 		}
 	}
+	for (auto const& [descriptor, pop] : network.execution_instances.at(id).populations) {
+		if (!std::holds_alternative<SpikeIOSourcePopulation>(pop)) {
+			continue;
+		}
+		auto const& population = std::get<SpikeIOSourcePopulation>(pop);
+		for (size_t i = 0; i < population.neurons.size(); ++i) {
+			if (population.neurons.at(i).enable_record_spikes) {
+				external_source_descriptors.insert(
+				    std::tuple{descriptor, i, CompartmentOnLogicalNeuron()});
+			}
+		}
+	}
 	// add inter-execution-instance sources
 	for (auto const& [_, inter_ei_proj] : network.inter_execution_instance_projections) {
 		if (inter_ei_proj.population_pre.toExecutionInstanceID() != id) {
 			continue;
 		}
-		if (!std::holds_alternative<ExternalSourcePopulation>(
-		        network.execution_instances.at(id).populations.at(inter_ei_proj.population_pre))) {
+		auto const& pre_pop =
+		    network.execution_instances.at(id).populations.at(inter_ei_proj.population_pre);
+
+		if (!std::holds_alternative<ExternalSourcePopulation>(pre_pop) &&
+		    !std::holds_alternative<SpikeIOSourcePopulation>(pre_pop)) {
 			continue;
 		}
 		for (auto const& conn : inter_ei_proj.connections) {
@@ -424,16 +441,23 @@ RoutingBuilder::get_external_labels(
 			auto const local_index = local_sources.at(k);
 			auto const& local_descriptor = descriptors.at(local_index);
 			auto const& [population_on_network, neuron_on_population, _] = local_descriptor;
+
+			bool enable_record_spikes = false;
+			auto const& popv = network.populations.at(population_on_network);
+			if (std::holds_alternative<ExternalSourcePopulation>(popv)) {
+				enable_record_spikes = std::get<ExternalSourcePopulation>(popv)
+				                           .neurons.at(neuron_on_population)
+				                           .enable_record_spikes;
+			} else if (std::holds_alternative<SpikeIOSourcePopulation>(popv)) {
+				enable_record_spikes = std::get<SpikeIOSourcePopulation>(popv)
+				                           .neurons.at(neuron_on_population)
+				                           .enable_record_spikes;
+			}
 			for (auto const& [padi_bus, _] : targets) {
 				halco::hicann_dls::vx::v3::SpikeLabel label;
 				label.set_neuron_label(NeuronLabel(
 				    (padi_bus.toPADIBusBlockOnDLS().value() << 13) |
-				    (std::get<ExternalSourcePopulation>(
-				         network.populations.at(population_on_network))
-				             .neurons.at(neuron_on_population)
-				             .enable_record_spikes
-				         ? 1 << 12 // used for recording external sources
-				         : 0)));
+				    (enable_record_spikes ? 1 << 12 : 0)));
 				label.set_row_select_address(
 				    haldls::vx::v3::PADIEvent::RowSelectAddress(local_label));
 				label.set_synapse_label(halco::hicann_dls::vx::SynapseLabel(k));
@@ -542,8 +566,19 @@ void RoutingBuilder::apply_source_labels(
 				result.background_spike_source_masks[descriptor][hemisphere] =
 				    haldls::vx::v3::BackgroundSpikeSource::Mask(size - 1);
 			}
-		} else {
-			throw std::logic_error("Population type not implemented.");
+		} else if (std::holds_alternative<SpikeIOSourcePopulation>(population)) {
+			auto& local_labels = result.external_spike_labels[descriptor];
+			local_labels.resize(std::get<SpikeIOSourcePopulation>(population).neurons.size());
+			for (size_t i = 0; i < local_labels.size(); ++i) {
+				if (!external.contains(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
+					// This might happen, but is in principle not an error.
+				} else {
+					for (auto const& [_, l] :
+					     external.at(std::tuple{descriptor, i, CompartmentOnLogicalNeuron()})) {
+						local_labels.at(i).push_back(l);
+					}
+				}
+			}
 		}
 	}
 	// all unset labels can be uniquely assigned now

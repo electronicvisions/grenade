@@ -14,6 +14,7 @@
 #include "grenade/vx/network/population_on_execution_instance.h"
 #include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/projection_on_execution_instance.h"
+#include "grenade/vx/network/spikeio_source_population.h"
 #include "hate/visibility.h"
 #include <chrono>
 #include <iosfwd>
@@ -40,7 +41,11 @@ struct GENPYBIND(visible, holder_type("std::shared_ptr<grenade::vx::network::Net
 	{
 		std::map<
 		    PopulationOnExecutionInstance,
-		    std::variant<Population, ExternalSourcePopulation, BackgroundSourcePopulation>>
+		    std::variant<
+		        Population,
+		        ExternalSourcePopulation,
+		        BackgroundSourcePopulation,
+		        SpikeIOSourcePopulation>>
 		    populations;
 		std::map<ProjectionOnExecutionInstance, Projection> projections;
 		std::optional<MADCRecording> madc_recording;

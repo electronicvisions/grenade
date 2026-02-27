@@ -84,6 +84,44 @@ PopulationOnNetwork NetworkBuilder::add(
 }
 
 PopulationOnNetwork NetworkBuilder::add(
+    SpikeIOSourcePopulation const& population,
+    grenade::common::ExecutionInstanceID const& execution_instance)
+{
+	hate::Timer timer;
+
+	for (auto const& [_, existing_population] :
+	     m_execution_instances.at(execution_instance).populations) {
+		auto const* existing_spikeio = std::get_if<SpikeIOSourcePopulation>(&existing_population);
+
+		if (!existing_spikeio) {
+			continue;
+		}
+
+		if (existing_spikeio->config.data_rate_scaler != population.config.data_rate_scaler) {
+			throw std::runtime_error(
+			    "All SpikeIOSourcePopulations within one execution instance must use the "
+			    "same data_rate_scaler.");
+		}
+	}
+
+	PopulationOnNetwork descriptor(
+	    PopulationOnExecutionInstance(m_execution_instances[execution_instance].populations.size()),
+	    execution_instance);
+	m_execution_instances[execution_instance].populations.insert(
+	    {descriptor.toPopulationOnExecutionInstance(), population});
+
+	if (!m_execution_instance_vertices.contains(execution_instance)) {
+		m_execution_instance_vertices[execution_instance] =
+		    boost::add_vertex(m_execution_instance_graph);
+	}
+	LOG4CXX_TRACE(
+	    m_logger,
+	    "add(): Added SpikeIO Source population(" << descriptor << ") in " << timer.print() << ".");
+	m_duration += std::chrono::microseconds(timer.get_us());
+	return descriptor;
+}
+
+PopulationOnNetwork NetworkBuilder::add(
     BackgroundSourcePopulation const& population,
     grenade::common::ExecutionInstanceID const& execution_instance)
 {

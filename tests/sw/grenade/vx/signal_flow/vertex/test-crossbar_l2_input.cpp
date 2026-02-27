@@ -9,7 +9,7 @@ TEST(CrossbarL2Input, General)
 {
 	CrossbarL2Input config;
 
-	EXPECT_FALSE(config.variadic_input);
+	EXPECT_TRUE(config.variadic_input);
 	EXPECT_EQ(config.inputs().size(), 1);
 	EXPECT_EQ(config.inputs().front().size, 1);
 	EXPECT_EQ(config.output().size, 1);

@@ -26,7 +26,7 @@ struct ExternalInput;
  */
 struct CrossbarL2Input : public EntityOnChip
 {
-	constexpr static bool can_connect_different_execution_instances = false;
+	constexpr static bool can_connect_different_execution_instances = true;
 
 	/**
 	 * Construct CrossbarL2Input.
@@ -34,7 +34,7 @@ struct CrossbarL2Input : public EntityOnChip
 	 */
 	CrossbarL2Input(ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
 
-	constexpr static bool variadic_input = false;
+	constexpr static bool variadic_input = true;
 	constexpr std::array<Port, 1> inputs() const
 	{
 		return {Port(1, ConnectionType::TimedSpikeToChipSequence)};

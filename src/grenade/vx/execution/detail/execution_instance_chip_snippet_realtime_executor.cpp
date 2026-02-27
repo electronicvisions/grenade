@@ -9,6 +9,7 @@
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/spikeio_source_population.h"
 #include "halco/hicann-dls/vx/hemisphere.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
@@ -86,11 +87,60 @@ template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
     signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::CrossbarL2Input const&)
 {
-	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
-	auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-	auto const in_vertex = boost::source(*(in_edges.first), m_graph.get_graph());
+	auto const edges = boost::make_iterator_range(boost::in_edges(vertex, m_graph.get_graph()));
+	auto const in_deg = boost::in_degree(vertex, m_graph.get_graph());
+	assert(in_deg >= 1);
 
-	m_data.insert(vertex, in_vertex);
+	auto const is_spikeio_vertex = [&](auto v) {
+		return std::holds_alternative<signal_flow::vertex::SpikeIOSourcePopulation>(
+		    m_graph.get_vertex_property(v));
+	};
+
+	if (in_deg == 1) {
+		auto const edge = *edges.begin();
+		auto const in_vertex = boost::source(edge, m_graph.get_graph());
+
+		if (is_spikeio_vertex(in_vertex)) {
+			return;
+		}
+
+		m_data.insert(vertex, in_vertex);
+		m_event_input_vertex = vertex;
+		return;
+	}
+
+	size_t const batch_size = m_data.batch_size();
+	std::vector<signal_flow::TimedSpikeToChipSequence> merged(batch_size);
+	size_t contributors = 0;
+
+	for (auto const& e : edges) {
+		auto const src = boost::source(e, m_graph.get_graph());
+
+		if (is_spikeio_vertex(src)) {
+			continue;
+		}
+
+		auto val = m_data.at(src);
+		auto const& seq = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(val);
+
+		for (size_t b = 0; b < batch_size; ++b) {
+			auto& out_b = merged[b];
+			auto const& in_b = seq[b];
+			out_b.insert(out_b.end(), in_b.begin(), in_b.end());
+		}
+		++contributors;
+	}
+
+
+	if (contributors == 0) {
+		return;
+	}
+	for (auto& seq : merged) {
+		std::stable_sort(
+		    seq.begin(), seq.end(), [](auto const& a, auto const& b) { return a.time < b.time; });
+	}
+
+	m_data.insert(vertex, std::move(merged));
 	m_event_input_vertex = vertex;
 }
 

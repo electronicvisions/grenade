@@ -66,7 +66,7 @@ bool NetworkGraph::valid() const
 				                << ") instead of expected(" << expected_size << ").");
 				return false;
 			}
-			auto const check_compartments = hate::overloaded(
+			auto const check_compartments = hate::overloaded{
 			    [&](Population const& p) {
 				    for (size_t n = 0; n < p.neurons.size(); ++n) {
 					    for (auto const& [compartment, ans] :
@@ -112,7 +112,21 @@ bool NetworkGraph::valid() const
 					    }
 				    }
 				    return true;
-			    });
+			    },
+			    [&](SpikeIOSourcePopulation const& p) -> bool {
+				    for (size_t n = 0; n < p.neurons.size(); ++n) {
+					    if (!graph_translation_execution_instance.spike_labels.at(descriptor)
+					             .at(n)
+					             .contains(CompartmentOnLogicalNeuron())) {
+						    LOG4CXX_ERROR(
+						        logger, "No spike-labels for neuron ("
+						                    << n << ") on SpikeIO source population(" << descriptor
+						                    << ") present.");
+						    return false;
+					    }
+				    }
+				    return true;
+			    }};
 			auto const has_expected_compartments = std::visit(check_compartments, population);
 			if (!has_expected_compartments) {
 				return false;

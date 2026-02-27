@@ -104,17 +104,42 @@ extract_neuron_spikes(signal_flow::OutputDataSnippet const& data, NetworkGraph c
 						}
 					}
 				};
+				auto const extract_spikeio_source_population = [&](SpikeIOSourcePopulation const&
+				                                                       population) {
+					for (size_t i = 0; i < population.neurons.size(); ++i) {
+						if (!population.neurons.at(i).enable_record_spikes) {
+							continue;
+						}
+						halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron;
+						auto const compartment_labels =
+						    execution_instance.spike_labels.at(descriptor)
+						        .at(i)
+						        .at(compartment_on_neuron);
+						if (!compartment_labels.empty()) {
+							auto const& label = compartment_labels.at(0);
+							assert(label);
+							auto const [_, success] = label_lookup.emplace(
+							    *label, std::tuple{descriptor, i, compartment_on_neuron});
+							static_cast<void>(success);
+							assert(success);
+						}
+					}
+				};
 				std::visit(
 				    hate::overloaded{
 				        extract_population, extract_external_source_population,
-				        extract_bg_source_population},
+				        extract_bg_source_population, extract_spikeio_source_population},
 				    population);
 			}
 
 			// add entry for each recorded neuron compartment
-			for (auto const& [_, location] : label_lookup) {
+			for (auto const& [label, location] : label_lookup) {
 				auto const& [population_on_execution_instance, neuron_on_population, compartment_on_neuron] =
 				    location;
+				LOG4CXX_TRACE(
+				    logger, "Population " << population_on_execution_instance << " (Neuron "
+				                          << neuron_on_population << ")"
+				                          << " is looking for Label: " << label);
 				for (auto& local_logical_neuron_events : logical_neuron_events) {
 					local_logical_neuron_events[std::make_tuple(
 					    PopulationOnNetwork(population_on_execution_instance, id),

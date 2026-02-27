@@ -304,6 +304,8 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 		     network.execution_instances.at(id).populations) {
 			if (std::holds_alternative<ExternalSourcePopulation>(population)) {
 				external_population_descriptors.push_back(descriptor);
+			} else if (std::holds_alternative<SpikeIOSourcePopulation>(population)) {
+				external_population_descriptors.push_back(descriptor);
 			} else if (std::holds_alternative<Population>(population)) {
 				internal_population_descriptors.push_back(descriptor);
 			} else if (std::holds_alternative<BackgroundSourcePopulation>(population)) {

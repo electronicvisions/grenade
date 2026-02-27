@@ -11,10 +11,12 @@
 #include "grenade/vx/network/routing_result.h"
 #include "grenade/vx/signal_flow/graph.h"
 #include "halco/hicann-dls/vx/v3/background.h"
+#include "halco/hicann-dls/vx/v3/fpga.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "haldls/vx/v3/fpga.h"
 #include "hate/visibility.h"
 #include <map>
 #include <memory>
@@ -39,7 +41,7 @@ NetworkGraph GENPYBIND(visible) build_network_graph(
 
 
 /**
- * Update an exisiting hardware graph representation.
+ * Update an existing hardware graph representation.
  * For this to work, no new routing has to have been required.
  * @param network_graph Existing hardware graph representation to update or fill with newly built
  * instance
@@ -93,6 +95,16 @@ public:
 			    neuron_event_outputs;
 			std::map<PopulationOnExecutionInstance, PlacedPopulation> populations;
 			std::map<ProjectionOnExecutionInstance, PlacedProjection> projections;
+			struct SpikeIO
+			{
+				haldls::vx::v3::SpikeIOConfig config;
+				std::map<
+				    halco::hicann_dls::vx::v3::SpikeIOInputRouteOnFPGA,
+				    haldls::vx::v3::SpikeIOInputRoute>
+				    input_routes;
+			};
+			std::optional<SpikeIO> spikeio;
+
 			NetworkGraph::GraphTranslation::ExecutionInstance graph_translation;
 		};
 
@@ -106,6 +118,12 @@ public:
 	    signal_flow::Graph& graph,
 	    Resources& resources,
 	    grenade::common::ExecutionInstanceID const& instance) const;
+
+	void add_spikeio_input(
+	    signal_flow::Graph& graph,
+	    Resources& resources,
+	    grenade::common::ExecutionInstanceID const& instance,
+	    RoutingResult const& routing_result) const;
 
 	void add_background_spike_sources(
 	    signal_flow::Graph& graph,

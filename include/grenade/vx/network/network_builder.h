@@ -56,6 +56,15 @@ public:
 	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
 
 	/**
+	 * Add off Chip SpikeIO Source/ Rx Population
+	 * @param population Population to add
+	 */
+	PopulationOnNetwork add(
+	    SpikeIOSourcePopulation const& population,
+	    grenade::common::ExecutionInstanceID const& execution_instance =
+	        grenade::common::ExecutionInstanceID()) SYMBOL_VISIBLE;
+
+	/**
 	 * Add projection between already added populations.
 	 * The projection is expected to be free of single connections present in already added
 	 * projections. A single connection is considered equal, if it connects the same pre- and

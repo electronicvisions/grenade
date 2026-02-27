@@ -51,3 +51,4 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/requires_routing.h"
 #include "grenade/vx/network/routing/portfolio_router.h"
 #include "grenade/vx/network/run.h"
+#include "grenade/vx/network/spikeio_source_population.h"

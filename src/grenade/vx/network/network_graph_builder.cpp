@@ -7,8 +7,11 @@
 #include "grenade/vx/network/vertex/transformation/external_source_merger.h"
 #include "grenade/vx/signal_flow/vertex/background_spike_source.h"
 #include "grenade/vx/signal_flow/vertex/madc_readout.h"
+#include "grenade/vx/signal_flow/vertex/spikeio_source_population.h"
 #include "halco/hicann-dls/vx/v3/event.h"
+#include "halco/hicann-dls/vx/v3/fpga.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
+#include "haldls/vx/v3/fpga.h"
 #include "hate/math.h"
 #include "hate/timer.h"
 #include "hate/variant.h"
@@ -51,6 +54,8 @@ NetworkGraph build_network_graph(
 		// For inter-execution-instance sources we use the above-calculated spike-labels
 		// to construct the translation here.
 		builder.add_external_input(result.m_graph, resources, instance);
+
+		builder.add_spikeio_input(result.m_graph, resources, instance, routing_result);
 
 		// add background spike sources
 		builder.add_background_spike_sources(result.m_graph, resources, instance, routing_result);
@@ -115,6 +120,10 @@ NetworkGraph build_network_graph(
 				auto const population_inputs = std::visit(
 				    hate::overloaded(
 				        [&](ExternalSourcePopulation const&) {
+					        return builder.add_projection_from_external_input(
+					            result.m_graph, resources, descriptor, routing_result, instance);
+				        },
+				        [&](SpikeIOSourcePopulation const&) {
 					        return builder.add_projection_from_external_input(
 					            result.m_graph, resources, descriptor, routing_result, instance);
 				        },
@@ -700,6 +709,182 @@ void NetworkGraphBuilder::add_external_input(
 	resources.execution_instances.at(instance).crossbar_l2_input = crossbar_l2_input_vertex;
 	LOG4CXX_TRACE(
 	    m_logger, "add_external_input(): Added external input in " << timer.print() << ".");
+}
+
+void NetworkGraphBuilder::add_spikeio_input(
+    signal_flow::Graph& graph,
+    Resources& resources,
+    grenade::common::ExecutionInstanceID const& instance,
+    RoutingResult const& routing_result) const
+{
+	hate::Timer timer;
+
+	// only continue if a spikio source exists
+	auto const& pops = m_network.execution_instances.at(instance).populations;
+	bool const has_spikeio = std::any_of(pops.begin(), pops.end(), [](auto const& p) {
+		return std::holds_alternative<SpikeIOSourcePopulation>(p.second);
+	});
+
+	if (!has_spikeio) {
+		LOG4CXX_TRACE(
+		    m_logger, "add_spikeio_input(): no SpikeIO pop detected - skipped - temp log here"
+		                  << timer.print() << ".");
+		return;
+	}
+
+	std::optional<SpikeIOSourcePopulation::Config> reference_config;
+	std::vector<std::string> error_msg;
+	for (auto const& [population_id, populationv] : pops) {
+		if (!std::holds_alternative<SpikeIOSourcePopulation>(populationv))
+			continue;
+
+		auto const& pop = std::get<SpikeIOSourcePopulation>(populationv);
+		if (!reference_config.has_value()) {
+			reference_config = pop.config;
+			LOG4CXX_TRACE(
+			    m_logger, "add_spikeio_input(): using Population "
+			                  << population_id << " as reference SpikeIO config: "
+			                  << ", loopback="
+			                  << (reference_config->enable_internal_loopback ? "true" : "false"));
+
+			continue;
+		}
+		std::vector<std::string> difference;
+		if (pop.config.enable_internal_loopback != reference_config->enable_internal_loopback)
+			difference.emplace_back("enable_internal_loopback");
+		if (pop.config.data_rate_scaler != reference_config->data_rate_scaler)
+			difference.emplace_back("data_rate_scaler");
+
+		if (!difference.empty()) { // TOO much or just logging?
+			std::ostringstream oss;
+			oss << "Population " << population_id << " SpikeIO config differs in: ";
+			for (size_t i = 0; i < difference.size(); ++i) {
+				if (i)
+					oss << ", ";
+				oss << difference[i];
+			}
+			oss << " ( loopback=" << (reference_config->enable_internal_loopback ? "true" : "false")
+			    << ", loopback=" << (pop.config.enable_internal_loopback ? "true" : "false") << ")";
+			LOG4CXX_ERROR(m_logger, "add_spikeio_input(): " << oss.str());
+			error_msg.emplace_back(oss.str());
+		}
+	}
+	if (!error_msg.empty()) {
+		for (auto const& msg : error_msg) {
+			LOG4CXX_ERROR(m_logger, "add_spikeio_input()" << msg);
+		}
+		throw std::runtime_error(
+		    "SpikeIO config mismatch between populations: all SpikeIOSourcePopulation configs "
+		    "must match (enable_tx/enable_rx/enable_internal_loopback).");
+	}
+	bool const enable_tx_hw = true; // always on tx
+	bool const enable_loopback_hw = reference_config->enable_internal_loopback;
+	bool const enable_rx_hw = has_spikeio; // based on existence of SourcePopulation
+	auto const data_rate_scaler = reference_config->data_rate_scaler;
+
+	haldls::vx::v3::SpikeIOConfig config_hw;
+	config_hw.set_enable_tx(enable_tx_hw);
+	config_hw.set_enable_rx(enable_rx_hw);
+	config_hw.set_enable_internal_loopback(enable_loopback_hw);
+	config_hw.set_data_rate_scaler(haldls::vx::v3::SpikeIOConfig::DataRateScaler(data_rate_scaler));
+	LOG4CXX_DEBUG(
+	    m_logger, "add_spikeio_input(): applying final SpikeIO config: "
+	                  << "loopback="
+	                  << (reference_config->enable_internal_loopback ? "true" : "false") << ".");
+	// maybe clean up here necessary
+	using HalcoInRoute = halco::hicann_dls::vx::SpikeIOInputRouteOnFPGA;
+	using HaldlsInRoute = haldls::vx::v3::SpikeIOInputRoute;
+	std::map<HalcoInRoute, HaldlsInRoute> input_routes;
+
+	for (size_t v = 0; v < (1u << halco::hicann_dls::vx::spikeio_serial_bits); ++v) {
+		input_routes.emplace(HalcoInRoute(v), HaldlsInRoute(HaldlsInRoute::SILENT));
+	}
+
+	using SpikeIOSourceVertex = signal_flow::vertex::SpikeIOSourcePopulation;
+	using SpikeIOSourceInputRoutes = SpikeIOSourceVertex::InputRouting;
+	using SpikeIOSourceOutputRoutes = SpikeIOSourceVertex::OutputRouting;
+	using SpikeIOSourceConfig = SpikeIOSourceVertex::Config;
+
+	SpikeIOSourceInputRoutes vertex_input_routing;
+	SpikeIOSourceOutputRoutes vertex_output_routing;
+
+	if (auto const exec_it = routing_result.execution_instances.find(instance);
+	    exec_it != routing_result.execution_instances.end()) {
+		auto const& exec_res = exec_it->second;
+
+		for (auto const& [desc, popv] : pops) {
+			if (!std::holds_alternative<SpikeIOSourcePopulation>(popv)) {
+				continue;
+			}
+
+			auto const labels_it = exec_res.external_spike_labels.find(desc);
+			if (labels_it == exec_res.external_spike_labels.end()) {
+				continue;
+			}
+			// auto const& labels_per_serial = labels_it->second;
+			auto const& labels_per_neuron_index = labels_it->second;
+			auto const& pop_vertex = std::get<SpikeIOSourcePopulation>(popv);
+
+			for (size_t s = 0; s < labels_per_neuron_index.size(); ++s) {
+				auto const& labels = labels_per_neuron_index[s];
+
+				if (labels.empty()) {
+					continue;
+				}
+
+				auto const& internal_L = labels.front();
+
+				if (s >= pop_vertex.neurons.size()) {
+					throw std::runtime_error(
+					    "Mismatch: Routing result has more neurons than config.");
+				}
+				int const user_label = pop_vertex.neurons.at(s).label;
+
+				if (user_label < 0 || user_label > 255) {
+					throw std::runtime_error("Port ID out of range (0-255).");
+				}
+
+				HalcoInRoute coord(static_cast<uint16_t>(user_label));
+				input_routes[coord] = HaldlsInRoute(internal_L);
+				vertex_input_routing.emplace(coord, internal_L);
+				if (enable_tx_hw) {
+					vertex_output_routing.emplace(
+					    internal_L, halco::hicann_dls::vx::SpikeIOAddress(user_label));
+				}
+			}
+		}
+	}
+
+	SpikeIOSourceConfig vertex_config(config_hw);
+
+	signal_flow::vertex::SpikeIOSourcePopulation spikeio_source_vertex(
+	    vertex_config, vertex_output_routing, vertex_input_routing, get_chip_on_executor(instance));
+
+	auto const spikeio_v = graph.add(spikeio_source_vertex, instance, {});
+
+	if (!resources.execution_instances.at(instance).crossbar_l2_input) {
+		signal_flow::vertex::CrossbarL2Input crossbar_l2_input(get_chip_on_executor(instance));
+		std::vector<signal_flow::Input> inputs;
+		inputs.push_back(spikeio_v);
+		auto const crossbar_l2_input_v = graph.add(crossbar_l2_input, instance, inputs);
+		resources.execution_instances.at(instance).crossbar_l2_input = crossbar_l2_input_v;
+	} else {
+		auto const crossbar_l2_input_v =
+		    *resources.execution_instances.at(instance).crossbar_l2_input;
+		auto const current_inputs = NetworkGraphBuilder::get_inputs(graph, crossbar_l2_input_v);
+
+		auto new_inputs = current_inputs;
+		new_inputs.emplace_back(spikeio_v);
+
+		auto const& old_v = std::get<signal_flow::vertex::CrossbarL2Input>(
+		    graph.get_vertex_property(crossbar_l2_input_v));
+
+		signal_flow::vertex::CrossbarL2Input updated_l2(old_v.chip_on_executor);
+		graph.update_and_relocate(
+		    crossbar_l2_input_v, std::move(updated_l2), std::move(new_inputs));
+	}
+	LOG4CXX_TRACE(
+	    m_logger, "add_spikeio_input(): Added SpikeIO spike sources in " << timer.print() << ".");
 }
 
 void NetworkGraphBuilder::add_background_spike_sources(
@@ -1316,9 +1501,18 @@ NetworkGraphBuilder::add_projection_from_external_input(
 	hate::Timer timer;
 	auto const population_pre =
 	    m_network.execution_instances.at(instance).projections.at(descriptor).population_pre;
-	if (!std::holds_alternative<ExternalSourcePopulation>(
-	        m_network.execution_instances.at(instance).populations.at(population_pre))) {
-		throw std::logic_error("Projection's presynaptic population is not external.");
+	auto const& population =
+	    m_network.execution_instances.at(instance).populations.at(population_pre);
+
+	char const* source_type = nullptr;
+	if (std::holds_alternative<ExternalSourcePopulation>(population)) {
+		source_type = "external";
+	} else if (std::holds_alternative<SpikeIOSourcePopulation>(population)) {
+		source_type = "spikeio";
+	} else {
+		throw std::logic_error(
+		    "Projection's presynaptic population is neither ExternalSourcePopulation nor "
+		    "SpikeIOSourcePopulation.");
 	}
 	// get used PADI busses, synapse drivers and spl1 addresses
 	std::set<PADIBusOnDLS> used_padi_bus;
@@ -1327,8 +1521,8 @@ NetworkGraphBuilder::add_projection_from_external_input(
 	if (!connection_result.execution_instances.at(instance).external_spike_labels.contains(
 	        population_pre)) {
 		throw std::runtime_error(
-		    "Connection builder result does not contain spike labels for the population(" +
-		    std::to_string(population_pre) + ") from external input.");
+		    "Connection builder result does not contain spike labels for the " +
+		    std::string(source_type) + " population(" + std::to_string(population_pre) + ").");
 	}
 	auto const& external_spike_labels =
 	    connection_result.execution_instances.at(instance).external_spike_labels.at(population_pre);
@@ -1337,8 +1531,8 @@ NetworkGraphBuilder::add_projection_from_external_input(
 	if (!connection_result.execution_instances.at(instance).connections.contains(descriptor)) {
 		if (num_connections_projection != 0) {
 			throw std::runtime_error(
-			    "Connection builder result does not contain connections for the projection(" +
-			    std::to_string(descriptor) + ").");
+			    "Connection builder result does not contain connections for the " +
+			    std::string(source_type) + " projection(" + std::to_string(descriptor) + ").");
 		}
 	} else {
 		auto const num_connections_result =
@@ -1401,8 +1595,10 @@ NetworkGraphBuilder::add_projection_from_external_input(
 	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.begin(),
 	    resources.execution_instances.at(instance).projections.at(descriptor).synapses.end());
 	LOG4CXX_TRACE(
-	    m_logger, "add_projection_from_external(): Added projection(" << descriptor << ") in "
-	                                                                  << timer.print() << ".");
+	    m_logger, "add_projection_from_external_input(): Added "
+	                  << source_type << " projection(" << descriptor << ") in " << timer.print()
+	                  << ".");
+
 	return inputs;
 }
 
@@ -1649,19 +1845,33 @@ void NetworkGraphBuilder::add_external_output(
 	// get set of l2 inputs from to be recorded populations
 	std::set<SPL1Address> l2_inputs;
 	for (auto const& [descriptor, pop] : m_network.execution_instances.at(instance).populations) {
-		if (!std::holds_alternative<ExternalSourcePopulation>(pop)) {
+		if (!std::holds_alternative<ExternalSourcePopulation>(pop) &&
+		    !std::holds_alternative<SpikeIOSourcePopulation>(pop)) {
 			continue;
 		}
-		auto const& population = std::get<ExternalSourcePopulation>(pop);
-		for (size_t i = 0; i < population.neurons.size(); ++i) {
-			if (!population.neurons.at(i).enable_record_spikes) {
-				continue;
+		if (std::holds_alternative<ExternalSourcePopulation>(pop)) {
+			auto const& population = std::get<ExternalSourcePopulation>(pop);
+			for (size_t i = 0; i < population.neurons.size(); ++i) {
+				if (!population.neurons.at(i).enable_record_spikes)
+					continue;
+				auto const& spike_labels = connection_result.execution_instances.at(instance)
+				                               .external_spike_labels.at(descriptor)
+				                               .at(i);
+				for (auto const& spike_label : spike_labels) {
+					l2_inputs.insert(spike_label.get_spl1_address());
+				}
 			}
-			auto const& spike_labels = connection_result.execution_instances.at(instance)
-			                               .external_spike_labels.at(descriptor)
-			                               .at(i);
-			for (auto const& spike_label : spike_labels) {
-				l2_inputs.insert(spike_label.get_spl1_address());
+		} else { // SpikeIOSourcePopulation
+			auto const& population = std::get<SpikeIOSourcePopulation>(pop);
+			for (size_t i = 0; i < population.neurons.size(); ++i) {
+				if (!population.neurons.at(i).enable_record_spikes)
+					continue;
+				auto const& spike_labels = connection_result.execution_instances.at(instance)
+				                               .external_spike_labels.at(descriptor)
+				                               .at(i);
+				for (auto const& spike_label : spike_labels) {
+					l2_inputs.insert(spike_label.get_spl1_address());
+				}
 			}
 		}
 	}
@@ -1907,10 +2117,21 @@ void NetworkGraphBuilder::calculate_spike_labels(
 				}
 			}
 		} else if (std::holds_alternative<ExternalSourcePopulation>(pop)) {
-			if (!spike_labels.contains(descriptor)) {
+			if (!connection_result.execution_instances.at(instance).external_spike_labels.contains(
+			        descriptor)) {
 				throw std::runtime_error(
-				    "Connection builder result does not contain spike labels for the "
+				    "Connection builder result does "
+				    "not contain spike labels for the "
 				    "population(" +
+				    std::to_string(descriptor) + ").");
+			}
+		} else if (std::holds_alternative<SpikeIOSourcePopulation>(pop)) {
+			if (!connection_result.execution_instances.at(instance).external_spike_labels.contains(
+			        descriptor)) {
+				throw std::runtime_error(
+				    "Connection builder result does "
+				    "not contain spike labes for the "
+				    "SpikeIO population(" +
 				    std::to_string(descriptor) + ").");
 			}
 		} else {
