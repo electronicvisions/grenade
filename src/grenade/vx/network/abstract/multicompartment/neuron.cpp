@@ -90,8 +90,8 @@ size_t Neuron::get_compartment_degree(CompartmentOnNeuron const& descriptor) con
 
 CompartmentOnNeuron Neuron::get_max_degree_compartment() const
 {
-	CompartmentOnNeuron compartment_max_degree = *(compartments().first);
-	for (auto compartment : boost::make_iterator_range(compartments())) {
+	CompartmentOnNeuron compartment_max_degree = *(compartments().begin());
+	for (auto compartment : compartments()) {
 		if (get_compartment_degree(compartment) > get_compartment_degree(compartment_max_degree)) {
 			compartment_max_degree = compartment;
 		}
@@ -110,18 +110,17 @@ CompartmentOnNeuron Neuron::target(CompartmentConnectionOnNeuron const& descript
 }
 
 // Iterators over Compartments
-std::pair<Neuron::CompartmentIterator, Neuron::CompartmentIterator> Neuron::compartments() const
+boost::iterator_range<Neuron::CompartmentIterator> Neuron::compartments() const
 {
 	return this->vertices();
 }
 
-std::pair<Neuron::CompartmentConnectionIterator, Neuron::CompartmentConnectionIterator>
-Neuron::compartment_connections() const
+boost::iterator_range<Neuron::CompartmentConnectionIterator> Neuron::compartment_connections() const
 {
 	return this->edges();
 }
 
-std::pair<Neuron::AdjacencyIterator, Neuron::AdjacencyIterator> Neuron::adjacent_compartments(
+boost::iterator_range<Neuron::AdjacencyIterator> Neuron::adjacent_compartments(
     CompartmentOnNeuron const& descriptor) const
 {
 	return this->adjacent_vertices(descriptor);
@@ -136,7 +135,7 @@ std::map<CompartmentOnNeuron::Value, size_t> Neuron::get_compartment_index_map()
 {
 	std::map<CompartmentOnNeuron::Value, size_t> mapping;
 	size_t index = 0;
-	for (auto compartment : boost::make_iterator_range(compartments())) {
+	for (auto compartment : compartments()) {
 		mapping.emplace(compartment.value(), index);
 		index++;
 	}
@@ -145,7 +144,7 @@ std::map<CompartmentOnNeuron::Value, size_t> Neuron::get_compartment_index_map()
 
 bool Neuron::neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const
 {
-	for (auto compartment : boost::make_iterator_range(adjacent_compartments(source))) {
+	for (auto compartment : adjacent_compartments(source)) {
 		if (compartment == target) {
 			return true;
 		}
@@ -161,8 +160,7 @@ size_t Neuron::branch_size(
 	size_t size = 1;
 	marked_compartments.emplace(compartment);
 
-	for (auto adjacent_compartment :
-	     boost::make_iterator_range(adjacent_compartments(compartment))) {
+	for (auto adjacent_compartment : adjacent_compartments(compartment)) {
 		if (marked_compartments.contains(adjacent_compartment)) {
 			continue;
 		}
@@ -181,8 +179,7 @@ bool Neuron::is_chain(
 
 	marked_compartments.emplace(compartment);
 
-	for (auto adjacent_compartment :
-	     boost::make_iterator_range(adjacent_compartments(compartment))) {
+	for (auto adjacent_compartment : adjacent_compartments(compartment)) {
 		if (marked_compartments.contains(adjacent_compartment)) {
 			continue;
 		}
@@ -210,8 +207,7 @@ std::vector<CompartmentOnNeuron> Neuron::branch_compartments(
 		auto current_compartment = compartment_queue.top();
 		compartment_queue.pop();
 
-		for (auto adjacent_compartment :
-		     boost::make_iterator_range(adjacent_compartments(current_compartment))) {
+		for (auto adjacent_compartment : adjacent_compartments(current_compartment)) {
 			if (!marked_compartments.contains(adjacent_compartment)) {
 				branch.push_back(adjacent_compartment);
 				marked_compartments.emplace(adjacent_compartment);
@@ -236,8 +232,7 @@ CompartmentNeighbours Neuron::classify_neighbours(
 	std::set<CompartmentOnNeuron> marked_compartments;
 	marked_compartments.emplace(compartment);
 
-	for (auto adjacent_compartment :
-	     boost::make_iterator_range(adjacent_compartments(compartment))) {
+	for (auto adjacent_compartment : adjacent_compartments(compartment)) {
 		if (neighbours_whitelist.size() > 0 &&
 		    !neighbours_whitelist.contains(adjacent_compartment)) {
 			continue;
@@ -285,7 +280,7 @@ void Neuron::write_graphviz(std::string filename, std::string name)
 	std::ofstream file;
 	file.open(filename);
 	file << "graph " << name << " {\n";
-	for (auto connection : boost::make_iterator_range(compartment_connections())) {
+	for (auto connection : compartment_connections()) {
 		auto compartment_a = source(connection);
 		auto compartment_b = target(connection);
 		file << compartment_a << "--" << compartment_b << "\n";
@@ -298,12 +293,12 @@ std::ostream& operator<<(std::ostream& os, Neuron const& neuron)
 {
 	os << "Neuron(\n";
 	os << "\tCompartments: " << neuron.num_compartments() << "\n";
-	for (auto compartment : boost::make_iterator_range(neuron.compartments())) {
+	for (auto compartment : neuron.compartments()) {
 		os << "\t\t" << compartment << "\n";
 	}
 	os << "\tConnections: " << neuron.num_compartment_connections() << "\n";
 	;
-	for (auto connection : boost::make_iterator_range(neuron.compartment_connections())) {
+	for (auto connection : neuron.compartment_connections()) {
 		os << "\t\t" << connection << "\n";
 	}
 	os << ")\n";

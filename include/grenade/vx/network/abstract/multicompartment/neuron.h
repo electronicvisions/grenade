@@ -196,21 +196,20 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 * @return Pair of iterators to begin and end of all compartments.
 	 */
 	typedef VertexIterator CompartmentIterator;
-	std::pair<CompartmentIterator, CompartmentIterator> compartments() const;
+	boost::iterator_range<CompartmentIterator> compartments() const;
 
 	/**
 	 * Return iterators to begin and end of all connections.
 	 * @return Pair of iterators to begin and end of all connections.
 	 */
 	typedef EdgeIterator CompartmentConnectionIterator;
-	std::pair<CompartmentConnectionIterator, CompartmentConnectionIterator>
-	compartment_connections() const;
+	boost::iterator_range<CompartmentConnectionIterator> compartment_connections() const;
 
 	/**
 	 * Return iterators to begin and end of adjacent compartments.
 	 * @return Pair of iterators to begin and end of adjacent compartments.
 	 */
-	std::pair<AdjacencyIterator, AdjacencyIterator> adjacent_compartments(
+	boost::iterator_range<AdjacencyIterator> adjacent_compartments(
 	    CompartmentOnNeuron const& descriptor) const;
 
 	/**

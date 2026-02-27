@@ -17,7 +17,7 @@ void ResourceManager::add_config(
 
 void ResourceManager::remove_config(Neuron const& neuron)
 {
-	for (auto compartment : boost::make_iterator_range(neuron.compartments())) {
+	for (auto compartment : neuron.compartments()) {
 		remove_config_compartment(compartment);
 	}
 }
@@ -69,7 +69,7 @@ void ResourceManager::write_graphviz(
 
 
 	file << "graph " << name << " {\n";
-	for (auto connection : boost::make_iterator_range(neuron.compartment_connections())) {
+	for (auto connection : neuron.compartment_connections()) {
 		auto compartment_a = neuron.source(connection);
 		auto compartment_b = neuron.target(connection);
 		file << compartment_a << "(" << get_config(compartment_a) << ")"

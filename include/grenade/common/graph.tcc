@@ -33,7 +33,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 
 		// Number of unmappable vertices
 		size_t unmapped_vertices = 0;
-		for (auto vertex : boost::make_iterator_range(other.vertices())) {
+		for (auto vertex : other.vertices()) {
 			if (boost::get(f, other.m_vertex_descriptors.left.at(vertex)) ==
 			    detail::UndirectedGraph::null_vertex()) {
 				unmapped_vertices++;
@@ -43,7 +43,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		// Create mapping from this graph to other graph and reversed.
 		vertex_mapping.clear();
 		vertex_mapping_reverse.clear();
-		for (auto vertex : boost::make_iterator_range(other.vertices())) {
+		for (auto vertex : other.vertices()) {
 			vertex_mapping[vertex] = VertexDescriptor(m_vertex_descriptors.right.at(
 			    boost::get(f, other.m_vertex_descriptors.left.at(vertex))));
 			vertex_mapping_reverse[VertexDescriptor(m_vertex_descriptors.right.at(
@@ -76,7 +76,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 	    };
 
 	std::vector<typename Backend::vertex_descriptor> vertex_order;
-	for (auto vertex : boost::make_iterator_range(other.vertices())) {
+	for (auto vertex : other.vertices()) {
 		vertex_order.push_back(other.m_vertex_descriptors.left.at(vertex));
 	}
 
@@ -120,7 +120,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 
 		// Number of unmappable vertices
 		size_t unmapped_vertices = 0;
-		for (auto vertex : boost::make_iterator_range(other.vertices())) {
+		for (auto vertex : other.vertices()) {
 			if (boost::get(f, other.m_vertex_descriptors.left.at(vertex)) ==
 			    detail::UndirectedGraph::null_vertex()) {
 				unmapped_vertices++;
@@ -130,7 +130,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		// Create mapping from this graph to other graph and reversed.
 		vertex_mapping.clear();
 		vertex_mapping_reverse.clear();
-		for (auto vertex : boost::make_iterator_range(other.vertices())) {
+		for (auto vertex : other.vertices()) {
 			vertex_mapping[vertex] = VertexDescriptor(m_vertex_descriptors.right.at(
 			    boost::get(f, other.m_vertex_descriptors.left.at(vertex))));
 			vertex_mapping_reverse[VertexDescriptor(m_vertex_descriptors.right.at(
@@ -163,7 +163,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 	    };
 
 	std::vector<typename Backend::vertex_descriptor> vertex_order;
-	for (auto vertex : boost::make_iterator_range(other.vertices())) {
+	for (auto vertex : other.vertices()) {
 		vertex_order.push_back(other.m_vertex_descriptors.left.at(vertex));
 	}
 

@@ -169,8 +169,8 @@ double PlacementAlgorithm::resource_efficient(
 {
 	// Calculate overall hardware requirements
 	double required_counter = 0;
-	for (auto it = neuron.compartments().first; it != neuron.compartments().second; it++) {
-		required_counter += resources.get_config(*it).number_total;
+	for (auto const& compartment : neuron.compartments()) {
+		required_counter += resources.get_config(compartment).number_total;
 	}
 
 	// Find all neuron circuits with an assigned compartment
@@ -270,8 +270,8 @@ PlacementAlgorithm::convert_to_logical_compartments(
 {
 	// All CompartmentIDs
 	std::vector<CompartmentOnNeuron> compartment_ids;
-	for (auto i = neuron.compartments().first; i != neuron.compartments().second; i++) {
-		compartment_ids.push_back(*i);
+	for (auto const& compartment : neuron.compartments()) {
+		compartment_ids.push_back(compartment);
 	}
 
 	// Result

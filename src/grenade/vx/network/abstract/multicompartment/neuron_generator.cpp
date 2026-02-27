@@ -16,8 +16,8 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate()
 
 bool NeuronGenerator::cyclic(Neuron const& neuron) const
 {
-	LOG4CXX_TRACE(m_logger, "Checking for Cycle: " << *(neuron.compartments().first));
-	CompartmentOnNeuron root = *(neuron.compartments().first);
+	LOG4CXX_TRACE(m_logger, "Checking for Cycle: " << *(neuron.compartments().begin()));
+	CompartmentOnNeuron root = *(neuron.compartments().begin());
 	std::queue<CompartmentOnNeuron> compartment_queue;
 	std::set<CompartmentOnNeuron> visited;
 	compartment_queue.push(root);
@@ -31,11 +31,10 @@ bool NeuronGenerator::cyclic(Neuron const& neuron) const
 		}
 		visited.emplace(temp_compartment);
 
-		for (auto it = neuron.adjacent_compartments(temp_compartment).first;
-		     it != neuron.adjacent_compartments(temp_compartment).second; it++) {
-			if (!visited.contains(*it)) {
-				compartment_queue.push(*it);
-				LOG4CXX_TRACE(m_logger, *it);
+		for (auto const& compartment : neuron.adjacent_compartments(temp_compartment)) {
+			if (!visited.contains(compartment)) {
+				compartment_queue.push(compartment);
+				LOG4CXX_TRACE(m_logger, compartment);
 			}
 		}
 	}
@@ -64,8 +63,7 @@ bool NeuronGenerator::path(
 
 		visited.emplace(temp_compartment);
 
-		for (auto neighbour :
-		     boost::make_iterator_range(neuron.adjacent_compartments(temp_compartment))) {
+		for (auto neighbour : neuron.adjacent_compartments(temp_compartment)) {
 			if (!visited.contains(neighbour)) {
 				next.push(neighbour);
 			}

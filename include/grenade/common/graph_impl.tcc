@@ -88,11 +88,11 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 		m_backend = std::make_unique<Backend>();
 		m_vertices = other.m_vertices;
 		m_edges = other.m_edges;
-		for (auto const other_descriptor : boost::make_iterator_range(other.vertices())) {
+		for (auto const other_descriptor : other.vertices()) {
 			auto const backend_descriptor(boost::add_vertex(backend()));
 			m_vertex_descriptors.insert({other_descriptor, backend_descriptor});
 		}
-		for (auto const other_descriptor : boost::make_iterator_range(other.edges())) {
+		for (auto const other_descriptor : other.edges()) {
 			auto const [backend_descriptor, success] = boost::add_edge(
 			    m_vertex_descriptors.left.at(other.source(other_descriptor)),
 			    m_vertex_descriptors.left.at(other.target(other_descriptor)), backend());
@@ -234,7 +234,7 @@ template <
 void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::remove_edge(
     VertexDescriptor const& source, VertexDescriptor const& target)
 {
-	for (auto const descriptor : boost::make_iterator_range(edge_range(source, target))) {
+	for (auto const descriptor : edge_range(source, target)) {
 		auto const num_elements_removed = m_edges.erase(descriptor);
 		assert(num_elements_removed == 1);
 		auto const num_descriptors_removed = m_edge_descriptors.left.erase(descriptor);
@@ -276,7 +276,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 {
 	std::vector<EdgeDescriptor> edge_descriptors;
 	edge_descriptors.reserve(in_degree(descriptor));
-	for (auto const edge_descriptor : boost::make_iterator_range(in_edges(descriptor))) {
+	for (auto const edge_descriptor : in_edges(descriptor)) {
 		edge_descriptors.push_back(edge_descriptor);
 	}
 	for (auto const edge_descriptor : edge_descriptors) {
@@ -298,7 +298,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 {
 	std::vector<EdgeDescriptor> edge_descriptors;
 	edge_descriptors.reserve(out_degree(descriptor));
-	for (auto const edge_descriptor : boost::make_iterator_range(out_edges(descriptor))) {
+	for (auto const edge_descriptor : out_edges(descriptor)) {
 		edge_descriptors.push_back(edge_descriptor);
 	}
 	for (auto const edge_descriptor : edge_descriptors) {
@@ -354,7 +354,7 @@ template <
     typename Holder>
 void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::clear()
 {
-	for (auto vertex : boost::make_iterator_range(vertices())) {
+	for (auto vertex : vertices()) {
 		clear_vertex(vertex);
 	}
 	while (!m_vertices.empty()) {
@@ -467,17 +467,16 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        VertexIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         VertexIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::vertices() const
 {
 	auto const backend_vertices = boost::vertices(backend());
-	return std::pair<VertexIterator, VertexIterator>{
-	    {backend_vertices.first, detail::DescriptorTransform{&m_vertex_descriptors}},
-	    {backend_vertices.second, detail::DescriptorTransform{&m_vertex_descriptors}}};
+	return {
+	    VertexIterator{backend_vertices.first, detail::DescriptorTransform{&m_vertex_descriptors}},
+	    VertexIterator{
+	        backend_vertices.second, detail::DescriptorTransform{&m_vertex_descriptors}}};
 }
 
 template <
@@ -489,17 +488,15 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        EdgeIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         EdgeIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::edges() const
 {
 	auto const backend_edges = boost::edges(backend());
-	return std::pair<EdgeIterator, EdgeIterator>{
-	    {backend_edges.first, detail::DescriptorTransform{&m_edge_descriptors}},
-	    {backend_edges.second, detail::DescriptorTransform{&m_edge_descriptors}}};
+	return {
+	    EdgeIterator{backend_edges.first, detail::DescriptorTransform{&m_edge_descriptors}},
+	    EdgeIterator{backend_edges.second, detail::DescriptorTransform{&m_edge_descriptors}}};
 }
 
 template <
@@ -511,9 +508,7 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        AdjacencyIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         AdjacencyIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::adjacent_vertices(
@@ -522,9 +517,11 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	check_contains(descriptor, "get adjacent vertices of");
 	auto const backend_adjacent_vertices =
 	    boost::adjacent_vertices(m_vertex_descriptors.left.at(descriptor), backend());
-	return std::pair<AdjacencyIterator, AdjacencyIterator>{
-	    {backend_adjacent_vertices.first, detail::DescriptorTransform{&m_vertex_descriptors}},
-	    {backend_adjacent_vertices.second, detail::DescriptorTransform{&m_vertex_descriptors}}};
+	return {
+	    AdjacencyIterator{
+	        backend_adjacent_vertices.first, detail::DescriptorTransform{&m_vertex_descriptors}},
+	    AdjacencyIterator{
+	        backend_adjacent_vertices.second, detail::DescriptorTransform{&m_vertex_descriptors}}};
 }
 
 template <
@@ -536,9 +533,7 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        InvAdjacencyIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         InvAdjacencyIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
@@ -547,9 +542,13 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	check_contains(descriptor, "get inverse adjacent vertices of");
 	auto const backend_inv_adjacent_vertices =
 	    boost::inv_adjacent_vertices(m_vertex_descriptors.left.at(descriptor), backend());
-	return std::pair<InvAdjacencyIterator, InvAdjacencyIterator>{
-	    {backend_inv_adjacent_vertices.first, detail::DescriptorTransform{&m_vertex_descriptors}},
-	    {backend_inv_adjacent_vertices.second, detail::DescriptorTransform{&m_vertex_descriptors}}};
+	return {
+	    InvAdjacencyIterator{
+	        backend_inv_adjacent_vertices.first,
+	        detail::DescriptorTransform{&m_vertex_descriptors}},
+	    InvAdjacencyIterator{
+	        backend_inv_adjacent_vertices.second,
+	        detail::DescriptorTransform{&m_vertex_descriptors}}};
 }
 
 template <
@@ -561,9 +560,7 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        OutEdgeIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         OutEdgeIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::out_edges(
@@ -572,9 +569,10 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	check_contains(descriptor, "get out-edges of");
 	auto const backend_out_edges =
 	    boost::out_edges(m_vertex_descriptors.left.at(descriptor), backend());
-	return std::pair<OutEdgeIterator, OutEdgeIterator>{
-	    {backend_out_edges.first, detail::DescriptorTransform{&m_edge_descriptors}},
-	    {backend_out_edges.second, detail::DescriptorTransform{&m_edge_descriptors}}};
+	return {
+	    OutEdgeIterator{backend_out_edges.first, detail::DescriptorTransform{&m_edge_descriptors}},
+	    OutEdgeIterator{
+	        backend_out_edges.second, detail::DescriptorTransform{&m_edge_descriptors}}};
 }
 
 template <
@@ -586,9 +584,7 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        InEdgeIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         InEdgeIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::in_edges(
@@ -597,9 +593,9 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	check_contains(descriptor, "get in-edges of");
 	auto const backend_in_edges =
 	    boost::in_edges(m_vertex_descriptors.left.at(descriptor), backend());
-	return std::pair<InEdgeIterator, InEdgeIterator>{
-	    {backend_in_edges.first, detail::DescriptorTransform{&m_edge_descriptors}},
-	    {backend_in_edges.second, detail::DescriptorTransform{&m_edge_descriptors}}};
+	return {
+	    InEdgeIterator{backend_in_edges.first, detail::DescriptorTransform{&m_edge_descriptors}},
+	    InEdgeIterator{backend_in_edges.second, detail::DescriptorTransform{&m_edge_descriptors}}};
 }
 
 template <
@@ -710,9 +706,7 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-std::pair<
-    typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
-        OutEdgeIterator,
+boost::iterator_range<
     typename Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
         OutEdgeIterator>
 Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::edge_range(
@@ -722,9 +716,10 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	check_contains(target, "get edge_range to target");
 	auto const backend_edge_range = boost::edge_range(
 	    m_vertex_descriptors.left.at(source), m_vertex_descriptors.left.at(target), backend());
-	return std::pair<OutEdgeIterator, OutEdgeIterator>{
-	    {backend_edge_range.first, detail::DescriptorTransform{&m_edge_descriptors}},
-	    {backend_edge_range.second, detail::DescriptorTransform{&m_edge_descriptors}}};
+	return {
+	    OutEdgeIterator{backend_edge_range.first, detail::DescriptorTransform{&m_edge_descriptors}},
+	    OutEdgeIterator{
+	        backend_edge_range.second, detail::DescriptorTransform{&m_edge_descriptors}}};
 }
 
 template <
@@ -773,8 +768,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	if constexpr (Backend::directed_selector::is_directed) {
 		std::map<typename Backend::vertex_descriptor, size_t> strongly_connected_component_coloring;
 		std::map<typename Backend::vertex_descriptor, size_t> vertex_index_map;
-		for (size_t vertex_index = 0;
-		     auto const vertex_descriptor : boost::make_iterator_range(vertices())) {
+		for (size_t vertex_index = 0; auto const vertex_descriptor : vertices()) {
 			vertex_index_map.emplace(m_vertex_descriptors.left.at(vertex_descriptor), vertex_index);
 			vertex_index++;
 		}
@@ -821,7 +815,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	std::map<VertexDescriptor, size_t> vertex_index;
 	size_t i = 0;
 
-	for (auto const& descriptor : boost::make_iterator_range(vertices())) {
+	for (auto const& descriptor : vertices()) {
 		vertex_index[descriptor] = i;
 		i++;
 	}
@@ -877,7 +871,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	 * should be fixed in boost-1.86.0
 	 */
 	if (num_vertices() == 1) {
-		vertex_mapping.emplace(*(vertices().first), *(other.vertices().first));
+		vertex_mapping.emplace(*(vertices().begin()), *(other.vertices().begin()));
 		return vertex_mapping;
 	}
 
@@ -914,7 +908,7 @@ bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
     const
 {
 	std::set<VertexDescriptor> marked_vertices;
-	VertexDescriptor root = *(vertices().first);
+	VertexDescriptor root = *(vertices().begin());
 
 	is_connected_rec(root, marked_vertices);
 
@@ -936,7 +930,7 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 {
 	marked_vertices.emplace(vertex);
 
-	for (auto neighbour : boost::make_iterator_range(adjacent_vertices(vertex))) {
+	for (auto neighbour : adjacent_vertices(vertex)) {
 		if (!marked_vertices.contains(neighbour)) {
 			is_connected_rec(neighbour, marked_vertices);
 		}
@@ -1021,10 +1015,10 @@ std::ostream& operator<<(
 	hate::IndentingOstream ios(os);
 	ios << hate::name<Derived>() << "(\n";
 	ios << hate::Indentation("\t");
-	for (auto const descriptor : boost::make_iterator_range(value.vertices())) {
+	for (auto const descriptor : value.vertices()) {
 		ios << descriptor << ": " << value.get(descriptor) << "\n";
 	}
-	for (auto const descriptor : boost::make_iterator_range(value.edges())) {
+	for (auto const descriptor : value.edges()) {
 		ios << descriptor << " (" << value.source(descriptor) << " -> " << value.target(descriptor)
 		    << "): " << value.get(descriptor) << "\n";
 	}

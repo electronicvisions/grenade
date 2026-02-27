@@ -355,7 +355,7 @@ std::set<CompartmentOnNeuron> PlacementAlgorithmRuleset::unplaced_neighbours(
 {
 	std::set<CompartmentOnNeuron> unplaced_neighbours;
 
-	for (auto compartment : boost::make_iterator_range(neuron.adjacent_compartments(compartment))) {
+	for (auto compartment : neuron.adjacent_compartments(compartment)) {
 		bool placed = false;
 		for (auto placed_compartment : m_placed_compartments) {
 			if (compartment == placed_compartment) {
@@ -1376,8 +1376,7 @@ void PlacementAlgorithmRuleset::connect_placed(CoordinateSystem& coordinates, Ne
 
 
 	for (auto placed_compartment : newly_placed) {
-		for (auto adjacent :
-		     boost::make_iterator_range(neuron.adjacent_compartments(placed_compartment))) {
+		for (auto adjacent : neuron.adjacent_compartments(placed_compartment)) {
 			if (placed.contains(adjacent) &&
 			    !m_placed_connections.contains(std::make_pair(placed_compartment, adjacent)) &&
 			    !m_placed_connections.contains(std::make_pair(adjacent, placed_compartment))) {

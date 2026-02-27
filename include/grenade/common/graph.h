@@ -17,6 +17,7 @@
 #include <boost/graph/vf2_sub_graph_iso.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/property_map/property_map.hpp>
+#include <boost/range/iterator_range.hpp>
 
 namespace cereal {
 struct access;
@@ -263,21 +264,21 @@ struct SYMBOL_VISIBLE Graph
 	/**
 	 * Get iterator range over vertices.
 	 */
-	std::pair<VertexIterator, VertexIterator> vertices() const GENPYBIND(hidden);
+	boost::iterator_range<VertexIterator> vertices() const GENPYBIND(hidden);
 
 	GENPYBIND_MANUAL({
 		typedef typename decltype(parent)::type self_type;
 		parent.def("vertices", [](GENPYBIND_PARENT_TYPE const& self) {
 			auto const vertices = self.vertices();
 			return std::vector<typename self_type::VertexDescriptor>(
-			    vertices.first, vertices.second);
+			    vertices.begin(), vertices.end());
 		});
 	})
 
 	/**
 	 * Get iterator range over edges.
 	 */
-	std::pair<EdgeIterator, EdgeIterator> edges() const GENPYBIND(hidden);
+	boost::iterator_range<EdgeIterator> edges() const GENPYBIND(hidden);
 
 	/**
 	 * Get iterator range over vertices adjacent to given vertex.
@@ -285,7 +286,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @param descriptor Vertex descriptor
 	 * @throws std::out_of_range On vertex not present in graph
 	 */
-	std::pair<AdjacencyIterator, AdjacencyIterator> adjacent_vertices(
+	boost::iterator_range<AdjacencyIterator> adjacent_vertices(
 	    VertexDescriptor const& descriptor) const GENPYBIND(hidden);
 
 	/**
@@ -294,7 +295,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @param descriptor Vertex descriptor
 	 * @throws std::out_of_range On vertex not present in graph
 	 */
-	std::pair<InvAdjacencyIterator, InvAdjacencyIterator> inv_adjacent_vertices(
+	boost::iterator_range<InvAdjacencyIterator> inv_adjacent_vertices(
 	    VertexDescriptor const& descriptor) const GENPYBIND(hidden);
 
 	/**
@@ -303,7 +304,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @param descriptor Vertex descriptor
 	 * @throws std::out_of_range On vertex not present in graph
 	 */
-	std::pair<OutEdgeIterator, OutEdgeIterator> out_edges(VertexDescriptor const& descriptor) const
+	boost::iterator_range<OutEdgeIterator> out_edges(VertexDescriptor const& descriptor) const
 	    GENPYBIND(hidden);
 
 	/**
@@ -313,7 +314,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @param descriptor Vertex descriptor
 	 * @throws std::out_of_range On vertex not present in graph
 	 */
-	std::pair<InEdgeIterator, InEdgeIterator> in_edges(VertexDescriptor const& descriptor) const
+	boost::iterator_range<InEdgeIterator> in_edges(VertexDescriptor const& descriptor) const
 	    GENPYBIND(hidden);
 
 	GENPYBIND_MANUAL({
@@ -323,7 +324,7 @@ struct SYMBOL_VISIBLE Graph
 		                   typename self_type::VertexDescriptor const& descriptor) {
 			    auto const in_edges = self.in_edges(descriptor);
 			    return std::vector<typename self_type::EdgeDescriptor>(
-			        in_edges.first, in_edges.second);
+			        in_edges.begin(), in_edges.end());
 		    });
 	})
 
@@ -372,7 +373,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @param target Target vertex descriptor
 	 * @throws std::out_of_range On source or target vertex not present in graph
 	 */
-	std::pair<OutEdgeIterator, OutEdgeIterator> edge_range(
+	boost::iterator_range<OutEdgeIterator> edge_range(
 	    VertexDescriptor const& source, VertexDescriptor const& target) const GENPYBIND(hidden);
 
 	/**
