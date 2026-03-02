@@ -52,6 +52,14 @@ grenade::common::ResourceEstimator::Resource& PopulationResourceEstimator::Resou
 	return *this;
 }
 
+PopulationResourceEstimator::Resource PopulationResourceEstimator::Resource::operator*(
+    size_t factor) const
+{
+	Resource resource = *this;
+	resource *= factor;
+	return resource;
+}
+
 std::vector<size_t> PopulationResourceEstimator::Resource::scalar_values() const
 {
 	size_t num_madc_channels = 0;

@@ -49,6 +49,9 @@ struct SYMBOL_VISIBLE PopulationResourceEstimator : public grenade::common::Reso
 		virtual ResourceEstimator::Resource& operator+=(
 		    ResourceEstimator::Resource const& other) override;
 		virtual ResourceEstimator::Resource& operator*=(size_t factor) override;
+
+		Resource operator*(size_t factor) const;
+
 		virtual std::vector<size_t> scalar_values() const override;
 
 		virtual std::unique_ptr<ResourceEstimator::Resource> copy() const override;

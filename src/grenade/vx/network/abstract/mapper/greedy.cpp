@@ -149,8 +149,9 @@ grenade::common::LinkedTopology GreedyMapper::operator()(
 		    m_placer.get_background_source_permutation().size(), {2});
 
 		ExecutionInstanceTopologyRewrite::SystemResources executor_system_resources;
-		for (auto const& connection_on_executor : executor.contained_connections()) {
-			executor_system_resources.emplace(connection_on_executor, population_system_resources);
+		for (auto const& [connection_on_executor, connection_size] : executor.connection_sizes()) {
+			executor_system_resources.emplace(
+			    connection_on_executor, population_system_resources * connection_size);
 		}
 
 		hate::Timer population_rewrite_timer;
