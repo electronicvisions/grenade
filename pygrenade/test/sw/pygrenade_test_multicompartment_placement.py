@@ -259,6 +259,22 @@ def get_compartment_ids(
 class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
     save_plot = False
 
+    @classmethod
+    def assert_valid(cls, coordinate_system: grenade.CoordinateSystem):
+        '''
+        Check if a valid neuron can be constructed from the given
+            coordinate system.
+
+        We check that all compartments are connected.
+
+        :param coordinate_system: coordinate system from which a neuron is
+            constructed.
+        '''
+        neuron_placed, _, _ = coordinate_system.construct_neuron()
+        cls.assertTrue(neuron_placed.compartments_connected(),
+                       "Placment result yields a neuron which is "
+                       "not fully connected.")
+
     def test_single_compartment_one(self):
         neuron = grenade.Neuron()
         resources = grenade.ResourceManager()
@@ -279,6 +295,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        # Validation not possible since only single circuit is allocated.
 
         limits = [120, 160]
         title = "Neuron single compartment with single neuron circuit"
@@ -318,6 +335,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         limits = [120, 160]
         title = "Neuron single compartment with multiple neuron circuits"
@@ -361,6 +379,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         limits = [120, 160]
         title = "Neuron with two connected compartments"
@@ -417,6 +436,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "Neuron with linearly chained compartments"
         limits = [120, 160]
@@ -460,6 +480,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "Neuron with synatpic input form both lanes"
         limits = [120, 160]
@@ -509,6 +530,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "Compartment with many neighbors"
         limits = [120, 160]
@@ -593,6 +615,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "Neuron with central compartment that changes shape"
         limits = [120, 160]
@@ -708,6 +731,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "Neuron with multiple connected branches"
         limits = [120, 160]
@@ -840,6 +864,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             .PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "Neuron pyramidal shape"
         limits = [120, 160]
@@ -996,8 +1021,9 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         placement_algorithm = pygrenade_vx.network\
             .PlacementAlgorithmRuleset()
-        placement_algorithm.run(
+        placement_result = placement_algorithm.run(
             grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
     def test_many_branches(self):
         neuron = grenade.Neuron()
@@ -1188,6 +1214,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         placement_algorithm = pygrenade_vx.network.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm.run(
             grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
         title = "spiny_dendrite"
         limits = [120, 135]

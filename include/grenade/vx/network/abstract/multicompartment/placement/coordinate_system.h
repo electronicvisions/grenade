@@ -3,6 +3,7 @@
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron_circuit.h"
 #include <array>
+#include <tuple>
 #if defined(__GENPYBIND__) or defined(__GENPYBIND_GENERATED__)
 #include <pybind11/stl.h>
 #endif
@@ -156,6 +157,19 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 */
 	std::vector<std::pair<int, int>> find_neuron_circuits(
 	    CompartmentOnNeuron const compartment) const;
+
+	/**
+	 * Construct a neuron based on the state of the coordinate-system.
+	 * @param coordinate_system Coordinate system from which a neuron is constructed.
+	 * @return Constructed neuron, map from compartment assigned to coordinate system to
+	 * compartments of constructed neuron and map over all newly constructed compartments with their
+	 * allocated resources.
+	 */
+	std::tuple<
+	    Neuron,
+	    std::map<CompartmentOnNeuron, CompartmentOnNeuron>,
+	    std::map<CompartmentOnNeuron, NumberTopBottom>>
+	construct_neuron();
 
 	// Constructor
 	CoordinateSystem() = default;
