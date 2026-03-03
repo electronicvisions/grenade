@@ -126,12 +126,19 @@ def build(bld):
     bld(
         name='pygrenade_hwtest_vx',
         tests='test/pygrenade_hwtest_vx.py',
-        features='use pytest pylint pycodestyle',
+        features='use pytest',
         use=['pygrenade_vx', 'dlens_vx_v3'],
         install_path='${PREFIX}/bin',
-        pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
-        pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle"),
         skip_run=not bld.env.BBS_HARDWARE_AVAILABLE
+    )
+
+    bld(
+        name='pygrenade_hwtest_vx_pylint',
+        tests='test/pygrenade_hwtest_vx.py',
+        features='use pylint pycodestyle',
+        use=['pygrenade_vx', 'dlens_vx_v3'],
+        pylint_config=join(get_toplevel_path(), "code-format", "pylintrc"),
+        pycodestyle_config=join(get_toplevel_path(), "code-format", "pycodestyle")
     )
 
     bld.add_post_fun(summary)
