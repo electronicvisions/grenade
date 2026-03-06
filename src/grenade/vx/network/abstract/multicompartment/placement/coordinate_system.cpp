@@ -326,6 +326,10 @@ std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conduc
 	if (!coordinate_system[y][x].switch_circuit_shared &&
 	    coordinate_system[y][x].switch_circuit_shared_conductance) {
 		starting_point_conductance = true;
+	} else if (
+	    !coordinate_system[y][x].switch_circuit_shared &&
+	    !coordinate_system[y][x].switch_circuit_shared_conductance) {
+		return connected_circuits;
 	}
 
 	// Check for connected compartments on the right. This compartment needs to be connected
