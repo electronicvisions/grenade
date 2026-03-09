@@ -120,7 +120,7 @@ TEST(MulticompartmentNeuron, RandomNeuronsEvolutionary)
 
 		void_results.push_back(std::async(
 		    std::launch::async, test_neuron_placement, file_name_configuration, logger, num_runs,
-		    max_num_compartments, max_num_synaptic_inputs, std::ref(algorithm)));
+		    max_num_compartments, max_num_synaptic_inputs, algorithm.clone()));
 	}
 
 

@@ -29,7 +29,7 @@ inline auto test_neuron_placement = [](std::string file_name,
                                        size_t num_runs,
                                        size_t max_num_compartments,
                                        size_t max_num_synaptic_inputs,
-                                       PlacementAlgorithm& algorithm) {
+                                       std::unique_ptr<PlacementAlgorithm> algorithm) {
 	NeuronGenerator neuron_generator;
 
 	// File for test result output.
@@ -107,7 +107,7 @@ inline auto test_neuron_placement = [](std::string file_name,
 
 		run_results.push_back(std::async(
 		    std::launch::async, test_neuron_placement_run, logger, max_num_compartments,
-		    max_num_synaptic_inputs, algorithm.clone()));
+		    max_num_synaptic_inputs, algorithm->clone()));
 	}
 
 	if (file_name != "") {

@@ -24,5 +24,6 @@ TEST(MulticompartmentNeuron, RandomNeuronsBruteForce)
 	PlacementAlgorithmBruteForce algorithm(timeout);
 
 	test_neuron_placement(
-	    file_name, logger, num_runs, max_num_compartments, max_num_synaptic_inputs, algorithm);
+	    file_name, logger, num_runs, max_num_compartments, max_num_synaptic_inputs,
+	    algorithm.clone());
 }
