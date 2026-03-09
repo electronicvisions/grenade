@@ -175,7 +175,9 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		// Execute realtime sections
 		for (auto& p : local_program.programs) {
 			try {
-				run(connection.m_initialized_connection, p);
+				std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>>
+				    local_programs_wrapped{p};
+				run(connection.m_initialized_connection, local_programs_wrapped);
 			} catch (std::runtime_error const& error) {
 				LOG4CXX_ERROR(
 				    logger, "Run of playback program not successful: " << error.what() << ".");
@@ -187,7 +189,9 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		// represent the actual hardware state.
 		if (!get_state_program.empty()) {
 			try {
-				run(connection.m_initialized_connection, get_state_program);
+				std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>>
+				    get_state_programs_wrapped{get_state_program};
+				run(connection.m_initialized_connection, get_state_programs_wrapped);
 			} catch (std::runtime_error const& error) {
 				LOG4CXX_ERROR(
 				    logger, "Run of playback program not successful: " << error.what() << ".");

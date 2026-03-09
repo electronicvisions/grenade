@@ -10,7 +10,9 @@ TEST(InitializedConnection_run, Empty)
 	grenade::vx::execution::backend::InitializedConnection connection;
 
 	stadls::vx::v3::PlaybackProgramBuilder builder;
-	auto program = builder.done();
-	grenade::vx::execution::backend::run(connection, program);
-	grenade::vx::execution::backend::run(connection, builder.done());
+	std::vector<stadls::vx::v3::PlaybackProgram> programs{builder.done()};
+	std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>> programs_wrapped;
+	programs_wrapped.push_back(programs.at(0));
+	grenade::vx::execution::backend::run(connection, programs_wrapped);
+	grenade::vx::execution::backend::run(connection, std::move(programs));
 }

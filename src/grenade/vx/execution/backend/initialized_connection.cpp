@@ -45,7 +45,8 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 namespace grenade::vx::execution::backend {
 
 InitializedConnection::InitializedConnection(
-    hxcomm::vx::ConnectionVariant&& connection, stadls::vx::v3::SystemInit const& init) :
+    hxcomm::vx::ConnectionVariant&& connection,
+    std::vector<stadls::vx::v3::SystemInit> const& inits) :
     m_connection(std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection))),
     m_expected_link_notification_count(halco::hicann_dls::vx::v3::PhyConfigFPGAOnDLS::size),
     m_init(*m_connection)
@@ -58,17 +59,20 @@ InitializedConnection::InitializedConnection(
 
 	hate::Timer timer;
 
-	PlaybackProgramBuilder init_builder;
-	// disable event recording, it is enabled only for realtime sections with event recording
-	// request later
-	{
-		EventRecordingConfig config;
-		config.set_enable_event_recording(false);
-		init_builder.write(EventRecordingConfigOnFPGA(), config);
+	std::vector<stadls::vx::v3::PlaybackProgram> init_programs;
+	for (auto const& init : inits) {
+		PlaybackProgramBuilder init_builder;
+		// disable event recording, it is enabled only for realtime sections with event recording
+		// request later
+		{
+			EventRecordingConfig config;
+			config.set_enable_event_recording(false);
+			init_builder.write(EventRecordingConfigOnFPGA(), config);
+		}
+		init_builder.merge_back(stadls::vx::generate(init).builder);
+		init_programs.emplace_back(init_builder.done());
 	}
-	init_builder.merge_back(stadls::vx::generate(init).builder);
-	std::vector<stadls::vx::v3::PlaybackProgram> inits{init_builder.done()};
-	m_init.set(std::move(inits), std::nullopt, true);
+	m_init.set(std::move(init_programs), std::nullopt, true);
 
 	m_expected_link_notification_count = 0;
 
@@ -78,10 +82,15 @@ InitializedConnection::InitializedConnection(
 }
 
 InitializedConnection::InitializedConnection(hxcomm::vx::ConnectionVariant&& connection) :
-    InitializedConnection(
-        std::move(connection),
-        stadls::vx::v3::SystemInit(std::visit(
-            [](auto const& connection) { return connection.get_hwdb_entry().at(0); }, connection)))
+    InitializedConnection(std::move(connection), [&connection]() {
+	    std::vector<stadls::vx::v3::SystemInit> inits;
+	    auto hwdb_entries = std::visit(
+	        [](auto const& connection) { return connection.get_hwdb_entry(); }, connection);
+	    for (auto const& hwdb_entry : hwdb_entries) {
+		    inits.push_back(stadls::vx::v3::SystemInit(hwdb_entry));
+	    }
+	    return inits;
+    }())
 {
 }
 
@@ -144,6 +153,11 @@ bool InitializedConnection::is_quiggeldy() const
 std::vector<common::ChipOnConnection> InitializedConnection::get_chips_on_connection() const
 {
 	return {common::ChipOnConnection()};
+}
+
+size_t InitializedConnection::size() const
+{
+	return std::visit([](auto const& c) { return c.size(); }, get_connection());
 }
 
 } // namespace grenade::vx::execution::backend

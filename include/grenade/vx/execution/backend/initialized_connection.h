@@ -46,7 +46,7 @@ struct InitializedConnection
 	 */
 	InitializedConnection(
 	    hxcomm::vx::ConnectionVariant&& connection,
-	    stadls::vx::v3::SystemInit const& init) SYMBOL_VISIBLE;
+	    std::vector<stadls::vx::v3::SystemInit> const& init) SYMBOL_VISIBLE;
 
 	/**
 	 * Get time information of execution(s).
@@ -60,7 +60,7 @@ struct InitializedConnection
 	 * @return Unique identifier
 	 */
 	std::vector<std::string> get_unique_identifier(
-	    std::optional<std::string> const& hwdb_path) const SYMBOL_VISIBLE;
+	    std::optional<std::string> const& hwdb_path = std::nullopt) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get bitfile information.
@@ -104,6 +104,11 @@ struct InitializedConnection
 	 */
 	std::vector<common::ChipOnConnection> get_chips_on_connection() const;
 
+	/**
+	 * Get number of backends on connection.
+	 */
+	size_t size() const;
+
 private:
 	std::unique_ptr<hxcomm::vx::ConnectionVariant> m_connection;
 
@@ -119,8 +124,11 @@ private:
 	/** Reinit stack entry of initialization for reapplication. */
 	stadls::vx::v3::ReinitStackEntry m_init;
 
-	friend stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProgram&);
-	friend stadls::vx::RunTimeInfo run(InitializedConnection&, stadls::vx::v3::PlaybackProgram&&);
+	friend stadls::vx::RunTimeInfo run(
+	    InitializedConnection&,
+	    std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>> const&);
+	friend stadls::vx::RunTimeInfo run(
+	    InitializedConnection&, std::vector<stadls::vx::v3::PlaybackProgram>&&);
 };
 
 } // namespace grenade::vx::execution::backend

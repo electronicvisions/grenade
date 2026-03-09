@@ -38,8 +38,14 @@ TEST(InitializedConnection, General)
 		auto hxcomm_connection = hxcomm::vx::get_connection_from_env();
 		grenade::vx::execution::backend::InitializedConnection connection(
 		    std::move(hxcomm_connection),
-		    stadls::vx::v3::SystemInit(std::visit(
-		        [](auto const& connection) { return connection.get_hwdb_entry().at(0); },
+		    (std::visit(
+		        [](auto const& conn) {
+			        std::vector<stadls::vx::v3::SystemInit> inits;
+			        for (auto const& hwdb_entry : conn.get_hwdb_entry()) {
+				        inits.push_back(stadls::vx::v3::SystemInit(hwdb_entry));
+			        }
+			        return inits;
+		        },
 		        hxcomm_connection)));
 		EXPECT_EQ(connection.get_unique_identifier(std::nullopt), hxcomm_unique_identifier);
 	}
