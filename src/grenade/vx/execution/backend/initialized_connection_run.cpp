@@ -97,7 +97,9 @@ void perform_post_fail_analysis(
 		}
 
 		builder.block_until(BarrierOnFPGA(), Barrier::omnibus);
-		run(connection, builder.done());
+
+		auto program = builder.done();
+		stadls::vx::v3::run(connection, {program});
 
 		std::stringstream ss;
 		ss << "perform_post_fail_analysis(): Experiment failed, reading post-mortem status.";
@@ -113,16 +115,15 @@ void perform_post_fail_analysis(
 
 namespace grenade::vx::execution::backend {
 
-using namespace stadls::vx::v3;
-using namespace halco::common;
-using namespace halco::hicann_dls::vx::v3;
-
-stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram& program)
+stadls::vx::RunTimeInfo run(
+    InitializedConnection& connection, stadls::vx::v3::PlaybackProgram& program)
 {
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
+	std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>> programs_wrapped{program};
+
 	stadls::vx::RunTimeInfo ret;
 	try {
-		ret = stadls::vx::v3::run(connection.get_connection(), program);
+		ret = stadls::vx::v3::run(connection.get_connection(), programs_wrapped);
 		check_link_notifications(
 		    logger, program.get_highspeed_link_notifications(),
 		    connection.m_expected_link_notification_count);
@@ -137,7 +138,8 @@ stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram& 
 	return ret;
 }
 
-stadls::vx::RunTimeInfo run(InitializedConnection& connection, PlaybackProgram&& program)
+stadls::vx::RunTimeInfo run(
+    InitializedConnection& connection, stadls::vx::v3::PlaybackProgram&& program)
 {
 	return run(connection, program);
 }

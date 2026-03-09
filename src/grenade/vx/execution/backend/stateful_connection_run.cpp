@@ -140,28 +140,37 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
-			connection.m_reinit_base.set(std::move(base_program), std::nullopt, enforce_base);
+			std::vector<stadls::vx::v3::PlaybackProgram> base_programs{base_program};
+			connection.m_reinit_base.set(std::move(base_programs), std::nullopt, enforce_base);
 
 			// Only enforce when not empty to support non-differential mode.
 			// In differential mode it is always enforced on changes.
+			std::vector<stadls::vx::v3::PlaybackProgram> differential_programs{
+			    differential_program};
 			connection.m_reinit_differential.set(
-			    std::move(differential_program), std::nullopt, !differential_program.empty());
+			    std::move(differential_programs), std::nullopt, !differential_program.empty());
 		}
 
 		// Never enforce, since the reinit is only filled after a schedule-out operation.
+		std::vector<stadls::vx::v3::PlaybackProgram> schedule_in_programs{
+		    stadls::vx::v3::PlaybackProgram()};
+		std::vector<stadls::vx::v3::PlaybackProgram> schedule_out_replacement_programs{
+		    schedule_out_replacement_program};
 		connection.m_reinit_schedule_out_replacement.set(
-		    stadls::vx::v3::PlaybackProgram(), std::move(schedule_out_replacement_program), false);
+		    std::move(schedule_in_programs), std::move(schedule_out_replacement_programs), false);
 
 		// Always write capmem settling wait reinit, but only enforce it when the wait is
 		// immediately required, i.e. after changes to the capmem.
-		connection.m_reinit_capmem_settling_wait.set(
+		std::vector<stadls::vx::v3::PlaybackProgram> capmem_settling_waits{
 		    stadls::vx::v3::generate(execution::detail::generator::CapMemSettlingWait())
-		        .builder.done(),
-		    std::nullopt, has_capmem_changes);
+		        .builder.done()};
+		connection.m_reinit_capmem_settling_wait.set(
+		    std::move(capmem_settling_waits), std::nullopt, has_capmem_changes);
 
 		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
+		std::vector<stadls::vx::v3::PlaybackProgram> trigger_programs{trigger_program};
 		connection.m_reinit_start_ppus.set(
-		    std::move(trigger_program), std::nullopt, !trigger_program.empty());
+		    std::move(trigger_programs), std::nullopt, !trigger_program.empty());
 
 		// Execute realtime sections
 		for (auto& p : local_program.programs) {

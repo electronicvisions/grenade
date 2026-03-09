@@ -29,7 +29,8 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 	PlaybackProgramBuilder builder;
 	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
 	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
-	stadls::vx::v3::run(connection, builder.done());
+	auto program = builder.done();
+	stadls::vx::v3::run(connection, {program});
 
 	if (dynamic_cast<JTAGIdCode const&>(jtag_id_ticket.get()).get_version() != 3) {
 		std::stringstream ss;
@@ -66,7 +67,8 @@ InitializedConnection::InitializedConnection(
 		init_builder.write(EventRecordingConfigOnFPGA(), config);
 	}
 	init_builder.merge_back(stadls::vx::generate(init).builder);
-	m_init.set(init_builder.done(), std::nullopt, true);
+	std::vector<stadls::vx::v3::PlaybackProgram> inits{init_builder.done()};
+	m_init.set(std::move(inits), std::nullopt, true);
 
 	m_expected_link_notification_count = 0;
 
