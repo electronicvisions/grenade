@@ -131,9 +131,9 @@ PPUReadHooks::Result::evaluate() const
 	for (auto const& [name, ticket] : tickets) {
 		std::visit(
 		    hate::overloaded{
-		        [&ret, name](std::map<
-		                     halco::hicann_dls::vx::v3::HemisphereOnDLS,
-		                     stadls::vx::v3::ContainerTicket> const& tickets) {
+		        [&ret, &name](std::map<
+		                      halco::hicann_dls::vx::v3::HemisphereOnDLS,
+		                      stadls::vx::v3::ContainerTicket> const& tickets) {
 			        ret[name] = std::map<
 			            halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
 			            {halco::hicann_dls::vx::v3::HemisphereOnDLS::top,
@@ -144,7 +144,7 @@ PPUReadHooks::Result::evaluate() const
 			                 tickets.at(halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom)
 			                     .get())}};
 		        },
-		        [&ret, name](stadls::vx::v3::ContainerTicket const& ticket) {
+		        [&ret, &name](stadls::vx::v3::ContainerTicket const& ticket) {
 			        if (auto const ptr = dynamic_cast<lola::vx::v3::ExternalPPUMemoryBlock const*>(
 			                &ticket.get());
 			            ptr) {

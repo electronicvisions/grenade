@@ -307,7 +307,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	};
 
 	// update external input to reflect new inter-execution-instance input
-	auto const update_external_input = [network](
+	auto const update_external_input = [&network](
 	                                       NetworkGraph& network_graph,
 	                                       grenade::common::ExecutionInstanceID const& instance) {
 		if (network->inter_execution_instance_projections.empty()) {
@@ -315,7 +315,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		}
 		if (std::none_of(
 		        network->inter_execution_instance_projections.begin(),
-		        network->inter_execution_instance_projections.end(), [instance](auto const& p) {
+		        network->inter_execution_instance_projections.end(), [&instance](auto const& p) {
 			        return p.second.population_post.toExecutionInstanceID() == instance;
 		        })) {
 			return;
@@ -395,7 +395,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	// update background source population config
 	// update external input to reflect new inter-execution-instance input
 	auto const update_background_source_configs =
-	    [network](
+	    [&network](
 	        NetworkGraph& network_graph, grenade::common::ExecutionInstanceID const& instance) {
 		    for (auto const& [descriptor, population] :
 		         network->execution_instances.at(instance).populations) {
@@ -425,7 +425,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	    };
 
 	// update MADC recording sources
-	auto const update_madc = [network](
+	auto const update_madc = [&network](
 	                             NetworkGraph& network_graph,
 	                             grenade::common::ExecutionInstanceID const& instance) {
 		auto const& new_madc_recording = network->execution_instances.at(instance).madc_recording;
@@ -459,7 +459,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	};
 
 	// update CADC recording sources
-	auto const update_cadc = [network](
+	auto const update_cadc = [&network](
 	                             NetworkGraph& network_graph,
 	                             grenade::common::ExecutionInstanceID const& instance) {
 		auto const& new_cadc_recording = network->execution_instances.at(instance).cadc_recording;
@@ -514,7 +514,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 	};
 
 	// update pad readout config
-	auto const update_pad = [network](
+	auto const update_pad = [&network](
 	                            NetworkGraph& network_graph,
 	                            grenade::common::ExecutionInstanceID const& instance) {
 		auto const& new_pad_recording = network->execution_instances.at(instance).pad_recording;
@@ -562,6 +562,7 @@ void update_network_graph(NetworkGraph& network_graph, std::shared_ptr<Network> 
 		update_background_source_configs(network_graph, id);
 		update_madc(network_graph, id);
 		update_cadc(network_graph, id);
+		update_pad(network_graph, id);
 	}
 	network_graph.m_network = network;
 

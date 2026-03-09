@@ -99,7 +99,7 @@ void StatefulConnectionConfig::set_system(System const& value, bool split_base_d
 	}();
 
 
-	auto const encode_value = [value, this]() {
+	auto const encode_value = [&value, this]() {
 		std::swap(m_last_system_words, m_system_words);
 
 		m_system_words.clear();

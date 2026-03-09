@@ -835,7 +835,7 @@ std::shared_ptr<Network> NetworkBuilder::done()
 	     it != topologically_reverse_sorted_execution_instance_vertices.rend(); ++it) {
 		auto const ei_it = std::find_if(
 		    m_execution_instance_vertices.begin(), m_execution_instance_vertices.end(),
-		    [it](auto const& p) { return p.second == *it; });
+		    [&it](auto const& p) { return p.second == *it; });
 		assert(ei_it != m_execution_instance_vertices.end());
 		topologically_sorted_execution_instance_ids.push_back(ei_it->first);
 	}

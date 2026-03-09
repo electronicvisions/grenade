@@ -33,7 +33,7 @@ std::set<std::set<PADIBusOnDLS>> SynapseDriverOnDLSManager::get_interdependent_p
 			    merged_dependency_references;
 			for (auto const& dependency : dependencies) {
 				if (std::find_if(
-				        dependency.begin(), dependency.end(), [padi_busses](auto const& p) {
+				        dependency.begin(), dependency.end(), [&padi_busses](auto const& p) {
 					        return padi_busses.contains(p);
 				        }) != dependency.end()) {
 					merged_dependency.insert(dependency.begin(), dependency.end());
@@ -54,7 +54,7 @@ std::set<std::set<PADIBusOnDLS>> SynapseDriverOnDLSManager::get_interdependent_p
 			for (auto const& [padi_bus, _] : requested_allocation.shapes) {
 				if (std::none_of(
 				        dependencies.begin(), dependencies.end(),
-				        [padi_bus](auto const& ps) { return ps.contains(padi_bus); })) {
+				        [&padi_bus](auto const& ps) { return ps.contains(padi_bus); })) {
 					dependencies.insert({padi_bus});
 				}
 			}
@@ -92,7 +92,7 @@ std::vector<size_t> SynapseDriverOnDLSManager::get_independent_allocation_reques
 	for (auto const& requested_allocation : requested_allocations) {
 		bool const has_matching_padi_bus = std::any_of(
 		    requested_allocation.shapes.begin(), requested_allocation.shapes.end(),
-		    [padi_busses](auto const& p) { return padi_busses.contains(p.first); });
+		    [&padi_busses](auto const& p) { return padi_busses.contains(p.first); });
 		if (has_matching_padi_bus && !requested_allocation.dependent_label_group) {
 			independent_requests.push_back(i);
 		}
@@ -110,7 +110,7 @@ SynapseDriverOnDLSManager::get_unique_dependent_label_groups(
 	for (auto const& requested_allocation : requested_allocations) {
 		bool const has_matching_padi_bus = std::any_of(
 		    requested_allocation.shapes.begin(), requested_allocation.shapes.end(),
-		    [padi_busses](auto const& p) { return padi_busses.contains(p.first); });
+		    [&padi_busses](auto const& p) { return padi_busses.contains(p.first); });
 		if (has_matching_padi_bus && requested_allocation.dependent_label_group) {
 			unique_dependent_label_groups_set.insert(*requested_allocation.dependent_label_group);
 		}
@@ -139,7 +139,7 @@ std::vector<int64_t> SynapseDriverOnDLSManager::get_label_space(
 		// use first allocation request in dependent label group to get labels size
 		auto const it = std::find_if(
 		    requested_allocations.begin(), requested_allocations.end(),
-		    [i, unique_dependent_label_groups](auto const& ra) {
+		    [i, &unique_dependent_label_groups](auto const& ra) {
 			    return ra.dependent_label_group &&
 			           (*ra.dependent_label_group == unique_dependent_label_groups.at(i));
 		    });
@@ -162,7 +162,7 @@ size_t SynapseDriverOnDLSManager::get_label_space_index(
 		           unique_dependent_label_groups.begin(),
 		           std::find_if(
 		               unique_dependent_label_groups.begin(), unique_dependent_label_groups.end(),
-		               [dependent_label_group](auto const& in) {
+		               [&dependent_label_group](auto const& in) {
 			               return in == *dependent_label_group;
 		               }));
 	} else {

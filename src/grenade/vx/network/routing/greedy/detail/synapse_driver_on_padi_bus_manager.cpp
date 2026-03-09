@@ -215,7 +215,7 @@ SynapseDriverOnPADIBusManager::allocate_backtracking(
 	}
 	std::vector<size_t> accept_synapse_drivers(requested_allocations.size());
 
-	auto const accept = [requested_size, &accept_synapse_drivers](Candidate const& candidate) {
+	auto const accept = [&requested_size, &accept_synapse_drivers](Candidate const& candidate) {
 		auto& synapse_drivers = accept_synapse_drivers;
 		std::fill(synapse_drivers.begin(), synapse_drivers.end(), 0);
 		for (size_t s = 0; s < candidate.first; ++s) {
@@ -257,9 +257,9 @@ SynapseDriverOnPADIBusManager::allocate_backtracking(
 		}
 	}
 
-	auto const reject = [reject_open_positions, &reject_synapse_drivers,
-	                     &reject_synapse_drivers_per_shape, requested_allocations,
-	                     flat_isolated_synapse_drivers](Candidate const& candidate) {
+	auto const reject = [&reject_open_positions, &reject_synapse_drivers,
+	                     &reject_synapse_drivers_per_shape,
+	                     &requested_allocations](Candidate const& candidate) {
 		for (auto& v : reject_synapse_drivers) {
 			v.clear();
 		}
@@ -344,7 +344,7 @@ SynapseDriverOnPADIBusManager::allocate_backtracking(
 		run = false;
 	};
 
-	auto const first = [reduced_isolated_synapse_drivers](Candidate& candidate) {
+	auto const first = [&reduced_isolated_synapse_drivers](Candidate& candidate) {
 		if (candidate.first == SynapseDriver::size) {
 			return false;
 		}
@@ -364,7 +364,7 @@ SynapseDriverOnPADIBusManager::allocate_backtracking(
 		return true;
 	};
 
-	auto const next = [reduced_isolated_synapse_drivers](Candidate& candidate) {
+	auto const next = [&reduced_isolated_synapse_drivers](Candidate& candidate) {
 		assert(candidate.first != 0);
 		auto const synapse_driver = candidate.first - 1;
 		auto const& isd = reduced_isolated_synapse_drivers.at(synapse_driver);
@@ -372,7 +372,7 @@ SynapseDriverOnPADIBusManager::allocate_backtracking(
 		if (!local_candidate) {
 			return false;
 		}
-		auto c = std::find_if(isd.begin(), isd.end(), [local_candidate](auto const& v) {
+		auto c = std::find_if(isd.begin(), isd.end(), [&local_candidate](auto const& v) {
 			return v == *local_candidate;
 		});
 		if (std::distance(c, isd.end()) == 1) {

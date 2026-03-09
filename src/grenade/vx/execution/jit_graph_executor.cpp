@@ -109,7 +109,7 @@ bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 		}
 	}
 
-	auto const find_chip_of_vertex_property = [chips_on_executor](auto const& v) {
+	auto const find_chip_of_vertex_property = [&chips_on_executor](auto const& v) {
 		if constexpr (std::is_base_of_v<
 		                  signal_flow::vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
 			return chips_on_executor.contains(v.chip_on_executor);
@@ -117,7 +117,7 @@ bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 		return true;
 	};
 
-	auto const find_chip_of_vertex_descriptor = [graph,
+	auto const find_chip_of_vertex_descriptor = [&graph,
 	                                             find_chip_of_vertex_property](auto const vertex) {
 		return std::visit(find_chip_of_vertex_property, graph.get_vertex_property(vertex));
 	};

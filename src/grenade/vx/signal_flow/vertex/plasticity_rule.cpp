@@ -235,7 +235,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 	for (auto const& [name, d] : data.data_per_synapse) {
 		for (size_t p = 0; p < d.size(); ++p) {
 			std::visit(
-			    [&os, name, p](auto const& dd) {
+			    [&os, &name, p](auto const& dd) {
 				    for (size_t b = 0; b < dd.size(); ++b) {
 					    for (size_t s = 0; s < dd.at(b).size(); ++s) {
 						    os << "\t\tobservable(" << name << "), synapse_view(" << p
@@ -254,7 +254,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 	for (auto const& [name, d] : data.data_per_neuron) {
 		for (size_t p = 0; p < d.size(); ++p) {
 			std::visit(
-			    [&os, name, p](auto const& dd) {
+			    [&os, &name, p](auto const& dd) {
 				    for (size_t b = 0; b < dd.size(); ++b) {
 					    for (size_t s = 0; s < dd.at(b).size(); ++s) {
 						    os << "\t\tobservable(" << name << "), neuron_view(" << p
@@ -272,7 +272,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 	os << "\tdata_array:\n";
 	for (auto const& [name, d] : data.data_array) {
 		std::visit(
-		    [&os, name](auto const& dd) {
+		    [&os, &name](auto const& dd) {
 			    for (size_t b = 0; b < dd.size(); ++b) {
 				    for (size_t s = 0; s < dd.at(b).size(); ++s) {
 					    os << "\t\tobservable(" << name << "), batch_entry(" << b << "), sample("
@@ -524,8 +524,8 @@ void static_assert_size()
 		for (auto const& [name, type] : std::get<TimedRecording>(*m_recording).observables) {
 			std::visit(
 			    hate::overloaded{
-			        [&parameters, name](TimedRecording::ObservableArray const& observable) {
-				        std::string const observable_type_str = [observable]() {
+			        [&parameters, &name](TimedRecording::ObservableArray const& observable) {
+				        std::string const observable_type_str = [&observable]() {
 					        std::stringstream ss;
 					        std::visit([&ss](auto const& t) { ss << t << "_t"; }, observable.type);
 					        return ss.str();
@@ -538,7 +538,7 @@ void static_assert_size()
 			        },
 			        [&parameters, name,
 			         this](TimedRecording::ObservablePerSynapse const& observable) {
-				        std::string layout_per_row = [observable]() {
+				        std::string layout_per_row = [&observable]() {
 					        std::stringstream ss;
 					        ss << observable.layout_per_row;
 					        return ss.str();
@@ -554,7 +554,7 @@ void static_assert_size()
 					        }
 					        case TimedRecording::ObservablePerSynapse::LayoutPerRow::
 					            packed_active_columns: {
-						        type = [observable]() {
+						        type = [&observable]() {
 							        std::stringstream ss;
 							        std::visit(
 							            [&ss](auto const& t) { ss << t << "_t"; }, observable.type);
@@ -574,7 +574,7 @@ void static_assert_size()
 				             {"layout_per_row", layout_per_row}});
 			        },
 			        [&](TimedRecording::ObservablePerNeuron const& observable) {
-				        std::string layout = [observable]() {
+				        std::string layout = [&observable]() {
 					        std::stringstream ss;
 					        ss << observable.layout;
 					        return ss.str();
@@ -589,7 +589,7 @@ void static_assert_size()
 					        }
 					        case TimedRecording::ObservablePerNeuron::Layout::
 					            packed_active_columns: {
-						        type = [observable]() {
+						        type = [&observable]() {
 							        std::stringstream ss;
 							        std::visit(
 							            [&ss](auto const& t) { ss << t << "_t"; }, observable.type);
@@ -1081,7 +1081,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 	for (auto const& [name, obsv] : std::get<TimedRecording>(*m_recording).observables) {
 		std::visit(
 		    hate::overloaded{
-		        [this, &observable_data, data, name, &timed_data_intervals,
+		        [this, &observable_data, &data, &name, &timed_data_intervals,
 		         extract_observable_per_synapse_complete_rows,
 		         extract_observable_per_synapse_packed_active_columns](
 		            TimedRecording::ObservablePerSynapse const& observable) {
@@ -1148,7 +1148,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				        }
 			        }
 		        },
-		        [this, &observable_data, data, name, &timed_data_intervals,
+		        [this, &observable_data, &data, &name, &timed_data_intervals,
 		         extract_observable_per_neuron_complete_row,
 		         extract_observable_per_neuron_packed_active_columns](
 		            TimedRecording::ObservablePerNeuron const& observable) {
@@ -1214,7 +1214,7 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 				        }
 			        }
 		        },
-		        [this, &observable_data, data, name, &timed_data_intervals,
+		        [this, &observable_data, &data, &name, &timed_data_intervals,
 		         extract_observable_array](TimedRecording::ObservableArray const& observable) {
 			        std::visit(
 			            hate::overloaded{

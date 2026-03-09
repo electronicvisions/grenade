@@ -56,14 +56,14 @@ ExternalSourceMerger::Function::Value ExternalSourceMerger::apply(
 		for (size_t i = 0; i < m_inputs.size(); ++i) {
 			auto const& local_value = value.at(i);
 
-			auto const add_external_input = [b, local_value, &local_ret](ExternalInput const&) {
+			auto const add_external_input = [b, &local_value, &local_ret](ExternalInput const&) {
 				auto const& local_events =
 				    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(local_value).at(b);
 				local_ret.insert(local_ret.end(), local_events.begin(), local_events.end());
 			};
 
 			auto const add_inter_execution_instance_input =
-			    [b, local_value, &local_ret, &log_inter_execution_instance_input_duration](
+			    [b, &local_value, &local_ret, &log_inter_execution_instance_input_duration](
 			        InterExecutionInstanceInput const& input) {
 				    hate::Timer timer;
 				    auto const& local_input_events =

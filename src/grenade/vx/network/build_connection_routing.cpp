@@ -72,7 +72,7 @@ ConnectionRoutingResult build_connection_routing(Network::ExecutionInstance cons
 				// choose neuron with matching receptor and smallest current in_degree
 				auto const neuron_on_compartment = *std::min_element(
 				    neurons_with_matching_receptor.begin(), neurons_with_matching_receptor.end(),
-				    [in_degree, get_neuron_post](auto const& a, auto const& b) {
+				    [&in_degree, get_neuron_post](auto const& a, auto const& b) {
 					    return in_degree[get_neuron_post(a)] < in_degree[get_neuron_post(b)];
 				    });
 				// choice performed, in_degree++ of chosen neuron

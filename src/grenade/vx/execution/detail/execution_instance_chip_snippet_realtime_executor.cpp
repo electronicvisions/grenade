@@ -767,7 +767,7 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 				// snippet requests to read out. And we save it in the local variable
 				// ppu_plasticity_rule_recorded_scratchpad_memory_coord
 				std::visit(
-				    [period_start, plasticity_rule](auto& coord) {
+				    [period_start, &plasticity_rule](auto& coord) {
 					    auto min = coord.toMin();
 					    min = decltype(min)(
 					        min.value() +
@@ -1049,7 +1049,7 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 				    std::visit(
 				        hate::overloaded{
 				            [&ppu_finish_builder,
-				             split_coord](ExternalPPUMemoryBlockOnFPGA const& c) {
+				             &split_coord](ExternalPPUMemoryBlockOnFPGA const& c) {
 					            std::vector<ContainerTicket> ret;
 					            auto const split_c = split_coord(c);
 					            for (auto const& cc : split_c) {
@@ -1059,7 +1059,7 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 					            return ret;
 				            },
 				            [&ppu_finish_builder,
-				             split_coord](ExternalPPUDRAMMemoryBlockOnFPGA const& c) {
+				             &split_coord](ExternalPPUDRAMMemoryBlockOnFPGA const& c) {
 					            std::vector<ContainerTicket> ret;
 					            auto const split_c = split_coord(c);
 					            for (auto const& cc : split_c) {

@@ -299,7 +299,7 @@ std::ostream& operator<<(std::ostream& os, Graph const& graph)
 		}
 	}
 	// get vertex name by type name and index to identify (possibly shared) property
-	auto const vertex_name = [graph, same_vertex_configs](
+	auto const vertex_name = [&graph, &same_vertex_configs](
 	                             std::ostream& out, Graph::vertex_descriptor const descriptor) {
 		auto const& vertex_property = graph.get_vertex_property(descriptor);
 		// generate a unique index to the associated vertex property
@@ -307,7 +307,7 @@ std::ostream& operator<<(std::ostream& os, Graph const& graph)
 		auto const& local = same_vertex_configs.at(vertex_property.index());
 		auto const index = local.at(&vertex_property);
 		auto const name = std::visit(
-		    [index](auto const& v) {
+		    [&index](auto const& v) {
 			    return hate::name<hate::remove_all_qualifiers_t<decltype(v)>>() + "(" +
 			           std::to_string(index) + ")";
 		    },

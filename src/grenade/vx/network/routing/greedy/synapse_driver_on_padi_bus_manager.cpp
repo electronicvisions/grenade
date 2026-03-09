@@ -54,8 +54,9 @@ bool SynapseDriverOnPADIBusManager::AllocationRequest::is_sensitive_for_shape_al
 		return false;
 	}
 	auto const first = shapes.front();
-	if (std::any_of(
-	        shapes.begin(), shapes.end(), [first](Shape const& shape) { return shape != first; })) {
+	if (std::any_of(shapes.begin(), shapes.end(), [&first](Shape const& shape) {
+		    return shape != first;
+	    })) {
 		return true;
 	}
 	return false;
@@ -159,13 +160,13 @@ SynapseDriverOnPADIBusManager::solve(
 	// allocate
 	auto const allocations = std::visit(
 	    hate::overloaded{
-	        [requested_allocations,
-	         isolated_synapse_drivers](AllocationPolicyGreedy const& policy) {
+	        [&requested_allocations,
+	         &isolated_synapse_drivers](AllocationPolicyGreedy const& policy) {
 		        return detail::SynapseDriverOnPADIBusManager::allocate_greedy(
 		            requested_allocations, isolated_synapse_drivers, policy.enable_exclusive_first);
 	        },
-	        [requested_allocations,
-	         isolated_synapse_drivers](AllocationPolicyBacktracking const& policy) {
+	        [&requested_allocations,
+	         &isolated_synapse_drivers](AllocationPolicyBacktracking const& policy) {
 		        return detail::SynapseDriverOnPADIBusManager::allocate_backtracking(
 		            requested_allocations, isolated_synapse_drivers, policy.max_duration);
 	        },

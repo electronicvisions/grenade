@@ -157,7 +157,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				    std::get<signal_flow::vertex::CrossbarNode>(graph.get_vertex_property(vertex));
 				if (std::find_if(
 				        crossbar_nodes.begin(), crossbar_nodes.end(),
-				        [crossbar_node](auto const& a) { return a.get() == crossbar_node; }) ==
+				        [&crossbar_node](auto const& a) { return a.get() == crossbar_node; }) ==
 				    crossbar_nodes.end()) {
 					crossbar_nodes.push_back(crossbar_node);
 				}
@@ -167,7 +167,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				    std::get<signal_flow::vertex::SynapseDriver>(graph.get_vertex_property(vertex));
 				if (std::find_if(
 				        synapse_drivers.begin(), synapse_drivers.end(),
-				        [synapse_driver](auto const& a) { return a.get() == synapse_driver; }) ==
+				        [&synapse_driver](auto const& a) { return a.get() == synapse_driver; }) ==
 				    synapse_drivers.end()) {
 					synapse_drivers.push_back(synapse_driver);
 				}
@@ -178,7 +178,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				        graph.get_vertex_property(vertex));
 				if (std::find_if(
 				        synapse_array_views.begin(), synapse_array_views.end(),
-				        [synapse_array_view](auto const& a) {
+				        [&synapse_array_view](auto const& a) {
 					        return a.first.get() == synapse_array_view;
 				        }) == synapse_array_views.end()) {
 					auto const& projection_descriptor =
@@ -223,7 +223,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 				        graph.get_vertex_property(vertex));
 				if (std::find_if(
 				        background_spike_sources.begin(), background_spike_sources.end(),
-				        [background_spike_source](auto const& a) {
+				        [&background_spike_source](auto const& a) {
 					        return a.get() == background_spike_source;
 				        }) == background_spike_sources.end()) {
 					background_spike_sources.push_back(background_spike_source);
@@ -422,7 +422,7 @@ Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_g
 					}
 					if (std::none_of(
 					        synapse_rows.begin(), synapse_rows.end(),
-					        [synapse_array_view](auto const& row) {
+					        [&synapse_array_view](auto const& row) {
 						        auto const it = std::find(
 						            synapse_array_view.first.get().get_rows().begin(),
 						            synapse_array_view.first.get().get_rows().end(), row);

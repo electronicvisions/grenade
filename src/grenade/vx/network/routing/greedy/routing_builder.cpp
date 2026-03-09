@@ -91,7 +91,7 @@ RoutingBuilder::get_internal_sources(
 			SourceOnPADIBusManager::InternalSource source;
 			source.neuron = neuron;
 			if (std::find_if(
-			        internal_sources.begin(), internal_sources.end(), [neuron](auto const& s) {
+			        internal_sources.begin(), internal_sources.end(), [&neuron](auto const& s) {
 				        return s.neuron == neuron;
 			        }) == internal_sources.end()) {
 				internal_sources.push_back(source);
@@ -101,7 +101,7 @@ RoutingBuilder::get_internal_sources(
 			SourceOnPADIBusManager::InternalSource source;
 			source.neuron = neuron;
 			if (std::find_if(
-			        internal_sources.begin(), internal_sources.end(), [neuron](auto const& s) {
+			        internal_sources.begin(), internal_sources.end(), [&neuron](auto const& s) {
 				        return s.neuron == neuron;
 			        }) == internal_sources.end()) {
 				internal_sources.push_back(source);
@@ -111,7 +111,7 @@ RoutingBuilder::get_internal_sources(
 		for (auto const& connection : local_padi_bus_constraints.internal_connections) {
 			auto source_it = std::find_if(
 			    internal_sources.begin(), internal_sources.end(),
-			    [connection](auto const& a) { return a.neuron == connection.source; });
+			    [&connection](auto const& a) { return a.neuron == connection.source; });
 			assert(source_it != internal_sources.end());
 			auto& source = *source_it;
 			if (!source.out_degree.contains(connection.receptor_type)) {

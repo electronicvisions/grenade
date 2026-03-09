@@ -94,7 +94,7 @@ signal_flow::OutputData run(
 	    vps_per_execution_instance;
 	for (auto const vertex :
 	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
-		auto const get_vps = [graphs, vertex](size_t i) {
+		auto const get_vps = [&graphs, &vertex](size_t i) {
 			std::set<grenade::common::ConnectionOnExecutor> vps;
 			auto const& vertex_descriptor_map = graphs[i].get().get_vertex_descriptor_map();
 			for (auto const& [vertex_descriptor, _] :

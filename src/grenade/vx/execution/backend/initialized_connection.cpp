@@ -105,7 +105,7 @@ std::vector<std::string> InitializedConnection::get_unique_identifier(
     std::optional<std::string> const& hwdb_path) const
 {
 	return std::visit(
-	    [hwdb_path](auto const& c) { return c.get_unique_identifier(hwdb_path); },
+	    [&hwdb_path](auto const& c) { return c.get_unique_identifier(hwdb_path); },
 	    get_connection());
 }
 
