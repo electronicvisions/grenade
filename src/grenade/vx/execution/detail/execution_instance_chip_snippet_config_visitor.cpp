@@ -7,8 +7,10 @@
 #include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
 #include "grenade/vx/signal_flow/vertex/crossbar_node.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
+#include "grenade/vx/signal_flow/vertex/input_routing_table.h"
 #include "grenade/vx/signal_flow/vertex/madc_readout.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
+#include "grenade/vx/signal_flow/vertex/output_routing_table.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "grenade/vx/signal_flow/vertex/padi_bus.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
@@ -53,6 +55,8 @@ ExecutionInstanceChipSnippetConfigVisitor::ExecutionInstanceChipSnippetConfigVis
 	register_process<signal_flow::vertex::SynapseArrayViewSparse>();
 	register_process<signal_flow::vertex::SynapseDriver>();
 	register_process<signal_flow::vertex::NeuronView>();
+	register_process<signal_flow::vertex::OutputRoutingTable>();
+	register_process<signal_flow::vertex::InputRoutingTable>();
 }
 
 template <typename T>
@@ -505,6 +509,54 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 			    .values[column]
 			    .set_enable_synaptic_current_inhibitory(true);
 		}
+	}
+}
+
+template <>
+void ExecutionInstanceChipSnippetConfigVisitor::process(
+    grenade::common::VertexOnTopology const vertex,
+    signal_flow::vertex::OutputRoutingTable const&,
+    System& system) const
+{
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::OutputRoutingTable::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+
+	if (!std::holds_alternative<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(system)) {
+		throw std::logic_error(
+		    "Output routing table vertex on hardware graph but not on a JBOA-Multichip-setup.");
+	}
+
+	auto& multichip_system = std::get<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(system);
+	for (auto const& [on_chip_label, routing_label] : parameterization.entries) {
+		auto& routing_table_entry =
+		    multichip_system.fpga.output_routing_table.entries[on_chip_label];
+		routing_table_entry.set_label(routing_label);
+		routing_table_entry.set_enable(true);
+	}
+}
+
+template <>
+void ExecutionInstanceChipSnippetConfigVisitor::process(
+    grenade::common::VertexOnTopology const vertex,
+    signal_flow::vertex::InputRoutingTable const&,
+    System& system) const
+{
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::InputRoutingTable::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+
+	if (!std::holds_alternative<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(system)) {
+		throw std::logic_error(
+		    "Input routing table vertex on hardware graph but not on a JBOA-Multichip-setup.");
+	}
+
+	auto& multichip_system = std::get<lola::vx::v3::ChipAndMultichipJboaLeafFPGA>(system);
+	for (auto const& [routing_label, on_chip_label] : parameterization.entries) {
+		auto& routing_table_entry =
+		    multichip_system.fpga.input_routing_table.entries[routing_label];
+		routing_table_entry.set_label(on_chip_label);
+		routing_table_entry.set_enable(true);
 	}
 }
 
