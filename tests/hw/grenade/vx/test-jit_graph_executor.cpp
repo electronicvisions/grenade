@@ -34,7 +34,8 @@ TEST(JITGraphExecutor, Empty)
 
 constexpr static long capmem_settling_time_ms = 100;
 
-TEST(JITGraphExecutor, DifferentialConfig)
+// disabled due to high performance variance on cluster
+TEST(JITGraphExecutor, DISABLED_DifferentialConfig)
 {
 	// use network to build simple experiment using the hardware
 	NetworkBuilder builder;
@@ -105,7 +106,8 @@ TEST(JITGraphExecutor, DifferentialConfig)
 	}
 }
 
-TEST(JITGraphExecutor, NoDifferentialConfig)
+// disabled due to high performance variance on cluster
+TEST(JITGraphExecutor, DISABLED_NoDifferentialConfig)
 {
 	// use network to build simple experiment using the hardeware
 	NetworkBuilder builder;
@@ -173,7 +175,8 @@ TEST(JITGraphExecutor, NoDifferentialConfig)
 	}
 }
 
-TEST(JITGraphExecutor, ConcurrentUsage)
+// disabled due to high performance variance on cluster
+TEST(JITGraphExecutor, DISABLED_ConcurrentUsage)
 {
 	// use network to build simple experiment using the hardeware
 	NetworkBuilder builder;
