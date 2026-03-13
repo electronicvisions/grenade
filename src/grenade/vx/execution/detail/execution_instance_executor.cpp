@@ -31,16 +31,27 @@
 namespace grenade::vx::execution::detail {
 
 signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
-    backend::PlaybackProgram const& playback_program)
+    backend::PlaybackProgram&& playback_program)
 {
 	auto logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceExecutor.Program.PostProcessor");
 
-	auto realtime_results = realtime(playback_program);
-
-	size_t const num_realtime_snippets = realtime_results.size();
+	size_t const num_realtime_snippets = realtime.snippet_executors.size();
 	signal_flow::OutputData output_data;
 	output_data.snippets.resize(num_realtime_snippets);
+
+	for (auto const& [chip_on_connection, chip] : chips) {
+		for (size_t i = 0; i < output_data.snippets.size(); i++) {
+			// add pre-execution config to result data map
+			output_data.snippets.at(i).pre_execution_chips.emplace(
+			    execution_instance,
+			    std::visit(
+			        [](auto&& system) -> lola::vx::v3::Chip { return std::move(system.chip); },
+			        playback_program.chips.at(chip_on_connection).system_configs[i]));
+		}
+	}
+
+	auto realtime_results = realtime(std::move(playback_program));
 
 	for (size_t i = 0; auto& result : realtime_results) {
 		output_data.snippets.at(i).merge(std::move(result.data));
@@ -67,15 +78,6 @@ signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
 			execution_health_info.chips[chip_on_connection] +=
 			    (chip.health_info_results_post.at(i).get_execution_health_info() -=
 			     chip.health_info_results_pre.at(i).get_execution_health_info());
-		}
-
-		for (size_t i = 0; i < output_data.snippets.size(); i++) {
-			// add pre-execution config to result data map
-			output_data.snippets.at(i).pre_execution_chips.emplace(
-			    execution_instance,
-			    std::visit(
-			        [](auto const& system) -> lola::vx::v3::Chip { return system.chip; },
-			        playback_program.chips.at(chip_on_connection).system_configs[i]));
 		}
 	}
 
@@ -142,29 +144,32 @@ ExecutionInstanceExecutor::operator()(
 		    !m_hooks.chips.at(chip_on_connection).inside_realtime_end.empty() ||
 		    !m_hooks.chips.at(chip_on_connection).post_realtime.empty();
 
-		playback_program.chips[chip_on_connection].has_hooks_around_realtime =
+		playback_program.chips.emplace(chip_on_connection, backend::PlaybackProgram::Chip());
+
+		playback_program.chips.at(chip_on_connection).has_hooks_around_realtime =
 		    has_hook_around_realtime;
-		playback_program.chips[chip_on_connection].pre_initial_config_hook =
+		playback_program.chips.at(chip_on_connection).pre_initial_config_hook =
 		    std::move(m_hooks.chips.at(chip_on_connection).pre_static_config);
 
+		playback_program.chips.at(chip_on_connection).system_configs.reserve(snippet_count);
 		for (size_t j = 0; j < snippet_count; j++) {
 			if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(
 			        chip_hwdb_entries.at(chip_on_connection))) {
-				playback_program.chips[chip_on_connection].system_configs.emplace_back(
-				    lola::vx::v3::ChipAndSinglechipFPGA(
+				playback_program.chips.at(chip_on_connection)
+				    .system_configs.emplace_back(lola::vx::v3::ChipAndSinglechipFPGA(
 				        m_configs.at(j).at(chip_on_connection).get()));
 			} else if (std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
 			               chip_hwdb_entries.at(chip_on_connection))) {
-				playback_program.chips[chip_on_connection].system_configs.emplace_back(
-				    lola::vx::v3::ChipAndMultichipJboaLeafFPGA(
+				playback_program.chips.at(chip_on_connection)
+				    .system_configs.emplace_back(lola::vx::v3::ChipAndMultichipJboaLeafFPGA(
 				        m_configs.at(j).at(chip_on_connection).get()));
 			} else {
 				throw std::logic_error("Invalid hwdb entry.");
 			}
 
 			ExecutionInstanceChipSnippetConfigVisitor(
-			    m_graphs[j], chip_on_connection, m_execution_instance)(
-			    playback_program.chips.at(chip_on_connection).system_configs[j]);
+			    m_graphs.at(j), chip_on_connection, m_execution_instance)(
+			    playback_program.chips.at(chip_on_connection).system_configs.at(j));
 		}
 
 		auto const ppu_program = ExecutionInstanceChipPPUProgramCompiler(

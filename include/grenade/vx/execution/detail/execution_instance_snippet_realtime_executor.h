@@ -98,7 +98,7 @@ public:
 	 * Postprocess by visit of all local vertices to be post processed after execution.
 	 * This resets the internal state of the builder to be ready for the next time step.
 	 */
-	Result post_process(PostProcessable const& post_processable) SYMBOL_VISIBLE;
+	Result post_process(PostProcessable&& post_processable) SYMBOL_VISIBLE;
 
 private:
 	signal_flow::Graph const& m_graph;

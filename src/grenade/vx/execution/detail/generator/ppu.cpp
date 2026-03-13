@@ -257,9 +257,10 @@ PPUPeriodicCADCRead::generate() const
 	            ExternalPPUMemoryBlockOnFPGA const& coord_bot) {
 		        if (m_used_hemispheres[HemisphereOnDLS::top]) {
 			        auto const split_coord_top = split_coord(coord_top);
+			        result.tickets[PPUOnDLS::top].reserve(split_coord_top.size());
 			        for (auto const& c : split_coord_top) {
 				        builder.push_back({});
-				        result.tickets[PPUOnDLS::top].push_back(builder.back().read(c));
+				        result.tickets[PPUOnDLS::top].emplace_back(builder.back().read(c));
 				        // wait for response data
 				        builder.back().block_until(
 				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
@@ -267,9 +268,10 @@ PPUPeriodicCADCRead::generate() const
 		        }
 		        if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
 			        auto const split_coord_bot = split_coord(coord_bot);
+			        result.tickets[PPUOnDLS::bottom].reserve(split_coord_bot.size());
 			        for (auto const& c : split_coord_bot) {
 				        builder.push_back({});
-				        result.tickets[PPUOnDLS::bottom].push_back(builder.back().read(c));
+				        result.tickets[PPUOnDLS::bottom].emplace_back(builder.back().read(c));
 				        // wait for response data
 				        builder.back().block_until(
 				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
@@ -280,9 +282,10 @@ PPUPeriodicCADCRead::generate() const
 	            ExternalPPUDRAMMemoryBlockOnFPGA const& coord_bot) {
 		        if (m_used_hemispheres[HemisphereOnDLS::top]) {
 			        auto const split_coord_top = split_coord(coord_top);
+			        result.tickets[PPUOnDLS::top].reserve(split_coord_top.size());
 			        for (auto const& c : split_coord_top) {
 				        builder.push_back({});
-				        result.tickets[PPUOnDLS::top].push_back(builder.back().read(c));
+				        result.tickets[PPUOnDLS::top].emplace_back(builder.back().read(c));
 				        // wait for response data
 				        builder.back().block_until(
 				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
@@ -290,9 +293,10 @@ PPUPeriodicCADCRead::generate() const
 		        }
 		        if (m_used_hemispheres[HemisphereOnDLS::bottom]) {
 			        auto const split_coord_bot = split_coord(coord_bot);
+			        result.tickets[PPUOnDLS::bottom].reserve(split_coord_bot.size());
 			        for (auto const& c : split_coord_bot) {
 				        builder.push_back({});
-				        result.tickets[PPUOnDLS::bottom].push_back(builder.back().read(c));
+				        result.tickets[PPUOnDLS::bottom].emplace_back(builder.back().read(c));
 				        // wait for response data
 				        builder.back().block_until(
 				            BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);

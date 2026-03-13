@@ -103,7 +103,7 @@ public:
 	 * This resets the internal state of the builder to be ready for the next time step.
 	 * @return signal_flow::OutputData of locally computed results
 	 */
-	std::chrono::nanoseconds post_process(PostProcessable const& post_processable) SYMBOL_VISIBLE;
+	std::chrono::nanoseconds post_process(PostProcessable&& post_processable) SYMBOL_VISIBLE;
 
 	/**
 	 * Switch to enable CADC baseline read before each sent input vector.

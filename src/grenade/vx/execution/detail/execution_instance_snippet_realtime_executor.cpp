@@ -304,14 +304,14 @@ ExecutionInstanceSnippetRealtimeExecutor::pre_process()
 }
 
 ExecutionInstanceSnippetRealtimeExecutor::Result
-ExecutionInstanceSnippetRealtimeExecutor::post_process(PostProcessable const& post_processable)
+ExecutionInstanceSnippetRealtimeExecutor::post_process(PostProcessable&& post_processable)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceSnippetRealtimeExecutor");
 
 	std::map<common::ChipOnConnection, std::chrono::nanoseconds> total_realtime_duration;
 	for (auto& [chip_on_connection, chip_executor] : m_chip_executors) {
 		total_realtime_duration[chip_on_connection] =
-		    chip_executor.post_process(post_processable.at(chip_on_connection));
+		    chip_executor.post_process(std::move(post_processable.at(chip_on_connection)));
 	}
 
 	assert(m_data);

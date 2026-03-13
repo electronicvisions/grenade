@@ -69,7 +69,7 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		run_successful = false;
 	}
 
-	auto output_data = post_processor(playback_program);
+	auto output_data = post_processor(std::move(playback_program));
 
 	// add execution duration per hardware to result data map
 	assert(output_data.execution_time_info);

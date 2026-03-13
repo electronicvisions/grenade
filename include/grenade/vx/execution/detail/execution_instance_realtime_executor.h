@@ -53,7 +53,7 @@ struct ExecutionInstanceRealtimeExecutor
 		std::map<common::ChipOnConnection, Chip> chips;
 
 		std::vector<ExecutionInstanceSnippetRealtimeExecutor::Result> operator()(
-		    backend::PlaybackProgram const& playback_program) SYMBOL_VISIBLE;
+		    backend::PlaybackProgram&& playback_program) SYMBOL_VISIBLE;
 	};
 
 	/**

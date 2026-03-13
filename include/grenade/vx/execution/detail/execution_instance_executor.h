@@ -40,7 +40,7 @@ struct ExecutionInstanceExecutor
 
 		ExecutionInstanceRealtimeExecutor::PostProcessor realtime;
 
-		signal_flow::OutputData operator()(backend::PlaybackProgram const& playback_program)
+		signal_flow::OutputData operator()(backend::PlaybackProgram&& playback_program)
 		    SYMBOL_VISIBLE;
 	};
 

@@ -29,7 +29,7 @@ namespace grenade::vx::execution::detail {
 
 std::vector<ExecutionInstanceSnippetRealtimeExecutor::Result>
 ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
-    backend::PlaybackProgram const& playback_program)
+    backend::PlaybackProgram&& playback_program)
 {
 	auto logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceRealtimeExecutor.PostProcessor");
@@ -47,7 +47,7 @@ ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
 			local_post_processable.periodic_cadc_readout_times =
 			    chips.at(chip_on_connection).cadc_readout_time_information[i];
 		}
-		auto result = snippet_executors[i].post_process(post_processable);
+		auto result = snippet_executors[i].post_process(std::move(post_processable));
 		results.push_back(std::move(result));
 		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
 	}

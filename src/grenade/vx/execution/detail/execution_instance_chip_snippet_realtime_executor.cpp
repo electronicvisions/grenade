@@ -620,11 +620,11 @@ ExecutionInstanceChipSnippetRealtimeExecutor::pre_process()
 }
 
 std::chrono::nanoseconds ExecutionInstanceChipSnippetRealtimeExecutor::post_process(
-    PostProcessable const& post_processable)
+    PostProcessable&& post_processable)
 {
-	m_chunked_program = post_processable.realtime;
+	m_chunked_program = std::move(post_processable.realtime);
 	for (size_t i = 0; i < m_batch_entries.size(); i++) {
-		m_batch_entries[i].m_extmem_result = post_processable.cadc_readout_tickets.at(i);
+		m_batch_entries[i].m_extmem_result = std::move(post_processable.cadc_readout_tickets.at(i));
 	}
 	if (post_processable.periodic_cadc_readout_times) {
 		m_periodic_cadc_readout_times = post_processable.periodic_cadc_readout_times.value();
