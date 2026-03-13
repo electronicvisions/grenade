@@ -196,6 +196,30 @@ ExecutionInstanceExecutor::operator()(
 			                                               .at(chip_on_connection)
 			                                               .realtimes[i]
 			                                               .pre_realtime_duration;
+			// Neuron resets
+			for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
+				auto backend = std::visit(
+				    [coord](auto const& system) {
+					    return system.chip.neuron_block.backends[coord];
+				    },
+				    local_playback_program.system_configs[0]);
+				backend.set_force_reset(true);
+				program_builder.write(config_time, coord, backend);
+			}
+			// Add additional time to reset neurons
+			config_time += haldls::vx::v3::Timer::Value(125);
+			for (auto const coord : iter_all<CommonNeuronBackendConfigOnDLS>()) {
+				auto backend = std::visit(
+				    [coord](auto const& system) {
+					    return system.chip.neuron_block.backends[coord];
+				    },
+				    local_playback_program.system_configs[0]);
+				backend.set_force_reset(false);
+				program_builder.write(config_time, coord, backend);
+			}
+			// Add additional time to reset neurons
+			config_time += haldls::vx::v3::Timer::Value(4 * 125);
+
 			for (size_t j = 0; j < snippet_count; j++) {
 				if (j > 0) {
 					config_time += realtime_program.snippets[j - 1]
