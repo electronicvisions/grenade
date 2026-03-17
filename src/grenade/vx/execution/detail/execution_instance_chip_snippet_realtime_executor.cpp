@@ -317,7 +317,8 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 					offset += 256;
 				}
 			}
-			auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceBuilder");
+			auto logger =
+			    log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetRealtimeExecutor");
 			LOG4CXX_TRACE(
 			    logger, "process(): post-processed " << total_num_samples << " CADC samples in "
 			                                         << timer.print() << ".");
