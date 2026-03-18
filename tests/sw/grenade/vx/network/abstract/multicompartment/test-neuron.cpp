@@ -45,32 +45,34 @@ TEST(multicompartment_neuron, General)
 	    std::invalid_argument);
 
 	// Add Mechanisms to Compartments
-	[[maybe_unused]] auto const membrane_on_compartment_a = compartment_a.add(membrane);
-	[[maybe_unused]] auto const membrane_on_compartment_b = compartment_b.add(membrane);
-	[[maybe_unused]] auto const membrane_on_compartment_c = compartment_c.add(membrane);
+	[[maybe_unused]] auto const membrane_on_compartment_a =
+	    compartment_a.mechanisms.insert(membrane);
+	[[maybe_unused]] auto const membrane_on_compartment_b =
+	    compartment_b.mechanisms.insert(membrane);
+	[[maybe_unused]] auto const membrane_on_compartment_c =
+	    compartment_c.mechanisms.insert(membrane);
 	[[maybe_unused]] auto const synaptic_current_a_on_compartment_a =
-	    compartment_a.add(synaptic_current);
+	    compartment_a.mechanisms.insert(synaptic_current);
 	[[maybe_unused]] auto const synaptic_conductance_on_compartment_a =
-	    compartment_a.add(synaptic_conductance);
+	    compartment_a.mechanisms.insert(synaptic_conductance);
 	[[maybe_unused]] auto const synaptic_current_b_on_compartment_b =
-	    compartment_b.add(synaptic_current);
+	    compartment_b.mechanisms.insert(synaptic_current);
 
 	// Not two mechanisms of same type on one compartment
-	EXPECT_THROW(compartment_a.add(membrane), std::invalid_argument);
+	EXPECT_THROW(compartment_a.mechanisms.insert(membrane), std::invalid_argument);
 
-	compartment_c.set(membrane_on_compartment_c, MechanismCapacitance());
+	compartment_c.mechanisms.set(membrane_on_compartment_c, MechanismCapacitance());
 	MechanismCapacitance::ParameterSpace(ParameterInterval<double>(20, 20));
 
 	EXPECT_FALSE(synaptic_conductance == synaptic_current);
 	EXPECT_TRUE(synaptic_current == synaptic_current);
 
-	compartment_a.remove(synaptic_conductance_on_compartment_a);
-	compartment_a.remove(synaptic_current_a_on_compartment_a);
-	compartment_b.remove(synaptic_current_b_on_compartment_b);
-	compartment_b.remove(membrane_on_compartment_b);
+	compartment_a.mechanisms.erase(synaptic_conductance_on_compartment_a);
+	compartment_a.mechanisms.erase(synaptic_current_a_on_compartment_a);
+	compartment_b.mechanisms.erase(synaptic_current_b_on_compartment_b);
+	compartment_b.mechanisms.erase(membrane_on_compartment_b);
 
-	EXPECT_THROW(compartment_b.remove(membrane_on_compartment_b), std::invalid_argument);
-	EXPECT_THROW(compartment_b.get(membrane_on_compartment_b), std::invalid_argument);
+	EXPECT_THROW(compartment_b.mechanisms.get(membrane_on_compartment_b), std::out_of_range);
 
 	// Add Compartments to Neuron
 	auto const compartment_a_on_neuron = neuron.add_compartment(compartment_a);
@@ -79,7 +81,8 @@ TEST(multicompartment_neuron, General)
 
 	EXPECT_EQ(neuron.num_compartments(), 3);
 	EXPECT_EQ(neuron.get(compartment_a_on_neuron), compartment_a);
-	EXPECT_EQ(neuron.get(compartment_a_on_neuron).get(membrane_on_compartment_a), membrane);
+	EXPECT_EQ(
+	    neuron.get(compartment_a_on_neuron).mechanisms.get(membrane_on_compartment_a), membrane);
 
 	// Add Compartment-Connections to Neuron
 	CompartmentConnectionConductance connection_conductance_1;

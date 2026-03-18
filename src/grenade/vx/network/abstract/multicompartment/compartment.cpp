@@ -13,47 +13,52 @@ bool Compartment::ParameterSpace::valid(Parameterization const& parameterization
 	return true;
 }
 
-// Adds Mechanism to Compartment
-MechanismOnCompartment Compartment::add(Mechanism const& mechanism)
+MechanismOnCompartment Compartment::Mechanisms::insert(Mechanism const& value)
 {
-	for (auto const& [mechanism_key, other_mechanism] : m_mechanisms) {
-		if (mechanism.conflict(*other_mechanism)) {
-			throw std::invalid_argument("Conflicting Mechanism");
+	for (auto const& [mechanism_key, other_mechanism] : *this) {
+		if (value.conflict(other_mechanism)) {
+			std::stringstream ss;
+			ss << "Conflicts with " << mechanism_key << ": " << other_mechanism;
+			throw std::invalid_argument(ss.str());
 		}
 	}
-	if (m_mechanism_key_counter == std::numeric_limits<int>::max()) {
-		throw std::invalid_argument("Too many Mechanisms. Overflow of Key Counter");
-	}
-	MechanismOnCompartment mechanismKey(m_mechanism_key_counter++);
-	m_mechanisms.emplace(mechanismKey, mechanism);
-	return mechanismKey;
+	return AutoKeyMap::insert(value);
 }
 
-// Removes Mechanism from Compartment by Key
-void Compartment::remove(MechanismOnCompartment const& descriptor)
+MechanismOnCompartment Compartment::Mechanisms::insert(Mechanism&& value)
 {
-	if (!m_mechanisms.contains(descriptor)) {
-		throw std::invalid_argument("Mechanism not on Compartment");
+	for (auto const& [mechanism_key, other_mechanism] : *this) {
+		if (value.conflict(other_mechanism)) {
+			std::stringstream ss;
+			ss << "Conflicts with " << mechanism_key << ": " << other_mechanism;
+			throw std::invalid_argument(ss.str());
+		}
 	}
-	m_mechanisms.erase(descriptor);
+	return AutoKeyMap::insert(std::move(value));
 }
 
-// Returns Mechanism of Compartment by Key
-Mechanism const& Compartment::get(MechanismOnCompartment const& descriptor) const
+void Compartment::Mechanisms::set(MechanismOnCompartment const& key, Mechanism const& value)
 {
-	if (m_mechanisms.find(descriptor) == m_mechanisms.end()) {
-		throw std::invalid_argument("Mechanism not on Compartment");
+	for (auto const& [mechanism_key, other_mechanism] : *this) {
+		if (mechanism_key != key && value.conflict(other_mechanism)) {
+			std::stringstream ss;
+			ss << "Conflicts with " << mechanism_key << ": " << other_mechanism;
+			throw std::invalid_argument(ss.str());
+		}
 	}
-	return *(m_mechanisms.at(descriptor));
+	AutoKeyMap::set(key, value);
 }
 
-// Changes Mechanism of Compartment by Key
-void Compartment::set(MechanismOnCompartment const& descriptor, Mechanism const& mechanism)
+void Compartment::Mechanisms::set(MechanismOnCompartment const& key, Mechanism&& value)
 {
-	if (m_mechanisms.find(descriptor) == m_mechanisms.end()) {
-		throw std::invalid_argument("Mechanism not on Compartment");
+	for (auto const& [mechanism_key, other_mechanism] : *this) {
+		if (mechanism_key != key && value.conflict(other_mechanism)) {
+			std::stringstream ss;
+			ss << "Conflicts with " << mechanism_key << ": " << other_mechanism;
+			throw std::invalid_argument(ss.str());
+		}
 	}
-	m_mechanisms[descriptor] = mechanism;
+	AutoKeyMap::set(key, std::move(value));
 }
 
 // Return HardwareRessource Requirements
@@ -63,10 +68,9 @@ std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> Compartment::
     Environment const& environment) const
 {
 	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> hardware_map;
-	for (auto const& [key, value] : m_mechanisms) {
+	for (auto const& [key, value] : mechanisms) {
 		hardware_map.emplace(
-		    key,
-		    value->get_hardware(compartment, parameter_space.mechanisms.get(key), environment));
+		    key, value.get_hardware(compartment, parameter_space.mechanisms.get(key), environment));
 	}
 	return hardware_map;
 }
@@ -74,7 +78,7 @@ std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> Compartment::
 bool Compartment::valid(ParameterSpace const& parameter_space) const
 {
 	for (auto [mechanism, mechanism_parameter_space] : parameter_space.mechanisms) {
-		if (!get(mechanism).valid(mechanism_parameter_space)) {
+		if (!mechanisms.get(mechanism).valid(mechanism_parameter_space)) {
 			return false;
 		}
 	}
@@ -84,7 +88,7 @@ bool Compartment::valid(ParameterSpace const& parameter_space) const
 // Operators
 bool Compartment::is_equal_to(Compartment const& other) const
 {
-	return (m_mechanisms == other.m_mechanisms);
+	return (mechanisms == other.mechanisms);
 }
 
 // Property Methods
@@ -99,8 +103,8 @@ std::unique_ptr<Compartment> Compartment::move()
 std::ostream& Compartment::print(std::ostream& os) const
 {
 	os << "Compartmentm_mechanisms: (";
-	for (auto const& [_, mechanism] : m_mechanisms) {
-		os << *mechanism;
+	for (auto const& [_, mechanism] : mechanisms) {
+		os << mechanism;
 	}
 	return os << ")";
 }

@@ -108,7 +108,8 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
 			// Create Mechanism-Parameter-Space
 			MechanismSynapticInputCurrent::ParameterSpace mechanism_parameter_space;
 			// Add mechanism to compartment
-			MechanismOnCompartment mechanism_id = temp_compartment.add(temp_mechanism);
+			MechanismOnCompartment mechanism_id =
+			    temp_compartment.mechanisms.insert(temp_mechanism);
 			compartment_parameter_space.mechanisms.set(mechanism_id, mechanism_parameter_space);
 			// Add compartment to neuron
 			CompartmentOnNeuron compartment_id = result.neuron.add_compartment(temp_compartment);

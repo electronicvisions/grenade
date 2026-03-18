@@ -48,26 +48,30 @@ TEST(multicompartment_neuron, Resources)
 	MechanismSynapticInputConductance synaptic_conductance_a, synaptic_conductance_b;
 
 	// Add Mechanisms to Compartments
-	auto const membrane_on_compartment_a = compartment_a.add(membrane_a);
+	auto const membrane_on_compartment_a = compartment_a.mechanisms.insert(membrane_a);
 	compartment_parameter_space_a.mechanisms.set(
 	    membrane_on_compartment_a, mechanism_parameter_space_capacitance_a);
-	auto const membrane_on_compartment_b = compartment_b.add(membrane_b);
+	auto const membrane_on_compartment_b = compartment_b.mechanisms.insert(membrane_b);
 	compartment_parameter_space_b.mechanisms.set(
 	    membrane_on_compartment_b, mechanism_parameter_space_capacitance_b);
-	auto const membrane_on_compartment_c = compartment_c.add(membrane_b);
+	auto const membrane_on_compartment_c = compartment_c.mechanisms.insert(membrane_b);
 	compartment_parameter_space_c.mechanisms.set(
 	    membrane_on_compartment_c, mechanism_parameter_space_capacitance_b);
 
-	auto const synaptic_current_a_on_compartment_a = compartment_a.add(synaptic_current_a);
+	auto const synaptic_current_a_on_compartment_a =
+	    compartment_a.mechanisms.insert(synaptic_current_a);
 	compartment_parameter_space_a.mechanisms.set(
 	    synaptic_current_a_on_compartment_a, mechanism_parameter_space_synaptic_current_a);
-	auto const synaptic_conductance_on_compartment_a = compartment_a.add(synaptic_conductance_a);
+	auto const synaptic_conductance_on_compartment_a =
+	    compartment_a.mechanisms.insert(synaptic_conductance_a);
 	compartment_parameter_space_a.mechanisms.set(
 	    synaptic_conductance_on_compartment_a, mechanism_parameter_space_synaptic_conductance_a);
-	auto const synaptic_current_b_on_compartment_b = compartment_b.add(synaptic_current_b);
+	auto const synaptic_current_b_on_compartment_b =
+	    compartment_b.mechanisms.insert(synaptic_current_b);
 	compartment_parameter_space_b.mechanisms.set(
 	    synaptic_current_b_on_compartment_b, mechanism_parameter_space_synaptic_current_b);
-	auto const synaptic_conductance_on_compartment_b = compartment_b.add(synaptic_conductance_b);
+	auto const synaptic_conductance_on_compartment_b =
+	    compartment_b.mechanisms.insert(synaptic_conductance_b);
 	compartment_parameter_space_b.mechanisms.set(
 	    synaptic_conductance_on_compartment_b, mechanism_parameter_space_synaptic_conductance_b);
 

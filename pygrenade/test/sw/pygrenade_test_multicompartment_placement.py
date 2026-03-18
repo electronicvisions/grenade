@@ -283,7 +283,7 @@ def get_cap_compartment(
         .ParameterSpace(param_interval)
 
     mechanism = grenade.MechanismCapacitance()
-    mechanism_on_comp = comp.add(mechanism)
+    mechanism_on_comp = comp.mechanisms.insert(mechanism)  # pylint: disable=no-member
 
     param_space_comp = grenade.Compartment.ParameterSpace()
     param_space_comp.mechanisms.set(mechanism_on_comp, param_space_mech)  # pylint: disable=no-member
@@ -306,7 +306,7 @@ def get_syn_compartment(
         param_interval_cap)
 
     mech_cap = grenade.MechanismCapacitance()
-    cap_on_comp = comp.add(mech_cap)
+    cap_on_comp = comp.mechanisms.insert(mech_cap)  # pylint: disable=no-member
 
     # Synaptic input
     param_interval_syn = grenade.ParameterIntervalDouble(0, 7)
@@ -314,7 +314,7 @@ def get_syn_compartment(
     param_space_syn = grenade.MechanismSynapticInputCurrent.ParameterSpace(
         param_interval_syn, param_interval_syn)
     mech_syn = grenade.MechanismSynapticInputCurrent()
-    syn_on_comp = comp.add(mech_syn)
+    syn_on_comp = comp.mechanisms.insert(mech_syn)  # pylint: disable=no-member
 
     # Parameter space
     param_space_comp = grenade.Compartment.ParameterSpace()
@@ -707,8 +707,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         mechanism_synaptic_input = grenade.MechanismSynapticInputCurrent()
 
         # Add Mechanisms to compartments
-        syn_on_spine = comp_spine.add(mechanism_synaptic_input)
-        cap_on_spine = comp_spine.add(mechanism_capacitance)
+        syn_on_spine = comp_spine.mechanisms.insert(mechanism_synaptic_input)  # pylint: disable=no-member
+        cap_on_spine = comp_spine.mechanisms.insert(mechanism_capacitance)  # pylint: disable=no-member
 
         param_space_spine = grenade.Compartment.ParameterSpace()
 

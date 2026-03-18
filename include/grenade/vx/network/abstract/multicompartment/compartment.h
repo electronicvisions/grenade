@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dapr/auto_key_map.h"
 #include "dapr/map.h"
 #include "dapr/property.h"
 #include "dapr/property_holder.h"
@@ -43,10 +44,19 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Pro
 		Mechanisms mechanisms;
 	};
 
-	virtual MechanismOnCompartment add(Mechanism const& mechanism);
-	virtual void remove(MechanismOnCompartment const& descriptor);
-	virtual Mechanism const& get(MechanismOnCompartment const& descriptor) const;
-	virtual void set(MechanismOnCompartment const& descriptor, Mechanism const& mechanism);
+	struct GENPYBIND(inline_base("*")) Mechanisms
+	    : public dapr::AutoKeyMap<MechanismOnCompartment, Mechanism>
+	{
+		virtual MechanismOnCompartment insert(Mechanism const& value) override;
+		virtual MechanismOnCompartment insert(Mechanism&& value) GENPYBIND(hidden) override;
+		virtual void set(MechanismOnCompartment const& key, Mechanism const& value) override;
+		virtual void set(MechanismOnCompartment const& key, Mechanism&& value)
+		    GENPYBIND(hidden) override;
+
+	private:
+		Mechanism& get_mutable(MechanismOnCompartment const& key);
+	};
+	Mechanisms mechanisms;
 
 	// Return HardwareRessource Requirements
 	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> get_hardware(
@@ -68,11 +78,6 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Pro
 protected:
 	bool is_equal_to(Compartment const& other) const;
 	std::ostream& print(std::ostream& os) const;
-
-private:
-	size_t m_mechanism_key_counter = 0;
-	// Map over all Mechanisms on a Compartment
-	std::map<MechanismOnCompartment, dapr::PropertyHolder<Mechanism>> m_mechanisms;
 };
 
 
