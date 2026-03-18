@@ -47,7 +47,8 @@ public:
 	 * @param enable_differential_config Whether to enable differential configuration writes instead
 	 * of full ones
 	 */
-	JITGraphExecutor(bool enable_differential_config = true) SYMBOL_VISIBLE;
+	JITGraphExecutor(bool enable_differential_config = true, size_t connection_size = 1)
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Construct executor with given active connections.

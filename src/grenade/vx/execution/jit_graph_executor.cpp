@@ -13,9 +13,10 @@
 
 namespace grenade::vx::execution {
 
-JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) : m_connections()
+JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config, size_t connection_size) :
+    m_connections()
 {
-	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env();
+	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env(connection_size);
 	for (size_t i = 0; i < hxcomm_connections.size(); ++i) {
 		grenade::common::ConnectionOnExecutor identifier(i);
 		size_t const connection_size = std::visit(
