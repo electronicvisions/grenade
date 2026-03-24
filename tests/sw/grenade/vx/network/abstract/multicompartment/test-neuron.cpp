@@ -25,23 +25,52 @@ TEST(multicompartment_neuron, General)
 	MechanismSynapticInputConductance synaptic_conductance;
 
 	// Valid parameter spaces
-	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace({ParameterInterval<double>(1, 10)}));
-	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace({ParameterInterval<double>(5, 20)}));
+	EXPECT_NO_THROW(
+	    MechanismCapacitance::ParameterSpace({ParameterInterval<ccalix::CapacitanceInFarad>(
+	        ccalix::CapacitanceInFarad(0.2 * 2.2e-12), ccalix::CapacitanceInFarad(2. * 2.2e-12))}));
+	EXPECT_NO_THROW(
+	    MechanismCapacitance::ParameterSpace({ParameterInterval<ccalix::CapacitanceInFarad>(
+	        ccalix::CapacitanceInFarad(1. * 2.2e-12), ccalix::CapacitanceInFarad(4. * 2.2e-12))}));
 	EXPECT_NO_THROW(MechanismSynapticInputCurrent::ParameterSpace(
-	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)}));
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))}));
 	EXPECT_NO_THROW(MechanismSynapticInputCurrent::ParameterSpace(
-	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)}));
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))}));
 	EXPECT_NO_THROW(MechanismSynapticInputConductance::ParameterSpace(
-	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(1, 1)},
-	    {ParameterInterval<double>(2, 2)}));
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<std::optional<double>>(2, 2)},
+	    {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))}));
 
 	// Invalid parameter spaces
 	EXPECT_THROW(
-	    MechanismCapacitance::ParameterSpace({ParameterInterval<double>(7, 3)}),
+	    MechanismCapacitance::ParameterSpace({ParameterInterval<ccalix::CapacitanceInFarad>(
+	        ccalix::CapacitanceInFarad(3. * 2.2e-12), ccalix::CapacitanceInFarad(1. * 2.2e-12))}),
 	    std::invalid_argument);
 	EXPECT_THROW(
 	    MechanismSynapticInputCurrent::ParameterSpace(
-	        {ParameterInterval<double>(1, 3)}, {ParameterInterval<double>(4, 1)}),
+	        {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	        {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	            lola::vx::v3::AtomicNeuron::AnalogValue(4),
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	        {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))}),
 	    std::invalid_argument);
 
 	// Add Mechanisms to Compartments
@@ -62,7 +91,8 @@ TEST(multicompartment_neuron, General)
 	EXPECT_THROW(compartment_a.mechanisms.insert(membrane), std::invalid_argument);
 
 	compartment_c.mechanisms.set(membrane_on_compartment_c, MechanismCapacitance());
-	MechanismCapacitance::ParameterSpace({ParameterInterval<double>(20, 20)});
+	MechanismCapacitance::ParameterSpace({ParameterInterval<ccalix::CapacitanceInFarad>(
+	    ccalix::CapacitanceInFarad(4. * 2.2e-12), ccalix::CapacitanceInFarad(4. * 2.2e-12))});
 
 	EXPECT_FALSE(synaptic_conductance == synaptic_current);
 	EXPECT_TRUE(synaptic_current == synaptic_current);

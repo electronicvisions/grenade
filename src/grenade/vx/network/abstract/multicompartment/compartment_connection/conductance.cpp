@@ -1,14 +1,22 @@
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection/conductance.h"
 
+#include "ccalix/types.h"
 #include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection.h"
+#include "grenade/vx/network/abstract/parameter_interval.h"
 #include "hate/join.h"
 
 namespace grenade::vx::network::abstract {
 
+CompartmentConnectionConductance::ParameterSpace::Parameterization::Parameterization(
+    std::vector<ccalix::TimeInS> time_constant) :
+    time_constant(std::move(time_constant))
+{
+}
+
 size_t CompartmentConnectionConductance::ParameterSpace::Parameterization::size() const
 {
-	return conductance.size();
+	return time_constant.size();
 }
 
 std::unique_ptr<CompartmentConnection::ParameterSpace::Parameterization>
@@ -20,9 +28,9 @@ CompartmentConnectionConductance::ParameterSpace::Parameterization::get_section(
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameterization.");
 	}
-	ret.conductance.reserve(sequence.size());
+	ret.time_constant.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.conductance.push_back(conductance.at(element.value.at(0)));
+		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
 	}
 	return std::make_unique<ParameterSpace::Parameterization>(std::move(ret));
 }
@@ -42,18 +50,24 @@ CompartmentConnectionConductance::ParameterSpace::Parameterization::move()
 std::ostream& CompartmentConnectionConductance::ParameterSpace::Parameterization::print(
     std::ostream& os) const
 {
-	return os << "Parameterization(" << hate::join(conductance, ", ") << ")";
+	return os << "Parameterization(" << hate::join(time_constant, ", ") << ")";
 }
 
 bool CompartmentConnectionConductance::ParameterSpace::Parameterization::is_equal_to(
     CompartmentConnection::ParameterSpace::Parameterization const& other) const
 {
-	return (conductance == static_cast<Parameterization const&>(other).conductance);
+	return (time_constant == static_cast<Parameterization const&>(other).time_constant);
+}
+
+CompartmentConnectionConductance::ParameterSpace::ParameterSpace(
+    std::vector<ParameterInterval<ccalix::TimeInS>> time_constant) :
+    time_constant(std::move(time_constant))
+{
 }
 
 size_t CompartmentConnectionConductance::ParameterSpace::size() const
 {
-	return conductance_interval.size();
+	return time_constant.size();
 }
 
 std::unique_ptr<CompartmentConnection::ParameterSpace>
@@ -65,9 +79,9 @@ CompartmentConnectionConductance::ParameterSpace::get_section(
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameter space.");
 	}
-	ret.conductance_interval.reserve(sequence.size());
+	ret.time_constant.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.conductance_interval.push_back(conductance_interval.at(element.value.at(0)));
+		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
 	}
 	return std::make_unique<ParameterSpace>(std::move(ret));
 }
@@ -81,7 +95,7 @@ bool CompartmentConnectionConductance::ParameterSpace::valid(
 			return false;
 		}
 		for (size_t i = 0; i < size(); ++i) {
-			if (!conductance_interval.at(i).contains(ptr->conductance.at(i))) {
+			if (!time_constant.at(i).contains(ptr->time_constant.at(i))) {
 				return false;
 			}
 		}
@@ -104,13 +118,13 @@ CompartmentConnectionConductance::ParameterSpace::move()
 
 std::ostream& CompartmentConnectionConductance::ParameterSpace::print(std::ostream& os) const
 {
-	return os << "ParameterSpace(" << hate::join(conductance_interval, ", ") << ")";
+	return os << "ParameterSpace(" << hate::join(time_constant, ", ") << ")";
 }
 
 bool CompartmentConnectionConductance::ParameterSpace::is_equal_to(
     CompartmentConnection::ParameterSpace const& other) const
 {
-	return (conductance_interval == static_cast<ParameterSpace const&>(other).conductance_interval);
+	return (time_constant == static_cast<ParameterSpace const&>(other).time_constant);
 }
 
 // Equal Operator CompartmentConnectionConductance

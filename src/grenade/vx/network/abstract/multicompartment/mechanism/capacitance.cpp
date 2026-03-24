@@ -9,13 +9,13 @@
 namespace grenade::vx::network::abstract {
 
 MechanismCapacitance::ParameterSpace::ParameterSpace(
-    std::vector<ParameterInterval<double>> parameter_interval_in) :
-    capacitance_interval(std::move(parameter_interval_in))
+    std::vector<ParameterInterval<ccalix::CapacitanceInFarad>> parameter_in) :
+    capacitance(std::move(parameter_in))
 {
 }
 
 MechanismCapacitance::ParameterSpace::Parameterization::Parameterization(
-    std::vector<double> value) :
+    std::vector<ccalix::CapacitanceInFarad> value) :
     capacitance(std::move(value))
 {
 }
@@ -28,9 +28,9 @@ std::unique_ptr<Mechanism::ParameterSpace> MechanismCapacitance::ParameterSpace:
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameterization.");
 	}
-	ret.capacitance_interval.reserve(sequence.size());
+	ret.capacitance.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.capacitance_interval.push_back(capacitance_interval.at(element.value.at(0)));
+		ret.capacitance.push_back(capacitance.at(element.value.at(0)));
 	}
 	return std::make_unique<ParameterSpace>(std::move(ret));
 }
@@ -53,7 +53,7 @@ MechanismCapacitance::ParameterSpace::Parameterization::get_section(
 
 size_t MechanismCapacitance::ParameterSpace::size() const
 {
-	return capacitance_interval.size();
+	return capacitance.size();
 }
 
 size_t MechanismCapacitance::ParameterSpace::Parameterization::size() const
@@ -73,7 +73,7 @@ bool MechanismCapacitance::ParameterSpace::valid(
 	}
 
 	for (size_t i = 0; i < size(); ++i) {
-		if (!capacitance_interval.at(i).contains(cast_parameterization->capacitance.at(i))) {
+		if (!capacitance.at(i).contains(cast_parameterization->capacitance.at(i))) {
 			return false;
 		}
 	}
@@ -132,13 +132,13 @@ bool MechanismCapacitance::ParameterSpace::is_equal_to(Mechanism::ParameterSpace
 	if (!other_cast) {
 		return false;
 	}
-	return (capacitance_interval == other_cast->capacitance_interval);
+	return (capacitance == other_cast->capacitance);
 }
 
 std::ostream& MechanismCapacitance::ParameterSpace::print(std::ostream& os) const
 {
 	os << "Parameter-Space(\n";
-	os << "\tCapacitance: " << hate::join(capacitance_interval, ", ");
+	os << "\tCapacitance: " << hate::join(capacitance, ", ");
 	os << "\n)";
 	return os;
 	return os;
@@ -171,19 +171,20 @@ HardwareConstraints MechanismCapacitance::get_hardware(
 		throw("Could not cast mechanism parameter space to capacitance parameter space.");
 	}
 
-	double capacity_convert = 5; // TO-DO
+	ccalix::CapacitanceInFarad capacity_convert(
+	    2.2e-12); // TODO: find better-matching minimal value including parasitic capacitances
 	HardwareConstraints constraints;
 
-	double capacitance_model = 0.;
-	for (auto const& capacitance_interval : parameter_space->capacitance_interval) {
-		capacitance_model = std::max(capacitance_model, capacitance_interval.get_upper());
+	ccalix::CapacitanceInFarad capacitance_model(0.);
+	for (auto const& capacitance : parameter_space->capacitance) {
+		capacitance_model = std::max(capacitance_model, capacitance.get_upper());
 	}
 	int num_of_hardware_resources;
 	// Round up
-	if (fmod(capacitance_model, capacity_convert) == 0) {
-		num_of_hardware_resources = capacitance_model / capacity_convert;
+	if (fmod(capacitance_model.value(), capacity_convert.value()) == 0) {
+		num_of_hardware_resources = capacitance_model.value() / capacity_convert.value();
 	} else {
-		num_of_hardware_resources = (capacitance_model / capacity_convert) + 1;
+		num_of_hardware_resources = (capacitance_model.value() / capacity_convert.value()) + 1;
 	}
 
 	// Always request one neuron circuit instead of none

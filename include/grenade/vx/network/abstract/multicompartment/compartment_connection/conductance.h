@@ -1,5 +1,8 @@
 #pragma once
+
+#include "ccalix/types.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection.h"
+#include "grenade/vx/network/abstract/parameter_interval.h"
 #include <vector>
 
 namespace grenade::vx::network {
@@ -13,10 +16,14 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnectionConductance
 
 	struct ParameterSpace : public CompartmentConnection::ParameterSpace
 	{
-		std::vector<ParameterInterval<double>> conductance_interval;
+		std::vector<TimeInterval> time_constant;
+
 		struct Parameterization : public CompartmentConnection::ParameterSpace::Parameterization
 		{
-			std::vector<double> conductance;
+			std::vector<ccalix::TimeInS> time_constant;
+
+			Parameterization() = default;
+			Parameterization(std::vector<ccalix::TimeInS> time_constant);
 
 			virtual size_t size() const override;
 
@@ -33,6 +40,9 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnectionConductance
 			virtual bool is_equal_to(CompartmentConnection::ParameterSpace::Parameterization const&
 			                             other) const override;
 		};
+
+		ParameterSpace() = default;
+		ParameterSpace(std::vector<TimeInterval> time_constant);
 
 		virtual size_t size() const override;
 

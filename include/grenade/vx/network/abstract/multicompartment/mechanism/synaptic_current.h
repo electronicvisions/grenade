@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ccalix/types.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_excitatory.h"
@@ -7,6 +8,7 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_input.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
+#include "lola/vx/v3/neuron.h"
 #include <vector>
 
 namespace grenade::vx::network {
@@ -20,16 +22,22 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputCurrent
 	struct GENPYBIND(visible) ParameterSpace : public Mechanism::ParameterSpace
 	{
 		// Interval with range of Parameters
-		std::vector<ParameterInterval<double>> current_interval;
-		std::vector<ParameterInterval<double>> time_constant_interval;
+		std::vector<AnalogValueInterval> i_synin_gm;
+		std::vector<AnalogValueInterval> synapse_dac_bias;
+		std::vector<TimeInterval> time_constant;
 
 		struct GENPYBIND(visible) Parameterization
 		    : public Mechanism::ParameterSpace::Parameterization
 		{
 			Parameterization() = default;
-			Parameterization(std::vector<double> current_in, std::vector<double> time_constant_in);
-			std::vector<double> current;
-			std::vector<double> time_constant;
+			Parameterization(
+			    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> i_synin_gm,
+			    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> synapse_dac_bias,
+			    std::vector<ccalix::TimeInS> time_constant);
+
+			std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> i_synin_gm;
+			std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> synapse_dac_bias;
+			std::vector<ccalix::TimeInS> time_constant;
 
 			virtual std::unique_ptr<Mechanism::ParameterSpace::Parameterization> get_section(
 			    grenade::common::MultiIndexSequence const& sequence) const;
@@ -63,8 +71,9 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputCurrent
 		// Constructor
 		ParameterSpace() = default;
 		ParameterSpace(
-		    std::vector<ParameterInterval<double>> interval_current_in,
-		    std::vector<ParameterInterval<double>> interval_time_constant_in);
+		    std::vector<AnalogValueInterval> i_synin_gm,
+		    std::vector<AnalogValueInterval> synapse_dac_bias,
+		    std::vector<TimeInterval> time_constant);
 
 		virtual size_t size() const override;
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ccalix/types.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/capacitance.h"
@@ -19,7 +20,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismCapacitance : public Mechanism
 	struct GENPYBIND(visible) ParameterSpace : public Mechanism::ParameterSpace
 	{
 		// Interval with range of Parameters
-		std::vector<ParameterInterval<double>> capacitance_interval;
+		std::vector<CapacitanceInterval> capacitance;
 
 		virtual size_t size() const override;
 
@@ -27,8 +28,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismCapacitance : public Mechanism
 		    : public Mechanism::ParameterSpace::Parameterization
 		{
 			Parameterization() = default;
-			Parameterization(std::vector<double> value);
-			std::vector<double> capacitance;
+			Parameterization(std::vector<ccalix::CapacitanceInFarad> value);
+			std::vector<ccalix::CapacitanceInFarad> capacitance;
 
 			virtual size_t size() const override;
 
@@ -61,7 +62,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismCapacitance : public Mechanism
 
 		// Constructor
 		ParameterSpace() = default;
-		ParameterSpace(std::vector<ParameterInterval<double>> parameter_interval_in);
+		ParameterSpace(std::vector<CapacitanceInterval> parameter_interval_in);
 
 		// Property methods
 		std::unique_ptr<Mechanism::ParameterSpace> copy() const;

@@ -267,7 +267,7 @@ def plot_grid(*, limits, title="", caption="", step="",
 
 
 def get_cap_compartment(
-        lower: int = 0, upper: int = 0
+        lower: float = 0., upper: float = 0.
 ) -> Tuple[grenade.Compartment, grenade.Compartment.ParameterSpace]:
     '''
     Generate a compartment with a capacitance.
@@ -278,7 +278,7 @@ def get_cap_compartment(
     '''
     comp = grenade.Compartment()
 
-    param_interval = grenade.ParameterIntervalDouble(lower, upper)
+    param_interval = grenade.CapacitanceInterval(lower, upper)
     param_space_mech = grenade.MechanismCapacitance\
         .ParameterSpace([param_interval])
 
@@ -304,7 +304,7 @@ def get_syn_compartment(
     comp = grenade.Compartment()
 
     # Capacitance
-    param_interval_cap = grenade.ParameterIntervalDouble(0, 11)
+    param_interval_cap = grenade.CapacitanceInterval(0., 11. / 63 * 2.2e-12)
     param_space_cap = grenade.MechanismCapacitance.ParameterSpace(
         [param_interval_cap])
 
@@ -312,10 +312,10 @@ def get_syn_compartment(
     cap_on_comp = comp.mechanisms.insert(mech_cap)  # pylint: disable=no-member
 
     # Synaptic input
-    param_interval_syn = grenade.ParameterIntervalDouble(0, 7)
-
     param_space_syn = grenade.MechanismSynapticInputCurrent.ParameterSpace(
-        [param_interval_syn], [param_interval_syn])
+        [grenade.AnalogValueInterval(500, 600)],
+        [grenade.AnalogValueInterval(500, 600)],
+        [grenade.TimeInterval(10., 10.)])
     mech_syn = grenade.MechanismSynapticInputCurrent()
     syn_on_comp = comp.mechanisms.insert(mech_syn)  # pylint: disable=no-member
 
@@ -393,7 +393,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             circuits.
         """
 
-        compartment, parameter_space = get_cap_compartment(0, 11)
+        compartment, parameter_space = get_cap_compartment(
+            0., 11. / 63 * 2.2e-12)
         neuron, resources = neuron_and_res_from_edgelist(
             [],
             {0: compartment},
@@ -416,7 +417,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
     def test_two_connected(self):
         comp_small, param_space_small = get_cap_compartment()
-        comp_big, param_space_big = get_cap_compartment(0, 11)
+        comp_big, param_space_big = get_cap_compartment(
+            0., 11. / 63 * 2.2e-12)
 
         neuron, resources = neuron_and_res_from_edgelist(
             [(0, 1)],
@@ -444,7 +446,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         neuron = grenade.Neuron()
 
         comp_small, param_space_small = get_cap_compartment()
-        comp_big, param_space_big = get_cap_compartment(0, 11)
+        comp_big, param_space_big = get_cap_compartment(
+            0., 11. / 63 * 2.2e-12)
 
         neuron, resources = neuron_and_res_from_edgelist(
             [(0, 1),
@@ -697,11 +700,14 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         comp_spine = grenade.Compartment()
 
         # Parameter
-        param_interval_syn = grenade.ParameterIntervalDouble(0, 7)
-        param_interval_cap = grenade.ParameterIntervalDouble(0, 1)
+        param_interval_cap = grenade.CapacitanceInterval(
+            0., 1. / 63 * 2.2e-12)
 
         parameter_space_a = grenade.MechanismSynapticInputCurrent\
-            .ParameterSpace([param_interval_syn], [param_interval_syn])
+            .ParameterSpace(
+                [grenade.AnalogValueInterval(500, 600)],
+                [grenade.AnalogValueInterval(500, 600)],
+                [grenade.TimeInterval(10., 10.)])
 
         parameter_space_b = grenade.MechanismCapacitance\
             .ParameterSpace([param_interval_cap])

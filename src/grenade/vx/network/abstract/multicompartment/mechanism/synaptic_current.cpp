@@ -10,10 +10,12 @@
 namespace grenade::vx::network::abstract {
 
 MechanismSynapticInputCurrent::ParameterSpace::ParameterSpace(
-    std::vector<ParameterInterval<double>> interval_current_in,
-    std::vector<ParameterInterval<double>> interval_time_constant_in) :
-    current_interval(std::move(interval_current_in)),
-    time_constant_interval(std::move(interval_time_constant_in))
+    std::vector<ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>> i_synin_gm,
+    std::vector<ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>> synapse_dac_bias,
+    std::vector<ParameterInterval<ccalix::TimeInS>> time_constant) :
+    i_synin_gm(std::move(i_synin_gm)),
+    synapse_dac_bias(std::move(synapse_dac_bias)),
+    time_constant(std::move(time_constant))
 {
 }
 
@@ -26,11 +28,13 @@ MechanismSynapticInputCurrent::ParameterSpace::get_section(
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameter space.");
 	}
-	ret.current_interval.reserve(sequence.size());
-	ret.time_constant_interval.reserve(sequence.size());
+	ret.i_synin_gm.reserve(sequence.size());
+	ret.synapse_dac_bias.reserve(sequence.size());
+	ret.time_constant.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.current_interval.push_back(current_interval.at(element.value.at(0)));
-		ret.time_constant_interval.push_back(time_constant_interval.at(element.value.at(0)));
+		ret.i_synin_gm.push_back(i_synin_gm.at(element.value.at(0)));
+		ret.synapse_dac_bias.push_back(synapse_dac_bias.at(element.value.at(0)));
+		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
 	}
 	return std::make_unique<ParameterSpace>(std::move(ret));
 }
@@ -44,10 +48,12 @@ MechanismSynapticInputCurrent::ParameterSpace::Parameterization::get_section(
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameterization.");
 	}
-	ret.current.reserve(sequence.size());
+	ret.i_synin_gm.reserve(sequence.size());
+	ret.synapse_dac_bias.reserve(sequence.size());
 	ret.time_constant.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.current.push_back(current.at(element.value.at(0)));
+		ret.i_synin_gm.push_back(i_synin_gm.at(element.value.at(0)));
+		ret.synapse_dac_bias.push_back(synapse_dac_bias.at(element.value.at(0)));
 		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
 	}
 	return std::make_unique<Parameterization>(std::move(ret));
@@ -56,29 +62,35 @@ MechanismSynapticInputCurrent::ParameterSpace::Parameterization::get_section(
 size_t MechanismSynapticInputCurrent::ParameterSpace::size() const
 {
 	std::set<size_t> sizes;
-	sizes.insert(current_interval.size());
-	sizes.insert(time_constant_interval.size());
+	sizes.insert(i_synin_gm.size());
+	sizes.insert(synapse_dac_bias.size());
+	sizes.insert(time_constant.size());
 	if (sizes.size() != 1) {
 		throw std::runtime_error("Parameter space features heterogeneous size.");
 	}
-	return current_interval.size();
+	return i_synin_gm.size();
 }
 
 MechanismSynapticInputCurrent::ParameterSpace::Parameterization::Parameterization(
-    std::vector<double> current_in, std::vector<double> time_constant_in) :
-    current(std::move(current_in)), time_constant(std::move(time_constant_in))
+    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> i_synin_gm,
+    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> synapse_dac_bias,
+    std::vector<ccalix::TimeInS> time_constant) :
+    i_synin_gm(std::move(i_synin_gm)),
+    synapse_dac_bias(std::move(synapse_dac_bias)),
+    time_constant(std::move(time_constant))
 {
 }
 
 size_t MechanismSynapticInputCurrent::ParameterSpace::Parameterization::size() const
 {
 	std::set<size_t> sizes;
-	sizes.insert(current.size());
+	sizes.insert(i_synin_gm.size());
+	sizes.insert(synapse_dac_bias.size());
 	sizes.insert(time_constant.size());
 	if (sizes.size() != 1) {
 		throw std::runtime_error("Parameterization features heterogeneous size.");
 	}
-	return current.size();
+	return i_synin_gm.size();
 }
 
 bool MechanismSynapticInputCurrent::ParameterSpace::valid(
@@ -90,10 +102,13 @@ bool MechanismSynapticInputCurrent::ParameterSpace::valid(
 	}
 
 	for (size_t i = 0; i < size(); ++i) {
-		if (!current_interval.at(i).contains(cast_parameterization->current.at(i))) {
+		if (!i_synin_gm.at(i).contains(cast_parameterization->i_synin_gm.at(i))) {
 			return false;
 		}
-		if (!time_constant_interval.at(i).contains(cast_parameterization->time_constant.at(i))) {
+		if (!synapse_dac_bias.at(i).contains(cast_parameterization->synapse_dac_bias.at(i))) {
+			return false;
+		}
+		if (!time_constant.at(i).contains(cast_parameterization->time_constant.at(i))) {
 			return false;
 		}
 	}
@@ -122,13 +137,16 @@ bool MechanismSynapticInputCurrent::ParameterSpace::Parameterization::is_equal_t
 	if (!other_cast) {
 		return false;
 	}
-	return (current == other_cast->current && time_constant == other_cast->time_constant);
+	return (
+	    i_synin_gm == other_cast->i_synin_gm && synapse_dac_bias == other_cast->synapse_dac_bias &&
+	    time_constant == other_cast->time_constant);
 }
 std::ostream& MechanismSynapticInputCurrent::ParameterSpace::Parameterization::print(
     std::ostream& os) const
 {
 	os << "Parameterization(\n";
-	os << "\tCurrent: " << hate::join(current, ", ");
+	os << "\tI_synin_gm: " << hate::join(i_synin_gm, ", ");
+	os << "\n\tSynapse_dac_bias:" << hate::join(synapse_dac_bias, ", ");
 	os << "\n\tTime-constant: " << hate::join(time_constant, ", ");
 	os << "\n)";
 	return os;
@@ -154,14 +172,15 @@ bool MechanismSynapticInputCurrent::ParameterSpace::is_equal_to(
 		return false;
 	}
 	return (
-	    current_interval == other_cast->current_interval &&
-	    time_constant_interval == other_cast->time_constant_interval);
+	    i_synin_gm == other_cast->i_synin_gm && synapse_dac_bias == other_cast->synapse_dac_bias &&
+	    time_constant == other_cast->time_constant);
 }
 std::ostream& MechanismSynapticInputCurrent::ParameterSpace::print(std::ostream& os) const
 {
 	os << "ParameterSpace(\n";
-	os << "\tCurrent: " << hate::join(current_interval, ", ");
-	os << "\n\tTime-constant: " << hate::join(time_constant_interval, ", ");
+	os << "\tI_synin_gm: " << hate::join(i_synin_gm, ", ");
+	os << "\n\tSynapse_dac_bias:" << hate::join(synapse_dac_bias, ", ");
+	os << "\n\tTime-constant: " << hate::join(time_constant, ", ");
 	os << "\n)";
 	return os;
 }

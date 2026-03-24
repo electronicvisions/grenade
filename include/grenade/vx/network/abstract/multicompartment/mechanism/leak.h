@@ -1,10 +1,12 @@
 #pragma once
 
+#include "ccalix/types.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/leak.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
+#include "haldls/vx/v3/cadc.h"
 #include <cmath>
 
 namespace grenade::vx::network {
@@ -22,7 +24,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 		{
 			Parameterization() = default;
 			Parameterization(
-			    std::vector<double> value_conductance, std::vector<double> value_potential);
+			    std::vector<ccalix::TimeInS> time_constant,
+			    std::vector<haldls::vx::v3::CADCSampleQuad::Value> potential);
 
 			virtual std::unique_ptr<Mechanism::ParameterSpace::Parameterization> get_section(
 			    grenade::common::MultiIndexSequence const& sequence) const;
@@ -37,8 +40,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 			bool is_equal_to(Mechanism::ParameterSpace::Parameterization const& other) const;
 			std::ostream& print(std::ostream& os) const;
 
-			std::vector<double> conductance;
-			std::vector<double> potential;
+			std::vector<ccalix::TimeInS> time_constant;
+			std::vector<haldls::vx::v3::CADCSampleQuad::Value> potential;
 
 			virtual size_t size() const override;
 		};
@@ -59,8 +62,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 		// Constructor
 		ParameterSpace() = default;
 		ParameterSpace(
-		    std::vector<ParameterInterval<double>> parameter_interval_conductance,
-		    std::vector<ParameterInterval<double>> parameter_interval_potential);
+		    std::vector<TimeInterval> time_constant, std::vector<CADCInterval> potential);
 
 		// Property methods
 		std::unique_ptr<Mechanism::ParameterSpace> copy() const;
@@ -68,8 +70,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 		bool is_equal_to(Mechanism::ParameterSpace const& other) const;
 		std::ostream& print(std::ostream& os) const;
 
-		std::vector<ParameterInterval<double>> conductance_interval;
-		std::vector<ParameterInterval<double>> potential_interval;
+		std::vector<TimeInterval> time_constant;
+		std::vector<CADCInterval> potential;
 
 		virtual size_t size() const override;
 	};

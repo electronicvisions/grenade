@@ -9,25 +9,31 @@
 namespace grenade::vx::network::abstract {
 
 MechanismSynapticInputConductance::ParameterSpace::ParameterSpace(
-    std::vector<ParameterInterval<double>> interval_conductance,
-    std::vector<ParameterInterval<double>> interval_potential,
-    std::vector<ParameterInterval<double>> interval_time_constant) :
-    conductance_interval(std::move(interval_conductance)),
-    potential_interval(std::move(interval_potential)),
-    time_constant_interval(std::move(interval_time_constant))
+    std::vector<ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>> i_synin_gm,
+    std::vector<ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>> synapse_dac_bias,
+    std::vector<ParameterInterval<double>> e_reversal,
+    std::vector<ParameterInterval<std::optional<double>>> e_reference,
+    std::vector<ParameterInterval<ccalix::TimeInS>> time_constant) :
+    i_synin_gm(std::move(i_synin_gm)),
+    synapse_dac_bias(std::move(synapse_dac_bias)),
+    e_reversal(std::move(e_reversal)),
+    e_reference(std::move(e_reference)),
+    time_constant(std::move(time_constant))
 {
 }
 
 size_t MechanismSynapticInputConductance::ParameterSpace::size() const
 {
 	std::set<size_t> sizes;
-	sizes.insert(conductance_interval.size());
-	sizes.insert(potential_interval.size());
-	sizes.insert(time_constant_interval.size());
+	sizes.insert(i_synin_gm.size());
+	sizes.insert(synapse_dac_bias.size());
+	sizes.insert(e_reversal.size());
+	sizes.insert(e_reference.size());
+	sizes.insert(time_constant.size());
 	if (sizes.size() != 1) {
 		throw std::runtime_error("Parameter space features heterogeneous size.");
 	}
-	return conductance_interval.size();
+	return i_synin_gm.size();
 }
 
 std::unique_ptr<Mechanism::ParameterSpace>
@@ -39,13 +45,17 @@ MechanismSynapticInputConductance::ParameterSpace::get_section(
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameter space.");
 	}
-	ret.conductance_interval.reserve(sequence.size());
-	ret.potential_interval.reserve(sequence.size());
-	ret.time_constant_interval.reserve(sequence.size());
+	ret.i_synin_gm.reserve(sequence.size());
+	ret.synapse_dac_bias.reserve(sequence.size());
+	ret.e_reversal.reserve(sequence.size());
+	ret.e_reference.reserve(sequence.size());
+	ret.time_constant.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.conductance_interval.push_back(conductance_interval.at(element.value.at(0)));
-		ret.potential_interval.push_back(potential_interval.at(element.value.at(0)));
-		ret.time_constant_interval.push_back(time_constant_interval.at(element.value.at(0)));
+		ret.i_synin_gm.push_back(i_synin_gm.at(element.value.at(0)));
+		ret.synapse_dac_bias.push_back(synapse_dac_bias.at(element.value.at(0)));
+		ret.e_reversal.push_back(e_reversal.at(element.value.at(0)));
+		ret.e_reference.push_back(e_reference.at(element.value.at(0)));
+		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
 	}
 	return std::make_unique<ParameterSpace>(std::move(ret));
 }
@@ -59,37 +69,47 @@ MechanismSynapticInputConductance::ParameterSpace::Parameterization::get_section
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument("Given sequence not included in parameterization.");
 	}
-	ret.conductance.reserve(sequence.size());
-	ret.potential.reserve(sequence.size());
+	ret.i_synin_gm.reserve(sequence.size());
+	ret.synapse_dac_bias.reserve(sequence.size());
+	ret.e_reversal.reserve(sequence.size());
+	ret.e_reference.reserve(sequence.size());
 	ret.time_constant.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
-		ret.conductance.push_back(conductance.at(element.value.at(0)));
-		ret.potential.push_back(potential.at(element.value.at(0)));
+		ret.i_synin_gm.push_back(i_synin_gm.at(element.value.at(0)));
+		ret.synapse_dac_bias.push_back(synapse_dac_bias.at(element.value.at(0)));
+		ret.e_reversal.push_back(e_reversal.at(element.value.at(0)));
+		ret.e_reference.push_back(e_reference.at(element.value.at(0)));
 		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
 	}
 	return std::make_unique<Parameterization>(std::move(ret));
 }
 
 MechanismSynapticInputConductance::ParameterSpace::Parameterization::Parameterization(
-    std::vector<double> conductance_in,
-    std::vector<double> potential_in,
-    std::vector<double> time_constant_in) :
-    conductance(std::move(conductance_in)),
-    potential(std::move(potential_in)),
-    time_constant(std::move(time_constant_in))
+    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> i_synin_gm,
+    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> synapse_dac_bias,
+    std::vector<double> e_reversal,
+    std::vector<std::optional<double>> e_reference,
+    std::vector<ccalix::TimeInS> time_constant) :
+    i_synin_gm(std::move(i_synin_gm)),
+    synapse_dac_bias(std::move(synapse_dac_bias)),
+    e_reversal(std::move(e_reversal)),
+    e_reference(std::move(e_reference)),
+    time_constant(std::move(time_constant))
 {
 }
 
 size_t MechanismSynapticInputConductance::ParameterSpace::Parameterization::size() const
 {
 	std::set<size_t> sizes;
-	sizes.insert(conductance.size());
-	sizes.insert(potential.size());
+	sizes.insert(i_synin_gm.size());
+	sizes.insert(synapse_dac_bias.size());
+	sizes.insert(e_reversal.size());
+	sizes.insert(e_reference.size());
 	sizes.insert(time_constant.size());
 	if (sizes.size() != 1) {
 		throw std::runtime_error("Parameterization features heterogeneous size.");
 	}
-	return conductance.size();
+	return i_synin_gm.size();
 }
 
 bool MechanismSynapticInputConductance::ParameterSpace::valid(
@@ -101,13 +121,19 @@ bool MechanismSynapticInputConductance::ParameterSpace::valid(
 	}
 
 	for (size_t i = 0; i < size(); ++i) {
-		if (!conductance_interval.at(i).contains(cast_parameterization->conductance.at(i))) {
+		if (!i_synin_gm.at(i).contains(cast_parameterization->i_synin_gm.at(i))) {
 			return false;
 		}
-		if (!potential_interval.at(i).contains(cast_parameterization->potential.at(i))) {
+		if (!synapse_dac_bias.at(i).contains(cast_parameterization->synapse_dac_bias.at(i))) {
 			return false;
 		}
-		if (!time_constant_interval.at(i).contains(cast_parameterization->time_constant.at(i))) {
+		if (!e_reversal.at(i).contains(cast_parameterization->e_reversal.at(i))) {
+			return false;
+		}
+		if (!e_reference.at(i).contains(cast_parameterization->e_reference.at(i))) {
+			return false;
+		}
+		if (!time_constant.at(i).contains(cast_parameterization->time_constant.at(i))) {
 			return false;
 		}
 	}
@@ -138,15 +164,26 @@ bool MechanismSynapticInputConductance::ParameterSpace::Parameterization::is_equ
 		return false;
 	}
 	return (
-	    conductance == other_cast->conductance && potential == other_cast->potential &&
+	    i_synin_gm == other_cast->i_synin_gm && synapse_dac_bias == other_cast->synapse_dac_bias &&
+	    e_reversal == other_cast->e_reversal && e_reference == other_cast->e_reference &&
 	    time_constant == other_cast->time_constant);
 }
 std::ostream& MechanismSynapticInputConductance::ParameterSpace::Parameterization::print(
     std::ostream& os) const
 {
 	os << "Parameterization(\n";
-	os << "\tConductance: " << hate::join(conductance, ", ");
-	os << "\n\tPotential:" << hate::join(potential, ", ");
+	os << "\tI_synin_gm: " << hate::join(i_synin_gm, ", ");
+	os << "\n\tSynapse_dac_bias:" << hate::join(synapse_dac_bias, ", ");
+	os << "\n\tE_reversal:" << hate::join(e_reversal, ", ");
+	os << "\n\tE_reference:" << hate::join(e_reference, ", ", [](auto const& e) {
+		std::stringstream ss;
+		if (e) {
+			ss << *e;
+		} else {
+			ss << "not specified";
+		}
+		return ss.str();
+	});
 	os << "\n\tTime-constant: " << hate::join(time_constant, ", ");
 	os << "\n)";
 	return os;
@@ -172,16 +209,34 @@ bool MechanismSynapticInputConductance::ParameterSpace::is_equal_to(
 		return false;
 	}
 	return (
-	    conductance_interval == other_cast->conductance_interval &&
-	    potential_interval == other_cast->potential_interval &&
-	    time_constant_interval == other_cast->time_constant_interval);
+	    i_synin_gm == other_cast->i_synin_gm && synapse_dac_bias == other_cast->synapse_dac_bias &&
+	    e_reversal == other_cast->e_reversal && e_reference == other_cast->e_reference &&
+	    time_constant == other_cast->time_constant);
 }
 std::ostream& MechanismSynapticInputConductance::ParameterSpace::print(std::ostream& os) const
 {
 	os << "ParameterSpace(\n";
-	os << "\tConductance: " << hate::join(conductance_interval, ", ");
-	os << "\n\tPotential:" << hate::join(potential_interval, ", ");
-	os << "\n\tTime-constant: " << hate::join(time_constant_interval, ", ");
+	os << "\tI_synin_gm: " << hate::join(i_synin_gm, ", ");
+	os << "\n\tSynapse_dac_bias:" << hate::join(synapse_dac_bias, ", ");
+	os << "\n\tE_reversal:" << hate::join(e_reversal, ", ");
+	os << "\n\tE_reference:" << hate::join(e_reference, ", ", [](auto const& e) {
+		std::stringstream ss;
+		ss << "[";
+		if (e.get_lower()) {
+			ss << *e.get_lower();
+		} else {
+			ss << "not specified";
+		}
+		ss << ", ";
+		if (e.get_lower()) {
+			ss << *e.get_lower();
+		} else {
+			ss << "disabled";
+		}
+		ss << "]";
+		return ss.str();
+	});
+	os << "\n\tTime-constant: " << hate::join(time_constant, ", ");
 	os << "\n)";
 	return os;
 }

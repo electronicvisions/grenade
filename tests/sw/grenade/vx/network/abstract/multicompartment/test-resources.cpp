@@ -27,21 +27,47 @@ TEST(multicompartment_neuron, Resources)
 
 	// Define mechanism parameter spaces
 	MechanismCapacitance::ParameterSpace mechanism_parameter_space_capacitance_a(
-	    {ParameterInterval<double>(1, 25)});
+	    {ParameterInterval<ccalix::CapacitanceInFarad>(
+	        ccalix::CapacitanceInFarad(0.2 * 2.2e-12), ccalix::CapacitanceInFarad(4.9 * 2.2e-12))});
 	MechanismCapacitance::ParameterSpace mechanism_parameter_space_capacitance_b(
-	    {ParameterInterval<double>(5, 12)});
+	    {ParameterInterval<ccalix::CapacitanceInFarad>(
+	        ccalix::CapacitanceInFarad(1. * 2.2e-12), ccalix::CapacitanceInFarad(2.4 * 2.2e-12))});
 	MechanismSynapticInputCurrent::ParameterSpace mechanism_parameter_space_synaptic_current_a(
-	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)});
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))});
 	MechanismSynapticInputCurrent::ParameterSpace mechanism_parameter_space_synaptic_current_b(
-	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)});
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	        lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	    {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))});
 	MechanismSynapticInputConductance::ParameterSpace
 	    mechanism_parameter_space_synaptic_conductance_a(
-	        {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(1, 1)},
-	        {ParameterInterval<double>(2, 2)});
+	        {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	        {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	        {ParameterInterval<double>(1, 1)}, {ParameterInterval<std::optional<double>>(1, 1)},
+	        {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(2), ccalix::TimeInS(2))});
 	MechanismSynapticInputConductance::ParameterSpace
 	    mechanism_parameter_space_synaptic_conductance_b(
-	        {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)},
-	        {ParameterInterval<double>(1, 1)});
+	        {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	        {ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>(
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1),
+	            lola::vx::v3::AtomicNeuron::AnalogValue(1))},
+	        {ParameterInterval<double>(1, 1)}, {ParameterInterval<std::optional<double>>(2, 2)},
+	        {ParameterInterval<ccalix::TimeInS>(ccalix::TimeInS(1), ccalix::TimeInS(1))});
 
 	// Define mechanisms
 	MechanismCapacitance membrane_a, membrane_b;

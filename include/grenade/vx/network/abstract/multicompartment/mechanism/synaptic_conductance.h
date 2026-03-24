@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ccalix/types.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_excitatory.h"
@@ -7,6 +8,7 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_input.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
+#include "lola/vx/v3/neuron.h"
 
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
@@ -19,21 +21,28 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance
 	struct GENPYBIND(visible) SYMBOL_VISIBLE ParameterSpace : public Mechanism::ParameterSpace
 	{
 		// Interval with range of Parameters
-		std::vector<ParameterInterval<double>> conductance_interval;
-		std::vector<ParameterInterval<double>> potential_interval;
-		std::vector<ParameterInterval<double>> time_constant_interval;
+		std::vector<AnalogValueInterval> i_synin_gm;
+		std::vector<AnalogValueInterval> synapse_dac_bias;
+		std::vector<ParameterIntervalDouble> e_reversal;
+		std::vector<ParameterInterval<std::optional<double>>> e_reference;
+		std::vector<TimeInterval> time_constant;
 
 		struct GENPYBIND(visible) SYMBOL_VISIBLE Parameterization
 		    : public Mechanism::ParameterSpace::Parameterization
 		{
 			Parameterization() = default;
 			Parameterization(
-			    std::vector<double> conductance_in,
-			    std::vector<double> potential_in,
-			    std::vector<double> time_constant_in);
-			std::vector<double> conductance;
-			std::vector<double> potential;
-			std::vector<double> time_constant;
+			    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> i_synin_gm,
+			    std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> synapse_dac_bias,
+			    std::vector<double> e_reversal,
+			    std::vector<std::optional<double>> e_reference,
+			    std::vector<ccalix::TimeInS> time_constant);
+
+			std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> i_synin_gm;
+			std::vector<lola::vx::v3::AtomicNeuron::AnalogValue> synapse_dac_bias;
+			std::vector<double> e_reversal;
+			std::vector<std::optional<double>> e_reference;
+			std::vector<ccalix::TimeInS> time_constant;
 
 			virtual size_t size() const override;
 
@@ -67,9 +76,11 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance
 		// Constructor
 		ParameterSpace() = default;
 		ParameterSpace(
-		    std::vector<ParameterInterval<double>> interval_conductance,
-		    std::vector<ParameterInterval<double>> interval_potential,
-		    std::vector<ParameterInterval<double>> interval_time_constant);
+		    std::vector<AnalogValueInterval> i_synin_gm,
+		    std::vector<AnalogValueInterval> synapse_dac_bias,
+		    std::vector<ParameterIntervalDouble> e_reversal,
+		    std::vector<ParameterInterval<std::optional<double>>> e_reference,
+		    std::vector<TimeInterval> time_constant);
 
 		// Property methods
 		std::unique_ptr<Mechanism::ParameterSpace> copy() const;
