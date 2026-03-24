@@ -2,7 +2,8 @@
 
 #include "dapr/property_holder.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_on_neuron.h"
-#include "grenade/vx/network/abstract/multicompartment/synaptic_input_environment.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_environment.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 #include <map>
 #include <set>
 
@@ -14,26 +15,29 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Environment
 	/**
 	 * Add information about number of synaptic inputs on a neuron.
 	 * @param compartment Compartment for which synaptic input is added.
-	 * @param synaptic_input Type, Number and hemisphere of the synaptic inputs on the compartment.
+	 * @param mechanism Mechanism on compartment identifier for which to add environment for
+	 * @param environment Environment to add
 	 */
 	void add(
-	    CompartmentOnNeuron const& compartment, SynapticInputEnvironment const& synaptic_input);
+	    CompartmentOnNeuron const& compartment,
+	    MechanismOnCompartment const& mechanism,
+	    MechanismEnvironment const& environment);
 
 	/**
 	 * Add information about number of synaptic inputs on a neuron.
 	 * @param compartment Compartment for which synaptic input is added.
-	 * @param synaptic_inputs Multiple synaptic inputs containing information about the type, number
-	 * and hemisphere of the synaptic inputs.
+	 * @param environment Environment per mechanism on compartment to add
 	 */
 	void add(
 	    CompartmentOnNeuron const& compartment,
-	    std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> const& synaptic_inputs);
+	    std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> const&
+	        environment);
 
 	/**
 	 * Get all synaptic inputs defined on a compartment.
 	 * @param compartment Compartment for which to get the synaptic input information.
 	 */
-	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> get(
+	std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> get(
 	    CompartmentOnNeuron const& compartment) const;
 
 	/**
@@ -62,7 +66,9 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Environment
 
 
 private:
-	std::map<CompartmentOnNeuron, std::vector<dapr::PropertyHolder<SynapticInputEnvironment>>>
+	std::map<
+	    CompartmentOnNeuron,
+	    std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>>>
 	    m_synaptic_connections;
 
 	// Holds information about the MADC recordable pairs of compartments on a neuron.

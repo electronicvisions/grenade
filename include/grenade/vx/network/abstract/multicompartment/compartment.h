@@ -9,6 +9,7 @@
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_environment.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 #include <map>
 #include <memory>
@@ -28,7 +29,22 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Pro
 			    vx::network::abstract::Mechanism::ParameterSpace::Parameterization>
 			    Mechanisms GENPYBIND(opaque(false));
 			Mechanisms mechanisms;
+
+			size_t size() const;
+
+			Parameterization get_section(grenade::common::MultiIndexSequence const& sequence) const;
+
+			bool operator==(Parameterization const& other) const = default;
+			bool operator!=(Parameterization const& other) const = default;
+
+			GENPYBIND(stringstream)
+			friend std::ostream& operator<<(std::ostream& os, Parameterization const& value)
+			    SYMBOL_VISIBLE;
 		};
+
+		size_t size() const;
+
+		ParameterSpace get_section(grenade::common::MultiIndexSequence const& sequence) const;
 
 		/**
 		 * Check if the given parameterization is valid for the parameter space.
@@ -42,6 +58,13 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Pro
 		    vx::network::abstract::Mechanism::ParameterSpace>
 		    Mechanisms GENPYBIND(opaque(false));
 		Mechanisms mechanisms;
+
+		bool operator==(ParameterSpace const& other) const = default;
+		bool operator!=(ParameterSpace const& other) const = default;
+
+		GENPYBIND(stringstream)
+		friend std::ostream& operator<<(std::ostream& os, ParameterSpace const& value)
+		    SYMBOL_VISIBLE;
 	};
 
 	struct GENPYBIND(inline_base("*")) Mechanisms
@@ -60,9 +83,9 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Pro
 
 	// Return HardwareRessource Requirements
 	std::map<MechanismOnCompartment, HardwareConstraints> get_hardware(
-	    CompartmentOnNeuron const& compartment,
 	    Compartment::ParameterSpace const& parameter_space,
-	    Environment const& environment) const;
+	    std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> const&
+	        environment) const;
 
 	/**
 	 * Check if the given paramter space is valid for the compartment.

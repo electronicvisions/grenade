@@ -95,7 +95,7 @@ void ResourceManager::add_config_compartment(
 {
 	// Map with HardwareResources per Mechanism on Compartment
 	std::map<MechanismOnCompartment, HardwareConstraints> hardware_constraints_on_mechanims =
-	    neuron.get(compartment).get_hardware(compartment, parameter_space, environment);
+	    neuron.get(compartment).get_hardware(parameter_space, environment.get(compartment));
 
 	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
 	// PropertyHolder is neither comparable nor hashable)

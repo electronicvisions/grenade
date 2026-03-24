@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/common/genpybind.h"
 #include "halco/common/geometry.h"
+#include "halco/common/geometry_numeric_limits.h"
 
 namespace grenade {
 namespace common GENPYBIND_TAG_GRENADE_COMMON {
@@ -16,3 +17,9 @@ struct GENPYBIND(inline_base("*")) CompartmentOnNeuron
 
 } // namespace common
 } // namespace grenade
+
+namespace std {
+
+HALCO_GEOMETRY_NUMERIC_LIMITS_CLASS(grenade::common::CompartmentOnNeuron)
+
+} // namespace std

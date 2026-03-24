@@ -2,9 +2,10 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism/capacitance.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_conductance.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_current.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_environment/synaptic_input.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/resource_manager.h"
-#include "grenade/vx/network/abstract/multicompartment/synaptic_input_environment.h"
 #include <iostream>
 #include <gtest/gtest.h>
 
@@ -26,21 +27,21 @@ TEST(multicompartment_neuron, Resources)
 
 	// Define mechanism parameter spaces
 	MechanismCapacitance::ParameterSpace mechanism_parameter_space_capacitance_a(
-	    ParameterInterval<double>(1, 25));
+	    {ParameterInterval<double>(1, 25)});
 	MechanismCapacitance::ParameterSpace mechanism_parameter_space_capacitance_b(
-	    ParameterInterval<double>(5, 12));
+	    {ParameterInterval<double>(5, 12)});
 	MechanismSynapticInputCurrent::ParameterSpace mechanism_parameter_space_synaptic_current_a(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2));
+	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)});
 	MechanismSynapticInputCurrent::ParameterSpace mechanism_parameter_space_synaptic_current_b(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2));
+	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)});
 	MechanismSynapticInputConductance::ParameterSpace
 	    mechanism_parameter_space_synaptic_conductance_a(
-	        ParameterInterval<double>(1, 1), ParameterInterval<double>(1, 1),
-	        ParameterInterval<double>(2, 2));
+	        {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(1, 1)},
+	        {ParameterInterval<double>(2, 2)});
 	MechanismSynapticInputConductance::ParameterSpace
 	    mechanism_parameter_space_synaptic_conductance_b(
-	        ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2),
-	        ParameterInterval<double>(1, 1));
+	        {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)},
+	        {ParameterInterval<double>(1, 1)});
 
 	// Define mechanisms
 	MechanismCapacitance membrane_a, membrane_b;
@@ -58,18 +59,18 @@ TEST(multicompartment_neuron, Resources)
 	compartment_parameter_space_c.mechanisms.set(
 	    membrane_on_compartment_c, mechanism_parameter_space_capacitance_b);
 
-	auto const synaptic_current_a_on_compartment_a =
+	auto const synaptic_current_on_compartment_a =
 	    compartment_a.mechanisms.insert(synaptic_current_a);
 	compartment_parameter_space_a.mechanisms.set(
-	    synaptic_current_a_on_compartment_a, mechanism_parameter_space_synaptic_current_a);
+	    synaptic_current_on_compartment_a, mechanism_parameter_space_synaptic_current_a);
 	auto const synaptic_conductance_on_compartment_a =
 	    compartment_a.mechanisms.insert(synaptic_conductance_a);
 	compartment_parameter_space_a.mechanisms.set(
 	    synaptic_conductance_on_compartment_a, mechanism_parameter_space_synaptic_conductance_a);
-	auto const synaptic_current_b_on_compartment_b =
+	auto const synaptic_current_on_compartment_b =
 	    compartment_b.mechanisms.insert(synaptic_current_b);
 	compartment_parameter_space_b.mechanisms.set(
-	    synaptic_current_b_on_compartment_b, mechanism_parameter_space_synaptic_current_b);
+	    synaptic_current_on_compartment_b, mechanism_parameter_space_synaptic_current_b);
 	auto const synaptic_conductance_on_compartment_b =
 	    compartment_b.mechanisms.insert(synaptic_conductance_b);
 	compartment_parameter_space_b.mechanisms.set(
@@ -103,19 +104,22 @@ TEST(multicompartment_neuron, Resources)
 	ResourceManager resource_manager;
 
 	// Add Synaptic Inputs
-	SynapticInputEnvironmentCurrent synaptic_input_current_a(true, 128);
-	SynapticInputEnvironmentCurrent synaptic_input_current_b(false, 512);
+	SynapticInputEnvironment synaptic_input_current_a(128);
+	SynapticInputEnvironment synaptic_input_current_b(512);
 
-	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_input_on_compartment_a = {
-	    synaptic_input_current_a, synaptic_input_current_b};
+	SynapticInputEnvironment synaptic_input_conductance_a(700);
+	SynapticInputEnvironment synaptic_input_conductance_b(NumberTopBottom(200, 100, 0));
+
+	std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>>
+	    synaptic_input_on_compartment_a{
+	        {synaptic_conductance_on_compartment_a, synaptic_input_conductance_a},
+	        {synaptic_current_on_compartment_a, synaptic_input_current_a}};
 	environment.add(compartment_a_on_neuron, synaptic_input_on_compartment_a);
 
-	SynapticInputEnvironmentConductance synaptic_input_conductance_a(true, 700);
-	SynapticInputEnvironmentConductance synaptic_input_conductance_b(
-	    true, NumberTopBottom(200, 100, 0));
-
-	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_input_on_compartment_b = {
-	    synaptic_input_conductance_a, synaptic_input_conductance_b};
+	std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>>
+	    synaptic_input_on_compartment_b{
+	        {synaptic_conductance_on_compartment_b, synaptic_input_conductance_b},
+	        {synaptic_current_on_compartment_b, synaptic_input_current_b}};
 	environment.add(compartment_b_on_neuron, synaptic_input_on_compartment_b);
 
 
@@ -124,10 +128,10 @@ TEST(multicompartment_neuron, Resources)
 
 	EXPECT_EQ(
 	    resource_manager.get_config(compartment_a_on_neuron).number_total,
-	    5); // 5 for Membranes and 3 for Synaptic Inputs
+	    5); // 5 for Membranes and 4 for Synaptic Inputs
 	EXPECT_EQ(
 	    resource_manager.get_config(compartment_b_on_neuron).number_total,
-	    4); // 3 for Membranes and 4 for Synaptic Inputs
+	    3); // 3 for Membranes and 3 for Synaptic Inputs
 	EXPECT_EQ(
 	    resource_manager.get_config(compartment_b_on_neuron).number_top,
 	    1); // 1 fof synaptic_input_conductance_b

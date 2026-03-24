@@ -1,6 +1,6 @@
 #pragma once
-
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection.h"
+#include <vector>
 
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
@@ -10,26 +10,52 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CompartmentConnectionConductance
     : public CompartmentConnection
 {
 	CompartmentConnectionConductance() = default;
-	CompartmentConnectionConductance(double value);
-	struct ParameterSpace
+
+	struct ParameterSpace : public CompartmentConnection::ParameterSpace
 	{
-		ParameterInterval<double> conductance_interval;
-		struct Parameterization
+		std::vector<ParameterInterval<double>> conductance_interval;
+		struct Parameterization : public CompartmentConnection::ParameterSpace::Parameterization
 		{
-			bool operator==(Parameterization const& other) const;
-			double conductance;
+			std::vector<double> conductance;
+
+			virtual size_t size() const override;
+
+			virtual std::unique_ptr<CompartmentConnection::ParameterSpace::Parameterization>
+			get_section(grenade::common::MultiIndexSequence const& sequence) const override;
+
+			virtual std::unique_ptr<CompartmentConnection::ParameterSpace::Parameterization> copy()
+			    const override;
+			virtual std::unique_ptr<CompartmentConnection::ParameterSpace::Parameterization> move()
+			    override;
+
+		protected:
+			virtual std::ostream& print(std::ostream& os) const override;
+			virtual bool is_equal_to(CompartmentConnection::ParameterSpace::Parameterization const&
+			                             other) const override;
 		};
-		bool contains(Parameterization const& conductance);
+
+		virtual size_t size() const override;
+
+		virtual std::unique_ptr<CompartmentConnection::ParameterSpace> get_section(
+		    grenade::common::MultiIndexSequence const& sequence) const override;
+
+		virtual bool valid(CompartmentConnection::ParameterSpace::Parameterization const&
+		                       parameterization) const override;
+
+		virtual std::unique_ptr<CompartmentConnection::ParameterSpace> copy() const override;
+		virtual std::unique_ptr<CompartmentConnection::ParameterSpace> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(CompartmentConnection::ParameterSpace const& other) const override;
 	};
-	ParameterSpace parameter_space;
-	ParameterSpace::Parameterization parameterization;
 
 	// Graph Mechanisms
 	std::unique_ptr<CompartmentConnection> copy() const;
 	std::unique_ptr<CompartmentConnection> move();
-	std::ostream& print(std::ostream& os) const;
 
 protected:
+	std::ostream& print(std::ostream& os) const;
 	bool is_equal_to(CompartmentConnection const& other) const;
 };
 

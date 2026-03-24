@@ -2,9 +2,11 @@
 
 #include "dapr/map.h"
 #include "dapr/property.h"
+#include "grenade/common/vertex.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_environment.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 
 namespace grenade::vx::network {
@@ -22,9 +24,19 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Prope
 		    : public Property<Mechanism::ParameterSpace::Parameterization>
 		{
 			virtual ~Parameterization();
+
+			virtual std::unique_ptr<Parameterization> get_section(
+			    grenade::common::MultiIndexSequence const& sequence) const = 0;
+
+			virtual size_t size() const = 0;
 		};
 
 		virtual ~ParameterSpace();
+
+		virtual std::unique_ptr<ParameterSpace> get_section(
+		    grenade::common::MultiIndexSequence const& sequence) const = 0;
+
+		virtual size_t size() const = 0;
 
 		/**
 		 * Check if the given parameterization is valid for the parameter space.
@@ -43,9 +55,11 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Prope
 
 	virtual bool conflict(Mechanism const& other) const = 0;
 	virtual HardwareConstraints get_hardware(
-	    CompartmentOnNeuron const& compartment,
 	    Mechanism::ParameterSpace const& parameter_space,
-	    Environment const& environment) const = 0;
+	    MechanismEnvironment const* environment) const = 0;
+
+	virtual std::vector<grenade::common::Vertex::Port> get_input_ports() const = 0;
+	virtual std::vector<grenade::common::Vertex::Port> get_output_ports() const = 0;
 };
 
 } // namespace abstract

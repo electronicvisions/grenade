@@ -1,4 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment/neuron_generator.h"
+
+#include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::network::abstract {
@@ -98,6 +100,7 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
 		std::vector<CompartmentOnNeuron> compartment_ids;
 
 		// Construct Neuron
+		std::vector<MechanismOnCompartment> mechanism_ids;
 		for (size_t i = 0; i < num_compartments; i++) {
 			// Create Compartment
 			Compartment temp_compartment;
@@ -116,12 +119,13 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
 			compartment_ids.push_back(compartment_id);
 			result.parameter_space.compartments.emplace(
 			    compartment_id, compartment_parameter_space);
+			mechanism_ids.push_back(mechanism_id);
 		}
 
 		// Add information about synaptic input to environment
 		std::uniform_int_distribution<> distribution_synaptic_inputs(0, limit_synaptic_input);
 		for (size_t i = 0; i < num_compartments; i++) {
-			SynapticInputEnvironmentCurrent temp_synaptic_input;
+			SynapticInputEnvironment temp_synaptic_input;
 
 			temp_synaptic_input.number_of_inputs.number_total =
 			    distribution_synaptic_inputs(m_generator);
@@ -139,7 +143,7 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
 				temp_synaptic_input.number_of_inputs.number_bottom = 0;
 			}
 
-			result.environment.add(compartment_ids.at(i), temp_synaptic_input);
+			result.environment.add(compartment_ids.at(i), mechanism_ids.at(i), temp_synaptic_input);
 		}
 
 

@@ -5,34 +5,40 @@
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_excitatory.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_inhibitory.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
-#include "grenade/vx/network/abstract/multicompartment/synaptic_input_environment/conductance.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_input.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
 
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 // Mechanism for Synaptic Conductance
-struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : public Mechanism
+struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance
+    : public MechanismSynapticInput
 {
 	// Parameter Space
-	struct GENPYBIND(visible) ParameterSpace : public Mechanism::ParameterSpace
+	struct GENPYBIND(visible) SYMBOL_VISIBLE ParameterSpace : public Mechanism::ParameterSpace
 	{
 		// Interval with range of Parameters
-		ParameterInterval<double> conductance_interval;
-		ParameterInterval<double> potential_interval;
-		ParameterInterval<double> time_constant_interval;
+		std::vector<ParameterInterval<double>> conductance_interval;
+		std::vector<ParameterInterval<double>> potential_interval;
+		std::vector<ParameterInterval<double>> time_constant_interval;
 
-		struct GENPYBIND(visible) Parameterization
+		struct GENPYBIND(visible) SYMBOL_VISIBLE Parameterization
 		    : public Mechanism::ParameterSpace::Parameterization
 		{
 			Parameterization() = default;
 			Parameterization(
-			    double const& conductance_in,
-			    double const& potential_in,
-			    double const& time_constant_in);
-			double conductance;
-			double potential;
-			double time_constant;
+			    std::vector<double> conductance_in,
+			    std::vector<double> potential_in,
+			    std::vector<double> time_constant_in);
+			std::vector<double> conductance;
+			std::vector<double> potential;
+			std::vector<double> time_constant;
+
+			virtual size_t size() const override;
+
+			virtual std::unique_ptr<Mechanism::ParameterSpace::Parameterization> get_section(
+			    grenade::common::MultiIndexSequence const& sequence) const;
 
 			// Operators
 			bool operator==(Parameterization const& other) const = default;
@@ -44,6 +50,9 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 			bool is_equal_to(Mechanism::ParameterSpace::Parameterization const& other) const;
 			std::ostream& print(std::ostream& os) const;
 		};
+
+		virtual std::unique_ptr<Mechanism::ParameterSpace> get_section(
+		    grenade::common::MultiIndexSequence const& sequence) const;
 
 		/**
 		 * Check if parameterization is valid for the paramter space.
@@ -58,31 +67,24 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 		// Constructor
 		ParameterSpace() = default;
 		ParameterSpace(
-		    ParameterInterval<double> const& interval_conductance,
-		    ParameterInterval<double> const& interval_potential,
-		    ParameterInterval<double> const& interval_time_constant);
+		    std::vector<ParameterInterval<double>> interval_conductance,
+		    std::vector<ParameterInterval<double>> interval_potential,
+		    std::vector<ParameterInterval<double>> interval_time_constant);
 
 		// Property methods
 		std::unique_ptr<Mechanism::ParameterSpace> copy() const;
 		std::unique_ptr<Mechanism::ParameterSpace> move();
 		bool is_equal_to(Mechanism::ParameterSpace const& other) const;
 		std::ostream& print(std::ostream& os) const;
-	};
 
-	// Check for Conflict with itself when placed on Compartment
-	bool conflict(Mechanism const& other) const;
+		virtual size_t size() const override;
+	};
 
 	/**
 	 * Check if paramter space is valid for the mechanism.
 	 * @param parameter_space Parameter-Space to check valditiy for.
 	 */
 	bool valid(Mechanism::ParameterSpace const& parameter_space) const;
-
-	// Return HardwareRessource Requirements
-	HardwareConstraints get_hardware(
-	    CompartmentOnNeuron const& compartment,
-	    Mechanism::ParameterSpace const& mechanism_parameter_space,
-	    Environment const& environment) const;
 
 	// Copy
 	std::unique_ptr<Mechanism> copy() const;
@@ -91,13 +93,17 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 	// Constructor
 	MechanismSynapticInputConductance() = default;
 
+	/**
+	 * Construct conductance-based synaptic input mechanism.
+	 * @param receptor_type Receptor type to provide
+	 * @param enable_analog_readout Whether to provide an output channel for analog readout
+	 */
+	MechanismSynapticInputConductance(
+	    ReceptorType receptor_type, bool enable_analog_readout = false);
+
 protected:
 	bool is_equal_to(Mechanism const& other) const;
 	std::ostream& print(std::ostream& os) const;
-
-private:
-	// Convert Number of Inputs to Number of SynapticCircuits
-	int round(int i) const;
 };
 
 

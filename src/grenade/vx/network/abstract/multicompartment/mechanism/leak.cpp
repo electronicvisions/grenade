@@ -1,20 +1,80 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism/leak.h"
+
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "hate/join.h"
 #include "hate/type_index.h"
 
 namespace grenade::vx::network::abstract {
 
 MechanismLeak::ParameterSpace::ParameterSpace(
-    ParameterInterval<double> const& parameter_interval_conductance,
-    ParameterInterval<double> const& parameter_interval_potential) :
-    conductance_interval(parameter_interval_conductance),
-    potential_interval(parameter_interval_potential)
+    std::vector<ParameterInterval<double>> parameter_interval_conductance,
+    std::vector<ParameterInterval<double>> parameter_interval_potential) :
+    conductance_interval(std::move(parameter_interval_conductance)),
+    potential_interval(std::move(parameter_interval_potential))
 {
 }
 
-MechanismLeak::ParameterSpace::Parameterization::Parameterization(
-    double const& value_conductance, double const& value_potential) :
-    conductance(value_conductance), potential(value_potential)
+std::unique_ptr<Mechanism::ParameterSpace> MechanismLeak::ParameterSpace::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
 {
+	ParameterSpace ret;
+
+	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
+		throw std::invalid_argument("Given sequence not included in parameter space.");
+	}
+	ret.conductance_interval.reserve(sequence.size());
+	ret.potential_interval.reserve(sequence.size());
+	for (auto const& element : sequence.get_elements()) {
+		ret.conductance_interval.push_back(conductance_interval.at(element.value.at(0)));
+		ret.potential_interval.push_back(potential_interval.at(element.value.at(0)));
+	}
+	return std::make_unique<ParameterSpace>(std::move(ret));
+}
+
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismLeak::ParameterSpace::Parameterization::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
+{
+	Parameterization ret;
+
+	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
+		throw std::invalid_argument("Given sequence not included in parameterization.");
+	}
+	ret.conductance.reserve(sequence.size());
+	ret.potential.reserve(sequence.size());
+	for (auto const& element : sequence.get_elements()) {
+		ret.conductance.push_back(conductance.at(element.value.at(0)));
+		ret.potential.push_back(potential.at(element.value.at(0)));
+	}
+	return std::make_unique<Parameterization>(std::move(ret));
+}
+
+size_t MechanismLeak::ParameterSpace::size() const
+{
+	std::set<size_t> sizes;
+	sizes.insert(conductance_interval.size());
+	sizes.insert(potential_interval.size());
+	if (sizes.size() != 1) {
+		throw std::runtime_error("Parameter space features heterogeneous size.");
+	}
+	return conductance_interval.size();
+}
+
+MechanismLeak::ParameterSpace::Parameterization::Parameterization(
+    std::vector<double> value_conductance, std::vector<double> value_potential) :
+    conductance(std::move(value_conductance)), potential(std::move(value_potential))
+{
+}
+
+size_t MechanismLeak::ParameterSpace::Parameterization::size() const
+{
+	std::set<size_t> sizes;
+	sizes.insert(conductance.size());
+	sizes.insert(potential.size());
+	if (sizes.size() != 1) {
+		throw std::runtime_error("Parameterization features heterogeneous size.");
+	}
+	return conductance.size();
 }
 
 bool MechanismLeak::ParameterSpace::valid(
@@ -25,8 +85,15 @@ bool MechanismLeak::ParameterSpace::valid(
 		return false;
 	}
 
-	return conductance_interval.contains(cast_parameterization->conductance) &&
-	       potential_interval.contains(cast_parameterization->potential);
+	for (size_t i = 0; i < size(); ++i) {
+		if (!conductance_interval.at(i).contains(cast_parameterization->conductance.at(i))) {
+			return false;
+		}
+		if (!potential_interval.at(i).contains(cast_parameterization->potential.at(i))) {
+			return false;
+		}
+	}
+	return true;
 }
 
 std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
@@ -56,7 +123,8 @@ bool MechanismLeak::ParameterSpace::Parameterization::is_equal_to(
 std::ostream& MechanismLeak::ParameterSpace::Parameterization::print(std::ostream& os) const
 {
 	os << "Parameterization(\n"
-	   << "\n\tLeak conductance: " << conductance << "\n\t Leak Potential: " << potential << "\n)";
+	   << "\n\tLeak conductance: " << hate::join(conductance, ", ")
+	   << "\n\t Leak Potential: " << hate::join(potential, ", ") << "\n)";
 	return os;
 }
 
@@ -84,8 +152,8 @@ bool MechanismLeak::ParameterSpace::is_equal_to(Mechanism::ParameterSpace const&
 std::ostream& MechanismLeak::ParameterSpace::print(std::ostream& os) const
 {
 	os << "Parameter-Space(\n"
-	   << "\n\tLeak Conductance: " << conductance_interval
-	   << "\n\tLeak Potential: " << potential_interval << "\n)";
+	   << "\n\tLeak Conductance: " << hate::join(conductance_interval, ", ")
+	   << "\n\tLeak Potential: " << hate::join(potential_interval, ", ") << "\n)";
 	return os;
 }
 
@@ -99,10 +167,18 @@ bool MechanismLeak::valid(Mechanism::ParameterSpace const&) const
 	return true;
 }
 
+std::vector<grenade::common::Vertex::Port> MechanismLeak::get_input_ports() const
+{
+	return {};
+}
+
+std::vector<grenade::common::Vertex::Port> MechanismLeak::get_output_ports() const
+{
+	return {};
+}
+
 HardwareConstraints MechanismLeak::get_hardware(
-    CompartmentOnNeuron const&,
-    Mechanism::ParameterSpace const& mechanism_parameter_space,
-    Environment const&) const
+    Mechanism::ParameterSpace const& mechanism_parameter_space, MechanismEnvironment const*) const
 {
 	const auto* parameter_space =
 	    dynamic_cast<const MechanismLeak::ParameterSpace*>(&mechanism_parameter_space);

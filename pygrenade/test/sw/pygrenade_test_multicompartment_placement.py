@@ -280,7 +280,7 @@ def get_cap_compartment(
 
     param_interval = grenade.ParameterIntervalDouble(lower, upper)
     param_space_mech = grenade.MechanismCapacitance\
-        .ParameterSpace(param_interval)
+        .ParameterSpace([param_interval])
 
     mechanism = grenade.MechanismCapacitance()
     mechanism_on_comp = comp.mechanisms.insert(mechanism)  # pylint: disable=no-member
@@ -292,7 +292,10 @@ def get_cap_compartment(
 
 
 def get_syn_compartment(
-) -> Tuple[grenade.Compartment, grenade.Compartment.ParameterSpace]:
+) -> Tuple[
+        grenade.Compartment,
+        grenade.Compartment.ParameterSpace,
+        grenade.MechanismOnCompartment]:
     '''
     Generate a compartment with a synaptic input (and a capacitance)
 
@@ -303,7 +306,7 @@ def get_syn_compartment(
     # Capacitance
     param_interval_cap = grenade.ParameterIntervalDouble(0, 11)
     param_space_cap = grenade.MechanismCapacitance.ParameterSpace(
-        param_interval_cap)
+        [param_interval_cap])
 
     mech_cap = grenade.MechanismCapacitance()
     cap_on_comp = comp.mechanisms.insert(mech_cap)  # pylint: disable=no-member
@@ -312,7 +315,7 @@ def get_syn_compartment(
     param_interval_syn = grenade.ParameterIntervalDouble(0, 7)
 
     param_space_syn = grenade.MechanismSynapticInputCurrent.ParameterSpace(
-        param_interval_syn, param_interval_syn)
+        [param_interval_syn], [param_interval_syn])
     mech_syn = grenade.MechanismSynapticInputCurrent()
     syn_on_comp = comp.mechanisms.insert(mech_syn)  # pylint: disable=no-member
 
@@ -321,7 +324,7 @@ def get_syn_compartment(
     param_space_comp.mechanisms.set(cap_on_comp, param_space_cap)  # pylint: disable=no-member
     param_space_comp.mechanisms.set(syn_on_comp, param_space_syn)  # pylint: disable=no-member
 
-    return comp, param_space_comp
+    return comp, param_space_comp, syn_on_comp
 
 
 def get_compartment_ids(
@@ -475,15 +478,16 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         resources = grenade.ResourceManager()
         environment = grenade.Environment()
 
-        compartment, parameter_space = get_syn_compartment()
+        compartment, parameter_space, syn_on_comp = get_syn_compartment()
         neuron, neuron_parameter_space = neuron_from_edgelist(
             [],
             {0: compartment},
             {0: parameter_space})
 
-        synaptic_input_a = grenade.SynapticInputEnvironmentCurrent(
-            True, grenade.NumberTopBottom(1200, 0, 257))
-        environment.add(grenade.CompartmentOnNeuron(0), synaptic_input_a)
+        synaptic_input_a = grenade.SynapticInputEnvironment(
+            grenade.NumberTopBottom(1200, 0, 257))
+        environment.add(
+            grenade.CompartmentOnNeuron(0), syn_on_comp, synaptic_input_a)
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
@@ -697,10 +701,10 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         param_interval_cap = grenade.ParameterIntervalDouble(0, 1)
 
         parameter_space_a = grenade.MechanismSynapticInputCurrent\
-            .ParameterSpace(param_interval_syn, param_interval_syn)
+            .ParameterSpace([param_interval_syn], [param_interval_syn])
 
         parameter_space_b = grenade.MechanismCapacitance\
-            .ParameterSpace(param_interval_cap)
+            .ParameterSpace([param_interval_cap])
 
         # Mechansims
         mechanism_capacitance = grenade.MechanismCapacitance()
@@ -718,8 +722,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources = grenade.ResourceManager()
         environment = grenade.Environment()
-        syn_input = grenade.SynapticInputEnvironmentCurrent(
-            True, grenade.NumberTopBottom(5, 0, 5))
+        syn_input = grenade.SynapticInputEnvironment(
+            grenade.NumberTopBottom(5, 0, 5))
 
         chain_length = 5
         spine_positions = [1, 3]
@@ -733,7 +737,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             compartments[comp_idx] = comp_spine
             parameter_spaces[comp_idx] = param_space_spine
             connections.append((spine_pos, comp_idx))
-            environment.add(grenade.CompartmentOnNeuron(comp_idx), syn_input)
+            environment.add(
+                grenade.CompartmentOnNeuron(comp_idx), syn_on_spine, syn_input)
 
         neuron, neuron_parameter_space = neuron_from_edgelist(
             connections, compartments, parameter_spaces)

@@ -2,9 +2,9 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism/capacitance.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_conductance.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_current.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_environment/synaptic_input.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/resource_manager.h"
-#include "grenade/vx/network/abstract/multicompartment/synaptic_input_environment.h"
 #include <gtest/gtest.h>
 
 using namespace grenade::vx::network::abstract;
@@ -25,23 +25,23 @@ TEST(multicompartment_neuron, General)
 	MechanismSynapticInputConductance synaptic_conductance;
 
 	// Valid parameter spaces
-	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace(ParameterInterval<double>(1, 10)));
-	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace(ParameterInterval<double>(5, 20)));
+	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace({ParameterInterval<double>(1, 10)}));
+	EXPECT_NO_THROW(MechanismCapacitance::ParameterSpace({ParameterInterval<double>(5, 20)}));
 	EXPECT_NO_THROW(MechanismSynapticInputCurrent::ParameterSpace(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2)));
+	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)}));
 	EXPECT_NO_THROW(MechanismSynapticInputCurrent::ParameterSpace(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(2, 2)));
+	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(2, 2)}));
 	EXPECT_NO_THROW(MechanismSynapticInputConductance::ParameterSpace(
-	    ParameterInterval<double>(1, 1), ParameterInterval<double>(1, 1),
-	    ParameterInterval<double>(2, 2)));
+	    {ParameterInterval<double>(1, 1)}, {ParameterInterval<double>(1, 1)},
+	    {ParameterInterval<double>(2, 2)}));
 
 	// Invalid parameter spaces
 	EXPECT_THROW(
-	    MechanismCapacitance::ParameterSpace(ParameterInterval<double>(7, 3)),
+	    MechanismCapacitance::ParameterSpace({ParameterInterval<double>(7, 3)}),
 	    std::invalid_argument);
 	EXPECT_THROW(
 	    MechanismSynapticInputCurrent::ParameterSpace(
-	        ParameterInterval<double>(1, 3), ParameterInterval<double>(4, 1)),
+	        {ParameterInterval<double>(1, 3)}, {ParameterInterval<double>(4, 1)}),
 	    std::invalid_argument);
 
 	// Add Mechanisms to Compartments
@@ -62,7 +62,7 @@ TEST(multicompartment_neuron, General)
 	EXPECT_THROW(compartment_a.mechanisms.insert(membrane), std::invalid_argument);
 
 	compartment_c.mechanisms.set(membrane_on_compartment_c, MechanismCapacitance());
-	MechanismCapacitance::ParameterSpace(ParameterInterval<double>(20, 20));
+	MechanismCapacitance::ParameterSpace({ParameterInterval<double>(20, 20)});
 
 	EXPECT_FALSE(synaptic_conductance == synaptic_current);
 	EXPECT_TRUE(synaptic_current == synaptic_current);
@@ -87,11 +87,8 @@ TEST(multicompartment_neuron, General)
 	// Add Compartment-Connections to Neuron
 	CompartmentConnectionConductance connection_conductance_1;
 	CompartmentConnectionConductance connection_conductance_2;
-	CompartmentConnectionConductance connection_conductance_3;
-	connection_conductance_3 = CompartmentConnectionConductance(10);
 
 	EXPECT_EQ(connection_conductance_2, connection_conductance_2);
-	EXPECT_NE(connection_conductance_1, connection_conductance_3);
 
 	[[maybe_unused]] auto const compartment_connection_ab_on_neuron =
 	    neuron.add_compartment_connection(

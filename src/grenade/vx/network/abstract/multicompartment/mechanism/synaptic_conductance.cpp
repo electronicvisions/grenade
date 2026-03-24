@@ -1,21 +1,95 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_conductance.h"
 
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_input.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism/with_analog_readout.h"
+#include "grenade/vx/network/abstract/vertex_port_type/synaptic_input.h"
+#include "hate/join.h"
+
 namespace grenade::vx::network::abstract {
 
 MechanismSynapticInputConductance::ParameterSpace::ParameterSpace(
-    ParameterInterval<double> const& interval_conductance,
-    ParameterInterval<double> const& interval_potential,
-    ParameterInterval<double> const& interval_time_constant) :
-    conductance_interval(interval_conductance),
-    potential_interval(interval_potential),
-    time_constant_interval(interval_time_constant)
+    std::vector<ParameterInterval<double>> interval_conductance,
+    std::vector<ParameterInterval<double>> interval_potential,
+    std::vector<ParameterInterval<double>> interval_time_constant) :
+    conductance_interval(std::move(interval_conductance)),
+    potential_interval(std::move(interval_potential)),
+    time_constant_interval(std::move(interval_time_constant))
 {
 }
 
-MechanismSynapticInputConductance::ParameterSpace::Parameterization::Parameterization(
-    double const& conductance_in, double const& potential_in, double const& time_constant_in) :
-    conductance(conductance_in), potential(potential_in), time_constant(time_constant_in)
+size_t MechanismSynapticInputConductance::ParameterSpace::size() const
 {
+	std::set<size_t> sizes;
+	sizes.insert(conductance_interval.size());
+	sizes.insert(potential_interval.size());
+	sizes.insert(time_constant_interval.size());
+	if (sizes.size() != 1) {
+		throw std::runtime_error("Parameter space features heterogeneous size.");
+	}
+	return conductance_interval.size();
+}
+
+std::unique_ptr<Mechanism::ParameterSpace>
+MechanismSynapticInputConductance::ParameterSpace::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
+{
+	ParameterSpace ret;
+
+	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
+		throw std::invalid_argument("Given sequence not included in parameter space.");
+	}
+	ret.conductance_interval.reserve(sequence.size());
+	ret.potential_interval.reserve(sequence.size());
+	ret.time_constant_interval.reserve(sequence.size());
+	for (auto const& element : sequence.get_elements()) {
+		ret.conductance_interval.push_back(conductance_interval.at(element.value.at(0)));
+		ret.potential_interval.push_back(potential_interval.at(element.value.at(0)));
+		ret.time_constant_interval.push_back(time_constant_interval.at(element.value.at(0)));
+	}
+	return std::make_unique<ParameterSpace>(std::move(ret));
+}
+
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismSynapticInputConductance::ParameterSpace::Parameterization::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
+{
+	Parameterization ret;
+
+	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
+		throw std::invalid_argument("Given sequence not included in parameterization.");
+	}
+	ret.conductance.reserve(sequence.size());
+	ret.potential.reserve(sequence.size());
+	ret.time_constant.reserve(sequence.size());
+	for (auto const& element : sequence.get_elements()) {
+		ret.conductance.push_back(conductance.at(element.value.at(0)));
+		ret.potential.push_back(potential.at(element.value.at(0)));
+		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
+	}
+	return std::make_unique<Parameterization>(std::move(ret));
+}
+
+MechanismSynapticInputConductance::ParameterSpace::Parameterization::Parameterization(
+    std::vector<double> conductance_in,
+    std::vector<double> potential_in,
+    std::vector<double> time_constant_in) :
+    conductance(std::move(conductance_in)),
+    potential(std::move(potential_in)),
+    time_constant(std::move(time_constant_in))
+{
+}
+
+size_t MechanismSynapticInputConductance::ParameterSpace::Parameterization::size() const
+{
+	std::set<size_t> sizes;
+	sizes.insert(conductance.size());
+	sizes.insert(potential.size());
+	sizes.insert(time_constant.size());
+	if (sizes.size() != 1) {
+		throw std::runtime_error("Parameterization features heterogeneous size.");
+	}
+	return conductance.size();
 }
 
 bool MechanismSynapticInputConductance::ParameterSpace::valid(
@@ -26,9 +100,18 @@ bool MechanismSynapticInputConductance::ParameterSpace::valid(
 		return false;
 	}
 
-	return conductance_interval.contains(cast_parameterization->conductance) &&
-	       potential_interval.contains(cast_parameterization->potential) &&
-	       time_constant_interval.contains(cast_parameterization->time_constant);
+	for (size_t i = 0; i < size(); ++i) {
+		if (!conductance_interval.at(i).contains(cast_parameterization->conductance.at(i))) {
+			return false;
+		}
+		if (!potential_interval.at(i).contains(cast_parameterization->potential.at(i))) {
+			return false;
+		}
+		if (!time_constant_interval.at(i).contains(cast_parameterization->time_constant.at(i))) {
+			return false;
+		}
+	}
+	return true;
 }
 
 // Property methods Parameterization
@@ -62,9 +145,9 @@ std::ostream& MechanismSynapticInputConductance::ParameterSpace::Parameterizatio
     std::ostream& os) const
 {
 	os << "Parameterization(\n";
-	os << "\tConductance: " << conductance;
-	os << "\n\tPotential:" << potential;
-	os << "\n\tTime-constant: " << time_constant;
+	os << "\tConductance: " << hate::join(conductance, ", ");
+	os << "\n\tPotential:" << hate::join(potential, ", ");
+	os << "\n\tTime-constant: " << hate::join(time_constant, ", ");
 	os << "\n)";
 	return os;
 }
@@ -96,122 +179,22 @@ bool MechanismSynapticInputConductance::ParameterSpace::is_equal_to(
 std::ostream& MechanismSynapticInputConductance::ParameterSpace::print(std::ostream& os) const
 {
 	os << "ParameterSpace(\n";
-	os << "\tConductance: " << conductance_interval;
-	os << "\n\tPotential:" << potential_interval;
-	os << "\n\tTime-constant: " << time_constant_interval;
+	os << "\tConductance: " << hate::join(conductance_interval, ", ");
+	os << "\n\tPotential:" << hate::join(potential_interval, ", ");
+	os << "\n\tTime-constant: " << hate::join(time_constant_interval, ", ");
 	os << "\n)";
 	return os;
 }
 
-
-// Convert Number of Inputs to number of synaptical input circuits
-int MechanismSynapticInputConductance::round(int i) const
+MechanismSynapticInputConductance::MechanismSynapticInputConductance(
+    ReceptorType receptor_type, bool enable_analog_readout) :
+    MechanismSynapticInput(receptor_type, enable_analog_readout)
 {
-	if (i % 256 == 0) {
-		return (i / 256);
-	} else {
-		return ((i / 256) + 1);
-	}
-}
-
-// Check for Conflict with itself when placed on Compartment
-bool MechanismSynapticInputConductance::conflict(Mechanism const& /*other*/) const
-{
-	return false;
 }
 
 bool MechanismSynapticInputConductance::valid(Mechanism::ParameterSpace const&) const
 {
 	return true;
-}
-
-// Return HardwareRessource Requirements
-HardwareConstraints MechanismSynapticInputConductance::get_hardware(
-    CompartmentOnNeuron const& compartment,
-    Mechanism::ParameterSpace const& mechanism_parameter_space,
-    Environment const& environment) const
-{
-	const auto* parameter_space =
-	    dynamic_cast<const MechanismSynapticInputConductance::ParameterSpace*>(
-	        &mechanism_parameter_space);
-
-	if (!parameter_space) {
-		throw("Could not cast mechanism parameter space to synaptic conductance parameter space.");
-	}
-
-	// Return Object and Input
-	HardwareConstraints constraints;
-
-	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
-	    environment.get(compartment);
-
-	if (synaptic_inputs.size() == 0) {
-		throw std::invalid_argument(" No information about this compartment in environment");
-	}
-
-	// Loop over all Synaptic Inputs of Compartment
-	for (auto const& i : synaptic_inputs) {
-		if (typeid(*i) != typeid(SynapticInputEnvironmentConductance)) {
-			continue;
-		}
-		// Calculate Number of Synaptic Circuits required
-		int number_of_inputs_total = round((*i).number_of_inputs.number_total);
-		// Always request one neuron circuit instead of none
-		if (number_of_inputs_total == 0) {
-			number_of_inputs_total = 1;
-		}
-
-		// Minimal Numbers in Top and Bottom Row
-		int number_of_inputs_top = round((*i).number_of_inputs.number_top);
-		int number_of_inputs_bottom = round((*i).number_of_inputs.number_bottom);
-
-		if ((*i).exitatory) {
-			// Add Exitatory Constraint
-			bool in_list = false;
-			for (auto j : constraints) {
-				if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputExitatory)) {
-					(*j).numbers.number_bottom += number_of_inputs_bottom;
-					(*j).numbers.number_top += number_of_inputs_top;
-					(*j).numbers.number_total += number_of_inputs_total;
-					in_list = true;
-					break;
-				}
-			}
-			if (!in_list) {
-				HardwareConstraint constraint;
-				constraint.resource = HardwareResourceSynapticInputExitatory();
-				constraint.numbers.number_bottom += number_of_inputs_bottom;
-				constraint.numbers.number_top += number_of_inputs_top;
-				constraint.numbers.number_total += number_of_inputs_total;
-				constraints.push_back(constraint);
-			}
-
-
-		} else {
-			// Add Inhibitory Constraint
-			bool in_list = false;
-			for (auto j : constraints) {
-				if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputInhibitory)) {
-					(*j).numbers.number_bottom += number_of_inputs_bottom;
-					(*j).numbers.number_top += number_of_inputs_top;
-					(*j).numbers.number_total += number_of_inputs_total;
-					in_list = true;
-					break;
-				}
-			}
-			if (!in_list) {
-				HardwareConstraint constraint;
-				constraint.resource = HardwareResourceSynapticInputInhibitory();
-				constraint.numbers.number_bottom += number_of_inputs_bottom;
-				constraint.numbers.number_top += number_of_inputs_top;
-				constraint.numbers.number_total += number_of_inputs_total;
-				constraints.push_back(constraint);
-			}
-		}
-	}
-
-	// Return Resources and Constraints
-	return constraints;
 }
 
 // Copy
@@ -224,21 +207,19 @@ std::unique_ptr<Mechanism> MechanismSynapticInputConductance::move()
 {
 	return std::make_unique<MechanismSynapticInputConductance>(std::move(*this));
 }
+
 // Print
 std::ostream& MechanismSynapticInputConductance::print(std::ostream& os) const
 {
-	os << "MechanismSynapticInputConductance\n";
+	os << "MechanismSynapticInputConductance(";
+	MechanismSynapticInput::print(os) << ")";
 	return os;
 }
 
 // Equality-Operator and Inequality-Operator
 bool MechanismSynapticInputConductance::is_equal_to(Mechanism const& other) const
 {
-	const auto* other_cast = dynamic_cast<const MechanismSynapticInputConductance*>(&other);
-	if (!other_cast) {
-		return false;
-	}
-	return true;
+	return MechanismSynapticInput::is_equal_to(other);
 }
 
 } // namespace grenade::vx::network::abstract

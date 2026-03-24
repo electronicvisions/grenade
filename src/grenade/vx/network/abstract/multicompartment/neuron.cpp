@@ -1,5 +1,14 @@
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
+
 #include "grenade/common/graph_impl.tcc"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/compartment_on_neuron.h"
+#include "grenade/common/population.h"
+#include "grenade/common/port_data.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
+#include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/mechanism_on_compartment.h"
+#include "hate/indent.h"
 #include "hate/join.h"
 #include <fstream>
 
@@ -16,15 +25,178 @@ template class Graph<
 
 namespace grenade::vx::network::abstract {
 
-bool Neuron::ParameterSpace::valid(Parameterization const& parameterization) const
+std::unique_ptr<grenade::common::Population::Cell::ParameterSpace::Parameterization>
+Neuron::ParameterSpace::Parameterization::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
 {
-	for (auto [compartment, compartment_parameterization] : parameterization.compartments) {
-		if (!compartments.at(compartment).valid(compartment_parameterization)) {
-			return false;
-		}
+	Parameterization ret;
+	for (auto const& [compartment_on_neuron, compartment] : compartments) {
+		ret.compartments.emplace(compartment_on_neuron, compartment.get_section(sequence));
 	}
-	return true;
+	for (auto const& [compartment_connection_on_neuron, compartment_connection] :
+	     compartment_connections) {
+		ret.compartment_connections.set(
+		    compartment_connection_on_neuron, *compartment_connection.get_section(sequence));
+	}
+	return std::make_unique<Parameterization>(std::move(ret));
 }
+
+size_t Neuron::ParameterSpace::Parameterization::size() const
+{
+	if (compartments.empty()) {
+		return 0;
+	}
+	std::set<size_t> ret;
+	for (auto const& [_, compartment] : compartments) {
+		ret.insert(compartment.size());
+	}
+	for (auto const& [_, compartment_connection] : compartment_connections) {
+		ret.insert(compartment_connection.size());
+	}
+	if (ret.size() > 1) {
+		throw std::runtime_error("Neuron parameterization features heterogeneous size.");
+	}
+	return *ret.begin();
+}
+
+std::unique_ptr<grenade::common::PortData> Neuron::ParameterSpace::Parameterization::copy() const
+{
+	return std::make_unique<Neuron::ParameterSpace::Parameterization>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> Neuron::ParameterSpace::Parameterization::move()
+{
+	return std::make_unique<Neuron::ParameterSpace::Parameterization>(std::move(*this));
+}
+
+bool Neuron::ParameterSpace::Parameterization::is_equal_to(
+    grenade::common::PortData const& other) const
+{
+	const auto* other_cast = dynamic_cast<const Neuron::ParameterSpace::Parameterization*>(&other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return (compartments == other_cast->compartments) &&
+	       (compartment_connections == other_cast->compartment_connections);
+}
+
+std::ostream& Neuron::ParameterSpace::Parameterization::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "Parameterization(\n";
+	ios << hate::Indentation("\t");
+	for (auto const& [compartment_on_neuron, compartment] : compartments) {
+		ios << compartment_on_neuron << ": " << compartment << "\n";
+	}
+	for (auto const& [compartment_connection_on_neuron, compartment_connection] :
+	     compartment_connections) {
+		ios << compartment_connection_on_neuron << ": " << compartment_connection << "\n";
+	}
+	ios << hate::Indentation("\t");
+	ios << ")";
+	return os;
+}
+
+
+size_t Neuron::ParameterSpace::size() const
+{
+	if (compartments.empty()) {
+		return 0;
+	}
+	std::set<size_t> ret;
+	for (auto const& [_, compartment] : compartments) {
+		ret.insert(compartment.size());
+	}
+	for (auto const& [_, compartment_connection] : compartment_connections) {
+		ret.insert(compartment_connection.size());
+	}
+	if (ret.size() > 1) {
+		throw std::runtime_error("Neuron parameter space features heterogeneous size.");
+	}
+	return *ret.begin();
+}
+
+std::unique_ptr<grenade::common::Population::Cell::ParameterSpace>
+Neuron::ParameterSpace::get_section(grenade::common::MultiIndexSequence const& sequence) const
+{
+	ParameterSpace ret;
+	for (auto const& [compartment_on_neuron, compartment] : compartments) {
+		ret.compartments.emplace(compartment_on_neuron, compartment.get_section(sequence));
+	}
+	for (auto const& [compartment_connection_on_neuron, compartment_connection] :
+	     compartment_connections) {
+		ret.compartment_connections.set(
+		    compartment_connection_on_neuron, *compartment_connection.get_section(sequence));
+	}
+	return std::make_unique<ParameterSpace>(std::move(ret));
+}
+
+bool Neuron::ParameterSpace::valid(
+    size_t /* input_port_on_cell */,
+    grenade::common::Population::Cell::ParameterSpace::Parameterization const& parameterization)
+    const
+{
+	if (auto const parameterization_ptr = dynamic_cast<Parameterization const*>(&parameterization);
+	    parameterization_ptr) {
+		for (auto [compartment, compartment_parameterization] :
+		     parameterization_ptr->compartments) {
+			if (!compartments.at(compartment).valid(compartment_parameterization)) {
+				return false;
+			}
+		}
+		for (auto [compartment_connection, compartment_connection_parameterization] :
+		     parameterization_ptr->compartment_connections) {
+			if (!compartment_connections.get(compartment_connection)
+			         .valid(compartment_connection_parameterization)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+std::unique_ptr<grenade::common::Population::Cell::ParameterSpace> Neuron::ParameterSpace::copy()
+    const
+{
+	return std::make_unique<Neuron::ParameterSpace>(*this);
+}
+
+std::unique_ptr<grenade::common::Population::Cell::ParameterSpace> Neuron::ParameterSpace::move()
+{
+	return std::make_unique<Neuron::ParameterSpace>(std::move(*this));
+}
+
+bool Neuron::ParameterSpace::is_equal_to(
+    grenade::common::Population::Cell::ParameterSpace const& other) const
+{
+	const auto* other_cast = dynamic_cast<const Neuron::ParameterSpace*>(&other);
+
+	if (!other_cast) {
+		return false;
+	}
+	return (compartments == other_cast->compartments) &&
+	       (compartment_connections == other_cast->compartment_connections);
+}
+
+std::ostream& Neuron::ParameterSpace::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "ParameterSpace(\n";
+	ios << hate::Indentation("\t");
+	for (auto const& [compartment_on_neuron, compartment] : compartments) {
+		ios << compartment_on_neuron << ": " << compartment << "\n";
+	}
+	for (auto const& [compartment_connection_on_neuron, compartment_connection] :
+	     compartment_connections) {
+		ios << compartment_connection_on_neuron << ": " << compartment_connection << "\n";
+	}
+	ios << hate::Indentation("\t");
+	ios << ")";
+	return os;
+}
+
 
 CompartmentOnNeuron Neuron::add_compartment(Compartment const& compartment)
 {
@@ -286,12 +458,18 @@ bool Neuron::contains(CompartmentOnNeuron const& descriptor) const
 	return Graph::contains(descriptor);
 }
 
-bool Neuron::valid(ParameterSpace const& parameter_space) const
+bool Neuron::valid(grenade::common::Population::Cell::ParameterSpace const& parameter_space) const
 {
-	for (auto& [compartment, compartment_parameter_space] : parameter_space.compartments) {
-		if (!get(compartment).valid(compartment_parameter_space)) {
-			return false;
+	if (auto const neuron_parameter_space = dynamic_cast<ParameterSpace const*>(&parameter_space);
+	    neuron_parameter_space) {
+		for (auto& [compartment, compartment_parameter_space] :
+		     neuron_parameter_space->compartments) {
+			if (!get(compartment).valid(compartment_parameter_space)) {
+				return false;
+			}
 		}
+	} else {
+		return false;
 	}
 	return true;
 }
@@ -300,6 +478,14 @@ bool Neuron::is_connected() const
 {
 	return Graph::is_connected();
 }
+
+bool Neuron::valid(
+    size_t /* input_port_on_cell */,
+    grenade::common::Population::Cell::Dynamics const& /* dynamics */) const
+{
+	return false;
+}
+
 
 // Writes neuron topology in graphviz format to be plotted later
 void Neuron::write_graphviz(std::string filename, std::string name)
@@ -316,27 +502,174 @@ void Neuron::write_graphviz(std::string filename, std::string name)
 	file.close();
 }
 
-std::ostream& operator<<(std::ostream& os, Neuron const& neuron)
+bool Neuron::requires_time_domain() const
+{
+	return true;
+}
+
+bool Neuron::is_partitionable() const
+{
+	return false;
+}
+
+bool Neuron::valid(grenade::common::TimeDomainRuntimes const& time_domain_runtimes) const
+{
+	return dynamic_cast<ClockCycleTimeDomainRuntimes const*>(&time_domain_runtimes) != nullptr;
+}
+
+std::vector<grenade::common::Vertex::Port> Neuron::get_input_ports() const
+{
+	std::vector<grenade::common::Vertex::Port> ret;
+
+	for (auto const& compartment_on_neuron : compartments()) {
+		auto const& compartment = get(compartment_on_neuron);
+		for (auto const& [mechanism_on_compartment, mechanism] : compartment.mechanisms) {
+			auto mechanism_ports = mechanism.get_input_ports();
+			for (auto&& mechanism_port : mechanism_ports) {
+				auto channels =
+				    grenade::common::CuboidMultiIndexSequence(
+				        {1, 1},
+				        grenade::common::MultiIndex(
+				            {compartment_on_neuron.value(), mechanism_on_compartment.value()}),
+				        {grenade::common::CompartmentOnNeuronDimensionUnit(),
+				         MechanismOnCompartmentDimensionUnit()})
+				        .cartesian_product(mechanism_port.get_channels());
+				auto const port_it =
+				    std::find_if(ret.begin(), ret.end(), [&mechanism_port](auto const& port) {
+					    // TODO: costly
+					    auto port_copy = port;
+					    port_copy.set_channels(grenade::common::ListMultiIndexSequence());
+					    auto mechanism_port_copy = mechanism_port;
+					    mechanism_port_copy.set_channels(grenade::common::ListMultiIndexSequence());
+					    return port_copy == mechanism_port_copy;
+				    });
+				if (port_it == ret.end()) {
+					mechanism_port.set_channels(*channels);
+					ret.emplace_back(std::move(mechanism_port));
+				} else {
+					auto& port = *port_it;
+					auto port_channel_elements = port.get_channels().get_elements();
+					auto channel_elements = channels->get_elements();
+					if (port.get_channels().get_dimension_units() !=
+					    channels->get_dimension_units()) {
+						throw std::runtime_error("Mechanism port of equal type has different "
+						                         "dimension units than already existing port.");
+					}
+					if (!port.get_channels().is_disjunct(*channels)) {
+						throw std::runtime_error(
+						    "Mechanism port has channel overlap with already existing port.");
+					}
+					port_channel_elements.insert(
+					    port_channel_elements.end(), channel_elements.begin(),
+					    channel_elements.end());
+					port.set_channels(grenade::common::ListMultiIndexSequence(
+					    std::move(port_channel_elements),
+					    port.get_channels().get_dimension_units()));
+				}
+			}
+		}
+	}
+
+	ret.push_back(grenade::common::Vertex::Port(
+	    ParameterizationPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})})));
+
+	return ret;
+}
+
+std::vector<grenade::common::Vertex::Port> Neuron::get_output_ports() const
+{
+	std::vector<grenade::common::Vertex::Port> ret;
+
+	for (auto const& compartment_on_neuron : compartments()) {
+		auto const& compartment = get(compartment_on_neuron);
+		for (auto const& [mechanism_on_compartment, mechanism] : compartment.mechanisms) {
+			auto mechanism_ports = mechanism.get_output_ports();
+			for (auto&& mechanism_port : mechanism_ports) {
+				auto channels =
+				    grenade::common::CuboidMultiIndexSequence(
+				        {1, 1},
+				        grenade::common::MultiIndex(
+				            {compartment_on_neuron.value(), mechanism_on_compartment.value()}),
+				        {grenade::common::CompartmentOnNeuronDimensionUnit(),
+				         MechanismOnCompartmentDimensionUnit()})
+				        .cartesian_product(mechanism_port.get_channels());
+				auto const port_it =
+				    std::find_if(ret.begin(), ret.end(), [&mechanism_port](auto const& port) {
+					    // TODO: costly
+					    auto port_copy = port;
+					    port_copy.set_channels(grenade::common::ListMultiIndexSequence());
+					    auto mechanism_port_copy = mechanism_port;
+					    mechanism_port_copy.set_channels(grenade::common::ListMultiIndexSequence());
+					    return port_copy == mechanism_port_copy;
+				    });
+				if (port_it == ret.end()) {
+					mechanism_port.set_channels(*channels);
+					ret.emplace_back(std::move(mechanism_port));
+				} else {
+					auto& port = *port_it;
+					auto port_channel_elements = port.get_channels().get_elements();
+					auto channel_elements = channels->get_elements();
+					if (port.get_channels().get_dimension_units() !=
+					    channels->get_dimension_units()) {
+						throw std::runtime_error("Mechanism port of equal type has different "
+						                         "dimension units than already existing port.");
+					}
+					if (!port.get_channels().is_disjunct(*channels)) {
+						throw std::runtime_error(
+						    "Mechanism port has channel overlap with already existing port.");
+					}
+					port_channel_elements.insert(
+					    port_channel_elements.end(), channel_elements.begin(),
+					    channel_elements.end());
+					port.set_channels(grenade::common::ListMultiIndexSequence(
+					    std::move(port_channel_elements),
+					    port.get_channels().get_dimension_units()));
+				}
+			}
+		}
+	}
+	return ret;
+}
+
+std::unique_ptr<grenade::common::Population::Cell> Neuron::copy() const
+{
+	return std::make_unique<Neuron>(*this);
+}
+
+std::unique_ptr<grenade::common::Population::Cell> Neuron::move()
+{
+	return std::make_unique<Neuron>(std::move(*this));
+}
+
+bool Neuron::is_equal_to(grenade::common::Population::Cell const& other) const
+{
+	return Graph::operator==(static_cast<Neuron const&>(other));
+}
+
+std::ostream& Neuron::print(std::ostream& os) const
 {
 	hate::IndentingOstream ios(os);
 	ios << "Neuron(\n";
 	ios << hate::Indentation("\t");
-	ios << "Number of compartments: " << neuron.num_compartments() << "\n";
+	ios << "Number of compartments: " << num_compartments() << "\n";
 
-	ios << "Connections: " << neuron.num_compartment_connections() << " ["
+	ios << "Connections: " << num_compartment_connections() << " ["
 	    << hate::join(
-	           neuron.compartment_connections(), ", ",
-	           [&neuron](auto const& v) {
+	           compartment_connections(), ", ",
+	           [this](auto const& v) {
 		           std::stringstream ss;
-		           ss << "(" << neuron.source(v).value() << ", " << neuron.target(v).value() << ")";
+		           ss << "(" << source(v).value() << ", " << target(v).value() << ")";
 		           return ss.str();
 	           })
 	    << "]\n";
 
 	// print compartments without connections
 	std::vector<int> isolated;
-	for (auto const& compartment : neuron.compartments()) {
-		if (neuron.get_compartment_degree(compartment) == 0) {
+	for (auto const& compartment : compartments()) {
+		if (get_compartment_degree(compartment) == 0) {
 			isolated.push_back(compartment.value());
 		}
 	}

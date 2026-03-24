@@ -1,17 +1,19 @@
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
+#include "dapr/property_holder.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 
 namespace grenade::vx::network::abstract {
 
 void Environment::add(
-    CompartmentOnNeuron const& compartment, SynapticInputEnvironment const& synaptic_input)
+    CompartmentOnNeuron const& compartment,
+    MechanismOnCompartment const& mechanism,
+    MechanismEnvironment const& environment)
 {
-	if (m_synaptic_connections.find(compartment) == m_synaptic_connections.end()) {
-		std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs;
-		synaptic_inputs.push_back(synaptic_input);
-		m_synaptic_connections.emplace(std::make_pair(compartment, synaptic_inputs));
-	} else {
-		m_synaptic_connections.at(compartment).push_back(synaptic_input);
+	if (m_synaptic_connections.contains(compartment) &&
+	    m_synaptic_connections.at(compartment).contains(mechanism)) {
+		throw std::runtime_error("Environment already contains element to be added.");
 	}
+	m_synaptic_connections[compartment][mechanism] = environment;
 }
 
 void Environment::add_recordable(
@@ -43,21 +45,18 @@ std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> Environment::get_r
 
 void Environment::add(
     CompartmentOnNeuron const& compartment,
-    std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> const& synaptic_inputs)
+    std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> const& environment)
 {
-	if (!m_synaptic_connections.contains(compartment)) {
-		m_synaptic_connections.emplace(std::make_pair(compartment, synaptic_inputs));
-	} else {
-		for (auto synaptic_input : synaptic_inputs) {
-			m_synaptic_connections.at(compartment).push_back(synaptic_input);
-		}
-	}
+	auto environment_copy = environment;
+	m_synaptic_connections[compartment].merge(environment_copy);
+	assert(environment_copy.empty());
 }
-std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> Environment::get(
+
+std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> Environment::get(
     CompartmentOnNeuron const& compartment) const
 {
 	if (!m_synaptic_connections.contains(compartment)) {
-		return std::vector<dapr::PropertyHolder<SynapticInputEnvironment>>();
+		return {};
 	}
 	return m_synaptic_connections.at(compartment);
 }

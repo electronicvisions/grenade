@@ -1,12 +1,15 @@
 #pragma once
 
+#include "dapr/map.h"
 #include "grenade/common/detail/graph.h"
 #include "grenade/common/graph.h"
+#include "grenade/common/population.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection/conductance.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/neighbours.h"
+#include "hate/visibility.h"
 #include <memory>
 
 namespace grenade::vx::network {
@@ -39,50 +42,78 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
  * Graph representation of a multicompartment Neuron.
  * Compartments are represented as graph vertices and connections as graph edges.
  */
-struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
-    : private ::grenade::common::Graph<
+struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
+    : grenade::common::Population::Cell
+    , private grenade::common::Graph<
           Neuron,
-          ::grenade::common::detail::UndirectedGraph,
+          grenade::common::detail::UndirectedGraph,
           Compartment,
           CompartmentConnection,
           CompartmentOnNeuron,
           CompartmentConnectionOnNeuron,
           std::unique_ptr>
 {
-	struct GENPYBIND(visible) ParameterSpace
+	struct GENPYBIND(visible) SYMBOL_VISIBLE ParameterSpace
+	    : grenade::common::Population::Cell::ParameterSpace
 	{
-		struct GENPYBIND(visible) Parameterization
+		struct GENPYBIND(visible) SYMBOL_VISIBLE Parameterization
+		    : grenade::common::Population::Cell::ParameterSpace::Parameterization
 		{
 			std::map<CompartmentOnNeuron, Compartment::ParameterSpace::Parameterization>
 			    compartments;
+			typedef dapr::Map<
+			    CompartmentConnectionOnNeuron,
+			    CompartmentConnection::ParameterSpace::Parameterization>
+			    CompartmentConnections GENPYBIND(opaque(false));
+			CompartmentConnections compartment_connections;
+
+			virtual size_t size() const override;
+
+			virtual std::unique_ptr<grenade::common::PortData> copy() const override;
+			virtual std::unique_ptr<grenade::common::PortData> move() override;
+
+			virtual std::unique_ptr<
+			    grenade::common::Population::Cell::ParameterSpace::Parameterization>
+			get_section(grenade::common::MultiIndexSequence const& sequence) const override;
+
+		protected:
+			virtual bool is_equal_to(grenade::common::PortData const& other) const override;
+			virtual std::ostream& print(std::ostream& os) const override;
 		};
 
-		/**
-		 * Check if the given parameterization is valid for the parameter space.
-		 * This checks if the parameterization for each compartment is valid.
-		 * @param paramterization Parameterization to check validity for.
-		 */
-		bool valid(Parameterization const& parameterization) const;
-
 		std::map<CompartmentOnNeuron, Compartment::ParameterSpace> compartments;
+		typedef dapr::Map<CompartmentConnectionOnNeuron, CompartmentConnection::ParameterSpace>
+		    CompartmentConnections GENPYBIND(opaque(false));
+		CompartmentConnections compartment_connections;
+
+		virtual size_t size() const override;
+
+		virtual bool valid(
+		    size_t input_port_on_cell,
+		    grenade::common::Population::Cell::ParameterSpace::Parameterization const&
+		        parameterization) const override;
+
+		virtual std::unique_ptr<grenade::common::Population::Cell::ParameterSpace> copy()
+		    const override;
+		virtual std::unique_ptr<grenade::common::Population::Cell::ParameterSpace> move() override;
+
+		virtual std::unique_ptr<grenade::common::Population::Cell::ParameterSpace> get_section(
+		    grenade::common::MultiIndexSequence const& sequence) const override;
+
+	protected:
+		virtual bool is_equal_to(
+		    grenade::common::Population::Cell::ParameterSpace const& other) const override;
+		virtual std::ostream& print(std::ostream& os) const override;
 	};
 
+	/**
+	 * Parameterization port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) ParameterizationPortType
+	    : public dapr::EmptyProperty<ParameterizationPortType, grenade::common::VertexPortType>
+	{};
 
 	Neuron() = default;
-
-	/**
-	 * Copy constructors.
-	 * Deleted since the descriptors of the compartments on the neuron need to be unique and
-	 * therfore can not be copied.
-	 */
-	Neuron(Neuron const& other) = delete;
-	Neuron& operator=(Neuron const& other) = delete;
-
-	/**
-	 * Move constructors.
-	 */
-	Neuron(Neuron&& other) = default;
-	Neuron& operator=(Neuron&& other) = default;
 
 	/**
 	 * Adds a compartment to the neuron.
@@ -349,7 +380,8 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 * This checks if the parameter space for each compartment of the neuron is valid.
 	 * @param paramter_space Paramter space to check for validity.
 	 */
-	bool valid(ParameterSpace const& parameter_space) const;
+	virtual bool valid(
+	    grenade::common::Population::Cell::ParameterSpace const& parameter_space) const override;
 
 	/**
 	 * Check if neuron is fully connected
@@ -362,10 +394,48 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 * @param name Name of the graph.
 	 */
 	void write_graphviz(std::string filename, std::string name);
+
+	virtual bool valid(
+	    size_t input_port_on_cell,
+	    grenade::common::Population::Cell::Dynamics const& dynamics) const override;
+
+	virtual bool requires_time_domain() const override;
+
+	virtual bool is_partitionable() const override;
+
+	virtual bool valid(
+	    grenade::common::TimeDomainRuntimes const& time_domain_runtimes) const override;
+
+	/**
+	 * Get input ports of neuron.
+	 * Ports are aggregated over compartments and input ports of the mechanisms on the
+	 * compartments.
+	 * If a port with equal properties (except channels) already exists, its channels are extended
+	 * instead of creating a new port.
+	 * To distinglish the different channels, they can be accessed with a three dimensional index of
+	 * the form: (compartment_on_neuron, mechanism_on_compartment, mechanism_port_channels).
+	 * The last port is the parameterization.
+	 */
+	virtual std::vector<grenade::common::Vertex::Port> get_input_ports() const override;
+
+	/**
+	 * Get output ports of neuron.
+	 * Ports are aggregated over compartments and output ports of the mechanisms on the
+	 * compartments.
+	 * If a port with equal properties (except channels) already exists, its channels are extended
+	 * instead of creating a new port.
+	 * To distinglish the different channels, they can be accessed with a three dimensional index of
+	 * the form: (compartment_on_neuron, mechanism_on_compartment, mechanism_port_channels).
+	 */
+	virtual std::vector<grenade::common::Vertex::Port> get_output_ports() const override;
+
+	virtual std::unique_ptr<grenade::common::Population::Cell> copy() const override;
+	virtual std::unique_ptr<grenade::common::Population::Cell> move() override;
+
+protected:
+	virtual bool is_equal_to(grenade::common::Population::Cell const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 };
-
-std::ostream& operator<<(std::ostream& os, Neuron const& neuron) SYMBOL_VISIBLE;
-
 
 } // namespace abstract
 } // namespace grenade::vx::network

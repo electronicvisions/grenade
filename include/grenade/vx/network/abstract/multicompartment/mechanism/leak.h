@@ -19,10 +19,13 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 	{
 		struct GENPYBIND(visible) Parameterization
 		    : public Mechanism::ParameterSpace::Parameterization
-
 		{
 			Parameterization() = default;
-			Parameterization(double const& value_conductance, double const& value_potential);
+			Parameterization(
+			    std::vector<double> value_conductance, std::vector<double> value_potential);
+
+			virtual std::unique_ptr<Mechanism::ParameterSpace::Parameterization> get_section(
+			    grenade::common::MultiIndexSequence const& sequence) const;
 
 			// Operators
 			bool operator==(Parameterization const& other) const = default;
@@ -34,9 +37,14 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 			bool is_equal_to(Mechanism::ParameterSpace::Parameterization const& other) const;
 			std::ostream& print(std::ostream& os) const;
 
-			double conductance;
-			double potential;
+			std::vector<double> conductance;
+			std::vector<double> potential;
+
+			virtual size_t size() const override;
 		};
+
+		virtual std::unique_ptr<Mechanism::ParameterSpace> get_section(
+		    grenade::common::MultiIndexSequence const& sequence) const;
 
 		/**
 		 * Check if parameterization is valid for the parameter space.
@@ -51,8 +59,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 		// Constructor
 		ParameterSpace() = default;
 		ParameterSpace(
-		    ParameterInterval<double> const& parameter_interval_conductance,
-		    ParameterInterval<double> const& parameter_interval_potential);
+		    std::vector<ParameterInterval<double>> parameter_interval_conductance,
+		    std::vector<ParameterInterval<double>> parameter_interval_potential);
 
 		// Property methods
 		std::unique_ptr<Mechanism::ParameterSpace> copy() const;
@@ -60,8 +68,10 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 		bool is_equal_to(Mechanism::ParameterSpace const& other) const;
 		std::ostream& print(std::ostream& os) const;
 
-		ParameterInterval<double> conductance_interval;
-		ParameterInterval<double> potential_interval;
+		std::vector<ParameterInterval<double>> conductance_interval;
+		std::vector<ParameterInterval<double>> potential_interval;
+
+		virtual size_t size() const override;
 	};
 
 	// Check for Conflict with itself when placed on Compartment
@@ -75,9 +85,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 
 	// Return HardwareRessource Requirements
 	HardwareConstraints get_hardware(
-	    CompartmentOnNeuron const& compartment,
 	    Mechanism::ParameterSpace const& mechanism_parameter_space,
-	    Environment const& environment) const;
+	    MechanismEnvironment const* environment) const;
 
 	// Copy
 	std::unique_ptr<Mechanism> copy() const;
@@ -85,6 +94,9 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 
 	// Constructor
 	MechanismLeak() = default;
+
+	virtual std::vector<grenade::common::Vertex::Port> get_input_ports() const;
+	virtual std::vector<grenade::common::Vertex::Port> get_output_ports() const;
 
 protected:
 	bool is_equal_to(Mechanism const& other) const;

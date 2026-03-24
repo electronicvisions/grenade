@@ -1,18 +1,84 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_current.h"
 
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_input.h"
+#include "grenade/vx/network/abstract/vertex_port_type/synaptic_input.h"
+#include "hate/join.h"
+#include <vector>
+
 namespace grenade::vx::network::abstract {
 
 MechanismSynapticInputCurrent::ParameterSpace::ParameterSpace(
-    ParameterInterval<double> const& interval_current_in,
-    ParameterInterval<double> const& interval_time_constant_in) :
-    current_interval(interval_current_in), time_constant_interval(interval_time_constant_in)
+    std::vector<ParameterInterval<double>> interval_current_in,
+    std::vector<ParameterInterval<double>> interval_time_constant_in) :
+    current_interval(std::move(interval_current_in)),
+    time_constant_interval(std::move(interval_time_constant_in))
 {
 }
 
-MechanismSynapticInputCurrent::ParameterSpace::Parameterization::Parameterization(
-    double const& current_in, double const& time_constant_in) :
-    current(current_in), time_constant(time_constant_in)
+std::unique_ptr<Mechanism::ParameterSpace>
+MechanismSynapticInputCurrent::ParameterSpace::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
 {
+	ParameterSpace ret;
+
+	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
+		throw std::invalid_argument("Given sequence not included in parameter space.");
+	}
+	ret.current_interval.reserve(sequence.size());
+	ret.time_constant_interval.reserve(sequence.size());
+	for (auto const& element : sequence.get_elements()) {
+		ret.current_interval.push_back(current_interval.at(element.value.at(0)));
+		ret.time_constant_interval.push_back(time_constant_interval.at(element.value.at(0)));
+	}
+	return std::make_unique<ParameterSpace>(std::move(ret));
+}
+
+std::unique_ptr<Mechanism::ParameterSpace::Parameterization>
+MechanismSynapticInputCurrent::ParameterSpace::Parameterization::get_section(
+    grenade::common::MultiIndexSequence const& sequence) const
+{
+	Parameterization ret;
+
+	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
+		throw std::invalid_argument("Given sequence not included in parameterization.");
+	}
+	ret.current.reserve(sequence.size());
+	ret.time_constant.reserve(sequence.size());
+	for (auto const& element : sequence.get_elements()) {
+		ret.current.push_back(current.at(element.value.at(0)));
+		ret.time_constant.push_back(time_constant.at(element.value.at(0)));
+	}
+	return std::make_unique<Parameterization>(std::move(ret));
+}
+
+size_t MechanismSynapticInputCurrent::ParameterSpace::size() const
+{
+	std::set<size_t> sizes;
+	sizes.insert(current_interval.size());
+	sizes.insert(time_constant_interval.size());
+	if (sizes.size() != 1) {
+		throw std::runtime_error("Parameter space features heterogeneous size.");
+	}
+	return current_interval.size();
+}
+
+MechanismSynapticInputCurrent::ParameterSpace::Parameterization::Parameterization(
+    std::vector<double> current_in, std::vector<double> time_constant_in) :
+    current(std::move(current_in)), time_constant(std::move(time_constant_in))
+{
+}
+
+size_t MechanismSynapticInputCurrent::ParameterSpace::Parameterization::size() const
+{
+	std::set<size_t> sizes;
+	sizes.insert(current.size());
+	sizes.insert(time_constant.size());
+	if (sizes.size() != 1) {
+		throw std::runtime_error("Parameterization features heterogeneous size.");
+	}
+	return current.size();
 }
 
 bool MechanismSynapticInputCurrent::ParameterSpace::valid(
@@ -23,8 +89,15 @@ bool MechanismSynapticInputCurrent::ParameterSpace::valid(
 		return false;
 	}
 
-	return current_interval.contains(cast_parameterization->current) &&
-	       time_constant_interval.contains(cast_parameterization->time_constant);
+	for (size_t i = 0; i < size(); ++i) {
+		if (!current_interval.at(i).contains(cast_parameterization->current.at(i))) {
+			return false;
+		}
+		if (!time_constant_interval.at(i).contains(cast_parameterization->time_constant.at(i))) {
+			return false;
+		}
+	}
+	return true;
 }
 
 // Property methods Parameterization
@@ -55,8 +128,8 @@ std::ostream& MechanismSynapticInputCurrent::ParameterSpace::Parameterization::p
     std::ostream& os) const
 {
 	os << "Parameterization(\n";
-	os << "\tCurrent: " << current;
-	os << "\n\tTime-constant: " << time_constant;
+	os << "\tCurrent: " << hate::join(current, ", ");
+	os << "\n\tTime-constant: " << hate::join(time_constant, ", ");
 	os << "\n)";
 	return os;
 }
@@ -87,121 +160,22 @@ bool MechanismSynapticInputCurrent::ParameterSpace::is_equal_to(
 std::ostream& MechanismSynapticInputCurrent::ParameterSpace::print(std::ostream& os) const
 {
 	os << "ParameterSpace(\n";
-	os << "\tCurrent: " << current_interval;
-	os << "\n\tTime-constant: " << time_constant_interval;
+	os << "\tCurrent: " << hate::join(current_interval, ", ");
+	os << "\n\tTime-constant: " << hate::join(time_constant_interval, ", ");
 	os << "\n)";
 	return os;
 }
 
 
-int MechanismSynapticInputCurrent::round(int i) const
+MechanismSynapticInputCurrent::MechanismSynapticInputCurrent(
+    ReceptorType receptor_type, bool enable_analog_readout) :
+    MechanismSynapticInput(receptor_type, enable_analog_readout)
 {
-	if (i % 256 == 0) {
-		return (i / 256);
-	} else {
-		return ((i / 256) + 1);
-	}
-}
-
-// Check for Conflict with itself when placed on Compartment
-bool MechanismSynapticInputCurrent::conflict(Mechanism const& /*other*/) const
-{
-	return false;
 }
 
 bool MechanismSynapticInputCurrent::valid(Mechanism::ParameterSpace const&) const
 {
 	return true;
-}
-
-// Return HardwareRessource Requirements
-HardwareConstraints MechanismSynapticInputCurrent::get_hardware(
-    CompartmentOnNeuron const& compartment,
-    Mechanism::ParameterSpace const& mechanism_parameter_space,
-    Environment const& environment) const
-{
-	const auto* parameter_space =
-	    dynamic_cast<const MechanismSynapticInputCurrent::ParameterSpace*>(
-	        &mechanism_parameter_space);
-
-	if (!parameter_space) {
-		throw("Could not cast mechanism parameter space to capacitance parameter space.");
-	}
-
-	// Return Object and Input
-	HardwareConstraints constraints;
-
-	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
-	    environment.get(compartment);
-
-	if (synaptic_inputs.size() == 0) {
-		throw std::invalid_argument(" No information about this compartment in environment");
-	}
-
-	// Loop over all Synaptic Inputs of Compartment
-	for (auto i : synaptic_inputs) {
-		if (typeid(*i) != typeid(SynapticInputEnvironmentCurrent)) {
-			continue;
-		}
-		// Calculate Number of Synaptic Circuits required
-		int number_of_inputs_total = round((*i).number_of_inputs.number_total);
-
-		// Always request one neuron circuit instead of none
-		if (number_of_inputs_total == 0) {
-			number_of_inputs_total = 1;
-		}
-
-		// Minimal Numbers in Top and Bottom Row
-		int number_of_inputs_top = round((*i).number_of_inputs.number_top);
-		int number_of_inputs_bottom = round((*i).number_of_inputs.number_bottom);
-
-		if ((*i).exitatory) {
-			// Add Exitatory Constraint
-			bool in_list = false;
-			for (auto j : constraints) {
-				if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputExitatory)) {
-					(*j).numbers.number_bottom += number_of_inputs_bottom;
-					(*j).numbers.number_top += number_of_inputs_top;
-					(*j).numbers.number_total += number_of_inputs_total;
-					in_list = true;
-					break;
-				}
-			}
-			if (!in_list) {
-				HardwareConstraint constraint;
-				constraint.resource = HardwareResourceSynapticInputExitatory();
-				constraint.numbers.number_bottom += number_of_inputs_bottom;
-				constraint.numbers.number_top += number_of_inputs_top;
-				constraint.numbers.number_total += number_of_inputs_total;
-				constraints.push_back(constraint);
-			}
-
-
-		} else {
-			// Add Inhibitory Constraint
-			bool in_list = false;
-			for (auto j : constraints) {
-				if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputInhibitory)) {
-					(*j).numbers.number_bottom += number_of_inputs_bottom;
-					(*j).numbers.number_top += number_of_inputs_top;
-					(*j).numbers.number_total += number_of_inputs_total;
-					in_list = true;
-					break;
-				}
-			}
-			if (!in_list) {
-				HardwareConstraint constraint;
-				constraint.resource = HardwareResourceSynapticInputInhibitory();
-				constraint.numbers.number_bottom += number_of_inputs_bottom;
-				constraint.numbers.number_top += number_of_inputs_top;
-				constraint.numbers.number_total += number_of_inputs_total;
-				constraints.push_back(constraint);
-			}
-		}
-	}
-
-	// Return Resources and Constraints
-	return constraints;
 }
 
 // Copy
@@ -217,20 +191,14 @@ std::unique_ptr<Mechanism> MechanismSynapticInputCurrent::move()
 // Print
 std::ostream& MechanismSynapticInputCurrent::print(std::ostream& os) const
 {
-	os << "MechanismSynapticInputCurrent";
+	os << "MechanismSynapticInputCurrent(";
+	MechanismSynapticInput::print(os) << ")";
 	return os;
 }
 
-
 bool MechanismSynapticInputCurrent::is_equal_to(Mechanism const& other) const
 {
-	const auto* other_cast = dynamic_cast<const MechanismSynapticInputCurrent*>(&other);
-
-	if (!other_cast) {
-		return false;
-	}
-	return true;
+	return MechanismSynapticInput::is_equal_to(other);
 }
-
 
 } // namespace grenade::vx::network::abstract

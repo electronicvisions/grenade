@@ -2,8 +2,8 @@
 
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_current.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism_environment/synaptic_input.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
-#include "grenade/vx/network/abstract/multicompartment/synaptic_input_environment.h"
 #include <queue>
 #include <random>
 
