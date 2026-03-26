@@ -6,16 +6,31 @@ namespace grenade::vx::execution::backend {
 StatefulConnection::StatefulConnection(
     InitializedConnection&& connection, bool const enable_differential_config) :
     m_initialized_connection(std::move(connection)),
-    m_config([this]() -> grenade::vx::execution::detail::System {
-	    auto hwdb_entries = get_hwdb_entry();
-
-	    if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(hwdb_entries.at(0))) {
-		    return lola::vx::v3::ChipAndSinglechipFPGA();
-	    } else if (std::holds_alternative<hwdb4cpp::JboaSetupEntry>(hwdb_entries.at(0))) {
-		    return lola::vx::v3::ChipAndMultichipJboaLeafFPGA();
-	    } else {
-		    throw std::logic_error("Invalid hwdb entry.");
+    m_configs([this, enable_differential_config]() {
+	    std::map<common::ChipOnConnection, detail::StatefulChipConfig> ret;
+	    auto const hwdb_entries = get_hwdb_entry();
+	    auto const chips_on_connection = get_chips_on_connection();
+	    assert(hwdb_entries.size() == chips_on_connection.size());
+	    for (size_t i = 0; i < chips_on_connection.size(); i++) {
+		    if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(hwdb_entries.at(i))) {
+			    if (!std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(hwdb_entries.at(0))) {
+				    throw std::logic_error("Heterogeneous hardware types.");
+			    }
+			    ret.emplace(chips_on_connection.at(i), lola::vx::v3::ChipAndSinglechipFPGA());
+		    } else if (std::holds_alternative<hwdb4cpp::JboaSetupEntry>(hwdb_entries.at(i))) {
+			    if (!std::holds_alternative<hwdb4cpp::JboaSetupEntry>(hwdb_entries.at(0))) {
+				    throw std::logic_error("Heterogeneous hardware types.");
+			    }
+			    ret.emplace(
+			        chips_on_connection.at(i), lola::vx::v3::ChipAndMultichipJboaLeafFPGA());
+		    } else {
+			    throw std::logic_error("Invalid hwdb entry.");
+		    }
+		    ret.at(chips_on_connection.at(i))
+		        .set_enable_differential_config(enable_differential_config);
 	    }
+
+	    return ret;
     }()),
     m_reinit_base(m_initialized_connection.create_reinit_stack_entry()),
     m_reinit_differential(m_initialized_connection.create_reinit_stack_entry()),
@@ -24,7 +39,6 @@ StatefulConnection::StatefulConnection(
     m_reinit_start_ppus(m_initialized_connection.create_reinit_stack_entry()),
     m_mutex(std::make_unique<std::mutex>())
 {
-	m_config.set_enable_differential_config(enable_differential_config);
 }
 
 StatefulConnection::StatefulConnection(bool const enable_differential_config) :
@@ -68,14 +82,24 @@ bool StatefulConnection::is_quiggeldy() const
 	return m_initialized_connection.is_quiggeldy();
 }
 
-bool StatefulConnection::get_enable_differential_config() const
+std::vector<bool> StatefulConnection::get_enable_differential_config() const
 {
-	return m_config.get_enable_differential_config();
+	std::vector<bool> ret;
+	for (auto const& [_, config] : m_configs) {
+		ret.push_back(config.get_enable_differential_config());
+	}
+	return ret;
 }
 
-void StatefulConnection::set_enable_differential_config(bool const value)
+void StatefulConnection::set_enable_differential_config(std::vector<bool> values)
 {
-	m_config.set_enable_differential_config(value);
+	if (values.size() != m_configs.size()) {
+		throw std::runtime_error("Wrong number of differential config flags.");
+	}
+	auto const chips_on_connection = get_chips_on_connection();
+	for (size_t i = 0; i < values.size(); i++) {
+		m_configs.at(chips_on_connection.at(i)).set_enable_differential_config(values.at(i));
+	}
 }
 
 std::vector<common::ChipOnConnection> StatefulConnection::get_chips_on_connection() const

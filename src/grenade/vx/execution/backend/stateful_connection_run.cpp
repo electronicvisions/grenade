@@ -9,6 +9,7 @@
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "hate/timer.h"
 #include <mutex>
+#include <ranges>
 #include <stdexcept>
 
 namespace grenade::vx::execution::backend {
@@ -52,7 +53,9 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	hate::Timer const read_timer;
 	stadls::vx::v3::PlaybackProgram get_state_program;
 	std::optional<execution::detail::generator::GetState::Result> get_state_result;
-	if (connection.get_enable_differential_config() && local_program.ppu_symbols) {
+	bool const differential_config = std::ranges::all_of(
+	    connection.get_enable_differential_config(), [](bool const value) { return value; });
+	if (differential_config && local_program.ppu_symbols) {
 		auto get_state = stadls::vx::v3::generate(
 		    execution::detail::generator::GetState(local_program.ppu_symbols.has_value()));
 		get_state_program = get_state.builder.done();
@@ -68,27 +71,29 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	std::unique_lock<std::mutex> connection_lock(*connection.m_mutex, std::defer_lock);
 	// exclusive access to connection.m_state_storage and initialized connection required from here
 	// in differential mode
-	if (connection.get_enable_differential_config()) {
+	if (differential_config) {
 		connection_lock.lock();
 	}
 
 	hate::Timer const initial_config_program_timer;
-	bool const is_fresh_connection_config = connection.m_config.get_is_fresh();
-	connection.m_config.set_system(local_program.system_configs[0], true);
+	bool const is_fresh_connection_config =
+	    connection.m_configs.at(common::ChipOnConnection()).get_is_fresh();
+	connection.m_configs.at(common::ChipOnConnection())
+	    .set_system(local_program.system_configs[0], true);
 	if (local_program.external_ppu_dram_memory_config) {
-		connection.m_config.set_external_ppu_dram_memory(
-		    local_program.external_ppu_dram_memory_config);
+		connection.m_configs.at(common::ChipOnConnection())
+		    .set_external_ppu_dram_memory(local_program.external_ppu_dram_memory_config);
 	}
 
-	bool const enforce_base = !connection.get_enable_differential_config() ||
-	                          is_fresh_connection_config ||
+	bool const enforce_base = !differential_config || is_fresh_connection_config ||
 	                          !local_program.pre_initial_config_hook.empty();
 	bool const has_capmem_changes =
-	    enforce_base || connection.m_config.get_differential_changes_capmem();
-	bool const nothing_changed = connection.get_enable_differential_config() &&
-	                             !is_fresh_connection_config &&
-	                             !connection.m_config.get_has_differential() &&
-	                             local_program.pre_initial_config_hook.empty();
+	    enforce_base ||
+	    connection.m_configs.at(common::ChipOnConnection()).get_differential_changes_capmem();
+	bool const nothing_changed =
+	    differential_config && !is_fresh_connection_config &&
+	    !connection.m_configs.at(common::ChipOnConnection()).get_has_differential() &&
+	    local_program.pre_initial_config_hook.empty();
 
 	stadls::vx::v3::PlaybackProgramBuilder base_builder;
 
@@ -98,11 +103,12 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	if (!nothing_changed) {
 		base_builder.write(
 		    detail::StatefulChipConfigBaseCoordinate(),
-		    detail::StatefulChipConfigBase(connection.m_config));
-		if (connection.m_config.get_has_differential()) {
+		    detail::StatefulChipConfigBase(connection.m_configs.at(common::ChipOnConnection())));
+		if (connection.m_configs.at(common::ChipOnConnection()).get_has_differential()) {
 			differential_builder.write(
 			    detail::StatefulChipConfigDifferentialCoordinate(),
-			    detail::StatefulChipConfigDifferential(connection.m_config));
+			    detail::StatefulChipConfigDifferential(
+			        connection.m_configs.at(common::ChipOnConnection())));
 		}
 	}
 
@@ -130,7 +136,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 	if (!local_program.programs.empty() || !base_program.empty()) {
 		// only lock execution section for non-differential config mode
-		if (!connection.get_enable_differential_config()) {
+		if (!differential_config) {
 			connection_lock.lock();
 		}
 
@@ -200,7 +206,7 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 		}
 
 		// unlock execution section for non-differential config mode
-		if (!connection.get_enable_differential_config()) {
+		if (!differential_config) {
 			connection_execution_duration_after =
 			    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
 			connection_lock.unlock();
@@ -217,19 +223,20 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 			    [](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, current_config));
 		}
 		if (runs_successful) {
-			connection.m_config.set_system(current_config, false);
+			connection.m_configs.at(common::ChipOnConnection()).set_system(current_config, false);
 		} else {
 			// reset connection state storage since no assumptions can be made after failure
 			// TODO: create reset mechanism in class
-			bool const enable_differential_config = connection.get_enable_differential_config();
-			connection.m_config.reset();
-			connection.m_config.set_enable_differential_config(enable_differential_config);
+
+			connection.m_configs.at(common::ChipOnConnection()).reset();
+			connection.m_configs.at(common::ChipOnConnection())
+			    .set_enable_differential_config(differential_config);
 		}
 		LOG4CXX_TRACE(logger, "Updated connection state in " << update_state_timer.print() << ".");
 	}
 
 	// unlock execution section for differential config mode
-	if (connection.get_enable_differential_config()) {
+	if (differential_config) {
 		if (!local_program.programs.empty() || !base_program.empty()) {
 			connection_execution_duration_after =
 			    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize

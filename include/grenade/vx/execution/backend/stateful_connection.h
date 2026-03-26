@@ -91,14 +91,14 @@ struct StatefulConnection
 	 * Get whether tracking hardware configurations and only applying differential changes is
 	 * enabled.
 	 */
-	bool get_enable_differential_config() const SYMBOL_VISIBLE;
+	std::vector<bool> get_enable_differential_config() const SYMBOL_VISIBLE;
 
 	/**
 	 * Set whether to enable tracking hardware configurations and only applying differential
 	 * changes.
 	 * @param value Value to set
 	 */
-	void set_enable_differential_config(bool value) SYMBOL_VISIBLE;
+	void set_enable_differential_config(std::vector<bool> values) SYMBOL_VISIBLE;
 
 	/**
 	 * Get chip identifiers on this connection.
@@ -109,9 +109,9 @@ private:
 	InitializedConnection m_initialized_connection;
 
 	/**
-	 * Tracked hardware configuration.
+	 * Tracked hardware configuration over all chips on the connection.
 	 */
-	detail::StatefulChipConfig m_config;
+	std::map<common::ChipOnConnection, detail::StatefulChipConfig> m_configs;
 
 	/**
 	 * Reinit applying the base configuration.
