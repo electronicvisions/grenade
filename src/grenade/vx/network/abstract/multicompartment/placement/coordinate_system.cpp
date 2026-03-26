@@ -638,6 +638,54 @@ CoordinateSystem::construct_neuron()
 	return {std::move(neuron), allocated_resources};
 }
 
+halco::hicann_dls::vx::LogicalNeuronCompartments
+CoordinateSystem::construct_logical_neuron_compartments() const
+{
+	// Result
+	std::map<
+	    halco::hicann_dls::vx::CompartmentOnLogicalNeuron,
+	    std::vector<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron>>
+	    compartments;
+
+	auto coordinate_system_copy = *this;
+	coordinate_system_copy.align_left();
+
+	// check that results fits on hardware
+	int right_most_used_circuit = 0;
+	for (int y = coordinate_system_copy.coordinate_system.size() - 1; y >= 0; y--) {
+		for (int x = coordinate_system_copy.coordinate_system[0].size() - 1; x >= 0; x--) {
+			if (coordinate_system_copy.connected(x, y)) {
+				right_most_used_circuit = std::max(x, right_most_used_circuit);
+				break;
+			}
+		}
+	}
+
+	if (static_cast<size_t>(right_most_used_circuit) >
+	    halco::hicann_dls::vx::NeuronColumnOnLogicalNeuron::size) {
+		throw std::runtime_error("Neuron does not fit on hardware.");
+	}
+
+	// Iterate over all compartment-IDs
+	for (auto const& i : get_compartments()) {
+		std::vector<std::pair<int, int>> coordinates =
+		    coordinate_system_copy.find_neuron_circuits(i);
+
+		std::vector<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron> atomic_neurons;
+		// Iterate over all Locations of Compartment
+		for (auto const& j : coordinates) {
+			auto neuron_column = halco::hicann_dls::vx::NeuronColumnOnLogicalNeuron(j.first);
+			auto neuron_row = halco::hicann_dls::vx::NeuronRowOnLogicalNeuron(j.second);
+			atomic_neurons.push_back(
+			    halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron(neuron_row, neuron_column));
+		}
+		compartments.emplace(
+		    halco::hicann_dls::vx::CompartmentOnLogicalNeuron(i.value()), atomic_neurons);
+	}
+
+	return halco::hicann_dls::vx::LogicalNeuronCompartments(compartments);
+}
+
 void CoordinateSystem::align_left()
 {
 	size_t left_most_used_circuit = coordinate_system[0].size();

@@ -263,41 +263,4 @@ PlacementAlgorithm::isomorphism_resources_subgraph(
 	return std::make_pair(null_compartments_min, id_mapping);
 }
 
-// Converts CoordinateSystem Into LogicalSystem
-halco::hicann_dls::vx::LogicalNeuronCompartments
-PlacementAlgorithm::convert_to_logical_compartments(
-    CoordinateSystem const& coordinate_system, Neuron const& neuron)
-{
-	// All CompartmentIDs
-	std::vector<CompartmentOnNeuron> compartment_ids;
-	for (auto const& compartment : neuron.compartments()) {
-		compartment_ids.push_back(compartment);
-	}
-
-	// Result
-	std::map<
-	    halco::hicann_dls::vx::CompartmentOnLogicalNeuron,
-	    std::vector<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron>>
-	    Compartments;
-
-	// Iterate over all Compartment-IDs
-	int keyCounter = 0;
-	for (auto i : compartment_ids) {
-		std::vector<std::pair<int, int>> coordinates = coordinate_system.find_neuron_circuits(i);
-
-		std::vector<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron> atomic_neurons;
-		// Iterate over all Locations of Compartment
-		for (auto j : coordinates) {
-			auto neuron_column = halco::hicann_dls::vx::NeuronColumnOnLogicalNeuron(j.first);
-			auto neuron_row = halco::hicann_dls::vx::NeuronRowOnLogicalNeuron(j.second);
-			atomic_neurons.push_back(
-			    halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron(neuron_row, neuron_column));
-		}
-		Compartments.emplace(
-		    halco::hicann_dls::vx::CompartmentOnLogicalNeuron(keyCounter++), atomic_neurons);
-	}
-
-	return halco::hicann_dls::vx::LogicalNeuronCompartments(Compartments);
-}
-
 } // namespace grenade::vx::network::abstract

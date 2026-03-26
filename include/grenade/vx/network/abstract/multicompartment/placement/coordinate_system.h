@@ -227,6 +227,15 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	std::tuple<Neuron, std::map<CompartmentOnNeuron, NumberTopBottom>> construct_neuron();
 
 	/**
+	 * Construct logical neuron compartments based on the state of the coordinate-system.
+	 *
+	 * The construction preserves the compartment IDs assigned to the neuron
+	 * circuits.
+	 */
+	halco::hicann_dls::vx::v3::LogicalNeuronCompartments construct_logical_neuron_compartments()
+	    const SYMBOL_VISIBLE;
+
+	/**
 	 * Align coordinate system to the left, i.e. remove unused circuits on the left.
 	 **/
 	void align_left();

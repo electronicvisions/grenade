@@ -108,10 +108,6 @@ protected:
 	    ResourceManager const& resources,
 	    std::map<CompartmentOnNeuron, NumberTopBottom> const& resources_build) const;
 
-	// Convert Configuration CoordinateSystem into logical Compartments
-	halco::hicann_dls::vx::LogicalNeuronCompartments convert_to_logical_compartments(
-	    CoordinateSystem const& coordinate_system, Neuron const& neuron);
-
 private:
 	log4cxx::LoggerPtr logger;
 };
