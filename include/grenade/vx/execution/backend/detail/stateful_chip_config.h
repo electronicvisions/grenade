@@ -14,16 +14,15 @@
 namespace grenade::vx::execution::backend::detail {
 
 /**
- * Connection config tracking changes to the configuration of hardware accessible via one
- * connection.
+ * Chip config tracking changes to the configuration of hardware.
  * Containers are eagerly encoded to only encode them once for both base and differential config
  * parts.
  */
-struct StatefulConnectionConfig
+struct StatefulChipConfig
 {
 	using System = ::grenade::vx::execution::detail::System;
 
-	StatefulConnectionConfig(System system);
+	StatefulChipConfig(System system);
 
 	bool get_enable_differential_config() const SYMBOL_VISIBLE;
 	void set_enable_differential_config(bool value) SYMBOL_VISIBLE;
@@ -56,8 +55,8 @@ struct StatefulConnectionConfig
 
 	bool get_has_differential() const SYMBOL_VISIBLE;
 
-	bool operator==(StatefulConnectionConfig const& other) const = default;
-	bool operator!=(StatefulConnectionConfig const& other) const = default;
+	bool operator==(StatefulChipConfig const& other) const = default;
+	bool operator!=(StatefulChipConfig const& other) const = default;
 
 	haldls::vx::Encodable::BackendCocoListVariant get_base() SYMBOL_VISIBLE;
 	haldls::vx::Encodable::BackendCocoListVariant get_differential() SYMBOL_VISIBLE;
@@ -90,16 +89,15 @@ private:
 };
 
 
-struct StatefulConnectionConfigBaseCoordinate
-    : public halco::common::detail::
-          RantWrapper<StatefulConnectionConfigBaseCoordinate, size_t, 0, 0>
-    , public halco::common::CoordinateBase<StatefulConnectionConfigBaseCoordinate>
+struct StatefulChipConfigBaseCoordinate
+    : public halco::common::detail::RantWrapper<StatefulChipConfigBaseCoordinate, size_t, 0, 0>
+    , public halco::common::CoordinateBase<StatefulChipConfigBaseCoordinate>
 {};
 
 
-struct StatefulConnectionConfigBase : public haldls::vx::Container
+struct StatefulChipConfigBase : public haldls::vx::Container
 {
-	StatefulConnectionConfigBase(StatefulConnectionConfig& config) SYMBOL_VISIBLE;
+	StatefulChipConfigBase(StatefulChipConfig& config) SYMBOL_VISIBLE;
 
 	virtual BackendCoordinateListVariant encode_read(
 	    Coordinate const& coordinate,
@@ -130,19 +128,19 @@ struct StatefulConnectionConfigBase : public haldls::vx::Container
 	virtual bool operator!=(Encodable const& other) const;
 
 private:
-	StatefulConnectionConfig& m_config;
+	StatefulChipConfig& m_config;
 };
 
 
-struct StatefulConnectionConfigDifferentialCoordinate
+struct StatefulChipConfigDifferentialCoordinate
     : public halco::common::detail::
-          RantWrapper<StatefulConnectionConfigDifferentialCoordinate, size_t, 0, 0>
-    , public halco::common::CoordinateBase<StatefulConnectionConfigDifferentialCoordinate>
+          RantWrapper<StatefulChipConfigDifferentialCoordinate, size_t, 0, 0>
+    , public halco::common::CoordinateBase<StatefulChipConfigDifferentialCoordinate>
 {};
 
-struct StatefulConnectionConfigDifferential : public haldls::vx::Container
+struct StatefulChipConfigDifferential : public haldls::vx::Container
 {
-	StatefulConnectionConfigDifferential(StatefulConnectionConfig& config) SYMBOL_VISIBLE;
+	StatefulChipConfigDifferential(StatefulChipConfig& config) SYMBOL_VISIBLE;
 
 	virtual BackendCoordinateListVariant encode_read(
 	    Coordinate const& coordinate,
@@ -173,7 +171,7 @@ struct StatefulConnectionConfigDifferential : public haldls::vx::Container
 	virtual bool operator!=(Encodable const& other) const;
 
 private:
-	StatefulConnectionConfig& m_config;
+	StatefulChipConfig& m_config;
 };
 
 } // namespace grenade::vx::execution::backend::detail

@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/execution/backend/detail/stateful_connection_config.h"
+#include "grenade/vx/execution/backend/detail/stateful_chip_config.h"
 #include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/genpybind.h"
 #include "hate/visibility.h"
@@ -111,7 +111,7 @@ private:
 	/**
 	 * Tracked hardware configuration.
 	 */
-	detail::StatefulConnectionConfig m_config;
+	detail::StatefulChipConfig m_config;
 
 	/**
 	 * Reinit applying the base configuration.

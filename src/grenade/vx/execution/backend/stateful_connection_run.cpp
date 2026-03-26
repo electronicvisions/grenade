@@ -97,12 +97,12 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	stadls::vx::v3::PlaybackProgramBuilder differential_builder;
 	if (!nothing_changed) {
 		base_builder.write(
-		    detail::StatefulConnectionConfigBaseCoordinate(),
-		    detail::StatefulConnectionConfigBase(connection.m_config));
+		    detail::StatefulChipConfigBaseCoordinate(),
+		    detail::StatefulChipConfigBase(connection.m_config));
 		if (connection.m_config.get_has_differential()) {
 			differential_builder.write(
-			    detail::StatefulConnectionConfigDifferentialCoordinate(),
-			    detail::StatefulConnectionConfigDifferential(connection.m_config));
+			    detail::StatefulChipConfigDifferentialCoordinate(),
+			    detail::StatefulChipConfigDifferential(connection.m_config));
 		}
 	}
 
