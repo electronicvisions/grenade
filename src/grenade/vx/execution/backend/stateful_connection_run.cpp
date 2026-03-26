@@ -19,47 +19,56 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 
 	auto const chips_on_connection = connection.get_chips_on_connection();
-	if (chips_on_connection.size() > 1) {
-		throw std::invalid_argument("Only connections with one chip are supported for now.");
-	}
 
-	auto& local_program = program.chips.at(chips_on_connection.at(0));
-
+	// Playback programs run when outscheduled.
 	hate::Timer const schedule_out_replacement_timer;
-	stadls::vx::v3::PlaybackProgramBuilder schedule_out_replacement_builder;
-	if (local_program.ppu_symbols) {
-		schedule_out_replacement_builder.merge_back(
-		    stadls::vx::v3::generate(
-		        execution::detail::generator::PPUStop(*local_program.ppu_symbols))
-		        .builder);
-		schedule_out_replacement_builder.merge_back(
-		    stadls::vx::v3::generate(
-		        execution::detail::generator::GetState{local_program.ppu_symbols.has_value()})
-		        .builder);
+	std::vector<stadls::vx::v3::PlaybackProgram> schedule_out_replacement_programs;
+	for (auto const& [_, local_program] : program.chips) {
+		stadls::vx::v3::PlaybackProgramBuilder schedule_out_replacement_builder;
+		if (local_program.ppu_symbols) {
+			schedule_out_replacement_builder.merge_back(
+			    stadls::vx::v3::generate(
+			        execution::detail::generator::PPUStop(*local_program.ppu_symbols))
+			        .builder);
+			schedule_out_replacement_builder.merge_back(
+			    stadls::vx::v3::generate(
+			        execution::detail::generator::GetState{local_program.ppu_symbols.has_value()})
+			        .builder);
+		}
+		schedule_out_replacement_programs.emplace_back(schedule_out_replacement_builder.done());
 	}
-	auto schedule_out_replacement_program = schedule_out_replacement_builder.done();
 	LOG4CXX_TRACE(
 	    logger, "operator(): Generated playback program for schedule out replacement in "
 	                << schedule_out_replacement_timer.print() << ".");
 
-	if (local_program.programs.size() > 1 && connection.is_quiggeldy() &&
-	    local_program.has_hooks_around_realtime) {
+	if (connection.is_quiggeldy() && std::ranges::any_of(program.chips, [](auto const& pair) {
+		    return pair.second.has_hooks_around_realtime && pair.second.programs.size() > 1;
+	    })) {
 		LOG4CXX_WARN(
 		    logger, "Connection uses quiggeldy and more than one playback programs "
 		            "shall be executed back-to-back with a pre or post realtime hook. Their "
 		            "contiguity can't be guaranteed.");
 	}
 
-	hate::Timer const read_timer;
-	stadls::vx::v3::PlaybackProgram get_state_program;
-	std::optional<execution::detail::generator::GetState::Result> get_state_result;
 	bool const differential_config = std::ranges::all_of(
 	    connection.get_enable_differential_config(), [](bool const value) { return value; });
-	if (differential_config && local_program.ppu_symbols) {
-		auto get_state = stadls::vx::v3::generate(
-		    execution::detail::generator::GetState(local_program.ppu_symbols.has_value()));
-		get_state_program = get_state.builder.done();
-		get_state_result = get_state.result;
+
+	// Playback programs to get state.
+	hate::Timer const read_timer;
+	std::vector<stadls::vx::v3::PlaybackProgram> get_state_programs;
+	std::map<grenade::vx::common::ChipOnConnection, execution::detail::generator::GetState::Result>
+	    get_state_results;
+	if (differential_config) {
+		for (auto const& [chip, local_program] : program.chips) {
+			if (local_program.ppu_symbols) {
+				auto get_state = stadls::vx::v3::generate(
+				    execution::detail::generator::GetState(local_program.ppu_symbols.has_value()));
+				get_state_programs.emplace_back(get_state.builder.done());
+				get_state_results[chip] = get_state.result;
+			} else {
+				get_state_programs.emplace_back(stadls::vx::v3::PlaybackProgram());
+			}
+		}
 	}
 	LOG4CXX_TRACE(
 	    logger, "Generated playback program for read-back of PPU alterations in "
@@ -76,114 +85,165 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	}
 
 	hate::Timer const initial_config_program_timer;
-	bool const is_fresh_connection_config =
-	    connection.m_configs.at(common::ChipOnConnection()).get_is_fresh();
-	connection.m_configs.at(common::ChipOnConnection())
-	    .set_system(local_program.system_configs[0], true);
-	if (local_program.external_ppu_dram_memory_config) {
-		connection.m_configs.at(common::ChipOnConnection())
-		    .set_external_ppu_dram_memory(local_program.external_ppu_dram_memory_config);
-	}
-
-	bool const enforce_base = !differential_config || is_fresh_connection_config ||
-	                          !local_program.pre_initial_config_hook.empty();
-	bool const has_capmem_changes =
-	    enforce_base ||
-	    connection.m_configs.at(common::ChipOnConnection()).get_differential_changes_capmem();
-	bool const nothing_changed =
-	    differential_config && !is_fresh_connection_config &&
-	    !connection.m_configs.at(common::ChipOnConnection()).get_has_differential() &&
-	    local_program.pre_initial_config_hook.empty();
-
-	stadls::vx::v3::PlaybackProgramBuilder base_builder;
-
-	base_builder.merge_back(local_program.pre_initial_config_hook);
-
-	stadls::vx::v3::PlaybackProgramBuilder differential_builder;
-	if (!nothing_changed) {
-		base_builder.write(
-		    detail::StatefulChipConfigBaseCoordinate(),
-		    detail::StatefulChipConfigBase(connection.m_configs.at(common::ChipOnConnection())));
-		if (connection.m_configs.at(common::ChipOnConnection()).get_has_differential()) {
-			differential_builder.write(
-			    detail::StatefulChipConfigDifferentialCoordinate(),
-			    detail::StatefulChipConfigDifferential(
-			        connection.m_configs.at(common::ChipOnConnection())));
+	bool is_fresh_connection_config = false;
+	for (auto const& [chip, local_program] : program.chips) {
+		if (connection.m_configs.at(chip).get_is_fresh()) {
+			is_fresh_connection_config = true;
+		}
+		connection.m_configs.at(chip).set_system(local_program.system_configs[0], true);
+		if (local_program.external_ppu_dram_memory_config) {
+			connection.m_configs.at(chip).set_external_ppu_dram_memory(
+			    local_program.external_ppu_dram_memory_config);
 		}
 	}
 
-	auto base_program = base_builder.done();
-	auto differential_program = differential_builder.done();
+	bool const enforce_base = !differential_config || is_fresh_connection_config ||
+	                          !std::ranges::all_of(program.chips, [](auto const& pair) {
+		                          return pair.second.pre_initial_config_hook.empty();
+	                          });
+	bool const has_capmem_changes =
+	    enforce_base || std::ranges::any_of(program.chips, [&connection](auto const& pair) {
+		    return connection.m_configs.at(pair.first).get_differential_changes_capmem();
+	    });
+	bool const nothing_changed =
+	    differential_config && !is_fresh_connection_config &&
+	    !std::ranges::any_of(
+	        program.chips,
+	        [&connection](auto const& pair) {
+		        return connection.m_configs.at(pair.first).get_has_differential();
+	        }) &&
+	    std::ranges::all_of(program.chips, [](auto const& pair) {
+		    return pair.second.pre_initial_config_hook.empty();
+	    });
+
+
+	std::vector<stadls::vx::PlaybackProgram> base_programs;
+	std::vector<stadls::vx::PlaybackProgram> differential_programs;
+	for (auto& [chip, local_program] : program.chips) {
+		stadls::vx::v3::PlaybackProgramBuilder base_builder;
+		base_builder.merge_back(local_program.pre_initial_config_hook);
+
+		stadls::vx::v3::PlaybackProgramBuilder differential_builder;
+		if (!nothing_changed) {
+			base_builder.write(
+			    detail::StatefulChipConfigBaseCoordinate(),
+			    detail::StatefulChipConfigBase(connection.m_configs.at(chip)));
+			if (connection.m_configs.at(chip).get_has_differential()) {
+				differential_builder.write(
+				    detail::StatefulChipConfigDifferentialCoordinate(),
+				    detail::StatefulChipConfigDifferential(connection.m_configs.at(chip)));
+			}
+		}
+
+		base_programs.emplace_back(base_builder.done());
+		differential_programs.emplace_back(differential_builder.done());
+	}
 	LOG4CXX_TRACE(
 	    logger, "Generated playback program of initial config after "
 	                << initial_config_program_timer.print() << ".");
 
-	auto trigger_program =
-	    local_program.ppu_symbols
-	        ? stadls::vx::v3::generate(execution::detail::generator::PPUStart(
-	                                       std::get<halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU>(
-	                                           local_program.ppu_symbols->at("status").coordinate)
-	                                           .toMin()))
-	              .builder.done()
-	        : stadls::vx::v3::PlaybackProgram();
+	std::vector<stadls::vx::v3::PlaybackProgram> trigger_programs;
+	for (auto const& [_, local_program] : program.chips) {
+		trigger_programs.emplace_back(
+		    local_program.ppu_symbols
+		        ? stadls::vx::v3::generate(
+		              execution::detail::generator::PPUStart(
+		                  std::get<halco::hicann_dls::vx::v3::PPUMemoryBlockOnPPU>(
+		                      local_program.ppu_symbols->at("status").coordinate)
+		                      .toMin()))
+		              .builder.done()
+		        : stadls::vx::v3::PlaybackProgram());
+	}
 
 	// execute
 	hate::Timer const exec_timer;
-	std::chrono::nanoseconds connection_execution_duration_before{0};
-	std::chrono::nanoseconds connection_execution_duration_after{0};
+	std::vector<std::chrono::nanoseconds> connection_execution_duration_before(
+	    chips_on_connection.size(), std::chrono::nanoseconds{0});
+	std::vector<std::chrono::nanoseconds> connection_execution_duration_after(
+	    chips_on_connection.size(), std::chrono::nanoseconds{0});
 
 	bool runs_successful = true;
 
-	if (!local_program.programs.empty() || !base_program.empty()) {
+
+	// Execution of base programs and realtime snippets
+	if (!std::ranges::all_of(
+	        program.chips,
+	        [](auto const& pair) {
+		        return pair.second.programs.empty();
+	        }) || // TO-DO: With the assert of same lenght for all, either all are empty or none???
+	    !std::ranges::all_of(
+	        base_programs, [](auto const& base_program) { return base_program.empty(); })) {
+		// Reorder program vectors from (Chips, Snippets) to (Snippets, Chips)
+		size_t max_realtime_section_length =
+		    std::ranges::max_element(program.chips, {}, [](auto const& pair) {
+			    return pair.second.programs.size();
+		    })->second.programs.size();
+		assert(std::ranges::all_of(program.chips, [max_realtime_section_length](auto const& pair) {
+			return pair.second.programs.size() == max_realtime_section_length;
+		}));
+
+		std::vector<std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>>>
+		    realtime_sections(max_realtime_section_length);
+		for (size_t chip_index = 0; chip_index < chips_on_connection.size(); chip_index++) {
+			auto& local_program = program.chips.at(chips_on_connection.at(chip_index));
+			for (size_t section_index = 0; section_index < local_program.programs.size();
+			     section_index++) {
+				realtime_sections.at(section_index)
+				    .push_back(local_program.programs.at(section_index));
+			}
+		}
+
+
 		// only lock execution section for non-differential config mode
 		if (!differential_config) {
 			connection_lock.lock();
 		}
 
 		// we are locked here in any case
-		connection_execution_duration_before =
-		    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
+		std::ranges::transform(
+		    connection.get_time_info(), connection_execution_duration_before.begin(),
+		    [](auto const& chip_time_info) { return chip_time_info.execution_duration; });
 
 		// Only if something changed (re-)set base and differential reinit
 		if (!nothing_changed) {
-			std::vector<stadls::vx::v3::PlaybackProgram> base_programs{base_program};
 			connection.m_reinit_base.set(std::move(base_programs), std::nullopt, enforce_base);
 
 			// Only enforce when not empty to support non-differential mode.
 			// In differential mode it is always enforced on changes.
-			std::vector<stadls::vx::v3::PlaybackProgram> differential_programs{
-			    differential_program};
 			connection.m_reinit_differential.set(
-			    std::move(differential_programs), std::nullopt, !differential_program.empty());
+			    std::move(differential_programs), std::nullopt,
+			    !std::ranges::all_of(differential_programs, [](auto const& differential_program) {
+				    return differential_program.empty();
+			    }));
 		}
 
 		// Never enforce, since the reinit is only filled after a schedule-out operation.
-		std::vector<stadls::vx::v3::PlaybackProgram> schedule_in_programs{
-		    stadls::vx::v3::PlaybackProgram()};
-		std::vector<stadls::vx::v3::PlaybackProgram> schedule_out_replacement_programs{
-		    schedule_out_replacement_program};
+		std::vector<stadls::vx::v3::PlaybackProgram> schedule_in_programs(
+		    chips_on_connection.size(), stadls::vx::v3::PlaybackProgram());
 		connection.m_reinit_schedule_out_replacement.set(
 		    std::move(schedule_in_programs), std::move(schedule_out_replacement_programs), false);
 
 		// Always write capmem settling wait reinit, but only enforce it when the wait is
 		// immediately required, i.e. after changes to the capmem.
-		std::vector<stadls::vx::v3::PlaybackProgram> capmem_settling_waits{
+		std::vector<stadls::vx::v3::PlaybackProgram> capmem_settling_waits(
+		    chips_on_connection.size(),
 		    stadls::vx::v3::generate(execution::detail::generator::CapMemSettlingWait())
-		        .builder.done()};
+		        .builder.done());
 		connection.m_reinit_capmem_settling_wait.set(
 		    std::move(capmem_settling_waits), std::nullopt, has_capmem_changes);
 
-		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are used.
-		std::vector<stadls::vx::v3::PlaybackProgram> trigger_programs{trigger_program};
+		// Always write (PPU) trigger reinit and enforce when not empty, i.e. when PPUs are
+		// used.
 		connection.m_reinit_start_ppus.set(
-		    std::move(trigger_programs), std::nullopt, !trigger_program.empty());
+		    std::move(trigger_programs), std::nullopt,
+		    !std::ranges::all_of(trigger_programs, [](auto const& trigger_program) {
+			    return trigger_program.empty();
+		    }));
 
 		// Execute realtime sections
-		for (auto& p : local_program.programs) {
+		for (auto& real_time_section : realtime_sections) {
 			try {
-				std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>>
-				    local_programs_wrapped{p};
-				run(connection.m_initialized_connection, local_programs_wrapped);
+				run(connection.m_initialized_connection, real_time_section);
 			} catch (std::runtime_error const& error) {
 				LOG4CXX_ERROR(
 				    logger, "Run of playback program not successful: " << error.what() << ".");
@@ -193,10 +253,15 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 		// If the PPUs (can) alter state, read it back to update current_config accordingly to
 		// represent the actual hardware state.
-		if (!get_state_program.empty()) {
+		if (!std::ranges::all_of(get_state_programs, [](auto const& get_state_program) {
+			    return get_state_program.empty();
+		    })) {
 			try {
 				std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>>
-				    get_state_programs_wrapped{get_state_program};
+				    get_state_programs_wrapped;
+				for (auto& get_state_program : get_state_programs) {
+					get_state_programs_wrapped.push_back(get_state_program);
+				}
 				run(connection.m_initialized_connection, get_state_programs_wrapped);
 			} catch (std::runtime_error const& error) {
 				LOG4CXX_ERROR(
@@ -207,39 +272,48 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 
 		// unlock execution section for non-differential config mode
 		if (!differential_config) {
-			connection_execution_duration_after =
-			    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
+			std::ranges::transform(
+			    connection.get_time_info(), connection_execution_duration_after.begin(),
+			    [](auto const& chip_time_info) { return chip_time_info.execution_duration; });
 			connection_lock.unlock();
 		}
 	}
 	LOG4CXX_TRACE(logger, "Executed built PlaybackPrograms in " << exec_timer.print() << ".");
 
-	// update connection state
-	if (local_program.system_configs.size() > 1 || local_program.ppu_symbols) {
-		hate::Timer const update_state_timer;
-		auto current_config = local_program.system_configs[local_program.system_configs.size() - 1];
-		if (get_state_result) {
-			get_state_result->apply(std::visit(
-			    [](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, current_config));
-		}
-		if (runs_successful) {
-			connection.m_configs.at(common::ChipOnConnection()).set_system(current_config, false);
-		} else {
-			// reset connection state storage since no assumptions can be made after failure
-			// TODO: create reset mechanism in class
 
-			connection.m_configs.at(common::ChipOnConnection()).reset();
-			connection.m_configs.at(common::ChipOnConnection())
-			    .set_enable_differential_config(differential_config);
+	// update connection state
+	hate::Timer const update_state_timer;
+	for (auto const& [chip, local_program] : program.chips) {
+		if (local_program.system_configs.size() > 1 || local_program.ppu_symbols) {
+			auto current_config =
+			    local_program.system_configs[local_program.system_configs.size() - 1];
+			if (get_state_results.contains(chip)) {
+				get_state_results.at(chip).apply(std::visit(
+				    [](auto& system) -> lola::vx::v3::Chip& { return system.chip; },
+				    current_config));
+			}
+			if (runs_successful) {
+				connection.m_configs.at(chip).set_system(current_config, false);
+			} else {
+				// reset connection state storage since no assumptions can be made after failure
+				// TODO: create reset mechanism in class
+
+				connection.m_configs.at(chip).reset();
+				connection.m_configs.at(chip).set_enable_differential_config(differential_config);
+			}
 		}
-		LOG4CXX_TRACE(logger, "Updated connection state in " << update_state_timer.print() << ".");
 	}
+	LOG4CXX_TRACE(logger, "Updated connection state in " << update_state_timer.print() << ".");
 
 	// unlock execution section for differential config mode
 	if (differential_config) {
-		if (!local_program.programs.empty() || !base_program.empty()) {
-			connection_execution_duration_after =
-			    connection.get_time_info().at(0).execution_duration; // TO-DO vectorize
+		if (!std::ranges::all_of(
+		        program.chips, [](auto const& pair) { return pair.second.programs.empty(); }) ||
+		    !std::ranges::all_of(
+		        base_programs, [](auto const& base_program) { return base_program.empty(); })) {
+			std::ranges::transform(
+			    connection.get_time_info(), connection_execution_duration_after.begin(),
+			    [](auto const& chip_time_info) { return chip_time_info.execution_duration; });
 		}
 		connection_lock.unlock();
 	}
@@ -250,8 +324,10 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	}
 
 	RunTimeInfo ret;
-	ret.execution_duration[chips_on_connection.at(0)] =
-	    connection_execution_duration_after - connection_execution_duration_before;
+	for (size_t i = 0; i < chips_on_connection.size(); i++) {
+		ret.execution_duration[chips_on_connection.at(i)] =
+		    connection_execution_duration_after.at(i) - connection_execution_duration_before.at(i);
+	}
 
 	return ret;
 }
