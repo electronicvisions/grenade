@@ -138,10 +138,10 @@ TEST(CuboidMultiIndexSequence, General)
 	    (*CuboidMultiIndexSequence(
 	          {1, 2, 3}, MultiIndex({3, 4, 4}),
 	          {DummyDimensionUnit(), DummyDimensionUnit(), DummyDimensionUnit()})
-	          .projection({0, 1})),
+	          .distinct_projection({0, 1})),
 	    sequence);
 	// dimension not present
-	EXPECT_THROW(sequence.projection({4}), std::invalid_argument);
+	EXPECT_THROW(sequence.distinct_projection({4}), std::invalid_argument);
 
 	EXPECT_EQ(
 	    (*CuboidMultiIndexSequence(

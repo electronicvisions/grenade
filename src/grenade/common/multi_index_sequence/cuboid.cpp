@@ -316,17 +316,11 @@ std::unique_ptr<MultiIndexSequence> CuboidMultiIndexSequence::related_sequence_s
 	return MultiIndexSequence::related_sequence_subset_restriction(related, subset);
 }
 
-std::unique_ptr<MultiIndexSequence> CuboidMultiIndexSequence::projection(
-    std::set<size_t> const& dimensions) const
-{
-	return distinct_projection(dimensions);
-}
-
 std::unique_ptr<MultiIndexSequence> CuboidMultiIndexSequence::distinct_projection(
     std::set<size_t> const& dimensions) const
 {
 	if (auto max_element = std::max_element(dimensions.begin(), dimensions.end());
-	    max_element != dimensions.end() && *max_element > dimensionality()) {
+	    max_element != dimensions.end() && *max_element >= dimensionality()) {
 		throw std::invalid_argument(
 		    "Given dimensions to projection onto not part of sequence (>= dimensionality).");
 	}

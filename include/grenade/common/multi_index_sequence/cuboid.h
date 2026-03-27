@@ -172,14 +172,6 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CuboidMultiIndexSequence : public Multi
 	    MultiIndexSequence const& related, MultiIndexSequence const& subset) const override;
 
 	/**
-	 * Get projection of sequence onto given dimensions.
-	 * @param dimensions Dimensions onto which to project
-	 * @throws std::invalid_argument On given dimensions not present in this sequence
-	 */
-	virtual std::unique_ptr<MultiIndexSequence> projection(
-	    std::set<size_t> const& dimensions) const override;
-
-	/**
 	 * Get distinct projection of sequence onto given dimensions.
 	 * @param dimensions Dimensions onto which to project
 	 * @throws std::invalid_argument On given dimensions not present in this sequence
