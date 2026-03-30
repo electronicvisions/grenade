@@ -48,53 +48,56 @@ CoordinateLimits PlacementAlgorithmRuleset::find_limits(
 {
 	CoordinateLimits limits;
 	// Iterate over Top and Bottom Row
-	for (int y = 0; y < 2; y++) {
-		CoordinateLimit limit;
-		bool valid_limit = false;
-
+	for (size_t y = 0; y < coordinates.coordinate_system.size(); y++) {
 		bool finished = false;
-		size_t lower_limit = 0;
 
 		// Search for another limit until end of coordinate system is reached
 		while (!finished) {
-			lower_limit = 0;
+			CoordinateLimit limit{0, 0};
+			bool valid_limit = false;
+
 			// Top Row Check if previous Limits exist
 			if (y == 0) {
 				if (!limits.top.empty()) {
-					lower_limit = limits.top.back().upper + 1;
+					limit.lower = limits.top.back().upper + 1;
 				}
 			}
 			// Bottom Row Check if Limits exist
 			else if (y == 1) {
 				if (!limits.bottom.empty()) {
-					lower_limit = limits.bottom.back().upper + 1;
+					limit.lower = limits.bottom.back().upper + 1;
 				}
 			}
 
+			if (limit.lower >= coordinates.coordinate_system[y].size()) {
+				finished = true;
+				valid_limit = false;
+				continue;
+			}
+
 			// Find next or first Lower Limit
-			for (size_t x = lower_limit; x <= 255; x++) {
+			for (size_t x = limit.lower; x < coordinates.coordinate_system[y].size(); x++) {
 				if (coordinates.coordinate_system[y][x].compartment == compartment) {
 					limit.lower = x;
 					valid_limit = true;
 					break;
 				}
-				if (x == 255) {
+				if (x == coordinates.coordinate_system[y].size() - 1) {
 					finished = true;
 					valid_limit = false;
 				}
 			}
 			// Find Upper Limit to Lower Limit
-			if (!finished) {
-				for (size_t x = limit.lower; x <= 255; x++) {
-					if (x == 255) {
+			if (!finished && valid_limit) {
+				for (size_t x = limit.lower; x < coordinates.coordinate_system[y].size(); x++) {
+					if (x == coordinates.coordinate_system[y].size() - 1) {
 						finished = true;
 						limit.upper = x;
-						valid_limit = true;
 						break;
 					}
+					assert(x + 1 < coordinates.coordinate_system[y].size());
 					if (coordinates.coordinate_system[y][x + 1].compartment != compartment) {
 						limit.upper = x;
-						valid_limit = true;
 						break;
 					}
 				}
