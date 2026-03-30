@@ -63,6 +63,11 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) MultiIndexSequence
 	virtual DimensionUnits get_dimension_units() const = 0;
 
 	/**
+	 * Set dimension units.
+	 */
+	virtual void set_dimension_units(DimensionUnits value) GENPYBIND(hidden) = 0;
+
+	/**
 	 * Get dimensionality of multi-indices in sequence.
 	 */
 	virtual size_t dimensionality() const = 0;

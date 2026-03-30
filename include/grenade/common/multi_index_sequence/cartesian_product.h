@@ -83,6 +83,14 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CartesianProductMultiIndexSequence
 	virtual DimensionUnits get_dimension_units() const override;
 
 	/**
+	 * Set dimension units.
+	 * @param value Dimension units to set
+	 * @throws std::invalid_argument On number of dimension units not matching dimensionality of
+	 * elements in sequence
+	 */
+	virtual void set_dimension_units(DimensionUnits value) override;
+
+	/**
 	 * Get dimensionality of multi-indices in sequence.
 	 */
 	virtual size_t dimensionality() const override;

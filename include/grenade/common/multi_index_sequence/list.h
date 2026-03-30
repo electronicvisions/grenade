@@ -101,7 +101,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) ListMultiIndexSequence : public MultiIn
 	 * @throws std::invalid_argument On number of dimension units not matching dimensionality of
 	 * elements in sequence
 	 */
-	void set_dimension_units(DimensionUnits value);
+	virtual void set_dimension_units(DimensionUnits value) override;
 
 	virtual std::unique_ptr<MultiIndexSequence> copy() const override;
 	virtual std::unique_ptr<MultiIndexSequence> move() override;

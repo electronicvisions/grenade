@@ -81,6 +81,24 @@ CartesianProductMultiIndexSequence::get_dimension_units() const
 	return ret;
 }
 
+void CartesianProductMultiIndexSequence::set_dimension_units(DimensionUnits value)
+{
+	if (dimensionality() != value.size()) {
+		throw std::invalid_argument("Dimension units' size doesn't match dimensionality of "
+		                            "sequence.");
+	}
+	DimensionUnits value_first(m_first->dimensionality());
+	DimensionUnits value_second(m_second->dimensionality());
+	for (size_t i = 0; i < value_first.size(); ++i) {
+		value_first.at(i) = std::move(value.at(i));
+	}
+	for (size_t i = 0; i < value_second.size(); ++i) {
+		value_second.at(i) = std::move(value.at(i + value_first.size()));
+	}
+	m_first->set_dimension_units(std::move(value_first));
+	m_second->set_dimension_units(std::move(value_second));
+}
+
 size_t CartesianProductMultiIndexSequence::dimensionality() const
 {
 	return m_first->dimensionality() + m_second->dimensionality();

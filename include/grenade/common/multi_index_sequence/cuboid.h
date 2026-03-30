@@ -137,7 +137,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CuboidMultiIndexSequence : public Multi
 	 * @throws std::invalid_argument On number of dimension units not matching dimensionality of
 	 * elements in sequence
 	 */
-	void set_dimension_units(DimensionUnits value);
+	virtual void set_dimension_units(DimensionUnits value) override;
 
 	/**
 	 * Get whether all elements of sequence are present in other sequence.

@@ -49,6 +49,12 @@ TEST(CartesianProductMultiIndexSequence, General)
 	EXPECT_FALSE(dimensionless_sequence.get_dimension_units().at(0));
 	EXPECT_FALSE(dimensionless_sequence.get_dimension_units().at(1));
 
+	EXPECT_THROW(dimensionless_sequence.set_dimension_units({}), std::invalid_argument);
+	dimensionless_sequence.set_dimension_units({DummyDimensionUnit(), DummyDimensionUnit()});
+	EXPECT_EQ(dimensionless_sequence.get_dimension_units().size(), 2);
+	EXPECT_EQ(dimensionless_sequence.get_dimension_units().at(0), DummyDimensionUnit());
+	EXPECT_EQ(dimensionless_sequence.get_dimension_units().at(1), DummyDimensionUnit());
+
 	CartesianProductMultiIndexSequence sequence(
 	    ListMultiIndexSequence({MultiIndex({1})}, {DummyDimensionUnit()}),
 	    ListMultiIndexSequence({MultiIndex({2})}, {DummyDimensionUnit()}));
