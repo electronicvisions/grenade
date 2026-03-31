@@ -28,18 +28,22 @@ struct StatefulConnection
 	/**
 	 * Construct connection with default-initialized InitializedConnection.
 	 * @param enable_differential_config Whether to enable tracking hardware configurations and only
-	 * applying differential changes.
+	 * applying differential changes, defaults to differential mode.
 	 */
-	StatefulConnection(bool enable_differential_config = true) SYMBOL_VISIBLE;
+	StatefulConnection(
+	    std::optional<std::vector<bool>> const& enable_differential_config = std::nullopt)
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Construct connection from initialized connection. Ownership of the initialized connection is
 	 * transferred to this object.
 	 * @param connection InitializedConnection to use
 	 * @param enable_differential_config Whether to enable tracking hardware configurations and only
-	 * applying differential changes.
+	 * applying differential changes, defaults to differential mode.
 	 */
-	StatefulConnection(InitializedConnection&& connection, bool enable_differential_config = true)
+	StatefulConnection(
+	    InitializedConnection&& connection,
+	    std::optional<std::vector<bool>> const& enable_differential_config = std::nullopt)
 	    SYMBOL_VISIBLE;
 
 	/**

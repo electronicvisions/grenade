@@ -4,7 +4,8 @@
 namespace grenade::vx::execution::backend {
 
 StatefulConnection::StatefulConnection(
-    InitializedConnection&& connection, bool const enable_differential_config) :
+    InitializedConnection&& connection,
+    std::optional<std::vector<bool>> const& enable_differential_config) :
     m_initialized_connection(std::move(connection)),
     m_configs([this, enable_differential_config]() {
 	    std::map<common::ChipOnConnection, detail::StatefulChipConfig> ret;
@@ -27,7 +28,8 @@ StatefulConnection::StatefulConnection(
 			    throw std::logic_error("Invalid hwdb entry.");
 		    }
 		    ret.at(chips_on_connection.at(i))
-		        .set_enable_differential_config(enable_differential_config);
+		        .set_enable_differential_config(
+		            enable_differential_config ? enable_differential_config->at(i) : true);
 	    }
 
 	    return ret;
@@ -41,7 +43,8 @@ StatefulConnection::StatefulConnection(
 {
 }
 
-StatefulConnection::StatefulConnection(bool const enable_differential_config) :
+StatefulConnection::StatefulConnection(
+    std::optional<std::vector<bool>> const& enable_differential_config) :
     StatefulConnection(InitializedConnection(), enable_differential_config)
 {
 }

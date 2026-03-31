@@ -21,10 +21,12 @@ JITGraphExecutor::JITGraphExecutor(bool const enable_differential_config) : m_co
 	auto hxcomm_connections = hxcomm::vx::get_connection_list_from_env();
 	for (size_t i = 0; i < hxcomm_connections.size(); ++i) {
 		grenade::common::ConnectionOnExecutor identifier(i);
+		size_t const connection_size = std::visit(
+		    [](auto const& connection) { return connection.size(); }, hxcomm_connections.at(i));
 		m_connections.emplace(
 		    identifier, backend::StatefulConnection(
 		                    backend::InitializedConnection(std::move(hxcomm_connections.at(i))),
-		                    enable_differential_config));
+		                    std::vector<bool>(connection_size, enable_differential_config)));
 	}
 }
 
