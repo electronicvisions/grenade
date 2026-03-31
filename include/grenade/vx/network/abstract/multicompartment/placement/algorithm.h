@@ -1,5 +1,6 @@
 #pragma once
 
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm_result.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/coordinate_limits.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/coordinate_system.h"
@@ -85,11 +86,15 @@ protected:
 	 * @param resources_build Resource requriements for the other neuron.
 	 * @return Number of unmapped compartments and mapping of some/ all compartments.
 	 */
-	std::pair<size_t, std::map<CompartmentOnNeuron, CompartmentOnNeuron>> isomorphism_resources(
+	std::pair<
+	    size_t,
+	    std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+	isomorphism_resources(
 	    Neuron const& neuron,
 	    Neuron const& neuron_build,
 	    ResourceManager const& resources,
-	    std::map<CompartmentOnNeuron, NumberTopBottom> const& resources_build) const;
+	    std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> const& resources_build)
+	    const;
 
 
 	/**
@@ -101,12 +106,15 @@ protected:
 	 * @param resources_build Resource requriements for the other neuron.
 	 * @return Number of unmapped compartments and mapping of some/ all compartments.
 	 */
-	std::pair<size_t, std::map<CompartmentOnNeuron, CompartmentOnNeuron>>
+	std::pair<
+	    size_t,
+	    std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
 	isomorphism_resources_subgraph(
 	    Neuron const& neuron,
 	    Neuron const& neuron_build,
 	    ResourceManager const& resources,
-	    std::map<CompartmentOnNeuron, NumberTopBottom> const& resources_build) const;
+	    std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> const& resources_build)
+	    const;
 
 private:
 	log4cxx::LoggerPtr logger;

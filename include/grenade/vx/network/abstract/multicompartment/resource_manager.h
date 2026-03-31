@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dapr/property_holder.h"
-#include "grenade/vx/network/abstract/multicompartment/compartment_on_neuron.h"
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/top_bottom.h"
@@ -38,7 +38,8 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	 *
 	 * @param compartment Compartment of which configuration is returned.
 	 */
-	NumberTopBottom const& get_config(CompartmentOnNeuron const& compartment) const;
+	NumberTopBottom const& get_config(
+	    grenade::common::CompartmentOnNeuron const& compartment) const;
 
 	/**
 	 * Set the configuration for a compartment in the resource manager.
@@ -46,7 +47,9 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	 * @param compartment Compartment of which configuration is returned.
 	 * @param config Config to be set for the compartment.
 	 */
-	void set_config(CompartmentOnNeuron const& compartment, NumberTopBottom const& config) const;
+	void set_config(
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    NumberTopBottom const& config) const;
 
 	/**
 	 * Returns total resources required by the contents of the resource manager.
@@ -56,7 +59,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	/**
 	 * Returns descriptors for all compartments for which a configuration is stored.
 	 */
-	std::vector<CompartmentOnNeuron> get_compartments() const;
+	std::vector<grenade::common::CompartmentOnNeuron> get_compartments() const;
 
 	/**
 	 * Writes neuron topology in graphviz format.
@@ -70,22 +73,25 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
 	    std::string filename, Neuron const& neuron, std::string name, bool append = false);
 
 	// Returns list of required MADC-recordable pairs.
-	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> get_recordable_pairs() const;
+	std::set<std::pair<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+	get_recordable_pairs() const;
 
 private:
 	// Adds configuration for single compartment.
 	void add_config_compartment(
-	    CompartmentOnNeuron const& compartment,
+	    grenade::common::CompartmentOnNeuron const& compartment,
 	    Neuron const& neuron,
 	    Compartment::ParameterSpace const& parameter_space,
 	    Environment const& environment);
 
 	// Removes configuration for single compartment.
-	void remove_config_compartment(CompartmentOnNeuron const& compartment);
+	void remove_config_compartment(grenade::common::CompartmentOnNeuron const& compartment);
 
-	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> m_recordable_pairs;
+	std::set<std::pair<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+	    m_recordable_pairs;
 
-	std::map<CompartmentOnNeuron, dapr::PropertyHolder<NumberTopBottom>> resource_map;
+	std::map<grenade::common::CompartmentOnNeuron, dapr::PropertyHolder<NumberTopBottom>>
+	    resource_map;
 };
 
 std::ostream& operator<<(std::ostream& os, ResourceManager const& resources) SYMBOL_VISIBLE;

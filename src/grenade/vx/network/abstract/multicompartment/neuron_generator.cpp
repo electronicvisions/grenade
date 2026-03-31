@@ -19,13 +19,13 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate()
 bool NeuronGenerator::cyclic(Neuron const& neuron) const
 {
 	LOG4CXX_TRACE(m_logger, "Checking for Cycle: " << *(neuron.compartments().begin()));
-	CompartmentOnNeuron root = *(neuron.compartments().begin());
-	std::queue<CompartmentOnNeuron> compartment_queue;
-	std::set<CompartmentOnNeuron> visited;
+	grenade::common::CompartmentOnNeuron root = *(neuron.compartments().begin());
+	std::queue<grenade::common::CompartmentOnNeuron> compartment_queue;
+	std::set<grenade::common::CompartmentOnNeuron> visited;
 	compartment_queue.push(root);
 
 	while (!compartment_queue.empty()) {
-		CompartmentOnNeuron temp_compartment = compartment_queue.front();
+		grenade::common::CompartmentOnNeuron temp_compartment = compartment_queue.front();
 		compartment_queue.pop();
 		if (visited.contains(temp_compartment)) {
 			LOG4CXX_TRACE(m_logger, "Cycle Detected.");
@@ -47,14 +47,14 @@ bool NeuronGenerator::cyclic(Neuron const& neuron) const
 
 bool NeuronGenerator::path(
     Neuron const& neuron,
-    CompartmentOnNeuron const& compartment_a,
-    CompartmentOnNeuron const& compartment_b) const
+    grenade::common::CompartmentOnNeuron const& compartment_a,
+    grenade::common::CompartmentOnNeuron const& compartment_b) const
 {
-	std::set<CompartmentOnNeuron> visited;
-	std::queue<CompartmentOnNeuron> next;
+	std::set<grenade::common::CompartmentOnNeuron> visited;
+	std::queue<grenade::common::CompartmentOnNeuron> next;
 
 	next.push(compartment_a);
-	CompartmentOnNeuron temp_compartment;
+	grenade::common::CompartmentOnNeuron temp_compartment;
 	while (!next.empty()) {
 		temp_compartment = next.front();
 		next.pop();
@@ -97,7 +97,7 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
 		result.environment = Environment();
 		result.parameter_space = Neuron::ParameterSpace();
 
-		std::vector<CompartmentOnNeuron> compartment_ids;
+		std::vector<grenade::common::CompartmentOnNeuron> compartment_ids;
 
 		// Construct Neuron
 		std::vector<MechanismOnCompartment> mechanism_ids;
@@ -115,7 +115,8 @@ NeuronWithEnvironmentAndParameterSpace NeuronGenerator::generate(
 			    temp_compartment.mechanisms.insert(temp_mechanism);
 			compartment_parameter_space.mechanisms.set(mechanism_id, mechanism_parameter_space);
 			// Add compartment to neuron
-			CompartmentOnNeuron compartment_id = result.neuron.add_compartment(temp_compartment);
+			grenade::common::CompartmentOnNeuron compartment_id =
+			    result.neuron.add_compartment(temp_compartment);
 			compartment_ids.push_back(compartment_id);
 			result.parameter_space.compartments.emplace(
 			    compartment_id, compartment_parameter_space);

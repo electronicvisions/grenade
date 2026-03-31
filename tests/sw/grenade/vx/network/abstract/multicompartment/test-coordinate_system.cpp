@@ -66,7 +66,7 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_FALSE(coordinates.short_circuit(255));
 
 	// Assigning compartment to connected circuits
-	CompartmentOnNeuron compartment_id;
+	grenade::common::CompartmentOnNeuron compartment_id;
 	coordinates.assign_compartment_adjacent(0, 0, compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(0, 0));
 	EXPECT_EQ(coordinates.get_compartment(0, 0).value(), compartment_id);

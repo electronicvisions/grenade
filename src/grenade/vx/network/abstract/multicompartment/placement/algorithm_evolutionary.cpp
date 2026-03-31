@@ -61,7 +61,7 @@ void PlacementAlgorithmEvolutionary::construct_neuron(
 	// Current Placement Result
 	AlgorithmResult& result_temp = parallel_result.result;
 	NumberTopBottom& total_resources_build = parallel_result.resources_total_build;
-	std::map<CompartmentOnNeuron, NumberTopBottom>& resources_constructed =
+	std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom>& resources_constructed =
 	    parallel_result.resources_build;
 
 	// Empty Neuron for construction
@@ -77,11 +77,11 @@ void PlacementAlgorithmEvolutionary::construct_neuron(
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
 			if (result_temp.coordinate_system.coordinate_system[y][x].compartment ==
-			        CompartmentOnNeuron() &&
+			        grenade::common::CompartmentOnNeuron() &&
 			    result_temp.coordinate_system.connected(x, y)) {
 				// Add Compartment to Neuron
 				Compartment temp_compartment;
-				CompartmentOnNeuron temp_descriptor =
+				grenade::common::CompartmentOnNeuron temp_descriptor =
 				    neuron_constructed.add_compartment(temp_compartment);
 				// Assign ID to Coordinate System
 				NumberTopBottom number_neuron_circuits =
@@ -238,9 +238,9 @@ double PlacementAlgorithmEvolutionary::fitness_isomorphism(
 double PlacementAlgorithmEvolutionary::fitness_recording(
     NeuronPlacementResult const& parallel_result, ResourceManager const& resources) const
 {
-	std::set<CompartmentOnNeuron> even_parity =
+	std::set<grenade::common::CompartmentOnNeuron> even_parity =
 	    parallel_result.result.coordinate_system.even_parity();
-	std::set<CompartmentOnNeuron> odd_parity =
+	std::set<grenade::common::CompartmentOnNeuron> odd_parity =
 	    parallel_result.result.coordinate_system.odd_parity();
 
 	double recordable = 0;
@@ -514,15 +514,15 @@ bool PlacementAlgorithmEvolutionary::valid(
 
 	// Construct Neuron from State of Switches in Coordinate System
 	Neuron neuron_constructed;
-	std::map<CompartmentOnNeuron, NumberTopBottom> resources_constructed;
+	std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> resources_constructed;
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
 			if (best_result.coordinate_system.coordinate_system[y][x].compartment ==
-			        CompartmentOnNeuron() &&
+			        grenade::common::CompartmentOnNeuron() &&
 			    best_result.coordinate_system.connected(x, y)) {
 				// Add Compartment to Neuron
 				Compartment temp_compartment;
-				CompartmentOnNeuron temp_descriptor =
+				grenade::common::CompartmentOnNeuron temp_descriptor =
 				    neuron_constructed.add_compartment(temp_compartment);
 				// Assign ID to Coordinate System
 				NumberTopBottom number_neuron_circuits =
@@ -565,16 +565,21 @@ bool PlacementAlgorithmEvolutionary::valid(
 	LOG4CXX_TRACE(m_logger, "Validation: Number of connections valid.");
 
 	// Check for isomorphism
-	std::pair<size_t, std::map<CompartmentOnNeuron, CompartmentOnNeuron>> isomorphism =
-	    isomorphism_resources(neuron, neuron_constructed, resources, resources_constructed);
+	std::pair<
+	    size_t,
+	    std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+	    isomorphism =
+	        isomorphism_resources(neuron, neuron_constructed, resources, resources_constructed);
 	if (isomorphism.first != 0) {
 		return false;
 	}
 	LOG4CXX_TRACE(m_logger, "Validation: Isomorphism valid.");
 
 	// Check for MADC-recordable pairs
-	std::set<CompartmentOnNeuron> even_parity = best_result.coordinate_system.even_parity();
-	std::set<CompartmentOnNeuron> odd_parity = best_result.coordinate_system.odd_parity();
+	std::set<grenade::common::CompartmentOnNeuron> even_parity =
+	    best_result.coordinate_system.even_parity();
+	std::set<grenade::common::CompartmentOnNeuron> odd_parity =
+	    best_result.coordinate_system.odd_parity();
 	for (auto record_pair : resources.get_recordable_pairs()) {
 		if (!(even_parity.contains(record_pair.first) && odd_parity.contains(record_pair.second)) &&
 		    !(even_parity.contains(record_pair.second) && odd_parity.contains(record_pair.first))) {

@@ -44,7 +44,8 @@ void PlacementAlgorithmRuleset::reset()
 
 // Find right and left limit of compartment placed
 CoordinateLimits PlacementAlgorithmRuleset::find_limits(
-    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const
+    CoordinateSystem const& coordinates,
+    grenade::common::CompartmentOnNeuron const& compartment) const
 {
 	CoordinateLimits limits;
 	// Iterate over Top and Bottom Row
@@ -118,7 +119,7 @@ std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
     CoordinateSystem const& coordinates,
     size_t x_start,
     size_t y,
-    std::set<CompartmentOnNeuron> const& neighbours,
+    std::set<grenade::common::CompartmentOnNeuron> const& neighbours,
     int direction,
     bool search_block)
 {
@@ -309,8 +310,8 @@ std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
 
 std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
     CoordinateSystem const& coordinates,
-    CompartmentOnNeuron const& compartment,
-    std::set<CompartmentOnNeuron> const& neighbours,
+    grenade::common::CompartmentOnNeuron const& compartment,
+    std::set<grenade::common::CompartmentOnNeuron> const& neighbours,
     bool search_block)
 {
 	CoordinateLimits limits = find_limits(coordinates, compartment);
@@ -343,7 +344,7 @@ PlacementSpot PlacementAlgorithmRuleset::select_free_spot(
     std::vector<PlacementSpot> spots,
     NumberTopBottom const& min_spot_size,
     CoordinateSystem& coordinates,
-    CompartmentOnNeuron const& parent_compartment)
+    grenade::common::CompartmentOnNeuron const& parent_compartment)
 {
 	LOG4CXX_DEBUG(m_logger, "Selecting free spot");
 	std::stringstream ss;
@@ -392,10 +393,10 @@ PlacementSpot PlacementAlgorithmRuleset::select_free_spot(
 	return final_spot;
 }
 
-std::set<CompartmentOnNeuron> PlacementAlgorithmRuleset::unplaced_neighbours(
-    Neuron const& neuron, CompartmentOnNeuron const& compartment) const
+std::set<grenade::common::CompartmentOnNeuron> PlacementAlgorithmRuleset::unplaced_neighbours(
+    Neuron const& neuron, grenade::common::CompartmentOnNeuron const& compartment) const
 {
-	std::set<CompartmentOnNeuron> unplaced_neighbours;
+	std::set<grenade::common::CompartmentOnNeuron> unplaced_neighbours;
 
 	for (auto compartment : neuron.adjacent_compartments(compartment)) {
 		bool placed = false;
@@ -418,7 +419,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple(
     NumberTopBottom required_resources,
     size_t x_start,
     size_t y,
-    CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& compartment,
     int direction,
     bool virtually)
 {
@@ -435,8 +436,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple(
 
 size_t PlacementAlgorithmRuleset::get_available_directions(
     CoordinateSystem& coordinates,
-    CompartmentOnNeuron const& compartment,
-    std::set<CompartmentOnNeuron> const& neighbours)
+    grenade::common::CompartmentOnNeuron const& compartment,
+    std::set<grenade::common::CompartmentOnNeuron> const& neighbours)
 {
 	LOG4CXX_DEBUG(m_logger, "Check available directions for " << compartment);
 	auto spots = find_free_spots(coordinates, compartment, neighbours, true);
@@ -451,8 +452,8 @@ size_t PlacementAlgorithmRuleset::get_available_directions(
 
 void PlacementAlgorithmRuleset::add_bridge(
     CoordinateSystem& coordinates,
-    CompartmentOnNeuron const& compartment,
-    std::set<CompartmentOnNeuron> const& children)
+    grenade::common::CompartmentOnNeuron const& compartment,
+    std::set<grenade::common::CompartmentOnNeuron> const& children)
 {
 	// size of a "pillar" to add
 	NumberTopBottom space{2, 1, 1};
@@ -480,7 +481,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
     NumberTopBottom required_resources,
     size_t x_start,
     size_t y,
-    CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& compartment,
     bool virtually)
 {
 	CoordinateSystem coordinates_copy;
@@ -572,7 +573,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
     NumberTopBottom required_resources,
     size_t x_start,
     size_t y,
-    CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& compartment,
     bool virtually)
 {
 	CoordinateSystem coordinates_copy;
@@ -662,7 +663,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 NumberTopBottom PlacementAlgorithmRuleset::get_chain_space(
     Neuron const& neuron,
     ResourceManager const& resources,
-    std::vector<CompartmentOnNeuron> const& chain)
+    std::vector<grenade::common::CompartmentOnNeuron> const& chain)
 {
 	CoordinateSystem coordinates;
 	PlacementSpot spot;
@@ -715,14 +716,14 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
     CoordinateSystem& coordinates,
     Neuron const& neuron,
     ResourceManager const& resources,
-    CompartmentOnNeuron const& compartment,
-    CompartmentOnNeuron const& parent)
+    grenade::common::CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& parent)
 {
 	LOG4CXX_DEBUG(m_logger, "Placing Branch");
 
 	NumberTopBottom total_resources;
 
-	if (std::set<CompartmentOnNeuron>(
+	if (std::set<grenade::common::CompartmentOnNeuron>(
 	        m_results.back().placed_compartments.begin(),
 	        m_results.back().placed_compartments.end())
 	        .contains(compartment)) {
@@ -756,7 +757,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 		search_block = true;
 	}
 	// All neighbours of the last placed compartment.
-	std::set<CompartmentOnNeuron> neighbours;
+	std::set<grenade::common::CompartmentOnNeuron> neighbours;
 	for (auto compartment : neuron.adjacent_compartments(parent)) {
 		neighbours.emplace(compartment);
 	}
@@ -776,7 +777,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 
 // Connect compartment with itself
 void PlacementAlgorithmRuleset::connect_self(
-    CoordinateSystem& coordinates, CompartmentOnNeuron const& compartment)
+    CoordinateSystem& coordinates, grenade::common::CompartmentOnNeuron const& compartment)
 {
 	std::vector<std::pair<int, int>> compartment_locations =
 	    coordinates.find_neuron_circuits(compartment);
@@ -807,7 +808,7 @@ void PlacementAlgorithmRuleset::run_one_step(
 	// Place Compartment with most Connections in center of coordinate System
 	if (step == 0) {
 		// Find largest compartment (By number of connections)
-		CompartmentOnNeuron compartment_first;
+		grenade::common::CompartmentOnNeuron compartment_first;
 		compartment_first = neuron.get_max_degree_compartment();
 
 		LOG4CXX_DEBUG(m_logger, "Placing first: " << compartment_first);
@@ -841,14 +842,14 @@ void PlacementAlgorithmRuleset::run_one_step(
 	// Every step apart from first one
 	else {
 		// Last placed compartment
-		CompartmentOnNeuron last_compartment;
+		grenade::common::CompartmentOnNeuron last_compartment;
 		// Compartment placed next
-		CompartmentOnNeuron next_compartment;
+		grenade::common::CompartmentOnNeuron next_compartment;
 		// Set of unplaced neighbours of last compartment
-		std::set<CompartmentOnNeuron> neighbours_unplaced;
+		std::set<grenade::common::CompartmentOnNeuron> neighbours_unplaced;
 
 		// Find next compartment to place
-		for (std::vector<CompartmentOnNeuron>::reverse_iterator it =
+		for (std::vector<grenade::common::CompartmentOnNeuron>::reverse_iterator it =
 		         m_results.back().placed_compartments.rbegin();
 		     it != m_results.back().placed_compartments.rend(); it++) {
 			last_compartment = *it;
@@ -871,7 +872,7 @@ void PlacementAlgorithmRuleset::run_one_step(
 		CompartmentNeighbours neighbours_classified =
 		    neuron.classify_neighbours(last_compartment, neighbours_unplaced);
 		// All neighbours of the last placed compartment.
-		std::set<CompartmentOnNeuron> neighbours;
+		std::set<grenade::common::CompartmentOnNeuron> neighbours;
 		for (auto compartment : neuron.adjacent_compartments(last_compartment)) {
 			neighbours.emplace(compartment);
 		}
@@ -920,7 +921,7 @@ void PlacementAlgorithmRuleset::run_one_step(
 		else if (neighbours_classified.chains.size() > 0) {
 			next_compartment = neighbours_classified.chains.front();
 			LOG4CXX_DEBUG(m_logger, "Next Compartment to place (Chain): " << next_compartment);
-			std::vector<CompartmentOnNeuron> chain =
+			std::vector<grenade::common::CompartmentOnNeuron> chain =
 			    neuron.branch_compartments(next_compartment, last_compartment);
 			NumberTopBottom required_space = get_chain_space(neuron, resources, chain);
 
@@ -944,7 +945,7 @@ void PlacementAlgorithmRuleset::run_one_step(
 			next_compartment = neighbours_classified.branches.front();
 
 			// Select smallest available branch first.
-			std::set<CompartmentOnNeuron> marked_compartments{last_compartment};
+			std::set<grenade::common::CompartmentOnNeuron> marked_compartments{last_compartment};
 			size_t min_size = 2 * result.coordinate_system.coordinate_system.at(0).size() +
 			                  1; // Does not fit on coordinate system.
 			for (auto const& branch : neighbours_classified.branches) {
@@ -971,7 +972,7 @@ void PlacementAlgorithmRuleset::run_one_step(
 	// Check that no compartment is acounted twice for in the placed compartments.
 	assert(
 	    m_results.back().placed_compartments.size() ==
-	    std::set<CompartmentOnNeuron>(
+	    std::set<grenade::common::CompartmentOnNeuron>(
 	        m_results.back().placed_compartments.begin(),
 	        m_results.back().placed_compartments.end())
 	        .size());
@@ -984,7 +985,8 @@ void PlacementAlgorithmRuleset::run_one_step(
 }
 
 void PlacementAlgorithmRuleset::output_placed(
-    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const
+    CoordinateSystem const& coordinates,
+    grenade::common::CompartmentOnNeuron const& compartment) const
 { // Console Output of compartment limits
 	CoordinateLimits limits = find_limits(coordinates, compartment);
 	LOG4CXX_DEBUG(m_logger, compartment << " placed in Limits: ");

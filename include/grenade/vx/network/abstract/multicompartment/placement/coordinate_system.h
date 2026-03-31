@@ -1,5 +1,6 @@
 #pragma once
 
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron_circuit.h"
 #include <array>
@@ -149,7 +150,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 * @param compartment Compartment descriptor.
 	 */
 	NumberTopBottom assign_compartment_adjacent(
-	    size_t x, size_t y, CompartmentOnNeuron const& compartment);
+	    size_t x, size_t y, grenade::common::CompartmentOnNeuron const& compartment);
 
 	/**
 	 * Assign compartment descriptor to the neuron circuit and to all directly connected neuron
@@ -159,28 +160,28 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 * @param compartment Compartment descriptor.
 	 */
 	NumberTopBottom assign_compartment_direct(
-	    size_t x, size_t y, CompartmentOnNeuron const& compartment);
+	    size_t x, size_t y, grenade::common::CompartmentOnNeuron const& compartment);
 
 	/**
 	 * Check if the compartment has neuron circuits of even and odd parity.
 	 * @param compartment Compartment descriptor.
 	 */
-	std::pair<bool, bool> parity(CompartmentOnNeuron const& compartment) const;
+	std::pair<bool, bool> parity(grenade::common::CompartmentOnNeuron const& compartment) const;
 
 	/**
 	 * Return set of all compartments.
 	 */
-	std::set<CompartmentOnNeuron> get_compartments() const;
+	std::set<grenade::common::CompartmentOnNeuron> get_compartments() const;
 
 	/**
 	 * Return set of all compartments that have neuron circuits in columns with even parity.
 	 */
-	std::set<CompartmentOnNeuron> even_parity() const;
+	std::set<grenade::common::CompartmentOnNeuron> even_parity() const;
 
 	/**
 	 * Return set of all compartments that have neuron circuits in columns with odd parity.
 	 */
-	std::set<CompartmentOnNeuron> odd_parity() const;
+	std::set<grenade::common::CompartmentOnNeuron> odd_parity() const;
 
 	/**
 	 * Connects two neuron circuits in the same row via a conductance.
@@ -197,14 +198,14 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 * @param compartment Compartment descriptor.
 	 * @return Number of allocated neuron circuits.
 	 */
-	NumberTopBottom get_resources(CompartmentOnNeuron const compartment) const;
+	NumberTopBottom get_resources(grenade::common::CompartmentOnNeuron const compartment) const;
 
 	/**
 	 * Return coordinates of all neuron circuits with the given compartment descriptor assigned.
 	 * @param compartment Compartment descriptor.
 	 */
 	std::vector<std::pair<int, int>> find_neuron_circuits(
-	    CompartmentOnNeuron const compartment) const;
+	    grenade::common::CompartmentOnNeuron const compartment) const;
 
 	/**
 	 * Construct a neuron based on the state of the coordinate-system.
@@ -224,7 +225,8 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 * @return Constructed neuron and map over all newly constructed
 	 * 		compartments with their allocated resources.
 	 */
-	std::tuple<Neuron, std::map<CompartmentOnNeuron, NumberTopBottom>> construct_neuron();
+	std::tuple<Neuron, std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom>>
+	construct_neuron();
 
 	/**
 	 * Construct logical neuron compartments based on the state of the coordinate-system.
@@ -254,9 +256,11 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	void set(size_t x, size_t y, NeuronCircuit const& neuron_circuit);
 	NeuronCircuit get(size_t x, size_t y) const;
 	void set_compartment(
-	    size_t coordinate_x, size_t coordinate_y, CompartmentOnNeuron const& compartment);
+	    size_t coordinate_x,
+	    size_t coordinate_y,
+	    grenade::common::CompartmentOnNeuron const& compartment);
 	void set_config(size_t x, size_t y, UnplacedNeuronCircuit const& neuron_circuit_config_in);
-	std::optional<CompartmentOnNeuron> get_compartment(
+	std::optional<grenade::common::CompartmentOnNeuron> get_compartment(
 	    size_t coordinate_x, size_t coordinate_y) const;
 	UnplacedNeuronCircuit get_config(size_t x, size_t y) const;
 

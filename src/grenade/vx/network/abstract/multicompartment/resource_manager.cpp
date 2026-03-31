@@ -25,7 +25,8 @@ void ResourceManager::remove_config(Neuron const& neuron)
 	}
 }
 
-NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& compartment) const
+NumberTopBottom const& ResourceManager::get_config(
+    grenade::common::CompartmentOnNeuron const& compartment) const
 {
 	if (resource_map.find(compartment) == resource_map.end()) {
 		throw std::invalid_argument("Invalid compartment: compartment not part of the resources");
@@ -34,7 +35,7 @@ NumberTopBottom const& ResourceManager::get_config(CompartmentOnNeuron const& co
 }
 
 void ResourceManager::set_config(
-    CompartmentOnNeuron const& compartment, NumberTopBottom const& config) const
+    grenade::common::CompartmentOnNeuron const& compartment, NumberTopBottom const& config) const
 {
 	if (!resource_map.contains(compartment)) {
 		throw std::invalid_argument("Invalid compartment: compartment not part of the resources");
@@ -42,9 +43,9 @@ void ResourceManager::set_config(
 	*resource_map.at(compartment) = config;
 }
 
-std::vector<CompartmentOnNeuron> ResourceManager::get_compartments() const
+std::vector<grenade::common::CompartmentOnNeuron> ResourceManager::get_compartments() const
 {
-	std::vector<CompartmentOnNeuron> compartments;
+	std::vector<grenade::common::CompartmentOnNeuron> compartments;
 	for (auto [compartment, number] : resource_map) {
 		compartments.push_back(compartment);
 	}
@@ -84,14 +85,14 @@ void ResourceManager::write_graphviz(
 	file.close();
 }
 
-std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>>
+std::set<std::pair<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
 ResourceManager::get_recordable_pairs() const
 {
 	return m_recordable_pairs;
 }
 
 void ResourceManager::add_config_compartment(
-    CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& compartment,
     Neuron const& neuron,
     Compartment::ParameterSpace const& parameter_space,
     Environment const& environment)
@@ -138,7 +139,8 @@ void ResourceManager::add_config_compartment(
 	    compartment, NumberTopBottom(max_request_total, max_request_top, max_request_bottom));
 }
 
-void ResourceManager::remove_config_compartment(CompartmentOnNeuron const& compartment)
+void ResourceManager::remove_config_compartment(
+    grenade::common::CompartmentOnNeuron const& compartment)
 {
 	if (!resource_map.contains(compartment)) {
 		throw std::invalid_argument("Removed Compartment not in Resource Manager");

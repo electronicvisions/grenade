@@ -27,8 +27,8 @@ bool PlacementAlgorithm::valid(
 	}
 
 	// Add compartments to neuron
-	std::optional<CompartmentOnNeuron> compartment_temp;
-	std::map<CompartmentOnNeuron, NumberTopBottom> resources_allocated;
+	std::optional<grenade::common::CompartmentOnNeuron> compartment_temp;
+	std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> resources_allocated;
 	for (size_t y = 0; y < 2; y++) {
 		for (size_t x = 0; x < 255; x++) {
 			compartment_temp = configuration.coordinate_system[y][x].compartment;
@@ -52,7 +52,8 @@ bool PlacementAlgorithm::valid(
 	}
 
 	// Create Compartment-ID-Mapping
-	std::map<CompartmentOnNeuron, CompartmentOnNeuron> compartment_mapping;
+	std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>
+	    compartment_mapping;
 	for (auto [compartment, _] : resources_allocated) {
 		compartment_mapping.emplace(
 		    compartment, neuron_constructed.add_compartment(neuron.get(compartment)));
@@ -70,13 +71,13 @@ bool PlacementAlgorithm::valid(
 	// Check inner connections
 	for (size_t y = 0; y < 2; y++) {
 		for (size_t x = 0; x < 255 - 1; x++) {
-			if (configuration.get_compartment(x, y) != CompartmentOnNeuron() &&
+			if (configuration.get_compartment(x, y) != grenade::common::CompartmentOnNeuron() &&
 			    (configuration.get_compartment(x, y) == configuration.get_compartment(x + 1, y)) &&
 			    !configuration.connected_right(x, y)) {
 				LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
 				return false;
 			}
-			if (configuration.get_compartment(x, y) != CompartmentOnNeuron() &&
+			if (configuration.get_compartment(x, y) != grenade::common::CompartmentOnNeuron() &&
 			    (configuration.get_compartment(x, y) == configuration.get_compartment(x, 1 - y)) &&
 			    !configuration.connected_top_bottom(x, y)) {
 				LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
@@ -84,14 +85,14 @@ bool PlacementAlgorithm::valid(
 			}
 			/*
 			if (configuration.connected_right(x, y) &&
-			        (configuration.get_compartment(x, y) == CompartmentOnNeuron()) ||
-			    configuration.get_compartment(x + 1, y) == CompartmentOnNeuron()) {
+			        (configuration.get_compartment(x, y) == grenade::common::CompartmentOnNeuron())
+			|| configuration.get_compartment(x + 1, y) == grenade::common::CompartmentOnNeuron()) {
 			    LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
 			    return false;
 			}
 			if (configuration.connected_top_bottom(x, y) &&
-			        (configuration.get_compartment(x, y) == CompartmentOnNeuron()) ||
-			    configuration.get_compartment(x, 1 - y) == CompartmentOnNeuron()) {
+			        (configuration.get_compartment(x, y) == grenade::common::CompartmentOnNeuron())
+			|| configuration.get_compartment(x, 1 - y) == grenade::common::CompartmentOnNeuron()) {
 			    LOG4CXX_INFO(logger, "Validation failed: Missing inner connections.");
 			    return false;
 			}
@@ -100,8 +101,9 @@ bool PlacementAlgorithm::valid(
 	}
 
 	// Add connections to neuron
-	CompartmentOnNeuron compartment_temp_a, compartment_temp_b;
-	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> connections_found;
+	grenade::common::CompartmentOnNeuron compartment_temp_a, compartment_temp_b;
+	std::set<std::pair<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+	    connections_found;
 	CompartmentConnectionConductance connection_dummy;
 	std::vector<std::pair<size_t, size_t>> connected_coordinates;
 	for (size_t y = 0; y < 2; y++) {
@@ -178,7 +180,8 @@ double PlacementAlgorithm::resource_efficient(
 	size_t lower_limit = 256;
 	size_t upper_limit = 0;
 	for (size_t x = 0; x < 255; x++) {
-		if (configuration.coordinate_system[0][x].compartment != CompartmentOnNeuron()) {
+		if (configuration.coordinate_system[0][x].compartment !=
+		    grenade::common::CompartmentOnNeuron()) {
 			lower_limit = x;
 		} else if (lower_limit != 256) {
 			upper_limit = x;
@@ -189,21 +192,27 @@ double PlacementAlgorithm::resource_efficient(
 }
 
 // Isomorphism which checks for resource requirments to find right permutation
-std::pair<size_t, std::map<CompartmentOnNeuron, CompartmentOnNeuron>>
+std::pair<
+    size_t,
+    std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
 PlacementAlgorithm::isomorphism_resources(
     Neuron const& neuron,
     Neuron const& neuron_build,
     ResourceManager const& resources,
-    std::map<CompartmentOnNeuron, NumberTopBottom> const& resources_build) const
+    std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> const& resources_build) const
 {
-	std::map<CompartmentOnNeuron, CompartmentOnNeuron> id_mapping;
+	std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron> id_mapping;
 	size_t null_compartments_min = neuron.num_compartments();
 
 	auto const callback =
 	    [&null_compartments_min, &id_mapping](
 	        size_t null_compartments,
-	        std::map<CompartmentOnNeuron, CompartmentOnNeuron> const& compartment_mapping,
-	        std::map<CompartmentOnNeuron, CompartmentOnNeuron> const&) -> bool {
+	        std::map<
+	            grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron> const&
+	            compartment_mapping,
+	        std::map<
+	            grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron> const&)
+	    -> bool {
 		// If no exact match found continue to search
 		if (null_compartments > 0) {
 			return true;
@@ -215,9 +224,10 @@ PlacementAlgorithm::isomorphism_resources(
 		return false;
 	};
 
-	auto const compartment_equivalent = [&neuron, &neuron_build, &resources, &resources_build](
-	                                        CompartmentOnNeuron compartment_build,
-	                                        CompartmentOnNeuron compartment) -> bool {
+	auto const compartment_equivalent =
+	    [&neuron, &neuron_build, &resources, &resources_build](
+	        grenade::common::CompartmentOnNeuron compartment_build,
+	        grenade::common::CompartmentOnNeuron compartment) -> bool {
 		return resources.get_config(compartment) <= resources_build.at(compartment_build);
 	};
 
@@ -227,22 +237,28 @@ PlacementAlgorithm::isomorphism_resources(
 }
 
 // Isomorphism which checks for resource requirments to find right permutation
-std::pair<size_t, std::map<CompartmentOnNeuron, CompartmentOnNeuron>>
+std::pair<
+    size_t,
+    std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
 PlacementAlgorithm::isomorphism_resources_subgraph(
     Neuron const& neuron,
     Neuron const& neuron_build,
     ResourceManager const& resources,
-    std::map<CompartmentOnNeuron, NumberTopBottom> const& resources_build) const
+    std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> const& resources_build) const
 {
 	// std::cout << "Checking Isomorphism" << std::endl;
-	std::map<CompartmentOnNeuron, CompartmentOnNeuron> id_mapping;
+	std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron> id_mapping;
 	size_t null_compartments_min = neuron.num_compartments();
 
 	auto const callback =
 	    [&id_mapping, &null_compartments_min](
 	        size_t null_compartments,
-	        std::map<CompartmentOnNeuron, CompartmentOnNeuron> const& compartment_mapping,
-	        std::map<CompartmentOnNeuron, CompartmentOnNeuron> const&) -> bool {
+	        std::map<
+	            grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron> const&
+	            compartment_mapping,
+	        std::map<
+	            grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron> const&)
+	    -> bool {
 		if (null_compartments > 0) {
 			return true;
 		}
@@ -252,9 +268,10 @@ PlacementAlgorithm::isomorphism_resources_subgraph(
 		return false;
 	};
 
-	auto const compartment_equivalent = [&neuron, &neuron_build, &resources, &resources_build](
-	                                        CompartmentOnNeuron compartment_build,
-	                                        CompartmentOnNeuron compartment) -> bool {
+	auto const compartment_equivalent =
+	    [&neuron, &neuron_build, &resources, &resources_build](
+	        grenade::common::CompartmentOnNeuron compartment_build,
+	        grenade::common::CompartmentOnNeuron compartment) -> bool {
 		return resources.get_config(compartment) <= resources_build.at(compartment_build);
 	};
 

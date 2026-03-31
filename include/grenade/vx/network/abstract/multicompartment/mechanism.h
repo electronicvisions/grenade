@@ -13,7 +13,6 @@ namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 struct Environment;
-struct CompartmentOnNeuron;
 
 // Mechanism Base-Class
 struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Property<Mechanism>

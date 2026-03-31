@@ -1,5 +1,6 @@
 #pragma once
 
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_current.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism_environment/synaptic_input.h"
@@ -83,8 +84,8 @@ private:
 	 */
 	bool path(
 	    Neuron const& neuron,
-	    CompartmentOnNeuron const& compartment_a,
-	    CompartmentOnNeuron const& compartment_b) const;
+	    grenade::common::CompartmentOnNeuron const& compartment_a,
+	    grenade::common::CompartmentOnNeuron const& compartment_b) const;
 
 private:
 	std::mt19937 m_generator;

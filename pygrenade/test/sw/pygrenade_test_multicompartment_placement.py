@@ -9,6 +9,7 @@ import numpy as np
 
 import pygrenade_vx.network.abstract as grenade
 import pygrenade_vx
+from pygrenade_common import CompartmentOnNeuron
 
 
 def neuron_from_edgelist(
@@ -329,7 +330,7 @@ def get_syn_compartment(
 
 def get_compartment_ids(
         coordinate_system: grenade.CoordinateSystem
-) -> Set[grenade.CompartmentOnNeuron]:
+) -> Set[CompartmentOnNeuron]:
     """
     Extract all compartment IDs from the given coordinate_system.
     :param coordinate_system: Coordinate system.
@@ -490,7 +491,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         synaptic_input_a = grenade.SynapticInputEnvironment(
             grenade.NumberTopBottom(1200, 0, 257))
         environment.add(
-            grenade.CompartmentOnNeuron(0), syn_on_comp, synaptic_input_a)
+            CompartmentOnNeuron(0), syn_on_comp, synaptic_input_a)
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
@@ -744,7 +745,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             parameter_spaces[comp_idx] = param_space_spine
             connections.append((spine_pos, comp_idx))
             environment.add(
-                grenade.CompartmentOnNeuron(comp_idx), syn_on_spine, syn_input)
+                CompartmentOnNeuron(comp_idx), syn_on_spine, syn_input)
 
         neuron, neuron_parameter_space = neuron_from_edgelist(
             connections, compartments, parameter_spaces)

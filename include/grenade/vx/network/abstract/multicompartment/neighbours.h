@@ -1,5 +1,5 @@
 #pragma once
-#include "grenade/vx/network/abstract/multicompartment/compartment_on_neuron.h"
+#include "grenade/common/compartment_on_neuron.h"
 #include <vector>
 
 namespace grenade::vx::network::abstract {
@@ -13,9 +13,9 @@ namespace grenade::vx::network::abstract {
  */
 struct CompartmentNeighbours
 {
-	std::vector<CompartmentOnNeuron> branches;
-	std::vector<CompartmentOnNeuron> chains;
-	std::vector<CompartmentOnNeuron> leafs;
+	std::vector<grenade::common::CompartmentOnNeuron> branches;
+	std::vector<grenade::common::CompartmentOnNeuron> chains;
+	std::vector<grenade::common::CompartmentOnNeuron> leafs;
 
 	size_t total()
 	{

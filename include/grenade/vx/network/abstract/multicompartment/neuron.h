@@ -1,13 +1,13 @@
 #pragma once
 
 #include "dapr/map.h"
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/common/detail/graph.h"
 #include "grenade/common/graph.h"
 #include "grenade/common/population.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection/conductance.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection_on_neuron.h"
-#include "grenade/vx/network/abstract/multicompartment/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/neighbours.h"
 #include "hate/visibility.h"
 #include <memory>
@@ -29,7 +29,7 @@ extern template class SYMBOL_VISIBLE Graph<
     detail::UndirectedGraph,
     vx::network::abstract::Compartment,
     vx::network::abstract::CompartmentConnection,
-    vx::network::abstract::CompartmentOnNeuron,
+    CompartmentOnNeuron,
     vx::network::abstract::CompartmentConnectionOnNeuron,
     std::unique_ptr>;
 
@@ -49,7 +49,7 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
           grenade::common::detail::UndirectedGraph,
           Compartment,
           CompartmentConnection,
-          CompartmentOnNeuron,
+          grenade::common::CompartmentOnNeuron,
           CompartmentConnectionOnNeuron,
           std::unique_ptr>
 {
@@ -59,7 +59,9 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 		struct GENPYBIND(visible) SYMBOL_VISIBLE Parameterization
 		    : grenade::common::Population::Cell::ParameterSpace::Parameterization
 		{
-			std::map<CompartmentOnNeuron, Compartment::ParameterSpace::Parameterization>
+			std::map<
+			    grenade::common::CompartmentOnNeuron,
+			    Compartment::ParameterSpace::Parameterization>
 			    compartments;
 			typedef dapr::Map<
 			    CompartmentConnectionOnNeuron,
@@ -81,7 +83,7 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 			virtual std::ostream& print(std::ostream& os) const override;
 		};
 
-		std::map<CompartmentOnNeuron, Compartment::ParameterSpace> compartments;
+		std::map<grenade::common::CompartmentOnNeuron, Compartment::ParameterSpace> compartments;
 		typedef dapr::Map<CompartmentConnectionOnNeuron, CompartmentConnection::ParameterSpace>
 		    CompartmentConnections GENPYBIND(opaque(false));
 		CompartmentConnections compartment_connections;
@@ -120,13 +122,13 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @param compartment Compartment to add to the neuron.
 	 * @return Compartment descriptor on the neuron.
 	 */
-	CompartmentOnNeuron add_compartment(Compartment const& compartment);
+	grenade::common::CompartmentOnNeuron add_compartment(Compartment const& compartment);
 
 	/**
 	 * Removes a compartment from the neuron.
 	 * @param descriptor Descriptor of the compartment to remove.
 	 */
-	void remove_compartment(CompartmentOnNeuron descriptor);
+	void remove_compartment(grenade::common::CompartmentOnNeuron descriptor);
 
 	/**
 	 * Add a compartment connection to the neuron.
@@ -136,7 +138,9 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @return Descriptor of the connection on the neuron.
 	 */
 	CompartmentConnectionOnNeuron add_compartment_connection(
-	    CompartmentOnNeuron source, CompartmentOnNeuron target, CompartmentConnection const& edge);
+	    grenade::common::CompartmentOnNeuron source,
+	    grenade::common::CompartmentOnNeuron target,
+	    CompartmentConnection const& edge);
 
 	/**
 	 * Remove a connection from the neuron.
@@ -149,14 +153,15 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @param descriptor Descriptor of the requested compartment.
 	 * @return Compartment corresponding to the descriptor.
 	 */
-	Compartment const& get(CompartmentOnNeuron const& descriptor) const;
+	Compartment const& get(grenade::common::CompartmentOnNeuron const& descriptor) const;
 
 	/**
 	 * Set a compartment via a descriptor.
 	 * @param descriptor Descriptor of the compartment to be set.
 	 * @param compartment Compartment to be set for the given descriptor.
 	 */
-	void set(CompartmentOnNeuron const& descriptor, Compartment const& compartment);
+	void set(
+	    grenade::common::CompartmentOnNeuron const& descriptor, Compartment const& compartment);
 
 	/**
 	 * Get a compartment connection via its descriptor.
@@ -198,7 +203,7 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @param descriptor Descriptor of the compartment to give degree.
 	 * @return Number of outgoing connections.
 	 */
-	size_t get_compartment_degree(CompartmentOnNeuron const& descriptor) const;
+	size_t get_compartment_degree(grenade::common::CompartmentOnNeuron const& descriptor) const;
 
 	/**
 	 * Return compartment with largest degree.
@@ -206,21 +211,23 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * equal.
 	 * @return Descriptor of the compartment with the highest degree.
 	 */
-	CompartmentOnNeuron get_max_degree_compartment() const;
+	grenade::common::CompartmentOnNeuron get_max_degree_compartment() const;
 
 	/**
 	 * Return source of the given connection.
 	 * @param descriptor Descriptor of the connection.
 	 * @return Descriptor of the source compartment.
 	 */
-	CompartmentOnNeuron source(CompartmentConnectionOnNeuron const& descriptor) const;
+	grenade::common::CompartmentOnNeuron source(
+	    CompartmentConnectionOnNeuron const& descriptor) const;
 
 	/**
 	 * Return target of the given connection.
 	 * @param descriptor Descriptor of the connection.
 	 * @return Descriptor of the target compartment.
 	 */
-	CompartmentOnNeuron target(CompartmentConnectionOnNeuron const& descriptor) const;
+	grenade::common::CompartmentOnNeuron target(
+	    CompartmentConnectionOnNeuron const& descriptor) const;
 
 	/**
 	 * Return iterators to begin and end of all compartments.
@@ -249,15 +256,14 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @return Pair of iterators to begin and end of adjacent compartments.
 	 */
 	boost::iterator_range<AdjacencyIterator> adjacent_compartments(
-	    CompartmentOnNeuron const& descriptor) const GENPYBIND(hidden);
+	    grenade::common::CompartmentOnNeuron const& descriptor) const GENPYBIND(hidden);
 
 	GENPYBIND_MANUAL({
 		parent.def(
-		    "adjacent_compartments",
-		    [](GENPYBIND_PARENT_TYPE const& self,
-		       grenade::vx::network::abstract::CompartmentOnNeuron const& descriptor) {
+		    "adjacent_compartments", [](GENPYBIND_PARENT_TYPE const& self,
+		                                grenade::common::CompartmentOnNeuron const& descriptor) {
 			    auto const iterators = self.adjacent_compartments(descriptor);
-			    return std::vector<grenade::vx::network::abstract::CompartmentOnNeuron>(
+			    return std::vector<grenade::common::CompartmentOnNeuron>(
 			        iterators.begin(), iterators.end());
 		    });
 	})
@@ -267,7 +273,8 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * If no mapping between all the neurons compartments is possible an map with the possible
 	 * compartment mappings is returned.
 	 */
-	std::map<CompartmentOnNeuron, CompartmentOnNeuron> isomorphism(Neuron const& other) const;
+	std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>
+	isomorphism(Neuron const& other) const;
 
 	/**
 	 * Create a mapping of compartments if the neurons are isomorphic and the number of
@@ -308,12 +315,15 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	/**
 	 * Return a map of each compartment-descriptor to an index.
 	 * */
-	std::map<CompartmentOnNeuron::Value, size_t> get_compartment_index_map() const;
+	std::map<grenade::common::CompartmentOnNeuron::value_type, size_t> get_compartment_index_map()
+	    const;
 
 	/**
 	 *  Check if two compartments are neighbours.
 	 */
-	bool neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const;
+	bool neighbour(
+	    grenade::common::CompartmentOnNeuron const& source,
+	    grenade::common::CompartmentOnNeuron const& target) const;
 
 	/**
 	 *  Return the number of compartments on a branch starting from the given compartment.
@@ -324,8 +334,8 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * branch is found.
 	 */
 	size_t branch_size(
-	    CompartmentOnNeuron const& compartment,
-	    std::set<CompartmentOnNeuron>& marked_compartments) const;
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    std::set<grenade::common::CompartmentOnNeuron>& marked_compartments) const;
 
 	/**
 	 * Distinguishes chains from branches.
@@ -338,8 +348,8 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @return True if a chain and fasle if a branch.
 	 */
 	bool is_chain(
-	    CompartmentOnNeuron const& compartment,
-	    std::set<CompartmentOnNeuron>& marked_compartments) const;
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    std::set<grenade::common::CompartmentOnNeuron>& marked_compartments) const;
 
 	/**
 	 * Return ordered list of compartments inside a branch or chain.
@@ -349,9 +359,10 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @param blacklist_compartment Compartment which should not be considered in order to prevent
 	 * looping.
 	 */
-	std::vector<CompartmentOnNeuron> branch_compartments(
-	    CompartmentOnNeuron const& compartment,
-	    CompartmentOnNeuron const& blacklist_compartment = CompartmentOnNeuron()) const;
+	std::vector<grenade::common::CompartmentOnNeuron> branch_compartments(
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    grenade::common::CompartmentOnNeuron const& blacklist_compartment =
+	        grenade::common::CompartmentOnNeuron()) const;
 
 	/**
 	 * Classify neighbours into parts of branches, chains or as a leaf.
@@ -360,9 +371,9 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * @return Object with compartments classified to a category.
 	 */
 	CompartmentNeighbours classify_neighbours(
-	    CompartmentOnNeuron const& compartment,
-	    std::set<CompartmentOnNeuron> neighbours_whitelist =
-	        std::set<grenade::vx::network::abstract::CompartmentOnNeuron>()) const;
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    std::set<grenade::common::CompartmentOnNeuron> neighbours_whitelist =
+	        std::set<grenade::common::CompartmentOnNeuron>()) const;
 
 	/**
 	 * Check if all compartments are connected.
@@ -373,7 +384,7 @@ struct GENPYBIND(inline_base("*Graph*")) SYMBOL_VISIBLE Neuron
 	 * Check if neuron contains a compartment.
 	 * @param descriptor Descriptor of the compartment to check for.
 	 */
-	bool contains(CompartmentOnNeuron const& descriptor) const;
+	bool contains(grenade::common::CompartmentOnNeuron const& descriptor) const;
 
 	/**
 	 * Check if the given paramter space is valid for the neuron.

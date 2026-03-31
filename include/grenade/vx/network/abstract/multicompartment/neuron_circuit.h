@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/unplaced_neuron_circuit.h"
 
 
@@ -7,7 +8,7 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 struct GENPYBIND(visible) NeuronCircuit : public UnplacedNeuronCircuit
 {
-	std::optional<CompartmentOnNeuron> compartment;
+	std::optional<grenade::common::CompartmentOnNeuron> compartment;
 
 	NeuronCircuit() = default;
 };

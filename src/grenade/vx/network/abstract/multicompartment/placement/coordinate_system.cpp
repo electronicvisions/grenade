@@ -14,9 +14,11 @@ NeuronCircuit CoordinateSystem::get(size_t x, size_t y) const
 }
 
 
-void CoordinateSystem::set_compartment(size_t x, size_t y, CompartmentOnNeuron const& compartment)
+void CoordinateSystem::set_compartment(
+    size_t x, size_t y, grenade::common::CompartmentOnNeuron const& compartment)
 {
-	coordinate_system[y][x].compartment = std::make_optional<CompartmentOnNeuron>(compartment);
+	coordinate_system[y][x].compartment =
+	    std::make_optional<grenade::common::CompartmentOnNeuron>(compartment);
 }
 
 void CoordinateSystem::set_config(
@@ -31,7 +33,8 @@ void CoordinateSystem::set_config(
 	coordinate_system[y][x].get_status();
 }
 
-std::optional<CompartmentOnNeuron> CoordinateSystem::get_compartment(size_t x, size_t y) const
+std::optional<grenade::common::CompartmentOnNeuron> CoordinateSystem::get_compartment(
+    size_t x, size_t y) const
 {
 	return coordinate_system[y][x].compartment;
 }
@@ -279,7 +282,8 @@ bool CoordinateSystem::short_circuit(size_t x_max) const
 				if (!coordinate_system[y][x].compartment) {
 					continue;
 				}
-				CompartmentOnNeuron temp_compartment = coordinate_system[y][x].compartment.value();
+				grenade::common::CompartmentOnNeuron temp_compartment =
+				    coordinate_system[y][x].compartment.value();
 				size_t x_temp = x;
 				while (coordinate_system[y][x_temp].switch_shared_right) {
 					if (coordinate_system[y][x_temp].switch_circuit_shared &&
@@ -370,13 +374,14 @@ std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conduc
 }
 
 NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
-    size_t x, size_t y, CompartmentOnNeuron const& compartment)
+    size_t x, size_t y, grenade::common::CompartmentOnNeuron const& compartment)
 {
 	if (coordinate_system[y][x].compartment) {
 		return NumberTopBottom();
 	}
 
-	coordinate_system[y][x].compartment = std::make_optional<CompartmentOnNeuron>(compartment);
+	coordinate_system[y][x].compartment =
+	    std::make_optional<grenade::common::CompartmentOnNeuron>(compartment);
 	NumberTopBottom number_neuron_circuits = NumberTopBottom(1, 1 - y, y);
 
 	if (connected_right(x, y)) {
@@ -393,7 +398,7 @@ NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
 }
 
 NumberTopBottom CoordinateSystem::assign_compartment_direct(
-    size_t x, size_t y, CompartmentOnNeuron const& compartment)
+    size_t x, size_t y, grenade::common::CompartmentOnNeuron const& compartment)
 {
 	if (coordinate_system[y][x].compartment) {
 		return NumberTopBottom();
@@ -419,7 +424,8 @@ NumberTopBottom CoordinateSystem::assign_compartment_direct(
 }
 
 
-std::pair<bool, bool> CoordinateSystem::parity(CompartmentOnNeuron const& compartment) const
+std::pair<bool, bool> CoordinateSystem::parity(
+    grenade::common::CompartmentOnNeuron const& compartment) const
 {
 	std::pair<bool, bool> parity_compartment;
 
@@ -445,9 +451,9 @@ std::pair<bool, bool> CoordinateSystem::parity(CompartmentOnNeuron const& compar
 }
 
 
-std::set<CompartmentOnNeuron> CoordinateSystem::get_compartments() const
+std::set<grenade::common::CompartmentOnNeuron> CoordinateSystem::get_compartments() const
 {
-	std::set<CompartmentOnNeuron> compartments;
+	std::set<grenade::common::CompartmentOnNeuron> compartments;
 	for (size_t x = 0; x < coordinate_system[0].size(); x++) {
 		for (size_t y = 0; y < coordinate_system.size(); y++) {
 			if (coordinate_system[y][x].compartment) {
@@ -460,9 +466,9 @@ std::set<CompartmentOnNeuron> CoordinateSystem::get_compartments() const
 }
 
 
-std::set<CompartmentOnNeuron> CoordinateSystem::even_parity() const
+std::set<grenade::common::CompartmentOnNeuron> CoordinateSystem::even_parity() const
 {
-	std::set<CompartmentOnNeuron> compartments;
+	std::set<grenade::common::CompartmentOnNeuron> compartments;
 
 	for (size_t x = 0; x < 256; x += 2) {
 		for (size_t y = 0; y < 2; y++) {
@@ -477,9 +483,9 @@ std::set<CompartmentOnNeuron> CoordinateSystem::even_parity() const
 }
 
 
-std::set<CompartmentOnNeuron> CoordinateSystem::odd_parity() const
+std::set<grenade::common::CompartmentOnNeuron> CoordinateSystem::odd_parity() const
 {
-	std::set<CompartmentOnNeuron> compartments;
+	std::set<grenade::common::CompartmentOnNeuron> compartments;
 
 	for (size_t x = 1; x < 256; x += 2) {
 		for (size_t y = 0; y < 2; y++) {
@@ -512,12 +518,12 @@ void CoordinateSystem::connect_shared(size_t x_source, size_t x_target, size_t y
 
 
 std::vector<std::pair<int, int>> CoordinateSystem::find_neuron_circuits(
-    CompartmentOnNeuron const compartment) const
+    grenade::common::CompartmentOnNeuron const compartment) const
 {
 	std::vector<std::pair<int, int>> results;
 	for (int y = 0; y < 2; y++) {
 		for (int x = 0; x < 256; x++) {
-			std::optional<CompartmentOnNeuron> temp_compartment_on_neuron =
+			std::optional<grenade::common::CompartmentOnNeuron> temp_compartment_on_neuron =
 			    coordinate_system[y][x].compartment;
 			if (temp_compartment_on_neuron && temp_compartment_on_neuron.value() == compartment) {
 				results.push_back(std::pair<int, int>(x, y));
@@ -528,7 +534,8 @@ std::vector<std::pair<int, int>> CoordinateSystem::find_neuron_circuits(
 }
 
 
-NumberTopBottom CoordinateSystem::get_resources(CompartmentOnNeuron const compartment) const
+NumberTopBottom CoordinateSystem::get_resources(
+    grenade::common::CompartmentOnNeuron const compartment) const
 {
 	NumberTopBottom resources;
 
@@ -552,25 +559,25 @@ void CoordinateSystem::assign_compartments()
 {
 	// First remove all assigned compartments
 	clear_compartments();
-	CompartmentOnNeuron compartment;
+	grenade::common::CompartmentOnNeuron compartment;
 	for (size_t y = 0; y < coordinate_system.size(); y++) {
 		for (size_t x = 0; x < coordinate_system[0].size(); x++) {
 			if (!coordinate_system[y][x].compartment &&
 			    (connected_to_shared_line(x, y) || connected_right(x, y) ||
 			     connected_top_bottom(x, y))) {
 				assign_compartment_direct(x, y, compartment);
-				compartment += 1;
+				compartment += grenade::common::CompartmentOnNeuron(1);
 			}
 		}
 	}
 }
 
 
-std::tuple<Neuron, std::map<CompartmentOnNeuron, NumberTopBottom>>
+std::tuple<Neuron, std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom>>
 CoordinateSystem::construct_neuron()
 {
 	Neuron neuron;
-	std::map<CompartmentOnNeuron, NumberTopBottom> allocated_resources;
+	std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> allocated_resources;
 
 	// find all assigned compartments
 	auto compartments = get_compartments();
@@ -580,11 +587,11 @@ CoordinateSystem::construct_neuron()
 	}
 
 	// test that there are no gaps and compartments start at zero
-	if (*compartments.begin() != CompartmentOnNeuron(0)) {
+	if (*compartments.begin() != grenade::common::CompartmentOnNeuron(0)) {
 		throw std::runtime_error("Can not construct neuron. Compartment ids "
 		                         "do not start at zero.");
 	}
-	if (*compartments.rbegin() != CompartmentOnNeuron(compartments.size() - 1)) {
+	if (*compartments.rbegin() != grenade::common::CompartmentOnNeuron(compartments.size() - 1)) {
 		throw std::runtime_error("Can not construct neuron. Compartment ids "
 		                         "are not contiguous.");
 	}

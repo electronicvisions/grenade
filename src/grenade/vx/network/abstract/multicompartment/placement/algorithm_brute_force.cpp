@@ -37,14 +37,14 @@ bool PlacementAlgorithmBruteForce::valid(
 
 	// Construct Neuron from State of Switches in Coordinate System
 	Neuron neuron_constructed;
-	std::map<CompartmentOnNeuron, NumberTopBottom> resources_constructed;
+	std::map<grenade::common::CompartmentOnNeuron, NumberTopBottom> resources_constructed;
 	for (size_t x = 0; x < x_max; x++) {
 		for (size_t y = 0; y < 2; y++) {
 			if (!result_temp.coordinate_system.coordinate_system[y][x].compartment &&
 			    result_temp.coordinate_system.connected(x, y)) {
 				// Add Compartment to Neuron
 				Compartment temp_compartment;
-				CompartmentOnNeuron temp_descriptor =
+				grenade::common::CompartmentOnNeuron temp_descriptor =
 				    neuron_constructed.add_compartment(temp_compartment);
 				// Assign ID to Coordinate System
 				NumberTopBottom number_neuron_circuits =
@@ -90,8 +90,11 @@ bool PlacementAlgorithmBruteForce::valid(
 	}
 
 	// Check for isomorphism
-	std::pair<size_t, std::map<CompartmentOnNeuron, CompartmentOnNeuron>> isomorphism =
-	    isomorphism_resources(neuron, neuron_constructed, resources, resources_constructed);
+	std::pair<
+	    size_t,
+	    std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+	    isomorphism =
+	        isomorphism_resources(neuron, neuron_constructed, resources, resources_constructed);
 	if (isomorphism.first != 0) {
 		return false;
 	}

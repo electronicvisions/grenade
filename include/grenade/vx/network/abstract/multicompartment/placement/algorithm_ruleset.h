@@ -1,5 +1,6 @@
 #pragma once
 
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/placement_spot.h"
 #include <algorithm>
@@ -85,7 +86,8 @@ private:
 	 * @param compartment Compartment for which limits are searched.
 	 */
 	CoordinateLimits find_limits(
-	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
+	    CoordinateSystem const& coordinates,
+	    grenade::common::CompartmentOnNeuron const& compartment) const;
 
 	/**
 	 * Finds all free spots.
@@ -102,7 +104,7 @@ private:
 	    CoordinateSystem const& coordinates,
 	    size_t x_start,
 	    size_t y,
-	    std::set<CompartmentOnNeuron> const& neighbours,
+	    std::set<grenade::common::CompartmentOnNeuron> const& neighbours,
 	    int direction = 1,
 	    bool search_block = false);
 
@@ -116,8 +118,8 @@ private:
 	 */
 	std::vector<PlacementSpot> find_free_spots(
 	    CoordinateSystem const& coordinates,
-	    CompartmentOnNeuron const& compartment,
-	    std::set<CompartmentOnNeuron> const& neighbours,
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    std::set<grenade::common::CompartmentOnNeuron> const& neighbours,
 	    bool search_block = false);
 
 
@@ -142,21 +144,21 @@ private:
 	    std::vector<PlacementSpot> spots,
 	    NumberTopBottom const& min_spot_size,
 	    CoordinateSystem& coordinates,
-	    CompartmentOnNeuron const& parent_compartment);
+	    grenade::common::CompartmentOnNeuron const& parent_compartment);
 
 	/**
 	 * Determine unplaced neighbours
 	 * @param neuron Neuron to be placed.
 	 * @param compartment Compartment whichs neighbours are to be determined.
 	 */
-	std::set<CompartmentOnNeuron> unplaced_neighbours(
-	    Neuron const& neuron, CompartmentOnNeuron const& compartment) const;
+	std::set<grenade::common::CompartmentOnNeuron> unplaced_neighbours(
+	    Neuron const& neuron, grenade::common::CompartmentOnNeuron const& compartment) const;
 
 	/**
 	 * Return compartment descriptor of compartment with largest number of connections.
 	 * @param neuron Neuron to check for compartments.
 	 */
-	CompartmentOnNeuron find_max_deg(Neuron const& neuron) const;
+	grenade::common::CompartmentOnNeuron find_max_deg(Neuron const& neuron) const;
 
 	/**
 	 * Simple placement. Place in one row if other row is not explicitly requested.
@@ -176,7 +178,7 @@ private:
 	    NumberTopBottom required_resources,
 	    size_t x_start,
 	    size_t y,
-	    CompartmentOnNeuron const& compartment,
+	    grenade::common::CompartmentOnNeuron const& compartment,
 	    int direction = 1,
 	    bool virtually = false);
 
@@ -190,7 +192,7 @@ private:
 	    NumberTopBottom required_resources,
 	    size_t x_start,
 	    size_t y,
-	    CompartmentOnNeuron const& compartment,
+	    grenade::common::CompartmentOnNeuron const& compartment,
 	    bool virtually = false);
 
 	/**
@@ -203,7 +205,7 @@ private:
 	    NumberTopBottom required_resources,
 	    size_t x_start,
 	    size_t y,
-	    CompartmentOnNeuron const& compartment,
+	    grenade::common::CompartmentOnNeuron const& compartment,
 	    bool virtually = false);
 
 	/**
@@ -215,7 +217,7 @@ private:
 	NumberTopBottom get_chain_space(
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    std::vector<CompartmentOnNeuron> const& chain);
+	    std::vector<grenade::common::CompartmentOnNeuron> const& chain);
 
 	/**
 	 * Place a single compartment from which the morphology branches.
@@ -231,8 +233,8 @@ private:
 	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    CompartmentOnNeuron const& compartment,
-	    CompartmentOnNeuron const& parent);
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    grenade::common::CompartmentOnNeuron const& parent);
 
 	/**
 	 * Expand the compartment with a bridge.
@@ -268,8 +270,8 @@ private:
 	 */
 	void add_bridge(
 	    CoordinateSystem& coordinates,
-	    CompartmentOnNeuron const& compartment,
-	    std::set<CompartmentOnNeuron> const& children);
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    std::set<grenade::common::CompartmentOnNeuron> const& children);
 
 	/**
 	 * Determine in how many directions (top left, top right, bottom left, bottom right)
@@ -283,15 +285,16 @@ private:
 	 */
 	size_t get_available_directions(
 	    CoordinateSystem& coordinates,
-	    CompartmentOnNeuron const& compartment,
-	    std::set<CompartmentOnNeuron> const& neighbours);
+	    grenade::common::CompartmentOnNeuron const& compartment,
+	    std::set<grenade::common::CompartmentOnNeuron> const& neighbours);
 
 	/**
 	 * Connect all neuron circuits belonging to one compartment directly.
 	 * @param coordinates Current configuration.
 	 * @param compartment Compartment to be connected.
 	 */
-	void connect_self(CoordinateSystem& coordinates, CompartmentOnNeuron const& compartment);
+	void connect_self(
+	    CoordinateSystem& coordinates, grenade::common::CompartmentOnNeuron const& compartment);
 
 	/**
 	 * Logs information about latest placement.
@@ -299,7 +302,8 @@ private:
 	 * @param compartment Compartment to log placement information about.
 	 */
 	void output_placed(
-	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
+	    CoordinateSystem const& coordinates,
+	    grenade::common::CompartmentOnNeuron const& compartment) const;
 
 	bool m_save_steps;
 	std::vector<AlgorithmResult> m_results;

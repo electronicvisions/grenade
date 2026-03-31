@@ -5,7 +5,7 @@
 namespace grenade::vx::network::abstract {
 
 void Environment::add(
-    CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& compartment,
     MechanismOnCompartment const& mechanism,
     MechanismEnvironment const& environment)
 {
@@ -17,15 +17,16 @@ void Environment::add(
 }
 
 void Environment::add_recordable(
-    CompartmentOnNeuron const& compartment_a, CompartmentOnNeuron const& compartment_b)
+    grenade::common::CompartmentOnNeuron const& compartment_a,
+    grenade::common::CompartmentOnNeuron const& compartment_b)
 {
 	recordable_pairs.emplace(std::make_pair(compartment_a, compartment_b));
 }
 
-std::vector<CompartmentOnNeuron> Environment::get_recordable(
-    CompartmentOnNeuron const& compartment) const
+std::vector<grenade::common::CompartmentOnNeuron> Environment::get_recordable(
+    grenade::common::CompartmentOnNeuron const& compartment) const
 {
-	std::vector<CompartmentOnNeuron> recordables;
+	std::vector<grenade::common::CompartmentOnNeuron> recordables;
 	for (auto record_pair : recordable_pairs) {
 		if (record_pair.first == compartment) {
 			recordables.push_back(record_pair.second);
@@ -37,14 +38,14 @@ std::vector<CompartmentOnNeuron> Environment::get_recordable(
 	return recordables;
 }
 
-std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> Environment::get_recordable_pairs()
-    const
+std::set<std::pair<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>>
+Environment::get_recordable_pairs() const
 {
 	return recordable_pairs;
 }
 
 void Environment::add(
-    CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& compartment,
     std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> const& environment)
 {
 	auto environment_copy = environment;
@@ -53,7 +54,7 @@ void Environment::add(
 }
 
 std::map<MechanismOnCompartment, dapr::PropertyHolder<MechanismEnvironment>> Environment::get(
-    CompartmentOnNeuron const& compartment) const
+    grenade::common::CompartmentOnNeuron const& compartment) const
 {
 	if (!m_synaptic_connections.contains(compartment)) {
 		return {};

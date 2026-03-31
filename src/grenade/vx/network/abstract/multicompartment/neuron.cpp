@@ -18,7 +18,7 @@ template class Graph<
     detail::UndirectedGraph,
     vx::network::abstract::Compartment,
     vx::network::abstract::CompartmentConnection,
-    vx::network::abstract::CompartmentOnNeuron,
+    CompartmentOnNeuron,
     vx::network::abstract::CompartmentConnectionOnNeuron,
     std::unique_ptr>;
 } // namespace grenade::common
@@ -198,18 +198,20 @@ std::ostream& Neuron::ParameterSpace::print(std::ostream& os) const
 }
 
 
-CompartmentOnNeuron Neuron::add_compartment(Compartment const& compartment)
+grenade::common::CompartmentOnNeuron Neuron::add_compartment(Compartment const& compartment)
 {
 	return this->add_vertex(compartment);
 }
 
-void Neuron::remove_compartment(CompartmentOnNeuron descriptor)
+void Neuron::remove_compartment(grenade::common::CompartmentOnNeuron descriptor)
 {
 	this->remove_vertex(descriptor);
 }
 
 CompartmentConnectionOnNeuron Neuron::add_compartment_connection(
-    CompartmentOnNeuron source, CompartmentOnNeuron target, CompartmentConnection const& edge)
+    grenade::common::CompartmentOnNeuron source,
+    grenade::common::CompartmentOnNeuron target,
+    CompartmentConnection const& edge)
 {
 	return this->add_edge(source, target, edge);
 }
@@ -219,12 +221,13 @@ void Neuron::remove_compartment_connection(CompartmentConnectionOnNeuron descrip
 	this->remove_edge(descriptor);
 }
 
-Compartment const& Neuron::get(CompartmentOnNeuron const& descriptor) const
+Compartment const& Neuron::get(grenade::common::CompartmentOnNeuron const& descriptor) const
 {
 	return Graph::get(descriptor);
 }
 
-void Neuron::set(CompartmentOnNeuron const& descriptor, Compartment const& compartment)
+void Neuron::set(
+    grenade::common::CompartmentOnNeuron const& descriptor, Compartment const& compartment)
 {
 	Graph::set(descriptor, compartment);
 }
@@ -255,15 +258,15 @@ size_t Neuron::num_compartment_connections() const
 	return this->num_edges();
 }
 
-size_t Neuron::get_compartment_degree(CompartmentOnNeuron const& descriptor) const
+size_t Neuron::get_compartment_degree(grenade::common::CompartmentOnNeuron const& descriptor) const
 {
 	assert(Graph::out_degree(descriptor) == Graph::in_degree(descriptor));
 	return Graph::out_degree(descriptor);
 }
 
-CompartmentOnNeuron Neuron::get_max_degree_compartment() const
+grenade::common::CompartmentOnNeuron Neuron::get_max_degree_compartment() const
 {
-	CompartmentOnNeuron compartment_max_degree = *(compartments().begin());
+	grenade::common::CompartmentOnNeuron compartment_max_degree = *(compartments().begin());
 	for (auto compartment : compartments()) {
 		if (get_compartment_degree(compartment) > get_compartment_degree(compartment_max_degree)) {
 			compartment_max_degree = compartment;
@@ -272,12 +275,14 @@ CompartmentOnNeuron Neuron::get_max_degree_compartment() const
 	return compartment_max_degree;
 }
 
-CompartmentOnNeuron Neuron::source(CompartmentConnectionOnNeuron const& descriptor) const
+grenade::common::CompartmentOnNeuron Neuron::source(
+    CompartmentConnectionOnNeuron const& descriptor) const
 {
 	return Graph::source(descriptor);
 }
 
-CompartmentOnNeuron Neuron::target(CompartmentConnectionOnNeuron const& descriptor) const
+grenade::common::CompartmentOnNeuron Neuron::target(
+    CompartmentConnectionOnNeuron const& descriptor) const
 {
 	return Graph::target(descriptor);
 }
@@ -294,12 +299,13 @@ boost::iterator_range<Neuron::CompartmentConnectionIterator> Neuron::compartment
 }
 
 boost::iterator_range<Neuron::AdjacencyIterator> Neuron::adjacent_compartments(
-    CompartmentOnNeuron const& descriptor) const
+    grenade::common::CompartmentOnNeuron const& descriptor) const
 {
 	return this->adjacent_vertices(descriptor);
 }
 
-std::map<CompartmentOnNeuron, CompartmentOnNeuron> Neuron::isomorphism(Neuron const& other) const
+std::map<grenade::common::CompartmentOnNeuron, grenade::common::CompartmentOnNeuron>
+Neuron::isomorphism(Neuron const& other) const
 {
 	return Graph::isomorphism(other);
 }
@@ -314,8 +320,9 @@ bool Neuron::has_equal_morphology(Neuron const& other) const
 		auto neighbours = adjacent_compartments(compartment);
 		auto neighbours_other = other.adjacent_compartments(compartment);
 
-		std::set<CompartmentOnNeuron> neighbours_set(neighbours.begin(), neighbours.end());
-		std::set<CompartmentOnNeuron> neighbours_other_set(
+		std::set<grenade::common::CompartmentOnNeuron> neighbours_set(
+		    neighbours.begin(), neighbours.end());
+		std::set<grenade::common::CompartmentOnNeuron> neighbours_other_set(
 		    neighbours_other.begin(), neighbours_other.end());
 
 		if (neighbours_set != neighbours_other_set) {
@@ -325,9 +332,10 @@ bool Neuron::has_equal_morphology(Neuron const& other) const
 	return true;
 }
 
-std::map<CompartmentOnNeuron::Value, size_t> Neuron::get_compartment_index_map() const
+std::map<grenade::common::CompartmentOnNeuron::value_type, size_t>
+Neuron::get_compartment_index_map() const
 {
-	std::map<CompartmentOnNeuron::Value, size_t> mapping;
+	std::map<grenade::common::CompartmentOnNeuron::value_type, size_t> mapping;
 	size_t index = 0;
 	for (auto compartment : compartments()) {
 		mapping.emplace(compartment.value(), index);
@@ -336,7 +344,9 @@ std::map<CompartmentOnNeuron::Value, size_t> Neuron::get_compartment_index_map()
 	return mapping;
 }
 
-bool Neuron::neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron const& target) const
+bool Neuron::neighbour(
+    grenade::common::CompartmentOnNeuron const& source,
+    grenade::common::CompartmentOnNeuron const& target) const
 {
 	for (auto compartment : adjacent_compartments(source)) {
 		if (compartment == target) {
@@ -348,8 +358,8 @@ bool Neuron::neighbour(CompartmentOnNeuron const& source, CompartmentOnNeuron co
 
 
 size_t Neuron::branch_size(
-    CompartmentOnNeuron const& compartment,
-    std::set<CompartmentOnNeuron>& marked_compartments) const
+    grenade::common::CompartmentOnNeuron const& compartment,
+    std::set<grenade::common::CompartmentOnNeuron>& marked_compartments) const
 {
 	size_t size = 1;
 	marked_compartments.emplace(compartment);
@@ -364,8 +374,8 @@ size_t Neuron::branch_size(
 }
 
 bool Neuron::is_chain(
-    CompartmentOnNeuron const& compartment,
-    std::set<CompartmentOnNeuron>& marked_compartments) const
+    grenade::common::CompartmentOnNeuron const& compartment,
+    std::set<grenade::common::CompartmentOnNeuron>& marked_compartments) const
 {
 	marked_compartments.emplace(compartment);
 
@@ -384,17 +394,18 @@ bool Neuron::is_chain(
 	return true;
 }
 
-std::vector<CompartmentOnNeuron> Neuron::branch_compartments(
-    CompartmentOnNeuron const& compartment, CompartmentOnNeuron const& blacklist_compartment) const
+std::vector<grenade::common::CompartmentOnNeuron> Neuron::branch_compartments(
+    grenade::common::CompartmentOnNeuron const& compartment,
+    grenade::common::CompartmentOnNeuron const& blacklist_compartment) const
 {
-	std::vector<CompartmentOnNeuron> branch;
+	std::vector<grenade::common::CompartmentOnNeuron> branch;
 	branch.push_back(compartment);
 
-	std::set<CompartmentOnNeuron> marked_compartments;
+	std::set<grenade::common::CompartmentOnNeuron> marked_compartments;
 	marked_compartments.emplace(compartment);
 	marked_compartments.emplace(blacklist_compartment);
 
-	std::stack<CompartmentOnNeuron> compartment_queue;
+	std::stack<grenade::common::CompartmentOnNeuron> compartment_queue;
 	compartment_queue.push(compartment);
 
 	while (!compartment_queue.empty()) {
@@ -418,12 +429,12 @@ std::vector<CompartmentOnNeuron> Neuron::branch_compartments(
 }
 
 CompartmentNeighbours Neuron::classify_neighbours(
-    CompartmentOnNeuron const& compartment,
-    std::set<CompartmentOnNeuron> neighbours_whitelist) const
+    grenade::common::CompartmentOnNeuron const& compartment,
+    std::set<grenade::common::CompartmentOnNeuron> neighbours_whitelist) const
 {
 	CompartmentNeighbours neighbours;
 
-	std::set<CompartmentOnNeuron> marked_compartments;
+	std::set<grenade::common::CompartmentOnNeuron> marked_compartments;
 	marked_compartments.emplace(compartment);
 
 	for (auto adjacent_compartment : adjacent_compartments(compartment)) {
@@ -453,7 +464,7 @@ bool Neuron::compartments_connected() const
 	return this->is_connected();
 }
 
-bool Neuron::contains(CompartmentOnNeuron const& descriptor) const
+bool Neuron::contains(grenade::common::CompartmentOnNeuron const& descriptor) const
 {
 	return Graph::contains(descriptor);
 }
