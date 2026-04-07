@@ -134,6 +134,7 @@ struct SYMBOL_VISIBLE GENPYBIND(
 
 protected:
 	virtual std::ostream& print(std::ostream& os) const override;
+	Vertex& get(VertexOnTopology const& descriptor);
 
 private:
 	void check_edge(
@@ -147,6 +148,10 @@ private:
 	friend class cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
+
+
+public:
+	using Graph::get;
 };
 
 } // namespace common

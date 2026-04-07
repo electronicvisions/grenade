@@ -371,6 +371,22 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
+Vertex& Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::get(
+    VertexDescriptor const& descriptor)
+{
+	check_contains(descriptor, "get");
+	return m_vertices.get(descriptor);
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
 Vertex const& Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::get(
     VertexDescriptor const& descriptor) const
 {

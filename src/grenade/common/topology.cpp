@@ -235,4 +235,9 @@ std::ostream& Topology::print(std::ostream& os) const
 	return os << static_cast<Topology::BaseGraph const&>(*this);
 }
 
+Vertex& Topology::get(VertexOnTopology const& descriptor)
+{
+	return Graph::get(descriptor);
+}
+
 } // namespace grenade::common
