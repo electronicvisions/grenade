@@ -63,7 +63,7 @@ struct SYMBOL_VISIBLE Graph
 
 	/**
 	 * Copy graph.
-	 * The copy creates new descriptors for every element.
+	 * The copy preserves the descriptors of all elements.
 	 */
 	Graph(Graph const& other);
 
@@ -74,7 +74,7 @@ struct SYMBOL_VISIBLE Graph
 
 	/**
 	 * Copy graph.
-	 * The copy creates new descriptors for every element.
+	 * The copy preserves the descriptors of all elements.
 	 */
 	Graph& operator=(Graph const& other);
 
