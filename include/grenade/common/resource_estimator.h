@@ -67,9 +67,9 @@ struct SYMBOL_VISIBLE ResourceEstimator : public dapr::Copyable<ResourceEstimato
 		virtual std::vector<size_t> scalar_values() const = 0;
 
 		/**
-		 * Get resource corresponding to sub-segment of this resource.
+		 * Get resource corresponding to sub-sequence of this resource.
 		 */
-		virtual std::unique_ptr<Resource> subsegment(MultiIndexSequence const& other) const = 0;
+		virtual std::unique_ptr<Resource> subsequence(MultiIndexSequence const& other) const = 0;
 	};
 
 	/**

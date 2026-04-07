@@ -47,7 +47,7 @@ struct DummyResource : public ResourceEstimator::Resource
 		return scalars;
 	}
 
-	virtual std::unique_ptr<Resource> subsegment(MultiIndexSequence const&) const override
+	virtual std::unique_ptr<Resource> subsequence(MultiIndexSequence const&) const override
 	{
 		return copy();
 	}
