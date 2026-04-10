@@ -44,6 +44,9 @@ def configure(cfg):
     cfg.load('doxygen')
 
     cfg.check_cxx(lib='tbb', uselib_store="TBB")
+    cfg.check_cxx(
+        lib=['gecodeint', 'gecodesearch', 'gecodekernel', 'gecodesupport'],
+        uselib_store="GECODE")
 
     cfg.env.CXXFLAGS_GRENADE_LIBRARIES = [
         '-fvisibility=hidden',
@@ -113,7 +116,7 @@ def build(bld):
         features = 'cxx cxxshlib',
         source = bld.path.ant_glob('src/grenade/vx/**/*.cpp', excl='src/grenade/vx/ppu/*.cpp'),
         install_path = '${PREFIX}/lib',
-        use = ['grenade_inc', 'grenade_common', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB', 'ccalix'],
+        use = ['grenade_inc', 'grenade_common', 'halco_hicann_dls_vx_v3', 'lola_vx_v3', 'haldls_vx_v3', 'stadls_vx_v3', 'TBB', 'ccalix', 'GECODE'],
         depends_on = ['grenade_ppu_base_vx', 'grenade_vx_ppu_header', 'grenade_ppu_vx', 'nux_vx_v3', 'nux_runtime_vx_v3.o', 'haldls_ppu_vx_v3', 'ccalix_includes'] if bld.env.have_ppu_toolchain else [],
         uselib = 'GRENADE_LIBRARIES',
     )
