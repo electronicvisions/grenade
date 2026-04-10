@@ -180,7 +180,7 @@ struct SYMBOL_VISIBLE Graph
 	 * @param descriptor Vertex descriptor
 	 * @throws std::out_of_range On vertex not being present in graph
 	 */
-	Vertex& get(VertexDescriptor const& descriptor) GENPYBIND(hidden);
+	Vertex& get_mutable(VertexDescriptor const& descriptor) GENPYBIND(hidden);
 
 	/**
 	 * Get vertex property.

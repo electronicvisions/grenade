@@ -371,10 +371,11 @@ template <
     typename EdgeDescriptor,
     template <typename...>
     typename Holder>
-Vertex& Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::get(
+Vertex&
+Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::get_mutable(
     VertexDescriptor const& descriptor)
 {
-	check_contains(descriptor, "get");
+	check_contains(descriptor, "get_mutable");
 	return m_vertices.get(descriptor);
 }
 
