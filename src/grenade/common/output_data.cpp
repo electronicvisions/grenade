@@ -9,21 +9,23 @@
 
 namespace grenade::common {
 
-OutputData::Global::~Global() {}
+OutputData::Executor::~Executor() {}
 
-OutputData::Global const& OutputData::get_global() const
+OutputData::ExecutionInstance::~ExecutionInstance() {}
+
+OutputData::Executor const& OutputData::get_executor() const
 {
-	return *m_global;
+	return *m_executor;
 }
 
-void OutputData::set_global(Global const& value)
+void OutputData::set_executor(Executor const& value)
 {
-	m_global = value;
+	m_executor = value;
 }
 
-bool OutputData::has_global() const
+bool OutputData::has_executor() const
 {
-	return static_cast<bool>(m_global);
+	return static_cast<bool>(m_executor);
 }
 
 #define GRENADE_RESULTS_VALID_LOG_ERROR(...)                                                       \
@@ -89,21 +91,25 @@ bool OutputData::valid(Topology const& topology) const
 void OutputData::merge(OutputData& other)
 {
 	ports.merge(other.ports);
-	if (m_global && other.m_global) {
-		m_global->merge(*other.m_global);
-	} else if (other.m_global) {
-		decltype(m_global) new_other_global;
-		std::swap(m_global, other.m_global);
+	execution_instances.merge(other.execution_instances);
+	if (m_executor && other.m_executor) {
+		throw std::invalid_argument(
+		    "OutputData can't be merged when both versions have executor data.");
+	} else if (other.m_executor) {
+		decltype(m_executor) new_other_executor;
+		std::swap(m_executor, other.m_executor);
 	}
 }
 
 void OutputData::merge(OutputData&& other)
 {
 	ports.merge(std::move(other.ports));
-	if (m_global && other.m_global) {
-		m_global->merge(std::move(*other.m_global));
-	} else if (other.m_global) {
-		m_global = std::move(other.m_global);
+	execution_instances.merge(std::move(other.execution_instances));
+	if (m_executor && other.m_executor) {
+		throw std::invalid_argument(
+		    "OutputData can't be merged when both versions have executor data.");
+	} else if (other.m_executor) {
+		m_executor = std::move(other.m_executor);
 	}
 }
 

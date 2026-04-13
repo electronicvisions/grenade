@@ -90,9 +90,10 @@ OutputData LinkedTopology::map_reference_output_data(OutputData const& linked_ou
 		throw std::invalid_argument("Given output_data not valid for linked topology.");
 	}
 	OutputData reference_output_data;
-	if (linked_output_data.has_global()) {
-		reference_output_data.set_global(linked_output_data.get_global());
+	if (linked_output_data.has_executor()) {
+		reference_output_data.set_executor(linked_output_data.get_executor());
 	}
+	reference_output_data.execution_instances = linked_output_data.execution_instances;
 	for (auto const& inter_graph_hyper_edge_descriptor : inter_graph_hyper_edges()) {
 		auto const& inter_graph_hyper_edge = get(inter_graph_hyper_edge_descriptor);
 		auto const& reference_vertex_descriptors = references(inter_graph_hyper_edge_descriptor);

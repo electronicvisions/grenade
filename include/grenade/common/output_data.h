@@ -2,8 +2,10 @@
 #include "dapr/map.h"
 #include "dapr/property.h"
 #include "dapr/property_holder.h"
+#include "grenade/common/connection_on_executor.h"
 #include "grenade/common/data.h"
 #include "grenade/common/edge.h"
+#include "grenade/common/execution_instance_on_executor.h"
 #include "grenade/common/genpybind.h"
 #include "grenade/common/port_on_topology.h"
 #include "grenade/common/vertex.h"
@@ -21,20 +23,30 @@ struct Topology;
 struct GENPYBIND(visible) SYMBOL_VISIBLE OutputData : public Data
 {
 	/**
-	 * Global backend-specific results.
+	 * Executor-specific results.
 	 */
-	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Global : public dapr::Property<Global>
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Executor : public dapr::Property<Executor>
 	{
-		virtual ~Global();
+		virtual ~Executor();
+	};
 
-		virtual void merge(Global& other) = 0;
-		virtual void merge(Global&& other) GENPYBIND(hidden) = 0;
+	/**
+	 * Execution instance-specific results.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) ExecutionInstance
+	    : public dapr::Property<ExecutionInstance>
+	{
+		virtual ~ExecutionInstance();
 	};
 
 	GENPYBIND(return_value_policy(reference_internal))
-	Global const& get_global() const;
-	void set_global(Global const& global);
-	bool has_global() const;
+	Executor const& get_executor() const;
+	void set_executor(Executor const& global);
+	bool has_executor() const;
+
+	typedef dapr::Map<ExecutionInstanceOnExecutor, ExecutionInstance> ExecutionInstances
+	    GENPYBIND(opaque(false));
+	ExecutionInstances execution_instances;
 
 	/**
 	 * Get whether output data is valid for topology.
@@ -52,7 +64,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE OutputData : public Data
 	bool operator!=(OutputData const& other) const = default;
 
 private:
-	dapr::PropertyHolder<Global> m_global;
+	dapr::PropertyHolder<Executor> m_executor;
 };
 
 } // namespace common
