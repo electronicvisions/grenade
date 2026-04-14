@@ -47,10 +47,6 @@ std::pair<RouteCollector::Routes, RouteCollector::Routes> RouterSpaceFactory::bu
 	RouteCollector route_collector;
 	auto [routes_acyclic, routes_cyclic] = route_collector(m_router_space->m_routing_graph);
 
-	if (!routes_cyclic.empty()) {
-		throw std::logic_error("Handling of cyclic routes not supported.");
-	}
-
 	size_t num_routes = 0;
 	for (auto const& [route_limits, routes] : routes_acyclic) {
 		LOG4CXX_TRACE(
@@ -160,10 +156,10 @@ void RouterSpaceFactory::build_label_constraints(
 
 void RouterSpaceFactory::build_route_constraints(
     RouteCollector::Routes& routes_acyclic,
-    RouteCollector::Routes&,
+    RouteCollector::Routes& routes_cyclic,
     std::map<SourceTargetPair, std::map<size_t, size_t>> const& active_routes)
 {
-	// Create route constraints
+	// Create route constraints for acyclic routes
 	{
 		hate::Timer timer;
 		for (auto const& [route_limits, routes] : routes_acyclic) {
@@ -193,7 +189,7 @@ void RouterSpaceFactory::build_route_constraints(
 		               << timer.print() << ".");
 	}
 
-	// Constrain routes to one active route per source target connection
+	// Constrain acyclic routes to one active route per source target connection
 	{
 		for (auto const& [route_limits, routes_per_source_index] :
 		     m_router_space->m_route_activities) {
@@ -211,6 +207,49 @@ void RouterSpaceFactory::build_route_constraints(
 					    *m_router_space, routes_per_source_index.at(source_index), Gecode::IRT_EQ,
 					    0);
 				}
+			}
+		}
+	}
+
+	// Create route constraints for cyclic routes
+	{
+		hate::Timer timer;
+		for (auto const& [route_limits, routes] : routes_cyclic) {
+			auto const& source = dynamic_cast<Source const&>(
+			    m_router_space->m_routing_graph.get(route_limits.source));
+
+			auto& local_route_activities = m_router_space->m_cyclic_route_activities[route_limits];
+			local_route_activities.resize(source.size());
+
+			// For each source index have array over different routes
+			for (size_t source_index = 0; source_index < source.size(); source_index++) {
+				local_route_activities.at(source_index) =
+				    Gecode::BoolVarArray(*m_router_space, routes.size(), 0, 1);
+			}
+		}
+
+		size_t num_route_activities = 0;
+		for (auto const& [_, route_activities] : m_router_space->m_cyclic_route_activities) {
+			for (auto const& route_activity_per_source_label : route_activities) {
+				num_route_activities += route_activity_per_source_label.size();
+			}
+		}
+
+		LOG4CXX_DEBUG(
+		    m_router_space->m_shared_storage->logger,
+		    "Created " << num_route_activities << " cyclic route activity values in "
+		               << timer.print() << ".");
+	}
+
+	// Constrain cyclic routes to zero active routes per source target connection
+	{
+		for (auto const& [route_limits, routes_per_source_index] :
+		     m_router_space->m_cyclic_route_activities) {
+			for (size_t source_index = 0; source_index < routes_per_source_index.size();
+			     ++source_index) {
+				// Disable all routes
+				Gecode::linear(
+				    *m_router_space, routes_per_source_index.at(source_index), Gecode::IRT_EQ, 0);
 			}
 		}
 	}

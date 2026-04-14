@@ -69,6 +69,7 @@ private:
 	 * source vertex per route filter sequence (outer to inner dimension).
 	 */
 	std::map<SourceTargetPair, std::vector<Gecode::BoolVarArray>> m_route_activities;
+	std::map<SourceTargetPair, std::vector<Gecode::BoolVarArray>> m_cyclic_route_activities;
 };
 
 } // namespace grenade::vx::network::routing::csp
