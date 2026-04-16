@@ -13,6 +13,7 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("_pygrenade_vx_network");
 })
 
+#include "grenade/vx/network/abstract/calibration.h"
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/execution_instance_global.h"
 #include "grenade/vx/network/abstract/executor_global.h"
