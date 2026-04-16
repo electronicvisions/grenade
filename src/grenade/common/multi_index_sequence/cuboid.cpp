@@ -298,18 +298,45 @@ std::unique_ptr<MultiIndexSequence> CuboidMultiIndexSequence::related_sequence_s
 	    related_ptr) {
 		if (auto const subset_ptr = dynamic_cast<CuboidMultiIndexSequence const*>(&subset);
 		    subset_ptr) {
-			if (dimensionality() == related_ptr->dimensionality()) {
-				if (related.includes(subset)) {
-					auto const subset_origin = subset_ptr->get_origin();
-					auto new_origin = get_origin();
-					auto const related_origin = related_ptr->get_origin();
-					for (size_t i = 0; i < dimensionality(); ++i) {
-						new_origin.value.at(i) +=
-						    subset_origin.value.at(i) - related_origin.value.at(i);
+			if (related.includes(subset)) {
+				// Dimensions of shape 1 don't alter the iteration order, they just insert a
+				// `index=constant` for this dimension for all elements. We can calculate the
+				// related sequence subset restriction if the size > 1 dimensions are of the same
+				// order and are equal. If not, we need to go back to calculating it via iterating
+				// all elements (the default impl. of MultiIndexSequence).
+				std::vector<size_t> this_dimensions_of_size_not_1;
+				std::vector<size_t> this_stripped_shape;
+				for (size_t i = 0; i < m_shape.size(); ++i) {
+					if (m_shape.at(i) != 1) {
+						this_stripped_shape.push_back(m_shape.at(i));
+						this_dimensions_of_size_not_1.push_back(i);
+					}
+				}
+				std::vector<size_t> related_dimensions_of_size_not_1;
+				std::vector<size_t> related_stripped_shape;
+				for (size_t i = 0; i < related_ptr->m_shape.size(); ++i) {
+					if (related_ptr->m_shape.at(i) != 1) {
+						related_stripped_shape.push_back(related_ptr->m_shape.at(i));
+						related_dimensions_of_size_not_1.push_back(i);
+					}
+				}
+				if (this_stripped_shape == related_stripped_shape) {
+					auto new_origin = m_origin;
+					auto new_shape = m_shape;
+					for (size_t i = 0; i < this_stripped_shape.size(); ++i) {
+						new_origin.value.at(this_dimensions_of_size_not_1.at(i)) +=
+						    subset_ptr->m_origin.value.at(related_dimensions_of_size_not_1.at(i)) -
+						    related_ptr->m_origin.value.at(related_dimensions_of_size_not_1.at(i));
+						new_shape.at(this_dimensions_of_size_not_1.at(i)) =
+						    subset_ptr->m_shape.at(related_dimensions_of_size_not_1.at(i));
 					}
 					return std::make_unique<CuboidMultiIndexSequence>(
-					    subset_ptr->m_shape, new_origin, m_dimension_units);
+					    std::move(new_shape), std::move(new_origin), m_dimension_units);
 				}
+			} else {
+				auto const restricted_subset = subset.subset_restriction(related);
+				assert(restricted_subset);
+				return related_sequence_subset_restriction(related, *restricted_subset);
 			}
 		}
 	}
