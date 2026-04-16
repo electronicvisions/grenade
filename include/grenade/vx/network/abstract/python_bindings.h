@@ -17,6 +17,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/execution_instance_global.h"
 #include "grenade/vx/network/abstract/executor_global.h"
+#include "grenade/vx/network/abstract/mapper.h"
 #include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/atomic_neuron_on_compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection/conductance.h"
