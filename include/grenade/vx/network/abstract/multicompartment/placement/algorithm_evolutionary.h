@@ -60,7 +60,7 @@ private:
 	 * @param placement_result Placement result containing the coordinate-system.
 	 * @param x_max Upper limit in x-direction to check for connections.
 	 */
-	void construct_neuron(PlacementResult& placement_result, size_t x_max);
+	void construct_neuron(NeuronPlacementResult& placement_result, size_t x_max);
 
 	/**
 	 * Calculate fitness based on the number of compartments.
@@ -70,7 +70,7 @@ private:
 	 * @param neuron Target neuron.
 	 */
 	double fitness_number_compartments(
-	    PlacementResult const& placement_result, Neuron const& neuron) const;
+	    NeuronPlacementResult const& placement_result, Neuron const& neuron) const;
 
 	/**
 	 * Calculate fitness based on the number of connections.
@@ -80,7 +80,7 @@ private:
 	 * @param neuron Target neuron.
 	 */
 	double fitness_number_compartment_connections(
-	    PlacementResult const& placement_result, Neuron const& neuron) const;
+	    NeuronPlacementResult const& placement_result, Neuron const& neuron) const;
 
 	/**
 	 * Calculate fitness based on the total number of allocated neuron circuits.
@@ -97,7 +97,7 @@ private:
 	 * @param resources Minimal required resources.
 	 */
 	double fitness_resources_total(
-	    PlacementResult const& placement_result, ResourceManager const& resources) const;
+	    NeuronPlacementResult const& placement_result, ResourceManager const& resources) const;
 
 	/**
 	 * Calculate fitness based on what fraction of the neuron constructed from the placement result
@@ -107,11 +107,11 @@ private:
 	 * @param resources Minimal required resources.
 	 */
 	double fitness_isomorphism(
-	    PlacementResult const& placement_result,
+	    NeuronPlacementResult const& placement_result,
 	    Neuron const& neuron,
 	    ResourceManager const& resources) const;
 	double fitness_recording(
-	    PlacementResult const& parallel_result, ResourceManager const& resources) const;
+	    NeuronPlacementResult const& parallel_result, ResourceManager const& resources) const;
 
 	/**
 	 * Construct coordinate system out of boolean vector retrieved by evolutionary algorithm.
@@ -121,7 +121,7 @@ private:
 	 * switches
 	 */
 	void build_coordinate_system(
-	    PlacementResult& placement_result, size_t x_max, std::vector<bool> individual);
+	    NeuronPlacementResult& placement_result, size_t x_max, std::vector<bool> individual);
 
 	/**
 	 * Returns fitness of current placement.
@@ -131,7 +131,7 @@ private:
 	 * @param resources Resources required by target neuron.
 	 */
 	double GENPYBIND(hidden) fitness(
-	    PlacementResult& placement_result,
+	    NeuronPlacementResult& placement_result,
 	    size_t x_max,
 	    Neuron const& neuron,
 	    ResourceManager const& resources);
@@ -160,7 +160,7 @@ private:
 
 	AlgorithmResult m_result_final;
 
-	std::vector<PlacementResult> m_placement_results;
+	std::vector<NeuronPlacementResult> m_placement_results;
 
 	log4cxx::LoggerPtr m_logger;
 };

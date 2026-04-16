@@ -39,6 +39,8 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/multicompartment/top_bottom.h"
 #include "grenade/vx/network/abstract/multicompartment/unplaced_neuron_circuit.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
+#include "grenade/vx/network/abstract/placement/placer.h"
+#include "grenade/vx/network/abstract/placement_result.h"
 #include "grenade/vx/network/abstract/plasticity_rule.h"
 #include "grenade/vx/network/abstract/population_cell/calibrated.h"
 #include "grenade/vx/network/abstract/population_cell/delay.h"

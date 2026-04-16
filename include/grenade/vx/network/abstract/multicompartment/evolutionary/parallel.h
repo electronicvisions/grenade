@@ -4,7 +4,7 @@
 
 namespace grenade::vx::network::abstract {
 
-struct PlacementResult
+struct NeuronPlacementResult
 {
 	AlgorithmResult result;
 	Neuron neuron_build;

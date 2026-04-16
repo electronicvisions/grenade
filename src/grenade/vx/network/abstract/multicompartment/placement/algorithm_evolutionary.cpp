@@ -56,7 +56,7 @@ PlacementAlgorithmEvolutionary::PlacementAlgorithmEvolutionary(
 }
 
 void PlacementAlgorithmEvolutionary::construct_neuron(
-    PlacementResult& parallel_result, size_t x_max)
+    NeuronPlacementResult& parallel_result, size_t x_max)
 {
 	// Current Placement Result
 	AlgorithmResult& result_temp = parallel_result.result;
@@ -136,7 +136,7 @@ void PlacementAlgorithmEvolutionary::construct_neuron(
 	}
 }
 double PlacementAlgorithmEvolutionary::fitness_number_compartments(
-    PlacementResult const& parallel_result, Neuron const& neuron) const
+    NeuronPlacementResult const& parallel_result, Neuron const& neuron) const
 {
 	double compartments_constructed = parallel_result.neuron_build.num_compartments();
 	double compartments = neuron.num_compartments();
@@ -154,7 +154,7 @@ double PlacementAlgorithmEvolutionary::fitness_number_compartments(
 }
 
 double PlacementAlgorithmEvolutionary::fitness_number_compartment_connections(
-    PlacementResult const& parallel_result, Neuron const& neuron) const
+    NeuronPlacementResult const& parallel_result, Neuron const& neuron) const
 {
 	double connections_constructed = parallel_result.neuron_build.num_compartment_connections();
 	double connections = neuron.num_compartment_connections();
@@ -178,7 +178,7 @@ double PlacementAlgorithmEvolutionary::fitness_number_compartment_connections(
 	            std::max(connections, connections_constructed));
 }
 double PlacementAlgorithmEvolutionary::fitness_resources_total(
-    PlacementResult const& parallel_result, ResourceManager const& resources) const
+    NeuronPlacementResult const& parallel_result, ResourceManager const& resources) const
 {
 	NumberTopBottom constructed_resources_total = parallel_result.resources_total_build;
 	NumberTopBottom required_resources_total = resources.get_total();
@@ -218,7 +218,7 @@ double PlacementAlgorithmEvolutionary::fitness_resources_total(
 	}
 }
 double PlacementAlgorithmEvolutionary::fitness_isomorphism(
-    PlacementResult const& parallel_result,
+    NeuronPlacementResult const& parallel_result,
     Neuron const& neuron,
     ResourceManager const& resources) const
 {
@@ -236,7 +236,7 @@ double PlacementAlgorithmEvolutionary::fitness_isomorphism(
 	return (1 - (number_difference / neuron.num_compartments()));
 }
 double PlacementAlgorithmEvolutionary::fitness_recording(
-    PlacementResult const& parallel_result, ResourceManager const& resources) const
+    NeuronPlacementResult const& parallel_result, ResourceManager const& resources) const
 {
 	std::set<CompartmentOnNeuron> even_parity =
 	    parallel_result.result.coordinate_system.even_parity();
@@ -260,7 +260,7 @@ double PlacementAlgorithmEvolutionary::fitness_recording(
 
 
 void PlacementAlgorithmEvolutionary::build_coordinate_system(
-    PlacementResult& parallel_result, size_t x_max, std::vector<bool> switch_configuration)
+    NeuronPlacementResult& parallel_result, size_t x_max, std::vector<bool> switch_configuration)
 {
 	AlgorithmResult& result = parallel_result.result;
 	result.coordinate_system.clear();
@@ -307,7 +307,7 @@ void PlacementAlgorithmEvolutionary::build_coordinate_system(
 }
 
 double PlacementAlgorithmEvolutionary::fitness(
-    PlacementResult& parallel_result,
+    NeuronPlacementResult& parallel_result,
     size_t x_max,
     Neuron const& neuron,
     ResourceManager const& resources)
@@ -421,7 +421,7 @@ AlgorithmResult PlacementAlgorithmEvolutionary::run(
 
 			auto lambda_fitness = [this, &population, &neuron, &resources](size_t index) -> void {
 				for (size_t i = index; i < index + m_run_parameters.parallel_threads; i++) {
-					PlacementResult& parallel_result = m_placement_results.at(i);
+					NeuronPlacementResult& parallel_result = m_placement_results.at(i);
 
 					build_coordinate_system(
 					    parallel_result, m_run_parameters.x_max, population.at(i));
