@@ -166,9 +166,12 @@ void Topology::check_edge(
 				std::stringstream ss;
 				ss << "Edge from source (" << source << ") to target (" << target
 				   << ") is not valid, because there are multiple usages of channels on the source "
-				      "vertex "
-				      "port, "
-				      "which doesn't support it.";
+				      "vertex port, "
+				      "which doesn't support it:\n";
+				ss << "source vertex: " << source_vertex << "\n";
+				ss << "target vertex: " << target_vertex << "\n";
+				ss << "edge: " << edge << "\n";
+				ss << "other edge: " << out_edge << "\n";
 				throw std::invalid_argument(ss.str());
 			}
 		}
