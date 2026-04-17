@@ -24,6 +24,10 @@ StatefulConnection::StatefulConnection(
 			    }
 			    ret.emplace(
 			        chips_on_connection.at(i), lola::vx::v3::ChipAndMultichipJboaLeafFPGA());
+		    } else if (std::holds_alternative<hxcomm::ZeroMockEntry>(hwdb_entries.at(i))) {
+			    // mock jboa setup
+			    ret.emplace(
+			        chips_on_connection.at(i), lola::vx::v3::ChipAndMultichipJboaLeafFPGA());
 		    } else {
 			    throw std::logic_error("Invalid hwdb entry.");
 		    }
