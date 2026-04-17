@@ -1,0 +1,3 @@
+greedy placer
+
+validity test without overlap and test failed placement

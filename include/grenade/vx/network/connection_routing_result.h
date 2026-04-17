@@ -1,6 +1,7 @@
 #pragma once
+#include "grenade/common/receptor_on_compartment.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/projection_on_network.h"
 #include "hate/visibility.h"
 #include <cstddef>
 #include <iosfwd>
@@ -17,7 +18,8 @@ namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
 struct GENPYBIND(visible) ConnectionToHardwareRoutes
 {
 	/** Indices of atomic neurons in target compartment. */
-	std::vector<size_t> atomic_neurons_on_target_compartment;
+	std::map<grenade::common::ReceptorOnCompartment, std::vector<size_t>>
+	    atomic_neurons_on_target_compartment;
 
 	bool operator==(ConnectionToHardwareRoutes const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ConnectionToHardwareRoutes const& other) const SYMBOL_VISIBLE;
@@ -34,7 +36,7 @@ struct GENPYBIND(visible) ConnectionToHardwareRoutes
  * Contains a translation for each connection of each projection.
  * The order of the translations matches the order of the connections in the projection.
  */
-typedef std::map<ProjectionOnExecutionInstance, std::vector<ConnectionToHardwareRoutes>>
+typedef std::map<grenade::common::VertexOnTopology, std::vector<ConnectionToHardwareRoutes>>
     ConnectionRoutingResult;
 
 } // namespace network

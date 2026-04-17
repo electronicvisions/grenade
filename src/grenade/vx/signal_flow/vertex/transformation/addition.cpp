@@ -1,5 +1,10 @@
 #include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/port_data.h"
+#include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
+#include <functional>
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow::vertex::transformation {
@@ -8,23 +13,28 @@ Addition::Addition(size_t const num_inputs, size_t const size) :
     m_num_inputs(num_inputs), m_size(size)
 {}
 
-Addition::~Addition() {}
-
-std::vector<Port> Addition::inputs() const
+std::vector<Addition::Port> Addition::get_input_ports() const
 {
-	return std::vector{m_num_inputs, Port(m_size, ConnectionType::Int8)};
+	return std::vector{
+	    m_num_inputs, Port(
+	                      VertexPortType(ConnectionType::Int8),
+	                      grenade::common::CuboidMultiIndexSequence({m_size}))};
 }
 
-Port Addition::output() const
+std::vector<Addition::Port> Addition::get_output_ports() const
 {
-	return Port(m_size, ConnectionType::Int8);
+	return {Port(
+	    VertexPortType(ConnectionType::Int8), grenade::common::CuboidMultiIndexSequence({m_size}))};
 }
 
-Addition::Function::Value Addition::apply(std::vector<Function::Value> const& value) const
+std::vector<Transformation::Results> Addition::apply(
+    std::vector<std::reference_wrapper<grenade::common::PortData const>> const& data) const
 {
 	size_t batch_size = 0;
-	if (!value.empty()) {
-		batch_size = std::visit([](auto const& v) { return v.size(); }, value.at(0));
+	if (!data.empty()) {
+		batch_size = std::visit(
+		    [](auto const& v) { return v.size(); },
+		    dynamic_cast<Transformation::Dynamics const&>(data.at(0).get()).value);
 	}
 
 	std::vector<common::TimedDataSequence<std::vector<Int8>>> ret(batch_size);
@@ -36,9 +46,10 @@ Addition::Function::Value Addition::apply(std::vector<Function::Value> const& va
 
 	std::vector<intmax_t> tmps(m_size, 0);
 	for (size_t j = 0; j < batch_size; ++j) {
-		for (size_t k = 0; k < value.size(); ++k) {
+		for (size_t k = 0; k < data.size(); ++k) {
 			auto const& batch_entry =
-			    std::get<std::vector<common::TimedDataSequence<std::vector<Int8>>>>(value.at(k))
+			    std::get<std::vector<common::TimedDataSequence<std::vector<Int8>>>>(
+			        dynamic_cast<Transformation::Dynamics const&>(data.at(k).get()).value)
 			        .at(j);
 			assert(batch_entry.size() == 1);
 			assert(tmps.size() == batch_entry.at(0).data.size());
@@ -52,20 +63,28 @@ Addition::Function::Value Addition::apply(std::vector<Function::Value> const& va
 		});
 		std::fill(tmps.begin(), tmps.end(), 0);
 	}
-	return ret;
+	return {{std::move(ret)}};
 }
 
-bool Addition::equal(Transformation::Function const& other) const
-{
-	if (auto const o = dynamic_cast<Addition const*>(&other); o != nullptr) {
-		return (m_num_inputs == o->m_num_inputs) && (m_size == o->m_size);
-	}
-	return false;
-}
-
-std::unique_ptr<Transformation::Function> Addition::clone() const
+std::unique_ptr<Transformation::Function> Addition::copy() const
 {
 	return std::make_unique<Addition>(*this);
+}
+
+std::unique_ptr<Transformation::Function> Addition::move()
+{
+	return std::make_unique<Addition>(*this);
+}
+
+bool Addition::is_equal_to(Transformation::Function const& other) const
+{
+	auto const& o = static_cast<Addition const&>(other);
+	return (m_num_inputs == o.m_num_inputs) && (m_size == o.m_size);
+}
+
+std::ostream& Addition::print(std::ostream& os) const
+{
+	return os << "Addition(num_inputs: " << m_num_inputs << ", size: " << m_size << ")";
 }
 
 } // namespace grenade::vx::signal_flow::vertex::transformation

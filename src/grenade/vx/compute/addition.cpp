@@ -1,42 +1,27 @@
 #include "grenade/vx/compute/addition.h"
 
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/vx/compute/detail/chip_configs.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 
 namespace grenade::vx::compute {
 
 Addition::Addition(std::vector<signal_flow::Int8> const& other) :
-    m_graph(), m_input_vertex(), m_other_vertex(), m_output_vertex(), m_other(other)
+    m_topology(std::make_shared<grenade::common::Topology>()), m_vertex(), m_other(other)
 {
 	using namespace halco::hicann_dls::vx;
 
-	auto const instance = grenade::common::ExecutionInstanceID();
+	auto const instance = grenade::common::ExecutionInstanceOnExecutor();
 
 	auto const size = other.size();
 
-	m_input_vertex = m_graph.add(
-	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
-	    {});
-	m_other_vertex = m_graph.add(
-	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
-	    {});
-	auto const vi = m_graph.add(
-	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
-	    {m_input_vertex});
-	auto const vo = m_graph.add(
-	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
-	    {m_other_vertex});
-	signal_flow::Vertex transformation(signal_flow::vertex::Transformation(
-	    std::make_unique<signal_flow::vertex::transformation::Addition>(2, size)));
-	auto const va = m_graph.add(std::move(transformation), instance, {vi, vo});
-	m_output_vertex = m_graph.add(
-	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::Int8, size), instance, {va});
+	m_vertex = m_topology->add_vertex(signal_flow::vertex::Transformation(
+	    signal_flow::vertex::transformation::Addition(2, size), instance));
 }
 
 size_t Addition::input_size() const
@@ -51,7 +36,7 @@ size_t Addition::output_size() const
 
 std::vector<std::vector<signal_flow::Int8>> Addition::run(
     std::vector<std::vector<signal_flow::Int8>> const& inputs,
-    lola::vx::v3::Chip const& config,
+    lola::vx::v3::Chip const&,
     execution::JITGraphExecutor& executor) const
 {
 	using namespace halco::hicann_dls::vx;
@@ -68,21 +53,18 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 	}
 
 	if (batch_entry_size !=
-	    std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
-	        .output()
-	        .size) {
+	    m_topology->get(m_vertex).get_output_ports().at(0).get_channels().size()) {
 		throw std::runtime_error("Provided inputs size does not match Addition input size.");
 	}
 
-	signal_flow::InputData input_map;
+	grenade::common::InputData input_map;
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
 		timed_inputs.at(i).resize(1);
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
-	input_map.snippets.resize(1);
-	input_map.snippets[0].data[m_input_vertex] = timed_inputs;
+	input_map.ports.set({m_vertex, 0}, signal_flow::vertex::Transformation::Dynamics(timed_inputs));
 
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> others(inputs.size());
 	for (auto& o : others) {
@@ -90,14 +72,15 @@ std::vector<std::vector<signal_flow::Int8>> Addition::run(
 		// TODO: Think about what to do with timing information
 		o.at(0).data = m_other;
 	}
-	input_map.snippets[0].data[m_other_vertex] = others;
+	input_map.ports.set({m_vertex, 1}, signal_flow::vertex::Transformation::Dynamics(others));
 
-	auto const output_map =
-	    execution::run(executor, m_graph, detail::get_chip_configs_from_chip(config), input_map);
+	auto const output_map = execution::run(executor, m_topology, input_map);
 
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
-	        output_map.snippets[0].data.at(m_output_vertex));
+	        dynamic_cast<signal_flow::vertex::Transformation::Results const&>(
+	            output_map.ports.get({m_vertex, 0}))
+	            .value);
 	std::vector<std::vector<signal_flow::Int8>> outputs(timed_outputs.size());
 	for (size_t i = 0; i < outputs.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);

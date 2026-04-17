@@ -1,5 +1,10 @@
 #include "grenade/vx/signal_flow/vertex/transformation/converting_relu.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/port_data.h"
+#include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
 
+#include <functional>
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow::vertex::transformation {
@@ -8,23 +13,26 @@ ConvertingReLU::ConvertingReLU(size_t const size, uint32_t const shift) :
     m_size(size), m_shift(shift)
 {}
 
-ConvertingReLU::~ConvertingReLU() {}
-
-std::vector<Port> ConvertingReLU::inputs() const
+std::vector<Transformation::Function::Port> ConvertingReLU::get_input_ports() const
 {
-	return {Port(m_size, ConnectionType::Int8)};
+	return {Port(
+	    VertexPortType(ConnectionType::Int8), grenade::common::CuboidMultiIndexSequence({m_size}))};
 }
 
-Port ConvertingReLU::output() const
+std::vector<Transformation::Function::Port> ConvertingReLU::get_output_ports() const
 {
-	return Port(m_size, ConnectionType::UInt5);
+	return {Port(
+	    VertexPortType(ConnectionType::UInt5),
+	    grenade::common::CuboidMultiIndexSequence({m_size}))};
 }
 
-ConvertingReLU::Function::Value ConvertingReLU::apply(
-    std::vector<Function::Value> const& value) const
+std::vector<Transformation::Results> ConvertingReLU::apply(
+    std::vector<std::reference_wrapper<grenade::common::PortData const>> const& data) const
 {
 	size_t batch_size = 0;
-	batch_size = std::visit([](auto const& v) { return v.size(); }, value.at(0));
+	batch_size = std::visit(
+	    [](auto const& v) { return v.size(); },
+	    dynamic_cast<Transformation::Dynamics const&>(data.at(0).get()).value);
 
 	std::vector<common::TimedDataSequence<std::vector<UInt5>>> ret(batch_size);
 	for (auto& e : ret) {
@@ -33,8 +41,9 @@ ConvertingReLU::Function::Value ConvertingReLU::apply(
 		e.at(0).data.resize(m_size);
 	}
 	for (size_t j = 0; j < ret.size(); ++j) {
-		auto const& d =
-		    std::get<std::vector<common::TimedDataSequence<std::vector<Int8>>>>(value.at(0)).at(j);
+		auto const& d = std::get<std::vector<common::TimedDataSequence<std::vector<Int8>>>>(
+		                    dynamic_cast<Transformation::Dynamics const&>(data.at(0).get()).value)
+		                    .at(j);
 		assert(d.size() == 1);
 		for (size_t i = 0; i < m_size; ++i) {
 			ret.at(j).at(0).data.at(i) = UInt5(std::min(
@@ -42,20 +51,28 @@ ConvertingReLU::Function::Value ConvertingReLU::apply(
 			    UInt5::max));
 		}
 	}
-	return ret;
+	return {{ret}};
 }
 
-bool ConvertingReLU::equal(Transformation::Function const& other) const
-{
-	if (auto const o = dynamic_cast<ConvertingReLU const*>(&other); o != nullptr) {
-		return (m_size == o->m_size);
-	}
-	return false;
-}
-
-std::unique_ptr<Transformation::Function> ConvertingReLU::clone() const
+std::unique_ptr<Transformation::Function> ConvertingReLU::copy() const
 {
 	return std::make_unique<ConvertingReLU>(*this);
+}
+
+std::unique_ptr<Transformation::Function> ConvertingReLU::move()
+{
+	return std::make_unique<ConvertingReLU>(std::move(*this));
+}
+
+bool ConvertingReLU::is_equal_to(Transformation::Function const& other) const
+{
+	auto const& o = static_cast<ConvertingReLU const&>(other);
+	return m_size == o.m_size && m_shift == o.m_shift;
+}
+
+std::ostream& ConvertingReLU::print(std::ostream& os) const
+{
+	return os << "ConvertingReLU(size: " << m_size << ", shift: " << m_shift << ")";
 }
 
 } // namespace grenade::vx::signal_flow::vertex::transformation

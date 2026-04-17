@@ -2,6 +2,7 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 #include <cereal/types/vector.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -10,8 +11,6 @@ template <typename Archive>
 void SynapseArrayView::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(cereal::base_class<EntityOnChip>(this));
-	ar(m_weights);
-	ar(m_labels);
 	ar(m_columns);
 	ar(m_rows);
 	ar(m_synram);

@@ -1,5 +1,7 @@
 #include "grenade/vx/execution/detail/execution_instance_realtime_executor.h"
 
+#include "grenade/common/input_data.h"
+#include "grenade/common/output_data.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_ppu_usage_visitor.h"
@@ -47,7 +49,8 @@ ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
 			local_post_processable.periodic_cadc_readout_times =
 			    chips.at(chip_on_connection).cadc_readout_time_information[i];
 		}
-		auto result = snippet_executors[i].post_process(std::move(post_processable));
+		assert(snippet_executors.at(i));
+		auto result = snippet_executors.at(i)->post_process(std::move(post_processable));
 		results.push_back(std::move(result));
 		LOG4CXX_TRACE(logger, "operator(): Evaluated in " << post_timer.print() << ".");
 	}
@@ -56,19 +59,19 @@ ExecutionInstanceRealtimeExecutor::PostProcessor::operator()(
 
 
 ExecutionInstanceRealtimeExecutor::ExecutionInstanceRealtimeExecutor(
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<signal_flow::InputDataSnippet> const& input_data,
-    std::vector<signal_flow::OutputDataSnippet>& output_data,
+    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors,
+    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
+    std::vector<grenade::common::OutputData>& output_data,
     std::map<common::ChipOnConnection, ExecutionInstanceChipPPUProgramCompiler::Result> const&
         ppu_program,
-    std::vector<common::ChipOnConnection> chips_on_connection,
-    grenade::common::ExecutionInstanceID const& execution_instance) :
-    m_graphs(graphs),
+    std::vector<common::ChipOnConnection> chips_on_connection) :
+    m_topologies(topologies),
+    m_execution_instance_vertex_descriptors(execution_instance_vertex_descriptors),
     m_input_data(input_data),
     m_output_data(output_data),
     m_ppu_program(ppu_program),
-    m_chips_on_connection(chips_on_connection),
-    m_execution_instance(execution_instance)
+    m_chips_on_connection(chips_on_connection)
 {
 }
 
@@ -86,7 +89,8 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	using namespace stadls::vx::v3;
 
 	assert(
-	    (std::set<size_t>{m_output_data.size(), m_input_data.size(), m_graphs.size()}.size() == 1));
+	    (std::set<size_t>{m_output_data.size(), m_input_data.size(), m_topologies.size()}.size() ==
+	     1));
 	size_t const snippet_count = m_output_data.size();
 
 	Program program;
@@ -113,7 +117,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	}
 
 	// vector for storing all execution_instance_snippet_realtime_executors
-	std::vector<ExecutionInstanceSnippetRealtimeExecutor> builders;
+	std::vector<std::unique_ptr<ExecutionInstanceSnippetRealtimeExecutor>> builders;
 	std::vector<ExecutionInstanceSnippetRealtimeExecutor::Program> snippets;
 
 	std::map<common::ChipOnConnection, std::vector<bool>> periodic_cadc_recording;
@@ -140,12 +144,13 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 		}
 	}
 	for (size_t i = 0; i < snippet_count; i++) {
-		builders.emplace_back(
-		    m_graphs[i], m_execution_instance, m_chips_on_connection, m_input_data[i],
-		    m_output_data[i], ppu_symbols, plasticity_rule_timed_recording_start_periods.at(i));
+		builders.emplace_back(std::make_unique<ExecutionInstanceSnippetRealtimeExecutor>(
+		    *m_topologies[i], m_execution_instance_vertex_descriptors[i], m_chips_on_connection,
+		    m_input_data[i].get(), m_output_data[i], ppu_symbols,
+		    plasticity_rule_timed_recording_start_periods.at(i)));
 
 		hate::Timer const realtime_preprocess_timer;
-		ExecutionInstanceSnippetRealtimeExecutor::Usages usages = builders[i].pre_process();
+		ExecutionInstanceSnippetRealtimeExecutor::Usages usages = builders[i]->pre_process();
 		for (auto const& chip_on_connection : m_chips_on_connection) {
 			if (usages[chip_on_connection].madc_recording) {
 				uses_madc.at(chip_on_connection) = true;
@@ -188,7 +193,7 @@ ExecutionInstanceRealtimeExecutor::operator()() const
 	for (size_t i = 0; i < snippet_count; i++) {
 		// build realtime programs
 		hate::Timer const realtime_generate_timer;
-		auto snippet = builders[i].generate(usages_before[i], usages_after[i]);
+		auto snippet = builders[i]->generate(usages_before[i], usages_after[i]);
 		snippets.push_back(std::move(snippet));
 		LOG4CXX_TRACE(
 		    logger, "operator(): Generated playback program builders for realtime snippet "

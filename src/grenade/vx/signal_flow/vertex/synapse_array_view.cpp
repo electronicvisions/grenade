@@ -1,5 +1,11 @@
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
 
+#include "grenade/common/edge.h"
+#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
+#include "grenade/vx/signal_flow/vertex/synapse_driver.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include <ostream>
@@ -8,8 +14,54 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-void SynapseArrayView::check(
-    Rows const& rows, Columns const& columns, Weights const& weights, Labels const& labels)
+SynapseArrayView::Parameterization::Parameterization(Labels labels, Weights weights) :
+    labels(std::move(labels)), weights(std::move(weights))
+{
+}
+
+std::unique_ptr<grenade::common::PortData> SynapseArrayView::Parameterization::copy() const
+{
+	return std::make_unique<Parameterization>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> SynapseArrayView::Parameterization::move()
+{
+	return std::make_unique<Parameterization>(std::move(*this));
+}
+
+std::ostream& SynapseArrayView::Parameterization::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "Parameterization(\n" << hate::Indentation("\t");
+	for (size_t i = 0; i < labels.size(); ++i) {
+		for (size_t j = 0; j < labels.size(); ++j) {
+			ios << i << ", " << j << ": " << labels.at(i).at(j) << ", " << weights.at(i).at(j)
+			    << "\n";
+		}
+	}
+	ios << hate::Indentation();
+	ios << ")";
+	return os;
+}
+
+bool SynapseArrayView::Parameterization::is_equal_to(grenade::common::PortData const& other) const
+{
+	auto const& other_parameterization = static_cast<Parameterization const&>(other);
+	return labels == other_parameterization.labels && weights == other_parameterization.weights;
+}
+
+
+SynapseArrayView::SynapseArrayView(
+    Synram const& synram,
+    Rows rows,
+    Columns columns,
+    common::ChipOnConnection const& chip_on_connection,
+    grenade::common::TimeDomainOnTopology const& time_domain,
+    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor) :
+    EntityOnChip(chip_on_connection, time_domain, execution_instance_on_executor),
+    m_synram(synram),
+    m_rows(),
+    m_columns()
 {
 	if (rows.empty()) {
 		throw std::runtime_error("Row size(0) unsupported.");
@@ -25,22 +77,8 @@ void SynapseArrayView::check(
 	if (unique_rows.size() != rows.size()) {
 		throw std::runtime_error("Row locations provided to SynapseArrayView are not unique.");
 	}
-	if (rows.size() != weights.size()) {
-		throw std::runtime_error("Weight row size does not match rows size.");
-	}
-	if (rows.size() != labels.size()) {
-		throw std::runtime_error("Label row size does not match rows size.");
-	}
-	for (auto const& row : weights) {
-		if (row.size() != columns.size()) {
-			throw std::runtime_error("Weight row size does not match columns size.");
-		}
-	}
-	for (auto const& row : labels) {
-		if (row.size() != columns.size()) {
-			throw std::runtime_error("Weight row size does not match columns size.");
-		}
-	}
+	m_rows = std::move(rows);
+	m_columns = std::move(columns);
 }
 
 boost::iterator_range<SynapseArrayView::Rows::const_iterator> SynapseArrayView::get_rows() const
@@ -54,56 +92,108 @@ boost::iterator_range<SynapseArrayView::Columns::const_iterator> SynapseArrayVie
 	return {m_columns.begin(), m_columns.end()};
 }
 
-boost::iterator_range<SynapseArrayView::Weights::const_iterator> SynapseArrayView::get_weights()
-    const
-{
-	return {m_weights.begin(), m_weights.end()};
-}
-
-boost::iterator_range<SynapseArrayView::Labels::const_iterator> SynapseArrayView::get_labels() const
-{
-	return {m_labels.begin(), m_labels.end()};
-}
-
 SynapseArrayView::Synram const& SynapseArrayView::get_synram() const
 {
 	return m_synram;
 }
 
-std::vector<Port> SynapseArrayView::inputs() const
+bool SynapseArrayView::valid_input_port_data(
+    size_t input_port_on_vertex, grenade::common::PortData const& data) const
 {
-	Port const port(1, ConnectionType::SynapseInputLabel);
-	std::set<halco::hicann_dls::vx::v3::SynapseDriverOnSynapseDriverBlock> drivers;
-	std::for_each(m_rows.begin(), m_rows.end(), [&](auto const& r) {
-		drivers.insert(r.toSynapseDriverOnSynapseDriverBlock());
-	});
-	std::vector<Port> ret;
-	ret.insert(ret.begin(), drivers.size(), port);
-	return ret;
+	if (input_port_on_vertex != 1) {
+		return false;
+	}
+	if (auto const parameterization_ptr = dynamic_cast<Parameterization const*>(&data);
+	    parameterization_ptr) {
+		if (parameterization_ptr->labels.size() != m_rows.size()) {
+			return false;
+		}
+		if (parameterization_ptr->weights.size() != m_rows.size()) {
+			return false;
+		}
+		for (size_t i = 0; i < m_rows.size(); ++i) {
+			if (parameterization_ptr->labels.at(i).size() != m_columns.size()) {
+				return false;
+			}
+			if (parameterization_ptr->weights.at(i).size() != m_columns.size()) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
-Port SynapseArrayView::output() const
+std::vector<grenade::common::Vertex::Port> SynapseArrayView::get_input_ports() const
 {
-	return Port(m_columns.size(), ConnectionType::SynapticInput);
+	return {
+	    grenade::common::Vertex::Port(
+	        VertexPortType(ConnectionType::SynapseInputLabel),
+	        grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	        grenade::common::CuboidMultiIndexSequence({m_rows.size()})),
+	    grenade::common::Vertex::Port(
+	        ParameterizationPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	        grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
 }
 
-std::ostream& operator<<(std::ostream& os, SynapseArrayView const& config)
+std::vector<grenade::common::Vertex::Port> SynapseArrayView::get_output_ports() const
 {
-	os << "SynapseArrayView(size: [rows: " << config.m_rows.size()
-	   << ", columns: " << config.m_columns.size() << "])";
+	return {grenade::common::Vertex::Port(
+	    VertexPortType(ConnectionType::SynapticInput),
+	    grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	    grenade::common::CuboidMultiIndexSequence({m_columns.size()}))};
+}
+
+bool SynapseArrayView::valid_edge_from(
+    Vertex const& source, grenade::common::Edge const& edge) const
+{
+	if (!PartitionedVertex::valid_edge_from(source, edge)) {
+		return false;
+	}
+	if (auto const synapse_driver = dynamic_cast<SynapseDriver const*>(&source); synapse_driver) {
+		auto const channels_on_target = edge.get_channels_on_target().get_elements();
+		auto const channels_on_source = edge.get_channels_on_source().get_elements();
+		for (size_t i = 0; i < channels_on_target.size(); ++i) {
+			if (synapse_driver->coordinate != halco::hicann_dls::vx::v3::SynapseDriverOnDLS(
+			                                      m_rows.at(channels_on_target.at(i).value.at(0))
+			                                          .toSynapseDriverOnSynapseDriverBlock(),
+			                                      m_synram.toSynapseDriverBlockOnDLS())) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+std::unique_ptr<grenade::common::Vertex> SynapseArrayView::copy() const
+{
+	return std::make_unique<SynapseArrayView>(*this);
+}
+
+std::unique_ptr<grenade::common::Vertex> SynapseArrayView::move()
+{
+	return std::make_unique<SynapseArrayView>(std::move(*this));
+}
+
+std::ostream& SynapseArrayView::print(std::ostream& os) const
+{
+	os << "SynapseArrayView(size: [rows: " << m_rows.size() << ", columns: " << m_columns.size()
+	   << "])";
 	return os;
 }
 
-bool SynapseArrayView::operator==(SynapseArrayView const& other) const
+bool SynapseArrayView::is_equal_to(Vertex const& other) const
 {
-	return (m_synram == other.m_synram) && (m_rows == other.m_rows) &&
-	       (m_columns == other.m_columns) && (m_weights == other.m_weights) &&
-	       (m_labels == other.m_labels);
-}
-
-bool SynapseArrayView::operator!=(SynapseArrayView const& other) const
-{
-	return !(*this == other);
+	auto const& other_synapses = static_cast<SynapseArrayView const&>(other);
+	return (m_synram == other_synapses.m_synram) && (m_rows == other_synapses.m_rows) &&
+	       (m_columns == other_synapses.m_columns) && EntityOnChip::is_equal_to(other);
 }
 
 } // namespace grenade::vx::signal_flow::vertex

@@ -10,6 +10,7 @@ namespace grenade::vx::signal_flow::vertex::transformation {
 template <typename Archive>
 void MACSpikeTrainGenerator::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<Function>(this));
 	ar(m_hemisphere_sizes);
 	ar(m_num_sends);
 	ar(m_wait_between_events);

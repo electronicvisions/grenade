@@ -280,7 +280,13 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	/**
 	 * Get synapse type property.
 	 */
-	Synapse const& get_synapse() const;
+	Synapse const& get_synapse() const GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		parent.def("get_synapse", [](GENPYBIND_PARENT_TYPE const& self) {
+			return self.get_synapse().copy();
+		});
+	})
 
 	/**
 	 * Set synapse type property.
@@ -317,7 +323,13 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	/**
 	 * Get connector property.
 	 */
-	Connector const& get_connector() const;
+	Connector const& get_connector() const GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		parent.def("get_connector", [](GENPYBIND_PARENT_TYPE const& self) {
+			return self.get_connector().copy();
+		});
+	})
 
 	/**
 	 * Set connector property.

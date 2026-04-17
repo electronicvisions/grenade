@@ -3,10 +3,12 @@
 #include <vector>
 #include <tbb/flow_graph.h>
 
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/linked_topology.h"
+#include "grenade/common/output_data.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
-#include "grenade/vx/signal_flow/output_data.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 #include "stadls/vx/v3/playback_program.h"
@@ -30,17 +32,28 @@ namespace grenade::vx::execution::detail {
  */
 struct ExecutionInstanceNode
 {
+	/**
+	 * Construct execution instance node.
+	 * @param output_data Output data to add results into
+	 * @param results_mutex Mutex with which to guard modifying output_data
+	 * @param topologies Topologies to use
+	 * @param execution_instance Execution instance to execute
+	 * @param data Input data to use
+	 * @param connection Connection to device use
+	 * @param hooks Execution instance hooks to use
+	 * @param execution_instance_vertex_descriptors Vertex descriptors per realtime snippet of
+	 * execution instance to visit
+	 */
 	ExecutionInstanceNode(
-	    signal_flow::OutputData& data_maps,
-	    signal_flow::InputData const& input_data_maps,
-	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    grenade::common::ExecutionInstanceID const& execution_instance,
-	    grenade::common::ConnectionOnExecutor const& connection_on_executor,
-	    std::vector<std::map<
-	        common::ChipOnConnection,
-	        std::reference_wrapper<lola::vx::v3::Chip const>>> const& configs,
+	    std::vector<grenade::common::OutputData>& output_data,
+	    std::mutex& results_mutex,
+	    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+	    grenade::common::ExecutionInstanceOnExecutor const& execution_instance,
+	    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& data,
 	    backend::StatefulConnection& connection,
-	    ExecutionInstanceHooks& hooks) SYMBOL_VISIBLE;
+	    ExecutionInstanceHooks& hooks,
+	    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors)
+	    SYMBOL_VISIBLE;
 
 	void operator()(tbb::flow::continue_msg) SYMBOL_VISIBLE;
 
@@ -61,16 +74,14 @@ struct ExecutionInstanceNode
 	};
 
 private:
-	signal_flow::OutputData& data_maps;
-	signal_flow::InputData const& input_data_maps;
-	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs;
-	grenade::common::ExecutionInstanceID execution_instance;
-	grenade::common::ConnectionOnExecutor connection_on_executor;
-	std::vector<
-	    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>>
-	    configs;
+	std::vector<grenade::common::OutputData>& output_data;
+	std::mutex& results_mutex;
+	std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies;
+	grenade::common::ExecutionInstanceOnExecutor execution_instance;
+	std::vector<std::reference_wrapper<grenade::common::InputData const>> input_data;
 	backend::StatefulConnection& connection;
 	ExecutionInstanceHooks& hooks;
+	std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors;
 	log4cxx::LoggerPtr logger;
 };
 

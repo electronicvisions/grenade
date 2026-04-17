@@ -2,16 +2,42 @@
 
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
 #include "grenade/common/time_domain_on_topology.h"
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/vertex_port_type/analog_observable.h"
 #include "grenade/vx/network/abstract/vertex_port_type/madc_samples.h"
+#include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "hate/indent.h"
 #include "hate/join.h"
 #include <memory>
 
 namespace grenade::vx::network::abstract {
+
+PadRecorder::Parameterization::Parameterization() {}
+
+std::unique_ptr<grenade::common::PortData> PadRecorder::Parameterization::copy() const
+{
+	return std::make_unique<Parameterization>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> PadRecorder::Parameterization::move()
+{
+	return std::make_unique<Parameterization>(std::move(*this));
+}
+
+std::ostream& PadRecorder::Parameterization::print(std::ostream& os) const
+{
+	return os << "Parameterization(enable_buffered: " << hate::join(enable_buffered, ", ") << ")";
+}
+
+bool PadRecorder::Parameterization::is_equal_to(grenade::common::PortData const& other) const
+{
+	auto const& other_parameterization = static_cast<Parameterization const&>(other);
+	return enable_buffered == other_parameterization.enable_buffered;
+}
+
 
 PadRecorder::PadRecorder(
     std::vector<halco::hicann_dls::vx::v3::PadOnDLS> pads,
@@ -40,12 +66,31 @@ void PadRecorder::set_pads(std::vector<halco::hicann_dls::vx::v3::PadOnDLS> valu
 	m_pads = std::move(value);
 }
 
+bool PadRecorder::valid_input_port_data(
+    size_t input_port_on_vertex, grenade::common::PortData const& input_data) const
+{
+	if (input_port_on_vertex != 1) {
+		return false;
+	}
+	if (auto const parameterization = dynamic_cast<Parameterization const*>(&input_data);
+	    parameterization != nullptr) {
+		return parameterization->enable_buffered.size() == get_shape().size();
+	}
+	return false;
+}
+
 std::vector<grenade::common::Vertex::Port> PadRecorder::get_input_ports() const
 {
-	return {Port(
-	    AnalogObservable(), Port::SumOrSplitSupport::no,
-	    Port::ExecutionInstanceTransitionConstraint::not_supported,
-	    Port::RequiresOrGeneratesData::no, get_shape())};
+	return {
+	    Port(
+	        AnalogObservable(), Port::SumOrSplitSupport::no,
+	        Port::ExecutionInstanceTransitionConstraint::not_supported,
+	        Port::RequiresOrGeneratesData::no, get_shape()),
+	    Port(
+	        ParameterizationPortType(), Port::SumOrSplitSupport::no,
+	        Port::ExecutionInstanceTransitionConstraint::required,
+	        Port::RequiresOrGeneratesData::yes,
+	        grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
 }
 
 std::vector<grenade::common::Vertex::Port> PadRecorder::get_output_ports() const

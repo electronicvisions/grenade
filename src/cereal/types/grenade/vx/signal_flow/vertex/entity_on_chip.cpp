@@ -2,13 +2,17 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/types/utility.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
 
 template <typename Archive>
 void EntityOnChip::serialize(Archive& ar, std::uint32_t const)
 {
-	ar(cereal::base_class<common::EntityOnChip>(this));
+	ar(cereal::base_class<grenade::common::PartitionedVertex>(this));
+	ar(chip_on_connection);
+	ar(m_time_domain);
 }
 
 } // namespace grenade::vx::signal_flow::vertex

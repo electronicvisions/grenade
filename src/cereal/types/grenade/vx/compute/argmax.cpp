@@ -1,6 +1,8 @@
 #include "grenade/vx/compute/argmax.h"
 
+#include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/memory.hpp>
 
 namespace grenade::vx::compute {
 
@@ -8,8 +10,7 @@ template <typename Archive>
 void ArgMax::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(m_graph);
-	ar(m_input_vertex);
-	ar(m_output_vertex);
+	ar(m_vertex);
 }
 
 } // namespace grenade::vx::compute

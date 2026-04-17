@@ -1,9 +1,12 @@
 #pragma once
+#include "grenade/common/vertex_port_type.h"
+#include "grenade/vx/genpybind.h"
 #include "hate/visibility.h"
 #include <array>
 #include <iosfwd>
 
-namespace grenade::vx::signal_flow {
+namespace grenade::vx {
+namespace signal_flow GENPYBIND_TAG_GRENADE_VX_SIGNAL_FLOW {
 
 /**
  * Type of data transfered by a connection.
@@ -46,4 +49,22 @@ constexpr auto can_connect_different_execution_instances = std::array{
     ConnectionType::DataUInt32,
     ConnectionType::DataTimedMADCSampleFromChipSequence};
 
-} // namespace grenade::vx::signal_flow
+/**
+ * Port type to be used.
+ */
+struct SYMBOL_VISIBLE GENPYBIND(visible) VertexPortType : public grenade::common::VertexPortType
+{
+	ConnectionType type;
+
+	VertexPortType(ConnectionType type);
+
+	virtual std::unique_ptr<grenade::common::VertexPortType> copy() const override;
+	virtual std::unique_ptr<grenade::common::VertexPortType> move() override;
+
+protected:
+	virtual bool is_equal_to(grenade::common::VertexPortType const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
+};
+
+} // namespace signal_flow
+} // namespace grenade::vx

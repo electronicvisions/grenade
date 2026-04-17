@@ -1,6 +1,10 @@
 #pragma once
+#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/port_data.h"
+#include "grenade/common/port_data/batched.h"
 #include "grenade/vx/signal_flow/connection_type.h"
-#include "grenade/vx/signal_flow/port.h"
+#include "grenade/vx/signal_flow/event.h"
+#include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/cadc.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
@@ -19,26 +23,34 @@ struct access;
 } // namespace cereal
 
 namespace grenade::vx::signal_flow {
-
-struct PortRestriction;
-
 namespace vertex {
-
-struct NeuronView;
 
 /**
  * Readout of membrane voltages via the CADC.
  */
-struct CADCMembraneReadoutView : public EntityOnChip
+struct SYMBOL_VISIBLE CADCMembraneReadoutView : public EntityOnChip
 {
-	constexpr static bool can_connect_different_execution_instances = false;
+	struct Results : public grenade::common::BatchedPortData
+	{
+		typedef std::vector<common::TimedDataSequence<std::vector<Int8>>> Samples;
+		Samples samples;
 
-	/**
-	 * Columns to record as collection of collections of columns.
-	 * Each inner collection corresponds to one input port of the vertex and thus allows recording
-	 * neurons from different non-contiguous input vertices.
-	 */
-	typedef std::vector<std::vector<halco::hicann_dls::vx::v3::SynapseOnSynapseRow>> Columns;
+		Results(Samples samples);
+
+		virtual size_t batch_size() const override;
+
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
+	};
+
+	virtual bool valid_output_port_data(
+	    size_t output_port_on_vertex, grenade::common::PortData const& data) const override;
+
+	typedef std::vector<halco::hicann_dls::vx::v3::SynapseOnSynapseRow> Columns;
 	typedef halco::hicann_dls::vx::v3::SynramOnDLS Synram;
 
 	enum class Mode
@@ -48,49 +60,39 @@ struct CADCMembraneReadoutView : public EntityOnChip
 		periodic_on_dram
 	};
 
-	typedef std::vector<std::vector<lola::vx::v3::AtomicNeuron::Readout::Source>> Sources;
-
-	CADCMembraneReadoutView() = default;
-
 	/**
 	 * Construct CADCMembraneReadoutView with specified size.
 	 * @param columns Columns to read out
 	 */
-	template <typename ColumnsT, typename SynramT, typename SourcesT>
-	explicit CADCMembraneReadoutView(
-	    ColumnsT&& columns,
-	    SynramT&& synram,
+	CADCMembraneReadoutView(
+	    Columns columns,
+	    Synram const& synram,
 	    Mode const& mode,
-	    SourcesT&& sources,
-	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor());
+	    common::ChipOnConnection const& chip_on_connection,
+	    grenade::common::TimeDomainOnTopology const& time_domain,
+	    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor);
 
 	Columns const& get_columns() const SYMBOL_VISIBLE;
 	Synram const& get_synram() const SYMBOL_VISIBLE;
 	Mode const& get_mode() const SYMBOL_VISIBLE;
-	Sources const& get_sources() const SYMBOL_VISIBLE;
 
-	constexpr static bool variadic_input = false;
-	std::vector<Port> inputs() const SYMBOL_VISIBLE;
+	virtual std::vector<Port> get_input_ports() const override;
+	virtual std::vector<Port> get_output_ports() const override;
 
-	Port output() const SYMBOL_VISIBLE;
+	virtual bool valid_edge_from(
+	    Vertex const& source, grenade::common::Edge const& edge) const override;
 
-	friend std::ostream& operator<<(std::ostream& os, CADCMembraneReadoutView const& config)
-	    SYMBOL_VISIBLE;
+	virtual std::unique_ptr<Vertex> copy() const override;
+	virtual std::unique_ptr<Vertex> move() override;
 
-	bool supports_input_from(
-	    NeuronView const& input,
-	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
-
-	bool operator==(CADCMembraneReadoutView const& other) const SYMBOL_VISIBLE;
-	bool operator!=(CADCMembraneReadoutView const& other) const SYMBOL_VISIBLE;
+protected:
+	virtual bool is_equal_to(Vertex const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 
 private:
 	Columns m_columns{};
 	Synram m_synram{};
 	Mode m_mode{};
-	Sources m_sources{};
-
-	void check(Columns const& columns, Sources const& sources) SYMBOL_VISIBLE;
 
 	friend struct cereal::access;
 	template <typename Archive>
@@ -98,7 +100,4 @@ private:
 };
 
 } // vertex
-
 } // grenade::vx::signal_flow
-
-#include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.tcc"

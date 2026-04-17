@@ -2,6 +2,7 @@
 #include "grenade/common/multi_index_sequence.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/recorder.h"
+#include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "hate/visibility.h"
 
@@ -18,6 +19,27 @@ struct SYMBOL_VISIBLE GENPYBIND(
     holder_type("std::shared_ptr<grenade::vx::network::abstract::PadRecorder>")) PadRecorder
     : public Recorder
 {
+	struct Parameterization : public grenade::common::PortData
+	{
+		std::vector<bool> enable_buffered{false};
+
+		Parameterization();
+
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
+	};
+
+	/**
+	 * Parameterization port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) ParameterizationPortType
+	    : public dapr::EmptyProperty<ParameterizationPortType, grenade::common::VertexPortType>
+	{};
+
 	/**
 	 * Construct pad recorder with specified pad location, number of channels and time-domain.
 	 * @param pads Pad locations to use
@@ -40,6 +62,12 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 * @throws std::invalid_argument On number of pad locations not matching shape size of recorder.
 	 */
 	void set_pads(std::vector<halco::hicann_dls::vx::v3::PadOnDLS> value);
+
+	/**
+	 * Only Parameterization is valid at output port 1.
+	 */
+	virtual bool valid_input_port_data(
+	    size_t input_port_on_vertex, grenade::common::PortData const& input_data) const override;
 
 	/**
 	 * Get input ports of pad recorder.

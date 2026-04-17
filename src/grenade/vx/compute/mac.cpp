@@ -1,16 +1,30 @@
 #include "grenade/vx/compute/mac.h"
 
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/time_domain_on_topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/compute/detail/range_split.h"
 #include "grenade/vx/compute/detail/single_chip_execution_instance_manager.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
+#include "grenade/vx/signal_flow/vertex/chip.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_input.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_node.h"
+#include "grenade/vx/signal_flow/vertex/madc_readout.h"
+#include "grenade/vx/signal_flow/vertex/neuron_view.h"
+#include "grenade/vx/signal_flow/vertex/padi_bus.h"
+#include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
+#include "grenade/vx/signal_flow/vertex/synapse_driver.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "grenade/vx/signal_flow/vertex/transformation/addition.h"
 #include "grenade/vx/signal_flow/vertex/transformation/concatenation.h"
+#include "grenade/vx/signal_flow/vertex/transformation/identity.h"
 #include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -36,16 +50,18 @@ MAC::Weight::UnsignedWeight MAC::Weight::toInhibitory() const
 	return UnsignedWeight(-std::min(value(), static_cast<value_type>(0)));
 }
 
-std::pair<
-    signal_flow::Graph::vertex_descriptor,
-    std::optional<signal_flow::Graph::vertex_descriptor>>
+std::tuple<
+    grenade::common::VertexOnTopology,
+    std::optional<grenade::common::VertexOnTopology>,
+    grenade::common::VertexOnTopology>
 MAC::insert_synram(
-    signal_flow::Graph& graph,
+    grenade::common::Topology& topology,
+    grenade::common::InputData& parameterization,
     Weights&& weights,
-    grenade::common::ExecutionInstanceID const& instance,
+    grenade::common::ExecutionInstanceOnExecutor const& instance,
     halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
     std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& madc_recording_neuron,
-    signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
+    grenade::common::VertexOnTopology const crossbar_input_vertex)
 {
 	using namespace haldls::vx::v3;
 	using namespace halco::hicann_dls::vx::v3;
@@ -64,7 +80,7 @@ MAC::insert_synram(
 	auto const num_padi_bus = std::min(
 	    hate::math::round_up_integer_division(y_size, 2),
 	    static_cast<size_t>(PADIBusOnPADIBusBlock::size));
-	std::vector<signal_flow::Input> padi_bus_vertices;
+	std::vector<grenade::common::VertexOnTopology> padi_bus_vertices;
 	padi_bus_vertices.reserve(num_padi_bus);
 	for (size_t i = 0; i < num_padi_bus; ++i) {
 		CrossbarNodeOnDLS coordinate(
@@ -72,15 +88,30 @@ MAC::insert_synram(
 		CrossbarNode config;
 		config.set_mask(CrossbarNode::neuron_label_type(0b1 << 13));
 		config.set_target(CrossbarNode::neuron_label_type((hemisphere.toEnum() << 13)));
-		signal_flow::vertex::CrossbarNode crossbar_node(coordinate, config);
-		auto const v1 = graph.add(crossbar_node, instance, {crossbar_input_vertex});
-		padi_bus_vertices.push_back(graph.add(
-		    signal_flow::vertex::PADIBus(signal_flow::vertex::PADIBus::Coordinate(
-		        PADIBusOnPADIBusBlock(i), hemisphere.toPADIBusBlockOnDLS())),
-		    instance, {v1}));
+		signal_flow::vertex::CrossbarNode crossbar_node(
+		    coordinate, common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(),
+		    instance);
+		auto const v1 = topology.add_vertex(crossbar_node);
+		parameterization.ports.set(
+		    {v1, 1}, signal_flow::vertex::CrossbarNode::Parameterization(config));
+		topology.add_edge(
+		    crossbar_input_vertex, v1,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({1}),
+		        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
+		auto const v2 = topology.add_vertex(signal_flow::vertex::PADIBus(
+		    signal_flow::vertex::PADIBus::Coordinate(
+		        PADIBusOnPADIBusBlock(i), hemisphere.toPADIBusBlockOnDLS()),
+		    common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance));
+		topology.add_edge(
+		    v1, v2,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({1}),
+		        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
+		padi_bus_vertices.push_back(v2);
 	}
 
-	signal_flow::vertex::SynapseArrayView::Labels labels(y_size);
+	signal_flow::vertex::SynapseArrayView::Parameterization::Labels labels(y_size);
 	signal_flow::vertex::SynapseArrayView::Rows rows;
 	rows.reserve(y_size);
 	size_t i = 0;
@@ -94,21 +125,32 @@ MAC::insert_synram(
 	// add synapse driver
 	assert(y_size % 2 == 0) /* always without remainder because of signed weights */;
 	auto const num_syndrv = y_size / 2;
-	std::vector<signal_flow::Input> synapse_driver_vertices;
+	std::vector<grenade::common::VertexOnTopology> synapse_driver_vertices;
 	synapse_driver_vertices.reserve(num_syndrv);
 	for (size_t i = 0; i < num_syndrv; ++i) {
 		auto const padi_bus_vertex = padi_bus_vertices.at(i % PADIBusOnPADIBusBlock::size);
 		signal_flow::vertex::SynapseDriver synapse_driver(
 		    SynapseDriverOnDLS(
 		        SynapseDriverOnSynapseDriverBlock(i), hemisphere.toSynapseDriverBlockOnDLS()),
-		    {signal_flow::vertex::SynapseDriver::Config::RowAddressCompareMask(0b11111),
-		     {signal_flow::vertex::SynapseDriver::Config::RowModes::value_type::excitatory,
-		      signal_flow::vertex::SynapseDriver::Config::RowModes::value_type::inhibitory},
-		     false});
-		synapse_driver_vertices.push_back(graph.add(synapse_driver, instance, {padi_bus_vertex}));
+		    common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance);
+		signal_flow::vertex::SynapseDriver::Parameterization synapse_driver_parameterization;
+		synapse_driver_parameterization.row_address_compare_mask =
+		    signal_flow::vertex::SynapseDriver::Parameterization::RowAddressCompareMask(0b11111);
+		synapse_driver_parameterization.row_modes = {
+		    signal_flow::vertex::SynapseDriver::Parameterization::RowModes::value_type::excitatory,
+		    signal_flow::vertex::SynapseDriver::Parameterization::RowModes::value_type::inhibitory};
+		synapse_driver_parameterization.enable_address_out = false;
+		auto const v1 = topology.add_vertex(synapse_driver);
+		parameterization.ports.set({v1, 1}, synapse_driver_parameterization);
+		topology.add_edge(
+		    padi_bus_vertex, v1,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({1}),
+		        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
+		synapse_driver_vertices.push_back(v1);
 	}
 	// add synapse array
-	signal_flow::vertex::SynapseArrayView::Weights unsigned_weights(y_size);
+	signal_flow::vertex::SynapseArrayView::Parameterization::Weights unsigned_weights(y_size);
 	for (size_t i = 0; i < weights.size(); ++i) {
 		unsigned_weights.at(2 * i).reserve(x_size);
 		unsigned_weights.at(2 * i + 1).reserve(x_size);
@@ -119,10 +161,23 @@ MAC::insert_synram(
 	}
 
 	signal_flow::vertex::SynapseArrayView synapse_array(
-	    hemisphere.toSynramOnDLS(), std::move(rows), columns, std::move(unsigned_weights),
-	    std::move(labels));
-	auto const synapse_array_vertex =
-	    graph.add(std::move(synapse_array), instance, synapse_driver_vertices);
+	    hemisphere.toSynramOnDLS(), std::move(rows), columns, common::ChipOnConnection(),
+	    grenade::common::TimeDomainOnTopology(), instance);
+	signal_flow::vertex::SynapseArrayView::Parameterization synapse_array_parameterization(
+	    std::move(labels), std::move(unsigned_weights));
+	auto const synapse_array_vertex = topology.add_vertex(std::move(synapse_array));
+	parameterization.ports.set({synapse_array_vertex, 1}, synapse_array_parameterization);
+	for (size_t i = 0; auto const& synapse_driver_vertex : synapse_driver_vertices) {
+		topology.add_edge(
+		    synapse_driver_vertex, synapse_array_vertex,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({2}),
+		        grenade::common::CuboidMultiIndexSequence(
+		            {2}, grenade::common::MultiIndex({i * 2})),
+		        0, 0));
+
+		i++;
+	}
 	// add neurons
 	signal_flow::vertex::NeuronView::Columns nrns;
 	nrns.reserve(x_size);
@@ -130,42 +185,47 @@ MAC::insert_synram(
 		auto const nrn = NeuronColumnOnDLS(o);
 		nrns.push_back(nrn);
 	}
-	signal_flow::vertex::NeuronView::Config config{
-	    lola::vx::v3::AtomicNeuron::EventRouting::Address(), true};
-	signal_flow::vertex::NeuronView::Configs enable_resets(x_size, config);
 	signal_flow::vertex::NeuronView neurons(
-	    std::move(nrns), std::move(enable_resets), hemisphere.toNeuronRowOnDLS());
-	auto const v1 = graph.add(std::move(neurons), instance, {synapse_array_vertex});
+	    std::move(nrns), hemisphere.toNeuronRowOnDLS(), common::ChipOnConnection(),
+	    grenade::common::TimeDomainOnTopology(), instance);
+	auto const v1 = topology.add_vertex(std::move(neurons));
+	topology.add_edge(
+	    synapse_array_vertex, v1,
+	    grenade::common::Edge(
+	        grenade::common::CuboidMultiIndexSequence({x_size}),
+	        grenade::common::CuboidMultiIndexSequence({x_size}), 0, 0));
 	// add readout
-	signal_flow::vertex::CADCMembraneReadoutView::Sources sources(1);
-	sources.at(0).resize(
-	    columns.size(),
-	    signal_flow::vertex::CADCMembraneReadoutView::Sources::value_type::value_type::membrane);
 	signal_flow::vertex::CADCMembraneReadoutView readout(
 	    signal_flow::vertex::CADCMembraneReadoutView::Columns({std::move(columns)}),
 	    hemisphere.toSynramOnDLS(), signal_flow::vertex::CADCMembraneReadoutView::Mode::hagen,
-	    std::move(sources));
-	auto const v2 = graph.add(readout, instance, {v1});
-	// add store
-	signal_flow::vertex::DataOutput data_output(signal_flow::ConnectionType::Int8, x_size);
+	    common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance);
+	auto const v2 = topology.add_vertex(readout);
+	topology.add_edge(
+	    v1, v2,
+	    grenade::common::Edge(
+	        grenade::common::CuboidMultiIndexSequence({x_size}),
+	        grenade::common::CuboidMultiIndexSequence({x_size}), 0, 0));
 	// add madc recording
 	if (madc_recording_neuron &&
 	    hemisphere == madc_recording_neuron->toNeuronRowOnDLS().toHemisphereOnDLS() &&
 	    madc_recording_neuron->toNeuronColumnOnDLS().value() < x_size) {
 		signal_flow::vertex::MADCReadoutView madc_readout(
-		    signal_flow::vertex::MADCReadoutView::Source{
-		        *madc_recording_neuron,
-		        signal_flow::vertex::MADCReadoutView::Source::Type::membrane},
-		    std::nullopt, signal_flow::vertex::MADCReadoutView::SourceSelection{});
+		    *madc_recording_neuron, std::nullopt, common::ChipOnConnection(),
+		    grenade::common::TimeDomainOnTopology(), instance);
 		auto const madc_readout_column = madc_recording_neuron->toNeuronColumnOnDLS().value();
-		auto const v3 =
-		    graph.add(madc_readout, instance, {{v1, {madc_readout_column, madc_readout_column}}});
-		signal_flow::vertex::DataOutput madc_data_output(
-		    signal_flow::ConnectionType::TimedMADCSampleFromChipSequence, 1);
-		return {
-		    graph.add(data_output, instance, {v2}), graph.add(madc_data_output, instance, {v3})};
+		auto const v3 = topology.add_vertex(madc_readout);
+		signal_flow::vertex::MADCReadoutView::Parameterization madc_parameterization;
+		parameterization.ports.set({v3, 1}, madc_parameterization);
+		topology.add_edge(
+		    v1, v3,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({1}),
+		        grenade::common::CuboidMultiIndexSequence(
+		            {1}, grenade::common::MultiIndex({madc_readout_column})),
+		        0, 0));
+		return {v2, v3, v1};
 	}
-	return {graph.add(data_output, instance, {v2}), std::nullopt};
+	return {v2, std::nullopt, v1};
 }
 
 namespace {
@@ -175,10 +235,10 @@ auto get_hemisphere_placement(
     std::vector<detail::RangeSplit::SubRange> const& x_split_ranges,
     std::vector<detail::RangeSplit::SubRange> const& y_split_ranges)
 {
-	auto instance = grenade::common::ExecutionInstanceID();
+	auto instance = grenade::common::ExecutionInstanceOnExecutor();
 
-	std::vector<
-	    std::pair<grenade::common::ExecutionInstanceID, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
+	std::vector<std::pair<
+	    grenade::common::ExecutionInstanceOnExecutor, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
 	    hemispheres;
 	for ([[maybe_unused]] auto const& x_range : x_split_ranges) {
 		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
@@ -192,13 +252,13 @@ auto get_hemisphere_placement(
 auto get_placed_ranges(
     std::vector<detail::RangeSplit::SubRange> const& x_split_ranges,
     std::vector<detail::RangeSplit::SubRange> const& y_split_ranges,
-    std::vector<
-        std::pair<grenade::common::ExecutionInstanceID, halco::hicann_dls::vx::v3::HemisphereOnDLS>>
-        hemispheres)
+    std::vector<std::pair<
+        grenade::common::ExecutionInstanceOnExecutor,
+        halco::hicann_dls::vx::v3::HemisphereOnDLS>> hemispheres)
 {
 	typedef std::pair<detail::RangeSplit::SubRange, detail::RangeSplit::SubRange> XYSubRange;
 	std::map<
-	    grenade::common::ExecutionInstanceID,
+	    grenade::common::ExecutionInstanceOnExecutor,
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, XYSubRange>>
 	    placed_ranges;
 	size_t i = 0;
@@ -215,33 +275,48 @@ auto get_placed_ranges(
 }
 
 void set_enable_loopback(
-    signal_flow::Graph& graph,
+    grenade::common::Topology& topology,
+    grenade::common::InputData& parameterization,
     bool const enable,
-    grenade::common::ExecutionInstanceID const& instance,
-    signal_flow::Graph::vertex_descriptor const crossbar_input_vertex)
+    grenade::common::ExecutionInstanceOnExecutor const& instance,
+    grenade::common::VertexOnTopology const crossbar_input_vertex)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	if (enable) {
-		std::vector<signal_flow::Input> loopback_vertices;
+		std::vector<grenade::common::VertexOnTopology> loopback_vertices;
 		loopback_vertices.reserve(SPL1Address::size);
 		for (size_t i = 0; i < SPL1Address::size; ++i) {
 			CrossbarNodeOnDLS coordinate(CrossbarInputOnDLS(i + 8), CrossbarOutputOnDLS(8 + i));
 			haldls::vx::v3::CrossbarNode config;
-			signal_flow::vertex::CrossbarNode crossbar_node(coordinate, config);
-			loopback_vertices.push_back(
-			    graph.add(crossbar_node, instance, {crossbar_input_vertex}));
+			signal_flow::vertex::CrossbarNode crossbar_node(
+			    coordinate, common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(),
+			    instance);
+			auto const v1 = topology.add_vertex(crossbar_node);
+			parameterization.ports.set(
+			    {v1, 1}, signal_flow::vertex::CrossbarNode::Parameterization(config));
+			topology.add_edge(
+			    crossbar_input_vertex, v1,
+			    grenade::common::Edge(
+			        grenade::common::CuboidMultiIndexSequence({1}),
+			        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
+			loopback_vertices.push_back(v1);
 		}
-		signal_flow::vertex::CrossbarL2Output l2_output;
-		auto const vl2 = graph.add(l2_output, instance, loopback_vertices);
-		signal_flow::vertex::DataOutput data_output_loopback(
-		    signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
-		graph.add(data_output_loopback, instance, {vl2});
+		signal_flow::vertex::CrossbarL2Output l2_output(
+		    true, common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance);
+		auto const vl2 = topology.add_vertex(l2_output);
+		for (auto const& loopback_vertex : loopback_vertices) {
+			topology.add_edge(
+			    loopback_vertex, vl2,
+			    grenade::common::Edge(
+			        grenade::common::CuboidMultiIndexSequence({1}),
+			        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
+		}
 	}
 }
 
 } // namespace
 
-void MAC::build_graph()
+void MAC::build_topology()
 {
 	using namespace halco::hicann_dls::vx::v3;
 
@@ -263,49 +338,61 @@ void MAC::build_graph()
 
 	auto const placed_ranges = get_placed_ranges(x_split_ranges, y_split_ranges, hemispheres);
 
-	signal_flow::vertex::ExternalInput external_input(
-	    signal_flow::ConnectionType::DataUInt5, input_size());
 	auto const external_instance = execution_instance_manager.next_index();
-	m_input_vertex = m_graph.add(external_input, external_instance, {});
+	signal_flow::vertex::Transformation external_input(
+	    signal_flow::vertex::transformation::Identity(
+	        {signal_flow::vertex::transformation::Identity::Port(
+	            signal_flow::VertexPortType(signal_flow::ConnectionType::UInt5),
+	            grenade::common::CuboidMultiIndexSequence({input_size()}))}),
+	    external_instance);
+	m_input_vertex = m_topology->add_vertex(external_input);
 
-	std::map<grenade::common::ExecutionInstanceID, std::map<HemisphereOnDLS, signal_flow::Input>>
+	std::map<
+	    grenade::common::ExecutionInstanceOnExecutor,
+	    std::map<HemisphereOnDLS, grenade::common::VertexOnTopology>>
 	    hemisphere_outputs;
 	for (auto const& [instance, hs] : placed_ranges) {
 		halco::common::typed_array<size_t, HemisphereOnDLS> sizes;
 		sizes.fill(0);
-		std::vector<signal_flow::Input> uint5_inputs;
 		for (auto const& [hemisphere, xy_range] : hs) {
 			auto const y_size = xy_range.second.size;
 			sizes[hemisphere] = y_size;
-			// Add store from (range subset of ) external data and local load
-			signal_flow::vertex::DataInput external_data_input(
-			    signal_flow::ConnectionType::UInt5, y_size);
-			signal_flow::vertex::DataOutput external_data_output(
-			    signal_flow::ConnectionType::UInt5, y_size);
-			signal_flow::vertex::DataInput data_input(signal_flow::ConnectionType::UInt5, y_size);
-			auto const v1 = m_graph.add(
-			    external_data_input, external_instance,
-			    {{m_input_vertex, {xy_range.second.offset, xy_range.second.offset + y_size - 1}}});
-			auto const input_vertex = m_graph.add(external_data_output, external_instance, {v1});
-			uint5_inputs.push_back(m_graph.add(data_input, instance, {input_vertex}));
 		}
 
 		// Add spiketrain generator, connect to crossbar
-		auto spiketrain_generator =
-		    std::make_unique<signal_flow::vertex::transformation::MACSpikeTrainGenerator>(
-		        sizes, m_num_sends, m_wait_between_events);
-		signal_flow::Vertex transformation(
-		    signal_flow::vertex::Transformation(std::move(spiketrain_generator)));
-		auto const data_input_vertex =
-		    m_graph.add(std::move(transformation), instance, uint5_inputs);
-		signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
-		signal_flow::Graph::vertex_descriptor crossbar_input_vertex =
-		    m_graph.add(crossbar_l2_input, instance, {data_input_vertex});
+		signal_flow::vertex::Transformation spiketrain_generator(
+		    signal_flow::vertex::transformation::MACSpikeTrainGenerator(
+		        sizes, m_num_sends, m_wait_between_events),
+		    execution_instance_manager.next_index());
+		auto const data_input_vertex = m_topology->add_vertex(std::move(spiketrain_generator));
+		for (auto const& [hemisphere, xy_range] : hs) {
+			m_topology->add_edge(
+			    m_input_vertex, data_input_vertex,
+			    grenade::common::Edge(
+			        grenade::common::CuboidMultiIndexSequence(
+			            {xy_range.second.size},
+			            grenade::common::MultiIndex({xy_range.second.offset})),
+			        grenade::common::CuboidMultiIndexSequence({xy_range.second.size}), 0,
+			        hemisphere.value()));
+		}
+
+		signal_flow::vertex::CrossbarL2Input crossbar_l2_input(
+		    false, common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance);
+		auto const crossbar_input_vertex = m_topology->add_vertex(crossbar_l2_input);
+		m_topology->add_edge(
+		    data_input_vertex, crossbar_input_vertex,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({1}),
+		        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
 
 		// Maybe enable event loopback
-		set_enable_loopback(m_graph, m_enable_loopback, instance, crossbar_input_vertex);
+		set_enable_loopback(
+		    *m_topology, m_parameterization, m_enable_loopback, instance, crossbar_input_vertex);
 
-		std::vector<signal_flow::Input> local_output_vertices;
+		m_chip_vertices[instance] = m_topology->add_vertex(signal_flow::vertex::Chip(
+		    common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance));
+
+		std::vector<grenade::common::VertexOnTopology> local_output_vertices;
 		for (auto const& [hemisphere, xy_range] : hs) {
 			auto const x_range = xy_range.first;
 			auto const y_range = xy_range.second;
@@ -316,28 +403,29 @@ void MAC::build_graph()
 				    m_weights.at(i + y_range.offset).begin() + x_range.offset,
 				    m_weights.at(i + y_range.offset).begin() + x_range.offset + x_range.size);
 			}
-			auto const [cadc_readout_data_vertex, madc_readout_data_vertex] = insert_synram(
-			    m_graph, std::move(local_weights), instance, hemisphere,
-			    m_madc_recording_path == ""
-			        ? std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>(std::nullopt)
-			        : std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>(
-			              m_madc_recording_neuron),
-			    crossbar_input_vertex);
+			auto const [cadc_readout_data_vertex, madc_readout_data_vertex, neuron_view_vertex] =
+			    insert_synram(
+			        *m_topology, m_parameterization, std::move(local_weights), instance, hemisphere,
+			        m_madc_recording_path == ""
+			            ? std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>(std::nullopt)
+			            : std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>(
+			                  m_madc_recording_neuron),
+			        crossbar_input_vertex);
 			if (madc_readout_data_vertex) {
 				m_madc_recording_vertices[instance] = *madc_readout_data_vertex;
 			}
-			hemisphere_outputs[instance].insert(
-			    {hemisphere, signal_flow::Input(cadc_readout_data_vertex)});
+			hemisphere_outputs[instance].insert({hemisphere, cadc_readout_data_vertex});
+			m_neuron_vertices.push_back(neuron_view_vertex);
 		}
 	}
 
 	// Add vertical addition of hemispheres
-	std::vector<signal_flow::Graph::vertex_descriptor> output_vertices;
+	std::vector<grenade::common::VertexOnTopology> output_vertices;
 	size_t i = 0;
 	std::vector<size_t> x_split_sizes;
 	for (auto const& x_range : x_split_ranges) {
 		x_split_sizes.push_back(x_range.size);
-		std::vector<signal_flow::Input> local_hemisphere_outputs;
+		std::vector<grenade::common::VertexOnTopology> local_hemisphere_outputs;
 		size_t j = 0;
 		for ([[maybe_unused]] auto const& y_range : y_split_ranges) {
 			auto const [instance, hemisphere] = hemispheres.at(i * y_split_ranges.size() + j);
@@ -349,49 +437,47 @@ void MAC::build_graph()
 		if (local_hemisphere_outputs.size() > 1) {
 			auto const instance = execution_instance_manager.next_index();
 			// add additions
-			// load all data
-			signal_flow::vertex::DataInput data_input(
-			    signal_flow::ConnectionType::Int8, x_range.size);
-			std::vector<signal_flow::Input> local_inputs;
-			local_inputs.reserve(local_hemisphere_outputs.size());
-			for (auto const vertex : local_hemisphere_outputs) {
-				local_inputs.push_back(m_graph.add(data_input, instance, {vertex}));
-			}
 			// add all data
-			signal_flow::Vertex addition(signal_flow::vertex::Transformation(
-			    std::make_unique<signal_flow::vertex::transformation::Addition>(
-			        local_inputs.size(), x_range.size)));
-			auto const v_add = m_graph.add(std::move(addition), instance, local_inputs);
-			signal_flow::vertex::DataOutput data_output(
-			    signal_flow::ConnectionType::Int8, x_range.size);
-			auto const v_out = m_graph.add(data_output, instance, {v_add});
-			output_vertices.push_back(v_out);
+			signal_flow::vertex::Transformation addition(
+			    signal_flow::vertex::transformation::Addition(
+			        local_hemisphere_outputs.size(), x_range.size),
+			    instance);
+			auto const v_add = m_topology->add_vertex(std::move(addition));
+			for (size_t i = 0; auto const& local_hemisphere_output : local_hemisphere_outputs) {
+				m_topology->add_edge(
+				    local_hemisphere_output, v_add,
+				    grenade::common::Edge(
+				        grenade::common::CuboidMultiIndexSequence({x_range.size}),
+				        grenade::common::CuboidMultiIndexSequence({x_range.size}), 0, i));
+				i++;
+			}
+			output_vertices.push_back(v_add);
 		} else {
 			std::transform(
 			    local_hemisphere_outputs.begin(), local_hemisphere_outputs.end(),
-			    std::back_inserter(output_vertices), [](auto const& in) { return in.descriptor; });
+			    std::back_inserter(output_vertices), [](auto const& in) { return in; });
 		}
 	}
 
 	// Concatenate all outputs
 	auto const instance = execution_instance_manager.next_index();
 	// Load all data
-	std::vector<signal_flow::Input> local_inputs;
+	std::vector<grenade::common::VertexOnTopology> local_inputs;
 	local_inputs.reserve(output_vertices.size());
 	i = 0;
-	for (auto const v : output_vertices) {
-		signal_flow::vertex::DataInput data_input(
-		    signal_flow::ConnectionType::Int8, x_split_ranges.at(i).size);
-		local_inputs.push_back(m_graph.add(data_input, instance, {v}));
+	signal_flow::vertex::Transformation concatenation(
+	    signal_flow::vertex::transformation::Concatenation(
+	        signal_flow::ConnectionType::Int8, x_split_sizes),
+	    instance);
+	m_output_vertex = m_topology->add_vertex(std::move(concatenation));
+	for (size_t i = 0; auto const& output : output_vertices) {
+		m_topology->add_edge(
+		    output, m_output_vertex,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({x_split_sizes.at(i)}),
+		        grenade::common::CuboidMultiIndexSequence({x_split_sizes.at(i)}), 0, i));
 		i++;
 	}
-	auto concatenation = std::make_unique<signal_flow::vertex::transformation::Concatenation>(
-	    signal_flow::ConnectionType::Int8, x_split_sizes);
-	grenade::vx::signal_flow::Vertex transformation(
-	    signal_flow::vertex::Transformation(std::move(concatenation)));
-	auto const vc = m_graph.add(std::move(transformation), instance, local_inputs);
-	signal_flow::vertex::DataOutput data_output(signal_flow::ConnectionType::Int8, output_size());
-	m_output_vertex = m_graph.add(data_output, instance, {vc});
 }
 
 size_t MAC::input_size() const
@@ -427,13 +513,13 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		}
 	}
 
-	// fill graph inputs (with signal_flow::UInt5(0))
+	// fill topology inputs (with signal_flow::UInt5(0))
 	if (batch_entry_size != input_size()) {
 		throw std::runtime_error("Provided inputs size does not match MAC input size.");
 	}
 
 	hate::Timer input_timer;
-	signal_flow::InputData input_list;
+	grenade::common::InputData input_data;
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
@@ -441,22 +527,44 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		// TODO: Think about what to do with timing information
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
-	input_list.snippets.resize(1);
-	input_list.snippets[0].data[m_input_vertex] = timed_inputs;
+	input_data.ports.set(
+	    {m_input_vertex, 0}, signal_flow::vertex::Transformation::Dynamics(timed_inputs));
+	std::vector<std::optional<common::Time>> runtimes(inputs.size());
+	input_data.time_domain_runtimes.set(
+	    grenade::common::TimeDomainOnTopology(),
+	    network::abstract::ClockCycleTimeDomainRuntimes(runtimes, common::Time()));
 	LOG4CXX_DEBUG(logger, "run(): input processing time: " << input_timer.print());
 
-	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	for (auto const& [_, execution_instance] : m_graph.get_execution_instance_map()) {
-		chip_configs[execution_instance][common::ChipOnConnection()] = config;
+	for (auto const& [d, data] : m_parameterization.ports) {
+		input_data.ports.set(d, data);
+	}
+	for (auto const& neuron_vertex : m_neuron_vertices) {
+		auto const& vertex =
+		    dynamic_cast<signal_flow::vertex::NeuronView const&>(m_topology->get(neuron_vertex));
+		std::vector<signal_flow::vertex::NeuronView::Parameterization::Config> configs(
+		    vertex.get_columns().size());
+		for (size_t i = 0; i < configs.size(); ++i) {
+			configs.at(i).enable_reset = true;
+			configs.at(i).atomic_neuron_config = config.neuron_block.atomic_neurons.at(
+			    AtomicNeuronOnDLS(vertex.get_columns().at(i), vertex.row));
+		}
+		signal_flow::vertex::NeuronView::Parameterization neuron_parameterization(configs);
+		input_data.ports.set({neuron_vertex, 1}, neuron_parameterization);
+	}
+	for (auto const& [_, chip_vertex] : m_chip_vertices) {
+		signal_flow::vertex::Chip::Parameterization chip_parameterization(config);
+		input_data.ports.set({chip_vertex, 0}, chip_parameterization);
 	}
 
 	// run Graph with given inputs and return results
-	auto const output_activation_map = execution::run(executor, m_graph, chip_configs, input_list);
+	auto const output_activation_map = execution::run(executor, m_topology, input_data);
 
 	hate::Timer output_timer;
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>>>(
-	        output_activation_map.snippets[0].data.at(m_output_vertex));
+	        dynamic_cast<signal_flow::vertex::Transformation::Results const&>(
+	            output_activation_map.ports.get({m_output_vertex, 0}))
+	            .value);
 	std::vector<std::vector<signal_flow::Int8>> output(timed_outputs.size());
 	for (size_t i = 0; i < output.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);
@@ -468,22 +576,38 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		    double, boost::accumulators::features<
 		                boost::accumulators::tag::mean, boost::accumulators::tag::variance>>
 		    acc;
-		for (auto const& l : output_activation_map.snippets[0].data) {
-			if (!std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
-			        l.second)) {
+		for (auto const& port_data : output_activation_map.ports) {
+			if (!dynamic_cast<signal_flow::vertex::Transformation::Results const*>(
+			        &port_data.second)) {
 				continue;
 			}
-			for (auto const& b :
-			     std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(l.second)) {
-				halco::common::typed_array<std::vector<common::Time>, HemisphereOnDLS> t;
-				for (auto const& s : b) {
-					t[HemisphereOnDLS(s.data.get_neuron_label() & (1 << 13) ? 1 : 0)].push_back(
-					    s.time);
+			if (!std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
+			        dynamic_cast<signal_flow::vertex::Transformation::Results const&>(
+			            port_data.second)
+			            .value)) {
+				continue;
+			}
+			if (!std::holds_alternative<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
+			        dynamic_cast<signal_flow::vertex::Transformation::Results const&>(
+			            port_data.second)
+			            .value)) {
+				continue;
+			}
+			for (auto const& batch_entry :
+			     std::get<std::vector<signal_flow::TimedSpikeFromChipSequence>>(
+			         dynamic_cast<signal_flow::vertex::Transformation::Results const&>(
+			             port_data.second)
+			             .value)) {
+				halco::common::typed_array<std::vector<common::Time>, HemisphereOnDLS> times;
+				for (auto const& spike : batch_entry) {
+					times[HemisphereOnDLS(spike.data.get_neuron_label() & (1 << 13) ? 1 : 0)]
+					    .push_back(spike.time);
 				}
-				for (auto& ht : t) {
-					std::sort(ht.begin(), ht.end());
-					for (size_t i = 1; i < ht.size(); ++i) {
-						acc(static_cast<intmax_t>(ht.at(i)) - static_cast<intmax_t>(ht.at(i - 1)));
+				for (auto& hemisphere_times : times) {
+					std::sort(hemisphere_times.begin(), hemisphere_times.end());
+					for (size_t i = 1; i < hemisphere_times.size(); ++i) {
+						acc(static_cast<intmax_t>(hemisphere_times.at(i)) -
+						    static_cast<intmax_t>(hemisphere_times.at(i - 1)));
 					}
 				}
 			}
@@ -504,13 +628,14 @@ std::vector<std::vector<signal_flow::Int8>> MAC::run(
 		assert(file.is_open());
 		for (auto [instance, vertex] : m_madc_recording_vertices) {
 			auto const madc_data =
-			    std::get<std::vector<signal_flow::TimedMADCSampleFromChipSequence>>(
-			        output_activation_map.snippets[0].data.at(vertex));
+			    dynamic_cast<signal_flow::vertex::MADCReadoutView::Results const&>(
+			        output_activation_map.ports.get({vertex, 0}))
+			        .samples;
 			for (size_t b = 0; b < output_activation_map.batch_size(); ++b) {
 				auto const& local_madc_data = madc_data.at(b);
 				for (auto const& sample : local_madc_data) {
-					file << instance.value() << "\t" << b << "\t" << sample.time.value() << "\t"
-					     << sample.data.value.value() << "\n";
+					file << instance.execution_instance_id.value() << "\t" << b << "\t"
+					     << sample.time.value() << "\t" << sample.data.value.value() << "\n";
 				}
 			}
 		}

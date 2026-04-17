@@ -1,12 +1,19 @@
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
 
-#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/vertex/background_spike_source.h"
+#include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_node.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
+#include "grenade/vx/signal_flow/vertex/madc_readout.h"
+#include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
-#include "grenade/vx/signal_flow/vertex/spikeio_source_population.h"
+#include "grenade/vx/signal_flow/vertex/padi_bus.h"
+#include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
+#include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"
+#include "grenade/vx/signal_flow/vertex/synapse_driver.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
@@ -26,18 +33,45 @@
 namespace grenade::vx::execution::detail {
 
 ExecutionInstanceChipSnippetConfigVisitor::ExecutionInstanceChipSnippetConfigVisitor(
-    signal_flow::Graph const& graph,
-    common::ChipOnConnection const& chip_on_connection,
-    grenade::common::ExecutionInstanceID const& execution_instance) :
-    m_graph(graph),
+    grenade::common::LinkedTopology const& topology,
+    grenade::common::VertexOnTopology const& execution_instance_vertex_descriptor,
+    grenade::common::InputData const& input_data,
+    common::ChipOnConnection const& chip_on_connection) :
+    m_topology(topology),
+    m_execution_instance_vertex_descriptor(execution_instance_vertex_descriptor),
+    m_input_data(input_data),
     m_chip_on_connection(chip_on_connection),
-    m_execution_instance(execution_instance)
+    m_logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor"))
 {
+	register_process<signal_flow::vertex::BackgroundSpikeSource>();
+	register_process<signal_flow::vertex::CADCMembraneReadoutView>();
+	register_process<signal_flow::vertex::CrossbarNode>();
+	register_process<signal_flow::vertex::MADCReadoutView>();
+	register_process<signal_flow::vertex::PadReadoutView>();
+	register_process<signal_flow::vertex::PADIBus>();
+	register_process<signal_flow::vertex::SynapseArrayView>();
+	register_process<signal_flow::vertex::SynapseArrayViewSparse>();
+	register_process<signal_flow::vertex::SynapseDriver>();
+	register_process<signal_flow::vertex::NeuronView>();
+}
+
+template <typename T>
+void ExecutionInstanceChipSnippetConfigVisitor::register_process()
+{
+	m_visitor.emplace(
+	    std::type_index(typeid(T)), [&](grenade::common::VertexOnTopology const& vertex_descriptor,
+	                                    grenade::common::Vertex const& vertex, System& system) {
+		    hate::Timer timer;
+		    process(vertex_descriptor, static_cast<T const&>(vertex), system);
+		    LOG4CXX_TRACE(
+		        m_logger, "process(): Processed " << hate::name<hate::remove_all_qualifiers_t<T>>()
+		                                          << " in " << timer.print() << ".");
+	    });
 }
 
 template <typename T>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const /* vertex */,
     T const& /* data */,
     System& /* system */) const
 {
@@ -46,7 +80,7 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const /* vertex */,
     signal_flow::vertex::CADCMembraneReadoutView const& data,
     System& system) const
 {
@@ -54,41 +88,15 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	// Configure neurons
 	for (size_t i = 0; i < data.get_columns().size(); ++i) {
-		for (size_t j = 0; j < data.get_columns().at(i).size(); ++j) {
-			halco::hicann_dls::vx::v3::AtomicNeuronOnDLS neuron(
-			    data.get_columns().at(i).at(j).toNeuronColumnOnDLS(),
-			    data.get_synram().toNeuronRowOnDLS());
-			chip.neuron_block.atomic_neurons[neuron].readout.source =
-			    data.get_sources().at(i).at(j);
-			chip.neuron_block.atomic_neurons[neuron].readout.enable_amplifier = true;
-		}
+		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS neuron(
+		    data.get_columns().at(i).toNeuronColumnOnDLS(), data.get_synram().toNeuronRowOnDLS());
+		chip.neuron_block.atomic_neurons[neuron].readout.enable_amplifier = true;
 	}
 }
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const,
-    signal_flow::vertex::NeuronEventOutputView const& data,
-    System& system) const
-{
-	auto& chip =
-	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
-	for (auto const& [row, columns] : data.get_neurons()) {
-		for (auto const& cs : columns) {
-			for (auto const& column : cs) {
-				chip.neuron_block
-				    .backends[column.toNeuronEventOutputOnDLS()
-				                  .toNeuronBackendConfigBlockOnDLS()
-				                  .toCommonNeuronBackendConfigOnDLS()]
-				    .set_enable_event_registers(true);
-			}
-		}
-	}
-}
-
-template <>
-void ExecutionInstanceChipSnippetConfigVisitor::process(
-    [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::MADCReadoutView const& data,
     System& system) const
 {
@@ -97,49 +105,48 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
-	// MADCReadoutView inputs size equals 1 or 2
-	assert(boost::in_degree(vertex, m_graph.get_graph()) <= 2);
-
 	// first source
 	// Determine readout chain configuration
 	auto& smux = chip.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(0)];
 	auto const& first_source = data.get_first_source();
-	bool const is_odd = first_source.coord.toNeuronColumnOnDLS() % 2;
+	bool const is_odd = first_source.toNeuronColumnOnDLS() % 2;
 	auto neuron_even = smux.get_neuron_even();
-	neuron_even[first_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+	neuron_even[first_source.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
 	smux.set_neuron_even(neuron_even);
 	auto neuron_odd = smux.get_neuron_odd();
-	neuron_odd[first_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+	neuron_odd[first_source.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 	smux.set_neuron_odd(neuron_odd);
 	chip.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(0)].enable = true;
 	// Configure neuron
-	chip.neuron_block.atomic_neurons[first_source.coord].readout.source = first_source.type;
-	chip.neuron_block.atomic_neurons[first_source.coord].readout.enable_amplifier = true;
-	chip.neuron_block.atomic_neurons[first_source.coord].readout.enable_buffered_access = true;
+	chip.neuron_block.atomic_neurons[first_source].readout.enable_amplifier = true;
+	chip.neuron_block.atomic_neurons[first_source].readout.enable_buffered_access = true;
 
 	// second source
 	if (data.get_second_source()) {
 		// Determine readout chain configuration
 		auto& smux = chip.readout_chain.input_mux[SourceMultiplexerOnReadoutSourceSelection(1)];
 		auto const& second_source = *(data.get_second_source());
-		bool const is_odd = second_source.coord.toNeuronColumnOnDLS() % 2;
+		bool const is_odd = second_source.toNeuronColumnOnDLS() % 2;
 		auto neuron_even = smux.get_neuron_even();
-		neuron_even[second_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+		neuron_even[second_source.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
 		smux.set_neuron_even(neuron_even);
 		auto neuron_odd = smux.get_neuron_odd();
-		neuron_odd[second_source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+		neuron_odd[second_source.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 		smux.set_neuron_odd(neuron_odd);
 		chip.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(1)].enable =
 		    true;
 		// Configure neuron
-		chip.neuron_block.atomic_neurons[second_source.coord].readout.source = second_source.type;
-		chip.neuron_block.atomic_neurons[second_source.coord].readout.enable_amplifier = true;
-		chip.neuron_block.atomic_neurons[second_source.coord].readout.enable_buffered_access = true;
+		chip.neuron_block.atomic_neurons[second_source].readout.enable_amplifier = true;
+		chip.neuron_block.atomic_neurons[second_source].readout.enable_buffered_access = true;
 	}
 
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::MADCReadoutView::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+
 	// configure source selection
-	chip.readout_chain.dynamic_mux.input_select_length = data.get_source_selection().period;
-	chip.readout_chain.dynamic_mux.initially_selected_input = data.get_source_selection().initial;
+	chip.readout_chain.dynamic_mux.input_select_length = parameterization.period;
+	chip.readout_chain.dynamic_mux.initially_selected_input = parameterization.initial;
 
 	// Configure analog parameters
 	// TODO: should come from calibration
@@ -155,7 +162,7 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    [[maybe_unused]] signal_flow::Graph::vertex_descriptor const vertex,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::PadReadoutView const& data,
     System& system) const
 {
@@ -164,46 +171,43 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
-	assert(boost::in_degree(vertex, m_graph.get_graph()) == 1);
+	auto const& source = data.source;
 
-	auto const& source = data.get_source();
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::PadReadoutView::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
 
-	chip.neuron_block.atomic_neurons[source.coord].readout.source = source.type;
-
-	if (data.get_source().enable_buffered) {
+	if (parameterization.enable_buffered) {
 		// Determine readout chain configuration
-		auto& smux =
-		    chip.readout_chain
-		        .input_mux[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())];
-		bool const is_odd = source.coord.toNeuronColumnOnDLS() % 2;
+		auto& smux = chip.readout_chain
+		                 .input_mux[SourceMultiplexerOnReadoutSourceSelection(data.coordinate)];
+		bool const is_odd = source.toNeuronColumnOnDLS() % 2;
 		auto neuron_even = smux.get_neuron_even();
-		neuron_even[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
+		neuron_even[source.toNeuronRowOnDLS().toHemisphereOnDLS()] = !is_odd;
 		smux.set_neuron_even(neuron_even);
 		auto neuron_odd = smux.get_neuron_odd();
-		neuron_odd[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
+		neuron_odd[source.toNeuronRowOnDLS().toHemisphereOnDLS()] = is_odd;
 		smux.set_neuron_odd(neuron_odd);
-		chip.readout_chain
-		    .buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())]
+		chip.readout_chain.buffer_to_pad[SourceMultiplexerOnReadoutSourceSelection(data.coordinate)]
 		    .enable = true;
 		PadMultiplexerConfig::buffer_type buffers;
 		buffers.fill(false);
-		buffers[SourceMultiplexerOnReadoutSourceSelection(data.get_coordinate())] = true;
-		chip.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())]
-		    .set_buffer_to_pad(buffers);
+		buffers[SourceMultiplexerOnReadoutSourceSelection(data.coordinate)] = true;
+		chip.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.coordinate)].set_buffer_to_pad(
+		    buffers);
 		// Configure neuron
-		chip.neuron_block.atomic_neurons[source.coord].readout.enable_amplifier = true;
-		chip.neuron_block.atomic_neurons[source.coord].readout.enable_buffered_access = true;
+		chip.neuron_block.atomic_neurons[source].readout.enable_amplifier = true;
+		chip.neuron_block.atomic_neurons[source].readout.enable_buffered_access = true;
 	} else {
 		// enable unbuffered access to pad
-		auto& pad_mux =
-		    chip.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.get_coordinate())];
+		auto& pad_mux = chip.readout_chain.pad_mux[PadMultiplexerConfigOnDLS(data.coordinate)];
 		auto neuron_i_stim_mux = pad_mux.get_neuron_i_stim_mux();
 		neuron_i_stim_mux.fill(false);
-		neuron_i_stim_mux[source.coord.toNeuronRowOnDLS().toHemisphereOnDLS()] = true;
+		neuron_i_stim_mux[source.toNeuronRowOnDLS().toHemisphereOnDLS()] = true;
 		pad_mux.set_neuron_i_stim_mux(neuron_i_stim_mux);
 		pad_mux.set_neuron_i_stim_mux_to_pad(true);
 		// Configure neuron
-		chip.neuron_block.atomic_neurons[source.coord].readout.enable_unbuffered_access = true;
+		chip.neuron_block.atomic_neurons[source].readout.enable_unbuffered_access = true;
 	}
 
 	// Configure analog parameters
@@ -214,7 +218,7 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::SynapseArrayView const& data,
     System& system) const
 {
@@ -224,7 +228,11 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	auto const& columns = data.get_columns();
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
-	for (auto const& var : boost::combine(data.get_weights(), data.get_labels(), data.get_rows())) {
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::SynapseArrayView::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+	for (auto const& var :
+	     boost::combine(parameterization.weights, parameterization.labels, data.get_rows())) {
 		auto const& weights = boost::get<0>(var);
 		auto const& labels = boost::get<1>(var);
 		auto const& row = boost::get<2>(var);
@@ -242,7 +250,7 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::SynapseArrayViewSparse const& data,
     System& system) const
 {
@@ -254,17 +262,21 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 	auto const synram = data.get_synram();
 	auto const hemisphere = synram.toHemisphereOnDLS();
 	auto& synapse_matrix = config.synapse_blocks[hemisphere.toSynapseBlockOnDLS()].matrix;
-	for (auto const& synapse : data.get_synapses()) {
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::SynapseArrayViewSparse::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+	for (size_t i = 0; auto const& synapse : data.get_synapses()) {
 		auto const row = *(rows.begin() + synapse.index_row);
 		auto const column = *(columns.begin() + synapse.index_column);
-		synapse_matrix.weights[row][column] = synapse.weight;
-		synapse_matrix.labels[row][column] = synapse.label;
+		synapse_matrix.weights[row][column] = parameterization.weights.at(i);
+		synapse_matrix.labels[row][column] = parameterization.labels.at(i);
+		i++;
 	}
 }
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor,
+    grenade::common::VertexOnTopology,
     signal_flow::vertex::PlasticityRule const& data,
     System& system) const
 {
@@ -280,49 +292,49 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 			    true;
 		}
 	}
-	// handle setting neuron readout parameters
+	// handle setting neuron readout amplifier
 	for (auto const& neuron_view : data.get_neuron_view_shapes()) {
 		for (size_t i = 0; i < neuron_view.columns.size(); ++i) {
-			if (neuron_view.neuron_readout_sources.at(i)) {
-				auto& atomic_neuron =
-				    chip.neuron_block.atomic_neurons[halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
-				        neuron_view.columns.at(i), neuron_view.row)];
-				atomic_neuron.readout.source = *neuron_view.neuron_readout_sources.at(i);
-				atomic_neuron.readout.enable_amplifier = true;
-			}
+			auto& atomic_neuron =
+			    chip.neuron_block.atomic_neurons[halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
+			        neuron_view.columns.at(i), neuron_view.row)];
+			atomic_neuron.readout.enable_amplifier = true;
 		}
 	}
 }
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::SynapseDriver const& data,
     System& system) const
 {
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::SynapseDriver::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
 	auto& synapse_driver_config =
-	    chip.synapse_driver_blocks[data.get_coordinate().toSynapseDriverBlockOnDLS()]
-	        .synapse_drivers[data.get_coordinate().toSynapseDriverOnSynapseDriverBlock()];
+	    chip.synapse_driver_blocks[data.coordinate.toSynapseDriverBlockOnDLS()]
+	        .synapse_drivers[data.coordinate.toSynapseDriverOnSynapseDriverBlock()];
 	synapse_driver_config.set_row_mode_top(
-	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::top]);
+	    parameterization.row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::top]);
 	synapse_driver_config.set_row_mode_bottom(
-	    data.get_config().row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::bottom]);
-	synapse_driver_config.set_row_address_compare_mask(data.get_config().row_address_compare_mask);
-	synapse_driver_config.set_enable_address_out(data.get_config().enable_address_out);
+	    parameterization.row_modes[halco::hicann_dls::vx::v3::SynapseRowOnSynapseDriver::bottom]);
+	synapse_driver_config.set_row_address_compare_mask(parameterization.row_address_compare_mask);
+	synapse_driver_config.set_enable_address_out(parameterization.enable_address_out);
 	synapse_driver_config.set_enable_receiver(true);
 }
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const /* vertex */,
     signal_flow::vertex::PADIBus const& data,
     System& system) const
 {
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
-	auto const bus = data.get_coordinate();
+	auto const bus = data.coordinate;
 	auto& config =
 	    chip.synapse_driver_blocks[bus.toPADIBusBlockOnDLS().toSynapseDriverBlockOnDLS()].padi_bus;
 	auto enable_config = config.get_enable_spl1();
@@ -332,147 +344,164 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::CrossbarNode const& data,
     System& system) const
 {
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
-	chip.crossbar.nodes[data.get_coordinate()] = data.get_config();
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::CrossbarNode::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+	chip.crossbar.nodes[data.coordinate] = parameterization.config;
 	// enable drop counter for accumulated measure in health info
-	chip.crossbar.nodes[data.get_coordinate()].set_enable_drop_counter(true);
+	chip.crossbar.nodes[data.coordinate].set_enable_drop_counter(true);
 	auto enable_event_counter = chip.crossbar.outputs.get_enable_event_counter();
 	// enable event counter of output for accumulated measure in health info
-	enable_event_counter[data.get_coordinate().toCrossbarOutputOnDLS()] = true;
+	enable_event_counter[data.coordinate.toCrossbarOutputOnDLS()] = true;
 	chip.crossbar.outputs.set_enable_event_counter(enable_event_counter);
 }
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::BackgroundSpikeSource const& data,
     System& system) const
 {
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
-	chip.background_spike_sources[data.get_coordinate()] = data.get_config();
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::BackgroundSpikeSource::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 0}));
+	chip.background_spike_sources[data.coordinate] = parameterization.config;
 }
+
+// TODO(SpikeIO)
+// template <>
+// void ExecutionInstanceChipSnippetConfigVisitor::process(
+//     signal_flow::Graph::vertex_descriptor const /* vertex */,
+//     signal_flow::vertex::SpikeIOSourcePopulation const& data,
+//     System& system) const
+//{
+//	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor");
+//	auto* sys = std::get_if<lola::vx::v3::ChipAndSinglechipFPGA>(&system);
+//	if (!sys) {
+//		throw std::logic_error("SpikeIOSource requires ChipAndSingleChipFPGA!");
+//	}
+//	auto& fpga = sys->fpga;
+//
+//	auto const& config = data.get_config();
+//	LOG4CXX_TRACE(
+//	    logger, "process(SpikeIOSourcePopulation): enable_tx="
+//	                << config.get_enable_tx() << " enable_rx=" << config.get_enable_rx()
+//	                << " loopback=" << config.get_enable_internal_loopback() << "dataratescaler"
+//	                << config.get_data_rate_scaler());
+//
+//
+//	auto const& in = data.get_input_routing();
+//	for (auto const& [coord, lbl] : in) {
+//		LOG4CXX_TRACE(
+//		    logger, "    input_routing[" << coord << "] -> label=" << lbl
+//		                                 << " neuron_label=" << lbl.get_neuron_label()
+//		                                 << " row=" << lbl.get_row_select_address()
+//		                                 << " synapse=" << lbl.get_synapse_label()
+//		                                 << " spl1=" << lbl.get_spl1_address());
+//	}
+//
+//	auto& fpga_cfg = fpga.spikeio_config;
+//
+//	fpga_cfg.set_enable_tx(fpga_cfg.get_enable_tx() || config.get_enable_tx());
+//	fpga_cfg.set_enable_rx(fpga_cfg.get_enable_rx() || config.get_enable_rx());
+//	fpga_cfg.set_enable_internal_loopback(
+//	    fpga_cfg.get_enable_internal_loopback() || config.get_enable_internal_loopback());
+//	fpga_cfg.set_data_rate_scaler(config.get_data_rate_scaler());
+//	// data rate consistency check moved to network_builder
+//	{
+//		for (auto const& [serial_addr, lbl] : data.get_input_routing()) {
+//			auto const coord = serial_addr.toSpikeIOInputRouteOnFPGA();
+//			auto& entry = fpga.spikeio_input_routes[coord];
+//			auto const cur = entry.get_target();
+//
+//			if (cur != haldls::vx::SpikeIOInputRoute::SILENT && cur != lbl) {
+//				std::ostringstream oss;
+//				oss << "SpikeIO input_routing conflict at coord " << coord;
+//				throw std::runtime_error(oss.str());
+//			}
+//
+//			entry.set_target(lbl);
+//
+//			auto const after = entry.get_target();
+//			if (after != lbl) {
+//				throw std::logic_error("SpikeIO input route did not stick in LoLA container");
+//			}
+//
+//			LOG4CXX_TRACE(
+//			    logger, "SpikeIO RX: " << serial_addr << " -> " << coord << " = " << after);
+//		}
+//	}
+// }
 
 template <>
 void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const /* vertex */,
-    signal_flow::vertex::SpikeIOSourcePopulation const& data,
-    System& system) const
-{
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor");
-	auto* sys = std::get_if<lola::vx::v3::ChipAndSinglechipFPGA>(&system);
-	if (!sys) {
-		throw std::logic_error("SpikeIOSource requires ChipAndSingleChipFPGA!");
-	}
-	auto& fpga = sys->fpga;
-
-	auto const& config = data.get_config();
-	LOG4CXX_TRACE(
-	    logger, "process(SpikeIOSourcePopulation): enable_tx="
-	                << config.get_enable_tx() << " enable_rx=" << config.get_enable_rx()
-	                << " loopback=" << config.get_enable_internal_loopback() << "dataratescaler"
-	                << config.get_data_rate_scaler());
-
-
-	auto const& in = data.get_input_routing();
-	for (auto const& [coord, lbl] : in) {
-		LOG4CXX_TRACE(
-		    logger, "    input_routing[" << coord << "] -> label=" << lbl
-		                                 << " neuron_label=" << lbl.get_neuron_label()
-		                                 << " row=" << lbl.get_row_select_address()
-		                                 << " synapse=" << lbl.get_synapse_label()
-		                                 << " spl1=" << lbl.get_spl1_address());
-	}
-
-	auto& fpga_cfg = fpga.spikeio_config;
-
-	fpga_cfg.set_enable_tx(fpga_cfg.get_enable_tx() || config.get_enable_tx());
-	fpga_cfg.set_enable_rx(fpga_cfg.get_enable_rx() || config.get_enable_rx());
-	fpga_cfg.set_enable_internal_loopback(
-	    fpga_cfg.get_enable_internal_loopback() || config.get_enable_internal_loopback());
-	fpga_cfg.set_data_rate_scaler(config.get_data_rate_scaler());
-	// data rate consistency check moved to network_builder
-	{
-		for (auto const& [serial_addr, lbl] : data.get_input_routing()) {
-			auto const coord = serial_addr.toSpikeIOInputRouteOnFPGA();
-			auto& entry = fpga.spikeio_input_routes[coord];
-			auto const cur = entry.get_target();
-
-			if (cur != haldls::vx::SpikeIOInputRoute::SILENT && cur != lbl) {
-				std::ostringstream oss;
-				oss << "SpikeIO input_routing conflict at coord " << coord;
-				throw std::runtime_error(oss.str());
-			}
-
-			entry.set_target(lbl);
-
-			auto const after = entry.get_target();
-			if (after != lbl) {
-				throw std::logic_error("SpikeIO input route did not stick in LoLA container");
-			}
-
-			LOG4CXX_TRACE(
-			    logger, "SpikeIO RX: " << serial_addr << " -> " << coord << " = " << after);
-		}
-	}
-}
-
-template <>
-void ExecutionInstanceChipSnippetConfigVisitor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::NeuronView const& data,
     System& system) const
 {
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::NeuronView::Parameterization const&>(
+	        m_input_data.ports.get(grenade::common::PortOnTopology{vertex, 1}));
+	for (auto const& column : data.get_columns()) {
+		chip.neuron_block
+		    .backends[column.toNeuronEventOutputOnDLS()
+		                  .toNeuronBackendConfigBlockOnDLS()
+		                  .toCommonNeuronBackendConfigOnDLS()]
+		    .set_enable_event_registers(true);
+	}
+
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 	size_t i = 0;
-	auto const& configs = data.get_configs();
+	auto const& configs = parameterization.configs;
 	auto& neurons = chip.neuron_block.atomic_neurons;
 	for (auto const column : data.get_columns()) {
 		auto const& config = configs.at(i);
-		auto const an = AtomicNeuronOnDLS(column, data.get_row());
-		auto const neuron_reset = an.toNeuronResetOnDLS();
-		if (config.label) {
-			neurons[an].event_routing.address = *(config.label);
-			neurons[an].event_routing.enable_digital = true;
-		} else {
-			neurons[an].event_routing.enable_digital = false;
-		}
+		auto& atomic_neuron = neurons[AtomicNeuronOnDLS(column, data.row)];
+		auto old_readout = atomic_neuron.readout;
+		atomic_neuron = config.atomic_neuron_config;
+		// leave readout amplifier settings untouched, since they are set by other vertices
+		// (adcs, plasticity)
+		atomic_neuron.readout.enable_amplifier = old_readout.enable_amplifier;
+		atomic_neuron.readout.enable_buffered_access = old_readout.enable_buffered_access;
+		atomic_neuron.readout.enable_unbuffered_access = old_readout.enable_unbuffered_access;
 		i++;
 	}
 	// get incoming synapse columns and enable current switches
-	if (boost::in_degree(vertex, m_graph.get_graph()) > 0) {
+	if (m_topology.get_reference().in_degree(vertex) > 0) {
 		std::set<SynapseOnSynapseRow> incoming_synapse_columns;
-		auto const in_edges = boost::in_edges(vertex, m_graph.get_graph());
-		for (auto const in_edge : boost::make_iterator_range(in_edges)) {
-			auto const source = boost::source(in_edge, m_graph.get_graph());
-			if (std::holds_alternative<signal_flow::vertex::SynapseArrayView>(
-			        m_graph.get_vertex_property(source))) {
-				auto const& synapses = std::get<signal_flow::vertex::SynapseArrayView>(
-				    m_graph.get_vertex_property(source));
-				for (auto const& column : synapses.get_columns()) {
+		for (auto const in_edge : m_topology.get_reference().in_edges(vertex)) {
+			auto const source = m_topology.get_reference().source(in_edge);
+			if (auto const synapses = dynamic_cast<signal_flow::vertex::SynapseArrayView const*>(
+			        &m_topology.get_reference().get(source));
+			    synapses) {
+				for (auto const& column : synapses->get_columns()) {
 					incoming_synapse_columns.insert(column);
 				}
 			} else {
-				auto const& synapses = std::get<signal_flow::vertex::SynapseArrayViewSparse>(
-				    m_graph.get_vertex_property(source));
-				for (auto const& column : synapses.get_columns()) {
+				auto const& synapses_sparse =
+				    dynamic_cast<signal_flow::vertex::SynapseArrayViewSparse const&>(
+				        m_topology.get_reference().get(source));
+				for (auto const& column : synapses_sparse.get_columns()) {
 					incoming_synapse_columns.insert(column);
 				}
 			}
 		}
 		for (auto const& column : incoming_synapse_columns) {
-			chip.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
+			chip.neuron_block.current_rows[data.row.toColumnCurrentRowOnDLS()]
 			    .values[column]
 			    .set_enable_synaptic_current_excitatory(true);
-			chip.neuron_block.current_rows[data.get_row().toColumnCurrentRowOnDLS()]
+			chip.neuron_block.current_rows[data.row.toColumnCurrentRowOnDLS()]
 			    .values[column]
 			    .set_enable_synaptic_current_inhibitory(true);
 		}
@@ -481,8 +510,6 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 
 void ExecutionInstanceChipSnippetConfigVisitor::operator()(System& system) const
 {
-	auto logger = log4cxx::Logger::getLogger("grenade.ExecutionInstanceChipSnippetConfigVisitor");
-
 	using namespace halco::common;
 	using namespace halco::hicann_dls::vx::v3;
 
@@ -523,25 +550,20 @@ void ExecutionInstanceChipSnippetConfigVisitor::operator()(System& system) const
 		}
 	}
 
-	auto const execution_instance_vertex =
-	    m_graph.get_execution_instance_map().right.at(m_execution_instance);
-	for (auto const p : boost::make_iterator_range(
-	         m_graph.get_vertex_descriptor_map().right.equal_range(execution_instance_vertex))) {
-		auto const vertex = p.second;
-		std::visit(
-		    [&](auto const& value) {
-			    hate::Timer timer;
-			    typedef hate::remove_all_qualifiers_t<decltype(value)> Value;
-			    if constexpr (std::is_base_of_v<signal_flow::vertex::EntityOnChip, Value>) {
-				    if (value.chip_on_executor.first == m_chip_on_connection) {
-					    process(vertex, value, system);
-					    LOG4CXX_TRACE(
-					        logger, "process(): Processed " << hate::name<Value>() << " in "
-					                                        << timer.print() << ".");
-				    }
-			    }
-		    },
-		    m_graph.get_vertex_property(vertex));
+	for (auto const inter_topology_hyper_edge_descriptor :
+	     m_topology.inter_graph_hyper_edges_by_linked(m_execution_instance_vertex_descriptor)) {
+		for (auto const& vertex_descriptor :
+		     m_topology.references(inter_topology_hyper_edge_descriptor)) {
+			auto const& vertex = m_topology.get_reference().get(vertex_descriptor);
+			if (auto const entity_on_chip =
+			        dynamic_cast<signal_flow::vertex::EntityOnChip const*>(&vertex);
+			    entity_on_chip && entity_on_chip->chip_on_connection == m_chip_on_connection) {
+				if (m_visitor.contains(std::type_index(typeid(vertex)))) {
+					m_visitor.at(std::type_index(typeid(vertex)))(
+					    vertex_descriptor, vertex, system);
+				}
+			}
+		}
 	}
 }
 

@@ -5,9 +5,9 @@ namespace grenade::vx::execution::detail {
 
 template <typename EntryT>
 void ExecutionInstanceSnippetData::insert(
-    signal_flow::Graph::vertex_descriptor descriptor, EntryT&& entry, bool is_output)
+    grenade::common::PortOnTopology descriptor, EntryT&& entry, bool is_output)
 {
-	m_local_data.data.emplace(descriptor, std::forward<EntryT>(entry));
+	m_local_results.ports.set(descriptor, std::forward<EntryT>(entry));
 	if (is_output) {
 		m_is_output.insert(descriptor);
 	}

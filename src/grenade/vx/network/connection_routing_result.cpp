@@ -1,5 +1,6 @@
 #include "grenade/vx/network/connection_routing_result.h"
 
+#include "hate/indent.h"
 #include "hate/join.h"
 #include <ostream>
 
@@ -17,8 +18,14 @@ bool ConnectionToHardwareRoutes::operator!=(ConnectionToHardwareRoutes const& ot
 
 std::ostream& operator<<(std::ostream& os, ConnectionToHardwareRoutes const& routes)
 {
-	os << "ConnectionToHardwareRoutes("
-	   << hate::join(routes.atomic_neurons_on_target_compartment, ", ") << ")";
+	hate::IndentingOstream ios(os);
+	ios << "ConnectionToHardwareRoutes(\n";
+	ios << hate::Indentation("\t");
+	for (auto const& [receptor_on_compartment, ans] : routes.atomic_neurons_on_target_compartment) {
+		ios << receptor_on_compartment << ": [" << hate::join(ans, ", ") << "]\n";
+	}
+	ios << hate::Indentation();
+	ios << ")";
 	return os;
 }
 

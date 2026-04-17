@@ -2,6 +2,7 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
 
@@ -9,7 +10,7 @@ template <typename Archive>
 void PADIBus::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(cereal::base_class<EntityOnChip>(this));
-	ar(m_coordinate);
+	ar(coordinate);
 }
 
 } // namespace grenade::vx::signal_flow::vertex

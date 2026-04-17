@@ -3,23 +3,15 @@
 #include "cereal/types/halco/common/geometry.h"
 #include "cereal/types/halco/common/typed_array.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
-
-template <typename Archive>
-void SynapseDriver::Config::serialize(Archive& ar, std::uint32_t const)
-{
-	ar(row_address_compare_mask);
-	ar(row_modes);
-	ar(enable_address_out);
-}
 
 template <typename Archive>
 void SynapseDriver::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(cereal::base_class<EntityOnChip>(this));
-	ar(m_coordinate);
-	ar(m_config);
+	ar(coordinate);
 }
 
 } // namespace grenade::vx::signal_flow::vertex

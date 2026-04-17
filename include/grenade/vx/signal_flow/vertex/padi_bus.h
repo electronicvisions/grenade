@@ -1,6 +1,5 @@
 #pragma once
 #include "grenade/vx/signal_flow/connection_type.h"
-#include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "hate/visibility.h"
@@ -14,8 +13,6 @@ struct access;
 
 namespace grenade::vx::signal_flow {
 
-struct PortRestriction;
-
 namespace vertex {
 
 struct CrossbarNode;
@@ -23,47 +20,39 @@ struct CrossbarNode;
 /**
  * PADI bus connecting a set of crossbar nodes to a set of synapse drivers.
  */
-struct PADIBus : public EntityOnChip
+struct SYMBOL_VISIBLE PADIBus : public EntityOnChip
 {
-	constexpr static bool can_connect_different_execution_instances = false;
-
 	typedef halco::hicann_dls::vx::v3::PADIBusOnDLS Coordinate;
 
-	PADIBus() = default;
-
 	/**
-	 * Construct PADI bus at specified location.
-	 * @param coordinate Location
-	 * @param chip_on_executor Coordinate of chip to use
+	 * Construct PADI bus at specified coordinate.
+	 * @param coordinate Coordinate to use
+	 * @param chip_on_connection Coordinate of chip to use
+	 * @param time_domain Time domain to use
+	 * @param execution_instance_on_executor Execution instance to use
 	 */
-	PADIBus(Coordinate const& coordinate, ChipOnExecutor const& chip_on_executor = ChipOnExecutor())
-	    SYMBOL_VISIBLE;
+	PADIBus(
+	    Coordinate const& coordinate,
+	    common::ChipOnConnection const& chip_on_connection,
+	    grenade::common::TimeDomainOnTopology const& time_domain,
+	    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor);
 
-	constexpr static bool variadic_input = true;
-	constexpr std::array<Port, 1> inputs() const
-	{
-		return {Port(1, ConnectionType::CrossbarOutputLabel)};
-	}
+	Coordinate coordinate;
 
-	constexpr Port output() const
-	{
-		return Port(1, ConnectionType::SynapseDriverInputLabel);
-	}
+	virtual std::vector<Port> get_input_ports() const override;
+	virtual std::vector<Port> get_output_ports() const override;
 
-	bool supports_input_from(
-	    CrossbarNode const& input,
-	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
+	virtual bool valid_edge_from(
+	    Vertex const& source, grenade::common::Edge const& edge) const override;
 
-	Coordinate const& get_coordinate() const SYMBOL_VISIBLE;
+	virtual std::unique_ptr<Vertex> copy() const override;
+	virtual std::unique_ptr<Vertex> move() override;
 
-	friend std::ostream& operator<<(std::ostream& os, PADIBus const& config) SYMBOL_VISIBLE;
-
-	bool operator==(PADIBus const& other) const SYMBOL_VISIBLE;
-	bool operator!=(PADIBus const& other) const SYMBOL_VISIBLE;
+protected:
+	virtual std::ostream& print(std::ostream& os) const override;
+	virtual bool is_equal_to(Vertex const& other) const override;
 
 private:
-	Coordinate m_coordinate{};
-
 	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);

@@ -5,6 +5,7 @@
 #include "grenade/common/resource_estimator.h"
 #include "grenade/common/topology.h"
 #include "grenade/common/vertex_on_topology.h"
+#include "grenade/vx/network/abstract/population_cell/delay.h"
 #include "grenade/vx/network/abstract/population_cell/external_source.h"
 #include "grenade/vx/network/abstract/population_cell/locally_placed.h"
 #include "grenade/vx/network/abstract/population_cell/poisson_source.h"
@@ -195,6 +196,9 @@ PopulationResourceEstimator::operator()(
 			    std::move(madc_channel_usage), sequence);
 		} else if (auto const neuron_ptr =
 		               dynamic_cast<ExternalSourceNeuron const*>(&section_ptr->get_cell());
+		           neuron_ptr) {
+			return std::make_unique<Resource>(0, 0, std::move(madc_channel_usage), sequence);
+		} else if (auto const neuron_ptr = dynamic_cast<DelayCell const*>(&section_ptr->get_cell());
 		           neuron_ptr) {
 			return std::make_unique<Resource>(0, 0, std::move(madc_channel_usage), sequence);
 		} else if (auto const neuron_ptr =

@@ -1,6 +1,7 @@
 #pragma once
+#include "dapr/empty_property.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/signal_flow/connection_type.h"
-#include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
@@ -18,70 +19,73 @@ struct access;
 
 namespace grenade::vx::signal_flow {
 
-struct PortRestriction;
-
 namespace vertex {
-
-struct NeuronView;
 
 /**
  * Readout of neuron voltages via a pad.
  */
-struct PadReadoutView : public EntityOnChip
+struct SYMBOL_VISIBLE PadReadoutView : public EntityOnChip
 {
-	constexpr static bool can_connect_different_execution_instances = false;
-
-	typedef halco::hicann_dls::vx::v3::PadOnDLS Coordinate;
-
-	struct Source
+	struct Parameterization : public grenade::common::PortData
 	{
-		typedef halco::hicann_dls::vx::v3::AtomicNeuronOnDLS Coord;
-		Coord coord{};
-		typedef lola::vx::v3::AtomicNeuron::Readout::Source Type;
-		Type type{};
 		bool enable_buffered{false};
 
-		bool operator==(Source const& other) const SYMBOL_VISIBLE;
-		bool operator!=(Source const& other) const SYMBOL_VISIBLE;
+		Parameterization();
 
-		template <typename Archive>
-		void serialize(Archive& ar, std::uint32_t);
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
 	};
 
-	PadReadoutView() = default;
+	virtual bool valid_input_port_data(
+	    size_t input_port_on_vertex, grenade::common::PortData const& data) const override;
+
+	/**
+	 * Parameterization port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) ParameterizationPortType
+	    : public dapr::EmptyProperty<ParameterizationPortType, grenade::common::VertexPortType>
+	{};
+
+	typedef halco::hicann_dls::vx::v3::AtomicNeuronOnDLS Source;
+	typedef halco::hicann_dls::vx::v3::PadOnDLS Coordinate;
 
 	/**
 	 * Construct PadReadoutView.
 	 * @param source Neuron source and location to read out
 	 * @param coordinate Pad to use
-	 * @param chip_on_executor Coordinate of chip to use
+	 * @param chip_on_connection Coordinate of chip to use
+	 * @param time_domain Time domain to use
+	 * @param execution_instance_on_executor Execution instance to use
 	 */
-	explicit PadReadoutView(
+	PadReadoutView(
 	    Source const& source,
 	    Coordinate const& coordinate,
-	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
+	    common::ChipOnConnection const& chip_on_connection,
+	    grenade::common::TimeDomainOnTopology const& time_domain,
+	    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor);
 
-	Source const& get_source() const SYMBOL_VISIBLE;
-	Coordinate const& get_coordinate() const SYMBOL_VISIBLE;
+	Source source;
+	Coordinate coordinate;
 
-	constexpr static bool variadic_input = false;
-	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
+	virtual std::vector<Port> get_input_ports() const override;
 
-	Port output() const SYMBOL_VISIBLE;
+	virtual std::vector<Port> get_output_ports() const override;
 
-	friend std::ostream& operator<<(std::ostream& os, PadReadoutView const& config) SYMBOL_VISIBLE;
+	virtual bool valid_edge_from(
+	    Vertex const& source, grenade::common::Edge const& edge) const override;
 
-	bool supports_input_from(
-	    NeuronView const& input,
-	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
+	virtual std::unique_ptr<Vertex> copy() const override;
+	virtual std::unique_ptr<Vertex> move() override;
 
-	bool operator==(PadReadoutView const& other) const SYMBOL_VISIBLE;
-	bool operator!=(PadReadoutView const& other) const SYMBOL_VISIBLE;
+protected:
+	virtual bool is_equal_to(Vertex const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 
 private:
-	Source m_source{};
-	Coordinate m_coordinate{};
-
 	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);

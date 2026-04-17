@@ -1,12 +1,15 @@
 #include "grenade/vx/signal_flow/vertex/transformation/mac_spiketrain_generator.h"
 
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/port_data.h"
+#include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include <functional>
 
 namespace grenade::vx::signal_flow::vertex::transformation {
-
-MACSpikeTrainGenerator::~MACSpikeTrainGenerator() {}
 
 MACSpikeTrainGenerator::MACSpikeTrainGenerator(
     halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS> const&
@@ -18,31 +21,37 @@ MACSpikeTrainGenerator::MACSpikeTrainGenerator(
     m_wait_between_events(wait_between_events)
 {}
 
-std::vector<Port> MACSpikeTrainGenerator::inputs() const
+std::vector<Transformation::Function::Port> MACSpikeTrainGenerator::get_input_ports() const
 {
 	std::vector<Port> ports;
 	for (auto const s : m_hemisphere_sizes) {
-		if (s != 0) {
-			ports.push_back(Port(s, ConnectionType::UInt5));
+		if (s == 0) {
+			continue;
 		}
+		ports.push_back(Port(
+		    VertexPortType(ConnectionType::UInt5), grenade::common::CuboidMultiIndexSequence({s})));
 	}
 	return ports;
 }
 
-Port MACSpikeTrainGenerator::output() const
+std::vector<Transformation::Function::Port> MACSpikeTrainGenerator::get_output_ports() const
 {
-	return Port(1, ConnectionType::TimedSpikeToChipSequence);
+	return {Port(
+	    VertexPortType(ConnectionType::TimedSpikeToChipSequence),
+	    grenade::common::CuboidMultiIndexSequence({1}))};
 }
 
-MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
-    std::vector<Function::Value> const& value) const
+std::vector<Transformation::Results> MACSpikeTrainGenerator::apply(
+    std::vector<std::reference_wrapper<grenade::common::PortData const>> const& data) const
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 
 	size_t batch_size = 0;
-	if (!value.empty()) {
-		batch_size = std::visit([](auto const& v) { return v.size(); }, value.at(0));
+	if (!data.empty()) {
+		batch_size = std::visit(
+		    [](auto const& v) { return v.size(); },
+		    dynamic_cast<Transformation::Dynamics const&>(data.at(0).get()).value);
 	}
 
 	halco::common::typed_array<std::vector<halco::hicann_dls::vx::v3::SpikeLabel>, HemisphereOnDLS>
@@ -51,9 +60,10 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 	std::vector<std::reference_wrapper<
 	    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>> const>>
 	    uvalue;
-	for (auto const& v : value) {
+	for (auto const& v : data) {
 		uvalue.push_back(
-		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>>>(v));
+		    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt5>>>>(
+		        dynamic_cast<Transformation::Dynamics const&>(v.get()).value));
 	}
 
 	std::vector<signal_flow::TimedSpikeToChipSequence> events(batch_size);
@@ -130,7 +140,7 @@ MACSpikeTrainGenerator::Function::Value MACSpikeTrainGenerator::apply(
 		});
 	}
 
-	return events;
+	return {{events}};
 }
 
 std::optional<halco::hicann_dls::vx::v3::SpikeLabel> MACSpikeTrainGenerator::get_spike_label(
@@ -149,19 +159,29 @@ std::optional<halco::hicann_dls::vx::v3::SpikeLabel> MACSpikeTrainGenerator::get
 	    h | (spl1_address << 14) | (row_select) << 6 | synapse_label);
 }
 
-bool MACSpikeTrainGenerator::equal(Transformation::Function const& other) const
+bool MACSpikeTrainGenerator::is_equal_to(Transformation::Function const& other) const
 {
-	MACSpikeTrainGenerator const* o = dynamic_cast<MACSpikeTrainGenerator const*>(&other);
-	if (o == nullptr) {
-		return false;
-	}
-	return (m_hemisphere_sizes == o->m_hemisphere_sizes) && (m_num_sends == o->m_num_sends) &&
-	       (m_wait_between_events == o->m_wait_between_events);
+	auto const& o = dynamic_cast<MACSpikeTrainGenerator const&>(other);
+	return (m_hemisphere_sizes == o.m_hemisphere_sizes) && (m_num_sends == o.m_num_sends) &&
+	       (m_wait_between_events == o.m_wait_between_events);
 }
 
-std::unique_ptr<Transformation::Function> MACSpikeTrainGenerator::clone() const
+std::unique_ptr<Transformation::Function> MACSpikeTrainGenerator::copy() const
 {
 	return std::make_unique<MACSpikeTrainGenerator>(*this);
+}
+
+std::unique_ptr<Transformation::Function> MACSpikeTrainGenerator::move()
+{
+	return std::make_unique<MACSpikeTrainGenerator>(std::move(*this));
+}
+
+std::ostream& MACSpikeTrainGenerator::print(std::ostream& os) const
+{
+	os << "MACSpikeTrainGenerator(";
+	os << hate::join(get_input_ports(), "\n");
+	os << ", TODO)";
+	return os;
 }
 
 } // namespace grenade::vx::signal_flow::vertex::transformation

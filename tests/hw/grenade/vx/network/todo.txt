@@ -1,0 +1,20 @@
+single chip, single execution:
+	external -> record
+	background -> record
+	external -> internal (bypass) -> record
+	background -> internal (bypass) -> record
+	external -> internal (bypass) -> internal (bypass) -> record
+
+single chip, multiple executions:
+	external -> internal (bypass) -> record
+	background -> internal (bypass) -> record
+	external -> internal (bypass) -> internal (bypass) -> record
+
+delay:
+	external -> delay -> record
+	background -> delay -> record
+	external -> internal (bypass) -> delay -> record
+	external -> delay -> internal (bypass) -> record
+
+multi chip:
+	all the above with larger internal -> scriptable

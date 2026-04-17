@@ -1,39 +1,29 @@
 #include "grenade/vx/compute/argmax.h"
 
-#include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/compute/detail/chip_configs.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "grenade/vx/signal_flow/vertex/transformation/argmax.h"
 
 namespace grenade::vx::compute {
 
-ArgMax::ArgMax(size_t size) : m_graph(), m_input_vertex(), m_output_vertex()
+ArgMax::ArgMax(size_t size) : m_graph(std::make_shared<grenade::common::Topology>()), m_vertex()
 {
 	using namespace halco::hicann_dls::vx;
 
-	auto const instance = grenade::common::ExecutionInstanceID();
+	auto const instance = grenade::common::ExecutionInstanceOnExecutor();
 
-	m_input_vertex = m_graph.add(
-	    signal_flow::vertex::ExternalInput(signal_flow::ConnectionType::DataInt8, size), instance,
-	    {});
-	auto const v2 = m_graph.add(
-	    signal_flow::vertex::DataInput(signal_flow::ConnectionType::Int8, size), instance,
-	    {m_input_vertex});
-	signal_flow::Vertex transformation(signal_flow::vertex::Transformation(
-	    std::make_unique<signal_flow::vertex::transformation::ArgMax>(
-	        size, signal_flow::ConnectionType::Int8)));
-	auto const v3 = m_graph.add(std::move(transformation), instance, {v2});
-	m_output_vertex = m_graph.add(
-	    signal_flow::vertex::DataOutput(signal_flow::ConnectionType::UInt32, 1), instance, {v3});
+	m_vertex = m_graph->add_vertex(signal_flow::vertex::Transformation(
+	    signal_flow::vertex::transformation::ArgMax(size, signal_flow::ConnectionType::Int8),
+	    instance));
 }
 
 std::vector<std::vector<signal_flow::UInt32>> ArgMax::run(
     std::vector<std::vector<signal_flow::Int8>> const& inputs,
-    lola::vx::v3::Chip const& config,
+    lola::vx::v3::Chip const&,
     execution::JITGraphExecutor& executor) const
 {
 	using namespace halco::hicann_dls::vx;
@@ -53,7 +43,7 @@ std::vector<std::vector<signal_flow::UInt32>> ArgMax::run(
 		throw std::runtime_error("Provided inputs size does not match ArgMax input size.");
 	}
 
-	signal_flow::InputData input_map;
+	grenade::common::InputData input_map;
 	std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> timed_inputs(
 	    inputs.size());
 	for (size_t i = 0; i < inputs.size(); ++i) {
@@ -61,15 +51,15 @@ std::vector<std::vector<signal_flow::UInt32>> ArgMax::run(
 		// TODO: Think about what to do with timing information
 		timed_inputs.at(i).at(0).data = inputs.at(i);
 	}
-	input_map.snippets.resize(1);
-	input_map.snippets[0].data[m_input_vertex] = timed_inputs;
+	input_map.ports.set({m_vertex, 0}, signal_flow::vertex::Transformation::Dynamics(timed_inputs));
 
-	auto const output_map =
-	    execution::run(executor, m_graph, detail::get_chip_configs_from_chip(config), input_map);
+	auto const output_map = execution::run(executor, m_graph, input_map);
 
 	auto const timed_outputs =
 	    std::get<std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>>(
-	        output_map.snippets[0].data.at(m_output_vertex));
+	        dynamic_cast<signal_flow::vertex::Transformation::Results const&>(
+	            output_map.ports.get({m_vertex, 0}))
+	            .value);
 	std::vector<std::vector<signal_flow::UInt32>> outputs(timed_outputs.size());
 	for (size_t i = 0; i < outputs.size(); ++i) {
 		assert(timed_outputs.at(i).size() == 1);
@@ -80,9 +70,7 @@ std::vector<std::vector<signal_flow::UInt32>> ArgMax::run(
 
 size_t ArgMax::input_size() const
 {
-	return std::get<signal_flow::vertex::ExternalInput>(m_graph.get_vertex_property(m_input_vertex))
-	    .output()
-	    .size;
+	return m_graph->get(m_vertex).get_input_ports().at(0).get_channels().size();
 }
 
 size_t ArgMax::output_size() const

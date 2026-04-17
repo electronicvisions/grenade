@@ -5,7 +5,7 @@
 namespace grenade::vx::network {
 
 std::vector<lola::vx::v3::SynapseMatrix::Weight> build_connection_weight_split(
-    Projection::Connection::Weight const& weight, size_t num)
+    abstract::UncalibratedSynapse::Weight const& weight, size_t num)
 {
 	constexpr lola::vx::v3::SynapseMatrix::Weight max_split_weight(
 	    lola::vx::v3::SynapseMatrix::Weight::max);

@@ -3,6 +3,7 @@
 GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING
 GENPYBIND_MANUAL({
 	parent.attr("__variant__") = "pybind11";
+	parent->py::module::import("pygrenade_common");
 	parent->py::module::import("_pygrenade_vx_network");
 })
 

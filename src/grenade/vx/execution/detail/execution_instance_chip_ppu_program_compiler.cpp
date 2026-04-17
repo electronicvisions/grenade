@@ -1,14 +1,18 @@
 #include "grenade/vx/execution/detail/execution_instance_chip_ppu_program_compiler.h"
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/common/port_on_topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/padi.h"
@@ -63,16 +67,16 @@ void ExecutionInstanceChipPPUProgramCompiler::Result::apply(
 
 
 ExecutionInstanceChipPPUProgramCompiler::ExecutionInstanceChipPPUProgramCompiler(
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    signal_flow::InputData const& input_data,
+    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors,
+    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
     ExecutionInstanceHooks const& hooks,
-    common::ChipOnConnection const& chip_on_connection,
-    grenade::common::ExecutionInstanceID const& execution_instance) :
-    m_graphs(graphs),
+    common::ChipOnConnection const& chip_on_connection) :
+    m_topologies(topologies),
+    m_execution_instance_vertex_descriptors(execution_instance_vertex_descriptors),
     m_input_data(input_data),
     m_hooks(hooks),
-    m_chip_on_connection(chip_on_connection),
-    m_execution_instance(execution_instance)
+    m_chip_on_connection(chip_on_connection)
 {
 }
 
@@ -89,25 +93,45 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 	using namespace lola::vx::v3;
 	using namespace haldls::vx::v3;
 
-	assert((std::set<size_t>{m_input_data.snippets.size(), m_graphs.size()}.size() == 1));
-	size_t const snippet_count = m_graphs.size();
+	assert(m_input_data.size() == m_topologies.size());
+	size_t const snippet_count = m_topologies.size();
 
 	ExecutionInstanceChipSnippetPPUUsageVisitor::Result overall_ppu_usage;
 	std::vector<ExecutionInstanceChipSnippetPPUUsageVisitor::Result> ppu_usages;
 	for (size_t i = 0; i < snippet_count; i++) {
 		auto ppu_usage = ExecutionInstanceChipSnippetPPUUsageVisitor(
-		    m_graphs[i], m_chip_on_connection, m_execution_instance, i)();
+		    *m_topologies.at(i), m_execution_instance_vertex_descriptors.at(i),
+		    m_input_data.at(i).get(), m_chip_on_connection, i)();
 		ppu_usages.push_back(ppu_usage);
 		overall_ppu_usage += std::move(ppu_usage);
 	}
 
-	std::vector<common::Time> maximal_periodic_cadc_runtimes(m_input_data.batch_size());
+	std::vector<std::vector<std::optional<common::Time>>> runtime(snippet_count);
+	for (size_t i = 0; i < snippet_count; ++i) {
+		for (auto const& inter_graph_hyper_edge_descriptor :
+		     m_topologies.at(i)->inter_graph_hyper_edges_by_linked(
+		         m_execution_instance_vertex_descriptors.at(i))) {
+			for (auto const& vertex_descriptor :
+			     m_topologies.at(i)->references(inter_graph_hyper_edge_descriptor)) {
+				auto const& vertex = m_topologies.at(i)->get_reference().get(vertex_descriptor);
+				if (vertex.get_time_domain()) {
+					runtime.at(i) =
+					    dynamic_cast<network::abstract::ClockCycleTimeDomainRuntimes const&>(
+					        m_input_data.at(i).get().time_domain_runtimes.get(
+					            *vertex.get_time_domain()))
+					        .values;
+					break;
+				}
+			}
+		}
+	}
+
+	std::vector<common::Time> maximal_periodic_cadc_runtimes(m_input_data.at(0).get().batch_size());
 	for (size_t i = 0; i < snippet_count; ++i) {
 		if (ppu_usages.at(i).has_periodic_cadc_readout ||
 		    ppu_usages.at(i).has_periodic_cadc_readout_on_dram) {
 			for (size_t b = 0; b < maximal_periodic_cadc_runtimes.size(); ++b) {
-				maximal_periodic_cadc_runtimes.at(b) +=
-				    m_input_data.snippets.at(i).runtime.at(b).at(m_execution_instance);
+				maximal_periodic_cadc_runtimes.at(b) += runtime.at(i).at(b).value();
 			}
 		}
 	}
@@ -135,9 +159,22 @@ ExecutionInstanceChipPPUProgramCompiler::operator()() const
 			    plasticity_rule_timed_recording_num_periods(snippet_count);
 			for (auto const& [descriptor, rule, synapses, neurons, snippet_index] :
 			     overall_ppu_usage.plasticity_rules) {
-				ppu_program_generator.add(descriptor, rule, synapses, neurons, snippet_index);
+				auto const& dynamics =
+				    dynamic_cast<signal_flow::vertex::PlasticityRule::Dynamics const&>(
+				        m_input_data.at(snippet_index)
+				            .get()
+				            .ports.get(grenade::common::PortOnTopology{
+				                descriptor, synapses.size() + neurons.size() + 1}));
+				ppu_program_generator.add(
+				    descriptor, rule,
+				    dynamic_cast<signal_flow::vertex::PlasticityRule::Parameterization const&>(
+				        m_input_data.at(snippet_index)
+				            .get()
+				            .ports.get(grenade::common::PortOnTopology{
+				                descriptor, synapses.size() + neurons.size()})),
+				    dynamics, synapses, neurons, snippet_index);
 				plasticity_rule_timed_recording_num_periods.at(snippet_index)[rule.get_id()] =
-				    rule.get_timer().num_periods;
+				    dynamics.timer.num_periods;
 			}
 			// sum up number of periods for different plasticity rules in order to get the index
 			// offset of the rule in the recording data for each realtime snippet.

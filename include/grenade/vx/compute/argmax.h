@@ -1,16 +1,13 @@
 #pragma once
 #include <vector>
 
-#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/common/topology.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "lola/vx/v3/chip.h"
 
 namespace cereal {
 struct access;
 } // namespace cereal
-
-namespace lola::vx::v3 {
-class Chip;
-} // namespace lola::vx::v3
 
 namespace grenade::vx {
 
@@ -51,9 +48,8 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	signal_flow::Graph m_graph;
-	signal_flow::Graph::vertex_descriptor m_input_vertex{};
-	signal_flow::Graph::vertex_descriptor m_output_vertex{};
+	std::shared_ptr<grenade::common::Topology> m_graph;
+	grenade::common::VertexOnTopology m_vertex{};
 
 	friend struct cereal::access;
 	template <typename Archive>

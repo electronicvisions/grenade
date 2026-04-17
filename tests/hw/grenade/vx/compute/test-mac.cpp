@@ -5,7 +5,6 @@
 #include "grenade/vx/compute/mac.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/ppu.h"
-#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
@@ -27,17 +26,15 @@ TEST(MAC, Single)
 	// Construct connection to HW
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	// fill graph inputs (with signal_flow::UInt5(0))
-	std::vector<grenade::vx::signal_flow::UInt5> inputs(5);
+	// fill graph inputs
+	std::vector<grenade::vx::signal_flow::UInt5> inputs(128);
 	for (size_t i = 0; i < inputs.size(); ++i) {
-		inputs[i] = grenade::vx::signal_flow::UInt5(i);
+		inputs[i] = grenade::vx::signal_flow::UInt5(i % grenade::vx::signal_flow::UInt5::size);
 	}
 
-	grenade::vx::compute::MAC::Weights const weights{
-	    {grenade::vx::compute::MAC::Weight(0)}, {grenade::vx::compute::MAC::Weight(0)},
-	    {grenade::vx::compute::MAC::Weight(0)}, {grenade::vx::compute::MAC::Weight(0)},
-	    {grenade::vx::compute::MAC::Weight(0)},
-	};
+	grenade::vx::compute::MAC::Weights const weights(
+	    128,
+	    grenade::vx::compute::MAC::Weights::value_type(512, grenade::vx::compute::MAC::Weight(0)));
 
 	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
 
@@ -47,7 +44,7 @@ TEST(MAC, Single)
 
 		auto const res = mac.run({inputs}, *chip, executor);
 		EXPECT_EQ(res.size(), 1);
-		EXPECT_EQ(res.at(0).size(), 1);
+		EXPECT_EQ(res.at(0).size(), 512);
 	}
 
 	{
@@ -67,7 +64,8 @@ TEST(MAC, Single)
 			std::getline(file, names);
 			EXPECT_EQ(names, "ExecutionIndex\tbatch\ttime\tvalue");
 			for (std::string line; std::getline(file, line);) {
-				EXPECT_TRUE(std::regex_match(line, std::regex("0\\t\\d+\\t\\d+\\t\\d+"))) << line;
+				EXPECT_TRUE(std::regex_match(line, std::regex("\\d+\\t\\d+\\t\\d+\\t\\d+")))
+				    << line;
 				single_linecount++;
 			}
 		}
@@ -82,7 +80,8 @@ TEST(MAC, Single)
 			std::getline(file, names);
 			EXPECT_EQ(names, "ExecutionIndex\tbatch\ttime\tvalue");
 			for (std::string line; std::getline(file, line);) {
-				EXPECT_TRUE(std::regex_match(line, std::regex("0\\t\\d+\\t\\d+\\t\\d+"))) << line;
+				EXPECT_TRUE(std::regex_match(line, std::regex("\\d+\\t\\d+\\t\\d+\\t\\d+")))
+				    << line;
 				second_linecount++;
 			}
 		}

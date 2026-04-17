@@ -1,19 +1,6 @@
 #include "grenade/vx/compute/conv1d.h"
 
-#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "hate/math.h"
-#include "hate/timer.h"
-
-#include <boost/accumulators/accumulators.hpp>
-#include <boost/accumulators/statistics.hpp>
-#include <log4cxx/logger.h>
-#include <tbb/parallel_for_each.h>
-
 #include <algorithm>
 
 namespace grenade::vx::compute {

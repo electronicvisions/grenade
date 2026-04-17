@@ -1,9 +1,9 @@
 #pragma once
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/network/population_on_execution_instance.h"
-#include "grenade/vx/network/projection.h"
-#include "grenade/vx/network/projection_on_network.h"
-#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/common/linked_topology.h"
+#include "grenade/common/vertex_on_topology.h"
+#include "grenade/vx/network/receptor.h"
+#include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "haldls/vx/v3/event.h"
 #include "hate/visibility.h"
@@ -17,7 +17,7 @@ namespace grenade::vx::network {
 struct ConnectumConnection
 {
 	typedef std::tuple<
-	    PopulationOnExecutionInstance,
+	    grenade::common::VertexOnTopology,
 	    size_t,
 	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
 	    Source;
@@ -26,13 +26,9 @@ struct ConnectumConnection
 	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 
 	Receptor::Type receptor_type;
-	lola::vx::v3::SynapseMatrix::Weight weight;
 
-	ProjectionOnNetwork projection;
+	grenade::common::VertexOnTopology projection;
 	size_t connection_on_projection;
-
-	halco::hicann_dls::vx::v3::SynapseRowOnDLS synapse_row;
-	halco::hicann_dls::vx::v3::SynapseOnSynapseRow synapse_on_row;
 
 	bool operator==(ConnectumConnection const& other) const SYMBOL_VISIBLE;
 	bool operator!=(ConnectumConnection const& other) const SYMBOL_VISIBLE;
@@ -43,23 +39,9 @@ struct ConnectumConnection
 };
 
 
-struct Connectum
-{
-	std::map<grenade::common::ExecutionInstanceID, std::vector<ConnectumConnection>>
-	    execution_instances;
-
-	bool operator==(Connectum const& other) const SYMBOL_VISIBLE;
-	bool operator!=(Connectum const& other) const SYMBOL_VISIBLE;
-
-	friend std::ostream& operator<<(std::ostream& os, Connectum const& connectum) SYMBOL_VISIBLE;
-};
-
-struct Network;
-struct NetworkGraph;
-
-Connectum generate_connectum_from_abstract_network(NetworkGraph const& network_graph)
-    SYMBOL_VISIBLE;
-Connectum generate_connectum_from_hardware_network(NetworkGraph const& network_graph)
-    SYMBOL_VISIBLE;
+std::vector<ConnectumConnection> generate_connectum_from_abstract_network(
+    grenade::common::LinkedTopology const& topology) SYMBOL_VISIBLE;
+std::vector<ConnectumConnection> generate_connectum_from_hardware_network(
+    grenade::common::LinkedTopology const& topology) SYMBOL_VISIBLE;
 
 } // namespace grenade::vx::network

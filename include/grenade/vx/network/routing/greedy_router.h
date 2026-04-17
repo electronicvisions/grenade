@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/common/linked_topology.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/routing/greedy/synapse_driver_on_dls_manager.h"
 #include "grenade/vx/network/routing/router.h"
@@ -10,12 +11,7 @@
 #include <optional>
 
 #if defined(__GENPYBIND__) or defined(__GENPYBIND_GENERATED__)
-#include "grenade/vx/network/network.h"
 #include <pybind11/chrono.h>
-#else
-namespace grenade::vx::network {
-struct Network;
-} // namespace grenade::vx::network
 #endif
 
 namespace grenade::vx::network {
@@ -24,7 +20,10 @@ namespace routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
 /**
  * Router using a (partially) greedy algorithm.
  */
-struct SYMBOL_VISIBLE GENPYBIND(visible) GreedyRouter : public Router
+struct SYMBOL_VISIBLE GENPYBIND(
+    visible,
+    holder_type("std::shared_ptr<grenade::vx::network::routing::GreedyRouter>")) GreedyRouter
+    : public Router
 {
 	/**
 	 * Options of the routing algorithm.
@@ -77,7 +76,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) GreedyRouter : public Router
 
 	virtual ~GreedyRouter();
 
-	virtual RoutingResult operator()(std::shared_ptr<Network> const& network) override;
+	virtual RoutingResult operator()(grenade::common::LinkedTopology const& topology) override;
 
 private:
 	struct Impl;

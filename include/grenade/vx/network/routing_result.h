@@ -1,9 +1,8 @@
 #pragma once
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/connection_routing_result.h"
-#include "grenade/vx/network/population_on_execution_instance.h"
-#include "grenade/vx/network/projection_on_execution_instance.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
@@ -37,7 +36,6 @@ struct GENPYBIND(visible) RoutingResult
 		 */
 		struct PlacedConnection
 		{
-			lola::vx::v3::SynapseMatrix::Weight weight;
 			lola::vx::v3::SynapseMatrix::Label label;
 			halco::hicann_dls::vx::v3::SynapseRowOnDLS synapse_row;
 			halco::hicann_dls::vx::v3::SynapseOnSynapseRow synapse_on_row;
@@ -45,15 +43,16 @@ struct GENPYBIND(visible) RoutingResult
 			GENPYBIND(stringstream)
 			friend std::ostream& operator<<(std::ostream&, PlacedConnection const&) SYMBOL_VISIBLE;
 		};
-		typedef std::map<ProjectionOnExecutionInstance, std::vector<std::vector<PlacedConnection>>>
-		    Connections;
+		typedef std::
+		    map<grenade::common::VertexOnTopology, std::vector<std::vector<PlacedConnection>>>
+		        Connections;
 		Connections connections;
 
 		/**
 		 * Spike label corresponding to each neuron in a external population.
 		 */
 		typedef std::map<
-		    PopulationOnExecutionInstance,
+		    grenade::common::VertexOnTopology,
 		    std::vector<std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
 		    ExternalSpikeLabels;
 		ExternalSpikeLabels external_spike_labels;
@@ -62,7 +61,7 @@ struct GENPYBIND(visible) RoutingResult
 		 * Spike label corresponding to each neuron in a background source population.
 		 */
 		typedef std::map<
-		    PopulationOnExecutionInstance,
+		    grenade::common::VertexOnTopology,
 		    std::map<
 		        halco::hicann_dls::vx::v3::HemisphereOnDLS,
 		        std::vector<halco::hicann_dls::vx::v3::SpikeLabel>>>
@@ -73,7 +72,7 @@ struct GENPYBIND(visible) RoutingResult
 		 * Background spike source mask for each population.
 		 */
 		typedef std::map<
-		    PopulationOnExecutionInstance,
+		    grenade::common::VertexOnTopology,
 		    std::map<
 		        halco::hicann_dls::vx::v3::HemisphereOnDLS,
 		        haldls::vx::v3::BackgroundSpikeSource::Mask>>
@@ -84,7 +83,7 @@ struct GENPYBIND(visible) RoutingResult
 		 * Neuron event output address corresponding to each neuron in a on-chip population.
 		 */
 		typedef std::map<
-		    PopulationOnExecutionInstance,
+		    grenade::common::VertexOnTopology,
 		    std::vector<std::map<
 		        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron,
 		        std::vector<std::optional<haldls::vx::v3::NeuronBackendConfig::AddressOut>>>>>
@@ -128,7 +127,7 @@ struct GENPYBIND(visible) RoutingResult
 		friend std::ostream& operator<<(std::ostream&, ExecutionInstance const&) SYMBOL_VISIBLE;
 	};
 
-	std::map<grenade::common::ExecutionInstanceID, ExecutionInstance> execution_instances;
+	std::map<grenade::common::ExecutionInstanceOnExecutor, ExecutionInstance> execution_instances;
 
 	struct TimingStatistics
 	{

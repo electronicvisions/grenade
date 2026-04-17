@@ -29,9 +29,9 @@ GENPYBIND_MANUAL({
 	struct PyPlacer : public Placer
 	{
 		virtual PlacementResult operator()(
-		    grenade::common::LinkedTopology const& mapped_topology) const override
+		    grenade::common::LinkedTopology const& topology) const override
 		{
-			PYBIND11_OVERLOAD_PURE(PlacementResult, Placer, operator(), mapped_topology);
+			PYBIND11_OVERLOAD_PURE(PlacementResult, Placer, operator(), topology);
 		}
 	};
 

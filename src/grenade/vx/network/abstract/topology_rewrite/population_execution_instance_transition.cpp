@@ -88,118 +88,194 @@ void PopulationExecutionInstanceTransitionRewrite::operator()() const
 	get_topology().set(std::move(new_vertices));
 
 	// add spike recorder and external source neuron population at execution instance transitions
-	for (auto const vertex_descriptor : get_topology().vertices()) {
+	std::vector<VertexOnTopology> vertices(
+	    get_topology().vertices().begin(), get_topology().vertices().end());
+	for (auto const vertex_descriptor : vertices) {
 		if (auto const population =
 		        dynamic_cast<Population const*>(&(get_topology().get(vertex_descriptor)));
 		    population) {
-			// FIXME: do this for locally-placed and background and delay, but just copy external
-			// population
-			auto const population_execution_instance =
-			    population->get_execution_instance_on_executor();
-			auto const population_time_domain = population->get_time_domain();
-			std::vector<EdgeOnTopology> out_edges(
-			    get_topology().out_edges(vertex_descriptor).begin(),
-			    get_topology().out_edges(vertex_descriptor).end());
-			for (auto const& out_edge_descriptor : out_edges) {
-				auto const target_descriptor = get_topology().target(out_edge_descriptor);
-				auto const& target =
-				    dynamic_cast<PartitionedVertex const&>(get_topology().get(target_descriptor));
-				auto const target_execution_instance = target.get_execution_instance_on_executor();
-				auto const target_time_domain = target.get_time_domain();
+			auto const& neuron = population->get_cell();
+			if (auto const external_source_neuron =
+			        dynamic_cast<ExternalSourceNeuron const*>(&neuron);
+			    external_source_neuron) {
+				auto const population_execution_instance =
+				    population->get_execution_instance_on_executor();
+				std::vector<EdgeOnTopology> out_edges(
+				    get_topology().out_edges(vertex_descriptor).begin(),
+				    get_topology().out_edges(vertex_descriptor).end());
+				std::map<ExecutionInstanceOnExecutor, VertexOnTopology> target_populations;
+				for (auto const& out_edge_descriptor : out_edges) {
+					auto const target_descriptor = get_topology().target(out_edge_descriptor);
+					auto const& target = dynamic_cast<PartitionedVertex const&>(
+					    get_topology().get(target_descriptor));
+					auto const target_execution_instance =
+					    target.get_execution_instance_on_executor();
+					auto const target_time_domain = target.get_time_domain();
 
-				if (target_execution_instance == population_execution_instance) {
-					continue;
-				}
-
-				auto const out_edge = get_topology().get(out_edge_descriptor).copy();
-
-				std::set<size_t> neuron_dimensions;
-				std::set<size_t> compartment_dimensions;
-				for (size_t i = 0; i < out_edge->get_channels_on_source().dimensionality(); ++i) {
-					if (dynamic_cast<CellOnPopulationDimensionUnit const*>(
-					        &(*out_edge->get_channels_on_source().get_dimension_units().at(i)))) {
-						neuron_dimensions.insert(i);
-					} else if (dynamic_cast<CompartmentOnNeuronDimensionUnit const*>(
-					               &(*out_edge->get_channels_on_source().get_dimension_units().at(
-					                   i)))) {
-						compartment_dimensions.insert(i);
-					}
-				}
-				assert(compartment_dimensions.size() == 1);
-
-				auto const out_edge_cell_channels_on_source =
-				    out_edge->get_channels_on_source().projection(neuron_dimensions);
-
-				get_topology().remove_edge(out_edge_descriptor);
-
-				// create spike recorder on population execution instance if it is on a time domain
-				std::optional<VertexOnTopology> spike_recorder_descriptor;
-				if (population_time_domain) {
-					SpikeRecorder spike_recorder(
-					    out_edge->get_channels_on_source(), *population_time_domain);
-					spike_recorder.set_execution_instance_on_executor(
-					    population_execution_instance);
-
-					spike_recorder_descriptor =
-					    get_topology().add_vertex(std::move(spike_recorder));
-
-					get_topology().add_edge(
-					    vertex_descriptor, *spike_recorder_descriptor,
-					    Edge(
-					        out_edge->get_channels_on_source(), out_edge->get_channels_on_source(),
-					        out_edge->port_on_source, 0));
-				}
-
-				// add external source neuron population on target execution instance if it is on a
-				// time domain
-				std::optional<VertexOnTopology> target_population_descriptor;
-				if (target_time_domain) {
-					Population target_population(
-					    ExternalSourceNeuron(), *out_edge_cell_channels_on_source,
-					    ExternalSourceNeuron::ParameterSpace(
-					        out_edge->get_channels_on_source().size()),
-					    target_time_domain, target_execution_instance);
-
-					target_population_descriptor =
-					    get_topology().add_vertex(std::move(target_population));
-				}
-
-				// add edges
-				if (target_population_descriptor) {
-					if (spike_recorder_descriptor) {
-						get_topology().add_edge(
-						    *spike_recorder_descriptor, *target_population_descriptor,
-						    Edge(
-						        out_edge->get_channels_on_source(),
-						        *out_edge_cell_channels_on_source->cartesian_product(
-						            CuboidMultiIndexSequence({1})),
-						        0, 0));
-					} else {
-						get_topology().add_edge(
-						    vertex_descriptor, *target_population_descriptor,
-						    Edge(
-						        out_edge->get_channels_on_source(),
-						        *out_edge_cell_channels_on_source->cartesian_product(
-						            CuboidMultiIndexSequence({1})),
-						        0, 0));
+					if (target_execution_instance == population_execution_instance ||
+					    !target_time_domain) {
+						continue;
 					}
 
+					auto const out_edge = get_topology().get(out_edge_descriptor).copy();
+
+					get_topology().remove_edge(out_edge_descriptor);
+
+					if (!target_populations.contains(target_execution_instance.value())) {
+						// add population on target execution instance
+						auto target_vertex = population->copy();
+						auto& target_population = dynamic_cast<Population&>(*target_vertex);
+						target_population.set_time_domain(target_time_domain);
+						target_population.set_execution_instance_on_executor(
+						    target_execution_instance);
+						target_populations.emplace(
+						    target_execution_instance.value(),
+						    get_topology().add_vertex(std::move(target_population)));
+
+						// add in edges
+						for (auto const in_edge_descriptor :
+						     get_topology().in_edges(vertex_descriptor)) {
+							auto const source_descriptor =
+							    get_topology().source(in_edge_descriptor);
+							get_topology().add_edge(
+							    source_descriptor,
+							    target_populations.at(target_execution_instance.value()),
+							    get_topology().get(in_edge_descriptor));
+						}
+					}
+
+					// add out edge
 					get_topology().add_edge(
-					    *target_population_descriptor, target_descriptor,
-					    Edge(
-					        *out_edge_cell_channels_on_source->cartesian_product(
-					            CuboidMultiIndexSequence(
-					                {1}, {CompartmentOnNeuronDimensionUnit()})),
-					        out_edge->get_channels_on_target(), 0, out_edge->port_on_target));
-				} else {
-					if (spike_recorder_descriptor) {
+					    target_populations.at(target_execution_instance.value()), target_descriptor,
+					    std::move(*out_edge));
+
+					// add inter-topology hyper edges
+					for (auto const& inter_topology_hyper_edge_descriptor :
+					     get_topology().inter_graph_hyper_edges_by_linked(vertex_descriptor)) {
+						auto const& links =
+						    get_topology().links(inter_topology_hyper_edge_descriptor);
+						auto const& references =
+						    get_topology().references(inter_topology_hyper_edge_descriptor);
+						assert(links.size() == 1);
+						get_topology().add_inter_graph_hyper_edge(
+						    {target_populations.at(target_execution_instance.value())}, references,
+						    get_topology().get(inter_topology_hyper_edge_descriptor));
+					}
+				}
+			} else {
+				auto const population_execution_instance =
+				    population->get_execution_instance_on_executor();
+				auto const population_time_domain = population->get_time_domain();
+				std::vector<EdgeOnTopology> out_edges(
+				    get_topology().out_edges(vertex_descriptor).begin(),
+				    get_topology().out_edges(vertex_descriptor).end());
+				for (auto const& out_edge_descriptor : out_edges) {
+					auto const target_descriptor = get_topology().target(out_edge_descriptor);
+					auto const& target = dynamic_cast<PartitionedVertex const&>(
+					    get_topology().get(target_descriptor));
+					auto const target_execution_instance =
+					    target.get_execution_instance_on_executor();
+					auto const target_time_domain = target.get_time_domain();
+
+					if (target_execution_instance == population_execution_instance) {
+						continue;
+					}
+
+					auto const out_edge = get_topology().get(out_edge_descriptor).copy();
+
+					std::set<size_t> neuron_dimensions;
+					std::set<size_t> compartment_dimensions;
+					for (size_t i = 0; i < out_edge->get_channels_on_source().dimensionality();
+					     ++i) {
+						if (dynamic_cast<CellOnPopulationDimensionUnit const*>(&(
+						        *out_edge->get_channels_on_source().get_dimension_units().at(i)))) {
+							neuron_dimensions.insert(i);
+						} else if (dynamic_cast<CompartmentOnNeuronDimensionUnit const*>(&(
+						               *out_edge->get_channels_on_source().get_dimension_units().at(
+						                   i)))) {
+							compartment_dimensions.insert(i);
+						}
+					}
+					assert(compartment_dimensions.size() == 1);
+
+					auto const out_edge_cell_channels_on_source =
+					    out_edge->get_channels_on_source().projection(neuron_dimensions);
+
+					get_topology().remove_edge(out_edge_descriptor);
+
+					// create spike recorder on population execution instance if it is on a time
+					// domain
+					std::optional<VertexOnTopology> spike_recorder_descriptor;
+					if (population_time_domain) {
+						SpikeRecorder spike_recorder(
+						    out_edge->get_channels_on_source(), *population_time_domain);
+						spike_recorder.set_execution_instance_on_executor(
+						    population_execution_instance);
+
+						spike_recorder_descriptor =
+						    get_topology().add_vertex(std::move(spike_recorder));
+
 						get_topology().add_edge(
-						    *spike_recorder_descriptor, target_descriptor,
+						    vertex_descriptor, *spike_recorder_descriptor,
 						    Edge(
 						        out_edge->get_channels_on_source(),
+						        out_edge->get_channels_on_source(), out_edge->port_on_source, 0));
+					}
+
+					// add external source neuron population on target execution instance if it is
+					// on a time domain
+					std::optional<VertexOnTopology> external_intermediate_population_descriptor;
+					if (target_time_domain) {
+						Population external_intermediate_population(
+						    ExternalSourceNeuron(), *out_edge_cell_channels_on_source,
+						    ExternalSourceNeuron::ParameterSpace(
+						        out_edge->get_channels_on_source().size()),
+						    target_time_domain, target_execution_instance);
+
+						external_intermediate_population_descriptor =
+						    get_topology().add_vertex(std::move(external_intermediate_population));
+					}
+
+					// add edges
+					if (external_intermediate_population_descriptor) {
+						if (spike_recorder_descriptor) {
+							get_topology().add_edge(
+							    *spike_recorder_descriptor,
+							    *external_intermediate_population_descriptor,
+							    Edge(
+							        out_edge->get_channels_on_source(),
+							        *out_edge_cell_channels_on_source->cartesian_product(
+							            CuboidMultiIndexSequence({1})),
+							        0, 0));
+						} else {
+							get_topology().add_edge(
+							    vertex_descriptor, *external_intermediate_population_descriptor,
+							    Edge(
+							        out_edge->get_channels_on_source(),
+							        *out_edge_cell_channels_on_source->cartesian_product(
+							            CuboidMultiIndexSequence({1})),
+							        0, 0));
+						}
+
+						get_topology().add_edge(
+						    *external_intermediate_population_descriptor, target_descriptor,
+						    Edge(
+						        *out_edge_cell_channels_on_source->cartesian_product(
+						            CuboidMultiIndexSequence(
+						                {1}, {CompartmentOnNeuronDimensionUnit()})),
 						        out_edge->get_channels_on_target(), 0, out_edge->port_on_target));
 					} else {
-						get_topology().add_edge(vertex_descriptor, target_descriptor, *out_edge);
+						if (spike_recorder_descriptor) {
+							get_topology().add_edge(
+							    *spike_recorder_descriptor, target_descriptor,
+							    Edge(
+							        out_edge->get_channels_on_source(),
+							        out_edge->get_channels_on_target(), 0,
+							        out_edge->port_on_target));
+						} else {
+							get_topology().add_edge(
+							    vertex_descriptor, target_descriptor, *out_edge);
+						}
 					}
 				}
 			}

@@ -1,15 +1,22 @@
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
 #include "grenade/vx/execution/detail/generator/timed_spike_to_chip_sequence.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/extmem.h"
 #include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/types.h"
-#include "grenade/vx/signal_flow/vertex/spikeio_source_population.h"
+#include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_input.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "halco/hicann-dls/vx/hemisphere.h"
 #include "haldls/vx/v3/barrier.h"
 #include "haldls/vx/v3/block.h"
@@ -29,7 +36,6 @@
 #include <utility>
 #include <vector>
 #include <boost/range/combine.hpp>
-#include <boost/sort/spinsort/spinsort.hpp>
 #include <boost/type_index.hpp>
 #include <log4cxx/logger.h>
 #include <tbb/parallel_for_each.h>
@@ -46,14 +52,16 @@ haldls::vx::v3::Timer::Value const
 
 
 ExecutionInstanceChipSnippetRealtimeExecutor::ExecutionInstanceChipSnippetRealtimeExecutor(
-    signal_flow::Graph const& graph,
-    grenade::common::ExecutionInstanceID const& execution_instance,
+    grenade::common::LinkedTopology const& topology,
+    grenade::common::VertexOnTopology const& execution_instance_vertex_descriptor,
+    grenade::common::InputData const& input_data,
     ExecutionInstanceSnippetData& data,
-    std::vector<signal_flow::Graph::vertex_descriptor>& post_vertices,
+    std::vector<grenade::common::VertexOnTopology>& post_vertices,
     std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
     std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const& timed_recording_index_offset) :
-    m_graph(graph),
-    m_execution_instance(execution_instance),
+    m_topology(topology),
+    m_execution_instance_vertex_descriptor(execution_instance_vertex_descriptor),
+    m_input_data(input_data),
     m_data(data),
     m_ppu_symbols(ppu_symbols),
     m_post_vertices(post_vertices),
@@ -63,21 +71,23 @@ ExecutionInstanceChipSnippetRealtimeExecutor::ExecutionInstanceChipSnippetRealti
 	m_ticket_requests.fill(false);
 
 	m_postprocessing = false;
-	size_t const batch_size = m_data.batch_size();
+	size_t const batch_size = m_input_data.batch_size();
 	m_batch_entries.resize(batch_size);
 }
 
 template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
-    signal_flow::Graph::vertex_descriptor const /*vertex*/,
-    signal_flow::vertex::NeuronView const& data)
+    grenade::common::VertexOnTopology const vertex, signal_flow::vertex::NeuronView const& data)
 {
 	using namespace halco::hicann_dls::vx::v3;
 	using namespace haldls::vx::v3;
 	size_t i = 0;
-	auto const& configs = data.get_configs();
+	auto const& parameterization =
+	    dynamic_cast<signal_flow::vertex::NeuronView::Parameterization const&>(
+	        m_input_data.ports.get({vertex, 1}));
+	auto const& configs = parameterization.configs;
 	for (auto const column : data.get_columns()) {
-		auto const neuron_reset = AtomicNeuronOnDLS(column, data.get_row()).toNeuronResetOnDLS();
+		auto const neuron_reset = AtomicNeuronOnDLS(column, data.row).toNeuronResetOnDLS();
 		m_neuron_resets.enable_resets[neuron_reset] = configs.at(i).enable_reset;
 		i++;
 	}
@@ -85,69 +95,55 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 
 template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
-    signal_flow::Graph::vertex_descriptor const vertex, signal_flow::vertex::CrossbarL2Input const&)
+    grenade::common::VertexOnTopology const vertex,
+    signal_flow::vertex::CrossbarL2Input const& data)
 {
-	auto const edges = boost::make_iterator_range(boost::in_edges(vertex, m_graph.get_graph()));
-	auto const in_deg = boost::in_degree(vertex, m_graph.get_graph());
-	assert(in_deg >= 1);
-
-	auto const is_spikeio_vertex = [&](auto v) {
-		return std::holds_alternative<signal_flow::vertex::SpikeIOSourcePopulation>(
-		    m_graph.get_vertex_property(v));
-	};
-
-	if (in_deg == 1) {
-		auto const edge = *edges.begin();
-		auto const in_vertex = boost::source(edge, m_graph.get_graph());
-
-		if (is_spikeio_vertex(in_vertex)) {
-			return;
+	// fill m_event_input from dynamics and incoming vertex results
+	if (m_topology.get_reference().in_degree(vertex) == 0 &&
+	    data.get_input_ports().at(0).requires_or_generates_data ==
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::yes) {
+		m_event_input = dynamic_cast<signal_flow::vertex::CrossbarL2Input::Dynamics const&>(
+		                    m_input_data.ports.get({vertex, 0}))
+		                    .spikes;
+	}
+	m_event_input.resize(m_input_data.batch_size());
+	for (auto const& in_edge_descriptor : m_topology.get_reference().in_edges(vertex)) {
+		auto const& source_descriptor = m_topology.get_reference().source(in_edge_descriptor);
+		auto const& source_results = m_data.at({source_descriptor, 0});
+		if (auto const crossbar_l2_output_results =
+		        dynamic_cast<signal_flow::vertex::CrossbarL2Output::Results const*>(
+		            &source_results);
+		    crossbar_l2_output_results) {
+			for (size_t b = 0; b < m_event_input.size(); ++b) {
+				for (auto const& spike : crossbar_l2_output_results->spikes.at(b)) {
+					m_event_input.at(b).push_back(
+					    {spike.time, haldls::vx::SpikePack1ToChip({spike.data})});
+				}
+			}
+		} else if (auto const transformation_results =
+		               dynamic_cast<signal_flow::vertex::Transformation::Results const*>(
+		                   &source_results);
+		           transformation_results) {
+			auto const& transformation_spikes =
+			    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
+			        transformation_results->value);
+			for (size_t b = 0; b < m_event_input.size(); ++b) {
+				m_event_input.at(b).insert(
+				    m_event_input.at(b).end(), transformation_spikes.at(b).begin(),
+				    transformation_spikes.at(b).end());
+			}
 		}
-
-		m_data.insert(vertex, in_vertex);
-		m_event_input_vertex = vertex;
-		return;
 	}
-
-	size_t const batch_size = m_data.batch_size();
-	std::vector<signal_flow::TimedSpikeToChipSequence> merged(batch_size);
-	size_t contributors = 0;
-
-	for (auto const& e : edges) {
-		auto const src = boost::source(e, m_graph.get_graph());
-
-		if (is_spikeio_vertex(src)) {
-			continue;
-		}
-
-		auto val = m_data.at(src);
-		auto const& seq = std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(val);
-
-		for (size_t b = 0; b < batch_size; ++b) {
-			auto& out_b = merged[b];
-			auto const& in_b = seq[b];
-			out_b.insert(out_b.end(), in_b.begin(), in_b.end());
-		}
-		++contributors;
+	for (auto& batch_entry : m_event_input) {
+		std::stable_sort(batch_entry.begin(), batch_entry.end(), [](auto const& a, auto const& b) {
+			return a.time < b.time;
+		});
 	}
-
-
-	if (contributors == 0) {
-		return;
-	}
-	for (auto& seq : merged) {
-		std::stable_sort(
-		    seq.begin(), seq.end(), [](auto const& a, auto const& b) { return a.time < b.time; });
-	}
-
-	m_data.insert(vertex, std::move(merged));
-	m_event_input_vertex = vertex;
 }
 
 template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
-    signal_flow::vertex::CrossbarL2Output const&)
+    grenade::common::VertexOnTopology const vertex, signal_flow::vertex::CrossbarL2Output const&)
 {
 	if (!m_postprocessing) {
 		if (m_event_output_vertex) {
@@ -177,33 +173,11 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				    common::Time(local_spike.chip_time.value()), local_spike.label));
 			}
 		}
-		m_data.insert(vertex, std::move(transformed_spikes));
+		m_data.insert(
+		    {vertex, 0},
+		    signal_flow::vertex::CrossbarL2Output::Results(std::move(transformed_spikes)));
 	}
 }
-
-namespace {
-
-template <typename T>
-std::vector<common::TimedDataSequence<std::vector<T>>> apply_restriction(
-    std::vector<common::TimedDataSequence<std::vector<T>>> const& value,
-    signal_flow::PortRestriction const& restriction)
-{
-	std::vector<common::TimedDataSequence<std::vector<T>>> ret(value.size());
-	for (size_t b = 0; b < ret.size(); ++b) {
-		auto& local_ret = ret.at(b);
-		auto const& local_value = value.at(b);
-		local_ret.resize(local_value.size());
-		for (size_t bb = 0; bb < local_value.size(); ++bb) {
-			local_ret.at(bb).data.insert(
-			    local_ret.at(bb).data.end(), local_value.at(bb).data.begin() + restriction.min(),
-			    local_value.at(bb).data.begin() + restriction.max() + 1);
-			local_ret.at(bb).time = local_value.at(bb).time;
-		}
-	}
-	return ret;
-}
-
-} // namespace
 
 namespace {
 
@@ -220,7 +194,7 @@ void resize_rectangular(std::vector<std::vector<T>>& data, size_t size_outer, si
 
 template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::CADCMembraneReadoutView const& data)
 {
 	// check mode and save
@@ -255,23 +229,21 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 			for (auto& e : sample_batches) {
 				e.resize(1);
 				// TODO: Think about what to do with timing information
-				e.at(0).data.resize(data.output().size);
+				e.at(0).data.resize(data.get_columns().size());
 			}
 			for (size_t batch_index = 0; batch_index < m_batch_entries.size(); ++batch_index) {
 				// move ticket to consume it
-				auto const local_ticket =
-				    std::move(*m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()]);
+				auto const& local_ticket =
+				    *m_batch_entries.at(batch_index).m_ppu_result[synram.toPPUOnDLS()];
 				auto const& block = dynamic_cast<PPUMemoryBlock const&>(local_ticket.get());
 				auto const values = from_vector_unit_row(block);
 				auto& samples = sample_batches.at(batch_index).at(0).data;
 
 				// get samples via neuron mapping from incoming NeuronView
 				size_t i = 0;
-				for (auto const& column_collection : columns) {
-					for (auto const& column : column_collection) {
-						samples.at(i) = signal_flow::Int8(values[column.toNeuronColumnOnDLS()]);
-						i++;
-					}
+				for (auto const& column : columns) {
+					samples.at(i) = signal_flow::Int8(values[column.toNeuronColumnOnDLS()]);
+					i++;
 				}
 			}
 		} else {
@@ -283,9 +255,8 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 					for (auto& ticket :
 					     m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]) {
 						// move ticket to consume it
-						auto const local_ticket = std::move(ticket);
 						auto const& local_block =
-						    dynamic_cast<ExternalPPUMemoryBlock const&>(local_ticket.get());
+						    dynamic_cast<ExternalPPUMemoryBlock const&>(ticket.get());
 						for (auto const& byte : local_block.get_bytes()) {
 							local_bytes.push_back(byte.get_value().value());
 						}
@@ -294,9 +265,8 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 					for (auto& ticket :
 					     m_batch_entries.at(batch_index).m_extmem_result[synram.toPPUOnDLS()]) {
 						// move ticket to consume it
-						auto const local_ticket = std::move(ticket);
 						auto const& local_block =
-						    dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(local_ticket.get());
+						    dynamic_cast<ExternalPPUDRAMMemoryBlock const&>(ticket.get());
 						for (auto const& byte : local_block.get_bytes()) {
 							local_bytes.push_back(byte.get_value().value());
 						}
@@ -345,7 +315,7 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 						                     (column % 2) * ppu_vector_alignment;
 						return index;
 					};
-					local_samples.data.resize(data.output().size);
+					local_samples.data.resize(data.get_columns().size());
 					Timer::Value allowed_interval_begin =
 					    m_periodic_cadc_readout_times.interval_begin[batch_index] -
 					    m_periodic_cadc_readout_times.time_zero[batch_index];
@@ -354,12 +324,10 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 					    m_periodic_cadc_readout_times.time_zero[batch_index];
 					if (local_samples.time.toTimerOnFPGAValue() >= allowed_interval_begin &&
 					    local_samples.time.toTimerOnFPGAValue() < allowed_interval_end) {
-						for (size_t j = 0; auto const& column_collection : columns) {
-							for (auto const& column : column_collection) {
-								local_samples.data.at(j) = signal_flow::Int8(
-								    local_bytes.at(offset + get_index(column.value())));
-								j++;
-							}
+						for (size_t j = 0; auto const& column : columns) {
+							local_samples.data.at(j) = signal_flow::Int8(
+							    local_bytes.at(offset + get_index(column.value())));
+							j++;
 						}
 						samples.push_back(local_samples);
 						total_num_samples++;
@@ -373,7 +341,9 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 			    logger, "process(): post-processed " << total_num_samples << " CADC samples in "
 			                                         << timer.print() << ".");
 		}
-		m_data.insert(vertex, std::move(sample_batches));
+		m_data.insert(
+		    {vertex, 0},
+		    signal_flow::vertex::CADCMembraneReadoutView::Results(std::move(sample_batches)));
 	}
 }
 
@@ -386,7 +356,9 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::filter_events(
 		return;
 	}
 	// sort events by chip time
-	boost::sort::spinsort(data.begin(), data.end(), [](auto const& a, auto const& b) {
+	// FIXME: was boost::sort::spinsort, but including the header yields compilation errors with
+	// boost/isomorphism due to redefined types
+	std::stable_sort(data.begin(), data.end(), [](auto const& a, auto const& b) {
 		return a.chip_time < b.chip_time;
 	});
 	// iterate over batch entries and extract associated events
@@ -413,10 +385,22 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::filter_events(
 		assert(e.m_ticket_events_end);
 		auto const interval_end_time = e.m_ticket_events_end->get_fpga_time().value();
 		uintmax_t end_time = 0;
-		if (!m_data.get_runtime().empty() &&
-		    m_data.get_runtime().at(i).contains(m_execution_instance)) {
-			auto const absolute_end_chip_time =
-			    m_data.get_runtime().at(i).at(m_execution_instance).value() + interval_begin_time;
+		std::vector<std::optional<common::Time>> runtime;
+		for (auto const& inter_graph_hyper_edge_descriptor :
+		     m_topology.inter_graph_hyper_edges_by_linked(m_execution_instance_vertex_descriptor)) {
+			for (auto const& vertex_descriptor :
+			     m_topology.references(inter_graph_hyper_edge_descriptor)) {
+				auto const& vertex = m_topology.get_reference().get(vertex_descriptor);
+				if (vertex.get_time_domain()) {
+					runtime = dynamic_cast<network::abstract::ClockCycleTimeDomainRuntimes const&>(
+					              m_input_data.time_domain_runtimes.get(*vertex.get_time_domain()))
+					              .values;
+					break;
+				}
+			}
+		}
+		if (runtime.at(i)) {
+			auto const absolute_end_chip_time = runtime.at(i).value().value() + interval_begin_time;
 			end_time = std::min(interval_end_time, absolute_end_chip_time);
 		} else {
 			end_time = interval_end_time;
@@ -449,7 +433,7 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::filter_events(
 
 template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
+    grenade::common::VertexOnTopology const vertex,
     signal_flow::vertex::MADCReadoutView const& data)
 {
 	if (!m_postprocessing) {
@@ -478,6 +462,10 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 			auto const& local_madc_samples = madc_samples.at(i);
 			local_transformed_madc_samples.reserve(local_madc_samples.size());
 			for (auto const& local_madc_sample : local_madc_samples) {
+				if (!data.get_second_source() && local_madc_sample.channel == 1) {
+					// got unexpected sample
+					continue;
+				}
 				// Inverting channel fro 2ch recording due to Issue #3998
 				local_transformed_madc_samples.push_back(signal_flow::TimedMADCSampleFromChip(
 				    common::Time(local_madc_sample.chip_time.value()),
@@ -488,14 +476,15 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				                                     : local_madc_sample.channel)));
 			}
 		}
-		m_data.insert(vertex, std::move(transformed_madc_samples));
+		m_data.insert(
+		    {vertex, 0},
+		    signal_flow::vertex::MADCReadoutView::Results(std::move(transformed_madc_samples)));
 	}
 }
 
 template <>
 void ExecutionInstanceChipSnippetRealtimeExecutor::process(
-    signal_flow::Graph::vertex_descriptor const vertex,
-    signal_flow::vertex::PlasticityRule const& data)
+    grenade::common::VertexOnTopology const vertex, signal_flow::vertex::PlasticityRule const& data)
 {
 	m_has_plasticity_rule = true;
 	if (!m_postprocessing) {
@@ -515,7 +504,7 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 			return;
 		}
 		std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> values(
-		    m_data.batch_size());
+		    m_input_data.batch_size());
 		for (size_t i = 0; i < values.size(); ++i) {
 			auto& local_values = values.at(i);
 			std::vector<uint8_t> bytes;
@@ -544,7 +533,7 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 			        *data.get_recording())) {
 				// TODO: Think about what shall happen with timing info
 				local_values.resize(1);
-				local_values.at(0).data.resize(data.output().size);
+				local_values.at(0).data.resize(data.get_recorded_scratchpad_memory_size());
 				if (bytes.size() != data.get_recorded_scratchpad_memory_size()) {
 					throw std::logic_error(
 					    "Recording scratchpad memory size (" + std::to_string(bytes.size()) +
@@ -556,21 +545,26 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				}
 			} else if (std::holds_alternative<signal_flow::vertex::PlasticityRule::TimedRecording>(
 			               *data.get_recording())) {
-				local_values.resize(data.get_timer().num_periods);
+				auto const& timer =
+				    dynamic_cast<signal_flow::vertex::PlasticityRule::Dynamics const&>(
+				        m_input_data.ports.get({vertex, data.get_input_ports().size() - 1}))
+				        .timer;
+				local_values.resize(timer.num_periods);
 				for (auto& e : local_values) {
-					e.data.resize(data.output().size);
+					e.data.resize(
+					    data.get_recorded_memory_data_interval().second -
+					    data.get_recorded_memory_data_interval().first);
 				}
 				if (bytes.size() !=
-				    data.get_recorded_scratchpad_memory_size() * data.get_timer().num_periods) {
+				    data.get_recorded_scratchpad_memory_size() * timer.num_periods) {
 					throw std::logic_error(
 					    "Recording scratchpad memory size (" + std::to_string(bytes.size()) +
 					    ") does not match expectation(" +
 					    std::to_string(
-					        data.get_recorded_scratchpad_memory_size() *
-					        data.get_timer().num_periods) +
+					        data.get_recorded_scratchpad_memory_size() * timer.num_periods) +
 					    ").");
 				}
-				for (size_t period = 0; period < data.get_timer().num_periods; ++period) {
+				for (size_t period = 0; period < timer.num_periods; ++period) {
 					uint64_t time = 0;
 					size_t period_offset = period * data.get_recorded_scratchpad_memory_size();
 					time |= static_cast<uint64_t>((bytes.at(period_offset + 0)) & 0xff) << 56;
@@ -592,7 +586,9 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 				throw std::logic_error("Recording type not supported.");
 			}
 		}
-		m_data.insert(vertex, std::move(values));
+		m_data.insert(
+		    {vertex, 0},
+		    signal_flow::vertex::PlasticityRule::Results(data.extract_recording_data(values)));
 	}
 }
 
@@ -716,11 +712,23 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 	using namespace lola::vx::v3;
 
 	// if no on-chip computation is to be done, return without static configuration
-	auto const& runtime = m_data.get_runtime();
+	std::vector<std::optional<common::Time>> runtime;
+	for (auto const& inter_graph_hyper_edge_descriptor :
+	     m_topology.inter_graph_hyper_edges_by_linked(m_execution_instance_vertex_descriptor)) {
+		for (auto const& vertex_descriptor :
+		     m_topology.references(inter_graph_hyper_edge_descriptor)) {
+			auto const& vertex = m_topology.get_reference().get(vertex_descriptor);
+			if (vertex.get_time_domain()) {
+				runtime = dynamic_cast<network::abstract::ClockCycleTimeDomainRuntimes const&>(
+				              m_input_data.time_domain_runtimes.get(*vertex.get_time_domain()))
+				              .values;
+				break;
+			}
+		}
+	}
 	auto const has_computation =
-	    m_event_input_vertex.has_value() ||
-	    std::any_of(runtime.begin(), runtime.end(), [*this](auto const& r) {
-		    return r.contains(m_execution_instance) && r.at(m_execution_instance) != 0;
+	    !m_event_input.empty() || std::any_of(runtime.begin(), runtime.end(), [](auto const& r) {
+		    return static_cast<bool>(r);
 	    });
 	if (!has_computation) {
 		std::vector<ExecutionInstanceChipSnippetRealtimeExecutor::RealtimeSnippet> realtime(
@@ -774,7 +782,7 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 	std::optional<PPUMemoryBlockOnPPU> ppu_scheduler_event_drop_count_coord;
 	std::vector<PPUMemoryBlockOnPPU> ppu_timer_event_drop_count_coord;
 	std::map<
-	    signal_flow::Graph::vertex_descriptor,
+	    grenade::common::VertexOnTopology,
 	    std::variant<
 	        PPUMemoryBlockOnPPU, ExternalPPUMemoryBlockOnFPGA, ExternalPPUDRAMMemoryBlockOnFPGA>>
 	    ppu_plasticity_rule_recorded_scratchpad_memory_coord;
@@ -800,8 +808,8 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 		}
 		for (auto const& [descriptor, _] :
 		     m_batch_entries.at(0).m_plasticity_rule_recorded_scratchpad_memory) {
-			auto const& plasticity_rule = std::get<signal_flow::vertex::PlasticityRule>(
-			    m_graph.get_vertex_property(descriptor));
+			auto const& plasticity_rule = dynamic_cast<signal_flow::vertex::PlasticityRule const&>(
+			    m_topology.get_reference().get(descriptor));
 			ppu_plasticity_rule_recorded_scratchpad_memory_coord[descriptor] =
 			    m_ppu_symbols
 			        ->at(
@@ -818,14 +826,17 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 				// snippet requests to read out. And we save it in the local variable
 				// ppu_plasticity_rule_recorded_scratchpad_memory_coord
 				std::visit(
-				    [period_start, &plasticity_rule](auto& coord) {
+				    [period_start, &plasticity_rule, this, &descriptor](auto& coord) {
 					    auto min = coord.toMin();
 					    min = decltype(min)(
 					        min.value() +
 					        plasticity_rule.get_recorded_scratchpad_memory_size() * period_start);
 					    auto const max = decltype(coord.toMax())(
 					        min.value() +
-					        plasticity_rule.get_timer().num_periods *
+					        dynamic_cast<signal_flow::vertex::PlasticityRule::Dynamics const&>(
+					            m_input_data.ports.get(
+					                {descriptor, plasticity_rule.get_input_ports().size() - 1}))
+					                .timer.num_periods *
 					            plasticity_rule.get_recorded_scratchpad_memory_size() -
 					        1);
 					    coord = std::decay_t<decltype(coord)>(min, max);
@@ -867,15 +878,14 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 		if (enable_ppu && m_has_plasticity_rule) {
 			for (auto const ppu : iter_all<PPUOnDLS>()) {
 				PPUMemoryBlock ppu_runtime(ppu_runtime_coord.toPPUMemoryBlockSize());
-				if (!m_data.get_runtime().empty()) {
+				if (!runtime.empty()) {
 					// TODO (Issue #3993): Implement calculation of PPU clock frequency vs. FPGA
 					// frequency
-					if (m_data.get_runtime().at(b).at(m_execution_instance) >= (1ull << 63)) {
+					if (runtime.at(b) >= (1ull << 63)) {
 						throw std::out_of_range(
 						    "PPU runtimes of more than 64-bit PPU clock cycles not supported.");
 					}
-					uint64_t ppu_runtime_value =
-					    m_data.get_runtime().at(b).at(m_execution_instance) * 2;
+					uint64_t ppu_runtime_value = runtime.at(b).value() * 2;
 					ppu_runtime.at(0) =
 					    PPUMemoryWord(PPUMemoryWord::Value(ppu_runtime_value >> 32));
 					ppu_runtime.at(1) =
@@ -956,22 +966,17 @@ ExecutionInstanceChipSnippetRealtimeExecutor::generate(
 		Timer::Value inside_realtime_duration(0);
 		stadls::vx::PlaybackGeneratorReturn<AbsoluteTimePlaybackProgramBuilder, Timer::Value>
 		    events;
-		if (m_event_input_vertex) {
-			generator::TimedSpikeToChipSequence event_generator(
-			    std::get<std::vector<signal_flow::TimedSpikeToChipSequence>>(
-			        m_data.at(*m_event_input_vertex))
-			        .at(b));
+		if (!m_event_input.empty()) {
+			generator::TimedSpikeToChipSequence event_generator(m_event_input.at(b));
 			events = stadls::vx::generate(event_generator);
 		}
 		events.builder += current_time;
 		builder.merge(events.builder);
 		inside_realtime_duration = events.result;
 		// wait until runtime reached
-		if (!m_data.get_runtime().empty() &&
-		    m_data.get_runtime().at(b).contains(m_execution_instance)) {
-			inside_realtime_duration = std::max(
-			    inside_realtime_duration,
-			    m_data.get_runtime().at(b).at(m_execution_instance).toTimerOnFPGAValue());
+		if (runtime.at(b)) {
+			inside_realtime_duration =
+			    std::max(inside_realtime_duration, runtime.at(b).value().toTimerOnFPGAValue());
 		}
 		current_time += inside_realtime_duration;
 

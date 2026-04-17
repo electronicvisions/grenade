@@ -49,4 +49,26 @@ std::ostream& operator<<(std::ostream& os, ConnectionType const& type)
 }
 
 
+VertexPortType::VertexPortType(ConnectionType type) : type(type) {}
+
+std::unique_ptr<grenade::common::VertexPortType> VertexPortType::copy() const
+{
+	return std::make_unique<VertexPortType>(*this);
+}
+
+std::unique_ptr<grenade::common::VertexPortType> VertexPortType::move()
+{
+	return std::make_unique<VertexPortType>(std::move(*this));
+}
+
+bool VertexPortType::is_equal_to(grenade::common::VertexPortType const& other) const
+{
+	return type == static_cast<VertexPortType const&>(other).type;
+}
+
+std::ostream& VertexPortType::print(std::ostream& os) const
+{
+	return os << "VertexPortType(" << type << ")";
+}
+
 } // namespace grenade::vx::signal_flow

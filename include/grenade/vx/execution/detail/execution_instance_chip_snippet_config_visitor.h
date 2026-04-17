@@ -1,9 +1,9 @@
 #pragma once
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/linked_topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/execution/detail/system.h"
 #include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
-#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -14,6 +14,7 @@
 #include <optional>
 #include <tuple>
 #include <vector>
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
 
@@ -27,13 +28,16 @@ class ExecutionInstanceChipSnippetConfigVisitor
 public:
 	/**
 	 * Construct visitor.
-	 * @param graph Graph to use for locality and property lookup
-	 * @param execution_instance Local execution instance to visit
+	 * @param topology Topology to use
+	 * @param execution_instance_vertex_descriptor Vertex descriptor of execution instance to visit
+	 * @param input_data Input data to visit
+	 * @param chip_on_connection Chip on connection to visit for
 	 */
 	ExecutionInstanceChipSnippetConfigVisitor(
-	    signal_flow::Graph const& graph,
-	    common::ChipOnConnection const& chip_on_connection,
-	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
+	    grenade::common::LinkedTopology const& topology,
+	    grenade::common::VertexOnTopology const& execution_instance_vertex_descriptor,
+	    grenade::common::InputData const& input_data,
+	    common::ChipOnConnection const& chip_on_connection) SYMBOL_VISIBLE;
 
 	/**
 	 * Perform visit operation and generate initial configuration.
@@ -41,9 +45,11 @@ public:
 	void operator()(System& system) const SYMBOL_VISIBLE;
 
 private:
-	signal_flow::Graph const& m_graph;
+	grenade::common::LinkedTopology const& m_topology;
+	grenade::common::VertexOnTopology m_execution_instance_vertex_descriptor;
+	grenade::common::InputData const& m_input_data;
 	common::ChipOnConnection m_chip_on_connection;
-	grenade::common::ExecutionInstanceID m_execution_instance;
+	log4cxx::LoggerPtr m_logger;
 
 	/**
 	 * Process single vertex.
@@ -54,9 +60,16 @@ private:
 	 */
 	template <typename Vertex>
 	void process(
-	    signal_flow::Graph::vertex_descriptor const vertex,
-	    Vertex const& data,
-	    System& system) const;
+	    grenade::common::VertexOnTopology const vertex, Vertex const& data, System& system) const;
+
+	std::unordered_map<
+	    std::type_index,
+	    std::function<void(
+	        grenade::common::VertexOnTopology const&, grenade::common::Vertex const&, System&)>>
+	    m_visitor;
+
+	template <typename Vertex>
+	void register_process();
 };
 
 } // namespace grenade::vx::execution::detail

@@ -1,6 +1,7 @@
 #pragma once
-#include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/common/port_data.h"
 #include "grenade/vx/signal_flow/vertex/transformation.h"
+#include <functional>
 #include <vector>
 
 namespace cereal {
@@ -14,8 +15,6 @@ namespace grenade::vx::signal_flow::vertex::transformation {
  */
 struct SYMBOL_VISIBLE ReLU : public Transformation::Function
 {
-	~ReLU() SYMBOL_VISIBLE;
-
 	ReLU() = default;
 
 	/**
@@ -24,14 +23,19 @@ struct SYMBOL_VISIBLE ReLU : public Transformation::Function
 	 */
 	ReLU(size_t size);
 
-	std::vector<Port> inputs() const;
-	Port output() const;
+	virtual std::vector<Port> get_input_ports() const override;
+	virtual std::vector<Port> get_output_ports() const override;
 
-	bool equal(Transformation::Function const& other) const;
+	virtual std::vector<Transformation::Results> apply(
+	    std::vector<std::reference_wrapper<grenade::common::PortData const>> const& data)
+	    const override;
 
-	Value apply(std::vector<Value> const& value) const;
+	virtual std::unique_ptr<Function> copy() const override;
+	virtual std::unique_ptr<Function> move() override;
 
-	std::unique_ptr<Transformation::Function> clone() const;
+protected:
+	virtual bool is_equal_to(Function const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 
 private:
 	size_t m_size{};

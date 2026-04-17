@@ -1,12 +1,19 @@
 #include <gtest/gtest.h>
 
+#include "grenade/common/edge.h"
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/vertex_on_topology.h"
+#include "grenade/vx/common/chip_on_connection.h"
+#include "grenade/vx/common/time.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/background_spike_source.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_node.h"
 #include "halco/hicann-dls/vx/event.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
@@ -14,6 +21,7 @@
 #include "stadls/vx/v3/init_generator.h"
 #include "stadls/vx/v3/playback_generator.h"
 #include "stadls/vx/v3/run.h"
+#include <memory>
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
@@ -32,11 +40,12 @@ inline void test_background_spike_source_regular(
 
 	typed_array<SpikeLabel, BackgroundSpikeSourceOnDLS> expected_labels;
 
-	grenade::vx::signal_flow::Graph g;
+	auto topology = std::make_shared<grenade::common::Topology>();
+	grenade::common::InputData input_data;
 
-	grenade::common::ExecutionInstanceID instance;
+	grenade::common::ExecutionInstanceOnExecutor instance;
 
-	std::vector<grenade::vx::signal_flow::Input> crossbar_nodes;
+	std::vector<grenade::common::VertexOnTopology> crossbar_nodes;
 
 	// enable background spike sources with unique configuration
 	for (auto source_coord : iter_all<BackgroundSpikeSourceOnDLS>()) {
@@ -53,42 +62,58 @@ inline void test_background_spike_source_regular(
 		source_config.set_enable_random(false);
 		source_config.set_neuron_label(neuron_label);
 
-		grenade::vx::signal_flow::vertex::BackgroundSpikeSource source(source_config, source_coord);
-		auto const v1 = g.add(source, instance, {});
+		grenade::vx::signal_flow::vertex::BackgroundSpikeSource source(
+		    source_coord, grenade::vx::common::ChipOnConnection(),
+		    grenade::common::TimeDomainOnTopology(), instance);
+		auto const v1 = topology->add_vertex(source);
+		input_data.ports.set(
+		    {v1, 0}, grenade::vx::signal_flow::vertex::BackgroundSpikeSource::Parameterization(
+		                 source_config));
 
 		grenade::vx::signal_flow::vertex::CrossbarNode crossbar_node(
 		    CrossbarNodeOnDLS(
 		        source_coord.toCrossbarInputOnDLS(),
 		        CrossbarOutputOnDLS(8 + source_coord % CrossbarL2OutputOnDLS::size)),
-		    haldls::vx::v3::CrossbarNode());
+		    grenade::vx::common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(),
+		    instance);
 
-		crossbar_nodes.push_back(g.add(crossbar_node, instance, {v1}));
+		auto const v2 = topology->add_vertex(crossbar_node);
+		input_data.ports.set(
+		    {v2, 1}, grenade::vx::signal_flow::vertex::CrossbarNode::Parameterization(
+		                 haldls::vx::v3::CrossbarNode()));
+		crossbar_nodes.push_back(v2);
 	}
 
-	grenade::vx::signal_flow::vertex::CrossbarL2Output crossbar_output;
-	grenade::vx::signal_flow::vertex::DataOutput data_output(
-	    grenade::vx::signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
+	grenade::vx::signal_flow::vertex::CrossbarL2Output crossbar_output(
+	    true, grenade::vx::common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(),
+	    instance);
 
-	auto const v3 = g.add(crossbar_output, instance, crossbar_nodes);
-	auto const v4 = g.add(data_output, instance, {v3});
+	auto const v3 = topology->add_vertex(crossbar_output);
 
-	grenade::vx::signal_flow::InputData input_list;
-	input_list.snippets.resize(1);
-	input_list.snippets.at(0).runtime.push_back({{instance, running_period}});
+	for (auto const& v2 : crossbar_nodes) {
+		topology->add_edge(
+		    v2, v3,
+		    grenade::common::Edge(
+		        grenade::common::CuboidMultiIndexSequence({1}),
+		        grenade::common::CuboidMultiIndexSequence({1})));
+	}
 
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
+	input_data.time_domain_runtimes.set(
+	    grenade::common::TimeDomainOnTopology(),
+	    grenade::vx::network::abstract::ClockCycleTimeDomainRuntimes(
+	        {running_period}, grenade::vx::common::Time()));
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
+	auto const results = grenade::vx::execution::run(executor, topology, input_data);
 
-	EXPECT_EQ(result_map.snippets.at(0).data.size(), 1);
+	EXPECT_EQ(results.batch_size(), 1);
 
-	EXPECT_TRUE(result_map.snippets.at(0).data.find(v4) != result_map.snippets.at(0).data.end());
+	EXPECT_TRUE(results.ports.contains({v3, 0}));
 
-	auto const spikes = std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	                        result_map.snippets.at(0).data.at(v4))
-	                        .at(0);
+	auto const spikes =
+	    dynamic_cast<grenade::vx::signal_flow::vertex::CrossbarL2Output::Results const&>(
+	        results.ports.get({v3, 0}))
+	        .spikes.at(0);
 
 	typed_array<size_t, BackgroundSpikeSourceOnDLS> expected_labels_count;
 	expected_labels_count.fill(0);

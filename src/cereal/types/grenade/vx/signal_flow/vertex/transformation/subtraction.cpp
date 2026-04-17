@@ -8,6 +8,7 @@ namespace grenade::vx::signal_flow::vertex::transformation {
 template <typename Archive>
 void Subtraction::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<Function>(this));
 	ar(m_num_inputs);
 	ar(m_size);
 }

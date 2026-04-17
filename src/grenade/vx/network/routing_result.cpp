@@ -10,8 +10,7 @@ std::ostream& operator<<(
     std::ostream& os,
     grenade::vx::network::RoutingResult::ExecutionInstance::PlacedConnection const& connection)
 {
-	os << connection.weight << " " << connection.label << " " << connection.synapse_row << " "
-	   << connection.synapse_on_row;
+	os << connection.label << " " << connection.synapse_row << " " << connection.synapse_on_row;
 	return os;
 }
 

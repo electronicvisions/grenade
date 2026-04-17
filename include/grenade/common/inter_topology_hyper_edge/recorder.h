@@ -32,6 +32,25 @@ struct SYMBOL_VISIBLE RecorderInterTopologyHyperEdge : InterTopologyHyperEdge
 	    LinkedTopology const& mapped_topology) const override;
 
 	/**
+	 * Map reference input_data to link input_data.
+	 * The given reference vertex input_data are expected to be valid for their
+	 * respective vertices.
+	 * An identity mapping is applied to the reference input_data.
+	 *
+	 * @param reference_vertex_input_data Dynamics of the reference vertices
+	 * @param linked_vertex_descriptors Vertex descriptors of linked topology
+	 * @param reference_vertex_descriptors Vertex descriptors of reference topology
+	 * @param topology Topology
+	 * @return Dynamics of linked vertices
+	 */
+	virtual std::vector<std::vector<std::unique_ptr<PortData>>> map_input_data(
+	    std::vector<std::vector<std::optional<std::reference_wrapper<PortData const>>>> const&
+	        reference_vertex_input_data,
+	    InterGraphHyperEdgeVertexDescriptors<VertexOnTopology> const& linked_vertex_descriptors,
+	    InterGraphHyperEdgeVertexDescriptors<VertexOnTopology> const& reference_vertex_descriptors,
+	    LinkedTopology const& topology) const override;
+
+	/**
 	 * Map output_data from linked vertices to reference vertex.
 	 * The given linked vertex output_data are expected to be valid for the
 	 * respective vertex.

@@ -1,11 +1,8 @@
 #include "helper.h"
 
-#include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/execution/jit_graph_executor.h"
 #include "halco/common/iter_all.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "halco/hicann-dls/vx/v3/padi.h"
-#include "lola/vx/v3/chip.h"
 #include "lola/vx/v3/neuron.h"
 
 
@@ -13,11 +10,9 @@ using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
-using namespace grenade::vx::execution;
-using namespace grenade::common;
 
 
-grenade::vx::execution::JITGraphExecutor::ChipConfigs get_chip_configs_bypass_excitatory()
+lola::vx::v3::Chip get_chip_config_bypass_excitatory()
 {
 	Chip chip;
 	for (auto const c : iter_all<CommonNeuronBackendConfigOnDLS>()) {
@@ -56,5 +51,5 @@ grenade::vx::execution::JITGraphExecutor::ChipConfigs get_chip_configs_bypass_ex
 			chip.synapse_blocks[block].i_bias_dac.fill(CapMemCell::Value(1022));
 		}
 	}
-	return {{ExecutionInstanceID(), {{grenade::vx::common::ChipOnConnection(), chip}}}};
+	return chip;
 }

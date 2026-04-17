@@ -1,17 +1,17 @@
 #pragma once
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/output_data.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_ppu_program_compiler.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/ppu.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/ppu.h"
+#include <memory>
 #include <vector>
 
 namespace grenade::vx::execution::backend {
@@ -37,8 +37,8 @@ struct ExecutionInstanceRealtimeExecutor
 
 	struct PostProcessor
 	{
-		grenade::common::ExecutionInstanceID execution_instance;
-		std::vector<ExecutionInstanceSnippetRealtimeExecutor> snippet_executors;
+		grenade::common::ExecutionInstanceOnExecutor execution_instance;
+		std::vector<std::unique_ptr<ExecutionInstanceSnippetRealtimeExecutor>> snippet_executors;
 
 		struct Chip
 		{
@@ -58,32 +58,33 @@ struct ExecutionInstanceRealtimeExecutor
 
 	/**
 	 * Construct executor.
-	 * @param graphs Graphs to use for locality and property lookup
-	 * @param input_data Input datas to use
-	 * @param output_data Output datas to use
+	 * @param topologies Topologies to use
+	 * @param execution_instance_vertex_descriptors Vertex descriptors per realtime snippet of
+	 * execution instance to visit
+	 * @param input_data Input data to use
+	 * @param output_data Output data to add results into
 	 * @param ppu_program PPU program to look up symbols and instructions
 	 * @param chips_on_connection Chip identifiers on connection to use
-	 * @param execution_instance Local execution instance to execute
 	 */
 	ExecutionInstanceRealtimeExecutor(
-	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<signal_flow::InputDataSnippet> const& input_data,
-	    std::vector<signal_flow::OutputDataSnippet>& output_data,
+	    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+	    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors,
+	    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
+	    std::vector<grenade::common::OutputData>& output_data,
 	    std::map<common::ChipOnConnection, ExecutionInstanceChipPPUProgramCompiler::Result> const&
 	        ppu_program,
-	    std::vector<common::ChipOnConnection> chips_on_connection,
-	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
+	    std::vector<common::ChipOnConnection> chips_on_connection) SYMBOL_VISIBLE;
 
 	std::pair<Program, PostProcessor> operator()() const SYMBOL_VISIBLE;
 
 private:
-	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;
-	std::vector<signal_flow::InputDataSnippet> const& m_input_data;
-	std::vector<signal_flow::OutputDataSnippet>& m_output_data;
+	std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& m_topologies;
+	std::vector<grenade::common::VertexOnTopology> const& m_execution_instance_vertex_descriptors;
+	std::vector<std::reference_wrapper<grenade::common::InputData const>> const& m_input_data;
+	std::vector<grenade::common::OutputData>& m_output_data;
 	std::map<common::ChipOnConnection, ExecutionInstanceChipPPUProgramCompiler::Result> const&
 	    m_ppu_program;
 	std::vector<common::ChipOnConnection> m_chips_on_connection;
-	grenade::common::ExecutionInstanceID m_execution_instance;
 };
 
 } // namespace grenade::vx::execution::detail

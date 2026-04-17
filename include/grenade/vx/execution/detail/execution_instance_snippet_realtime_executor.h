@@ -1,14 +1,13 @@
 #pragma once
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/output_data.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
-#include "grenade/vx/signal_flow/data_snippet.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data_snippet.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
@@ -41,21 +40,21 @@ class ExecutionInstanceSnippetRealtimeExecutor
 public:
 	/**
 	 * Construct builder.
-	 * @param graph Graph to use for locality and property lookup
-	 * @param execution_instance Local execution instance to build for
+	 * @param topology Topology to use
+	 * @param execution_instance_vertex_descriptor Vertex descriptor of execution instance to visit
 	 * @param chips_on_connection Chip identifiers on connection to use
-	 * @param input_list Input list to use for input data lookup
-	 * @param data_output Data output from depended-on executions to use for data lookup
-	 * @param chip_config Chip configuration to use
+	 * @param input_data Input data to visit
+	 * @param output_data Data output from depended-on executions to use for data lookup
+	 * @param ppu_symbols PPU symbols to use
 	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
 	 * which the builder generates
 	 */
 	ExecutionInstanceSnippetRealtimeExecutor(
-	    signal_flow::Graph const& graph,
-	    grenade::common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::LinkedTopology const& topology,
+	    grenade::common::VertexOnTopology const& execution_instance_vertex_descriptor,
 	    std::vector<common::ChipOnConnection> const& chips_on_connection,
-	    signal_flow::InputDataSnippet const& input_list,
-	    signal_flow::DataSnippet const& data_output,
+	    grenade::common::InputData const& input_data,
+	    grenade::common::OutputData const& output_data,
 	    std::map<
 	        common::ChipOnConnection,
 	        std::reference_wrapper<
@@ -85,7 +84,7 @@ public:
 
 	struct Result
 	{
-		signal_flow::DataSnippet data;
+		grenade::common::OutputData data;
 
 		std::map<common::ChipOnConnection, std::chrono::nanoseconds> total_realtime_duration;
 	};
@@ -101,23 +100,25 @@ public:
 	Result post_process(PostProcessable&& post_processable) SYMBOL_VISIBLE;
 
 private:
-	signal_flow::Graph const& m_graph;
-	grenade::common::ExecutionInstanceID m_execution_instance;
+	grenade::common::LinkedTopology const& m_topology;
+	grenade::common::VertexOnTopology m_execution_instance_vertex_descriptor;
 
+	grenade::common::InputData const& m_input_data;
 	std::unique_ptr<ExecutionInstanceSnippetData> m_data;
 
-	std::unique_ptr<std::vector<signal_flow::Graph::vertex_descriptor>> m_post_vertices;
+	std::unique_ptr<std::vector<grenade::common::VertexOnTopology>> m_post_vertices;
 
 	std::map<common::ChipOnConnection, ExecutionInstanceChipSnippetRealtimeExecutor>
 	    m_chip_executors;
+
+	log4cxx::LoggerPtr m_logger;
 
 	/**
 	 * Check if any incoming vertex requires post processing.
 	 * @param descriptor Vertex descriptor to check for
 	 * @return Boolean value
 	 */
-	bool inputs_available(signal_flow::Graph::vertex_descriptor const descriptor) const
-	    SYMBOL_VISIBLE;
+	bool inputs_available(grenade::common::VertexOnTopology const descriptor) const SYMBOL_VISIBLE;
 
 	/**
 	 * Process single vertex.
@@ -127,14 +128,16 @@ private:
 	 * @param data Data associated with vertex
 	 */
 	template <typename Vertex>
-	void process(signal_flow::Graph::vertex_descriptor const vertex, Vertex const& data);
+	void process(grenade::common::VertexOnTopology const vertex, Vertex const& data);
 
-	/**
-	 * Get whether input data is complete for the local execution instance.
-	 * @param input_data Input data to check
-	 * @return Boolean value
-	 */
-	bool input_data_matches_graph(signal_flow::InputDataSnippet const& input_data) const;
+	std::unordered_map<
+	    std::type_index,
+	    std::function<void(
+	        grenade::common::VertexOnTopology const&, grenade::common::Vertex const&)>>
+	    m_visitor;
+
+	template <typename Vertex>
+	void register_process();
 };
 
 } // namespace grenade::vx::execution::detail

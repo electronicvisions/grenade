@@ -4,12 +4,13 @@
 #include "hate/visibility.h"
 #include <memory>
 
+
 #if defined(__GENPYBIND__) or defined(__GENPYBIND_GENERATED__)
-#include "grenade/vx/network/network.h"
+#include "grenade/common/linked_topology.h"
 #else
-namespace grenade::vx::network {
-struct Network;
-} // namespace grenade::vx::network
+namespace grenade::common {
+struct LinkedTopology;
+} // namespace grenade::common
 #endif
 
 namespace grenade::vx::network {
@@ -21,11 +22,11 @@ struct SYMBOL_VISIBLE Router
 
 	/**
 	 * Route given network.
-	 * Successive invokations with the same network are allowed to yield different results.
-	 * @param network Network to route for
+	 * Successive invokations with the same topology are allowed to yield different results.
+	 * @param topology Topology to route for
 	 * @return Routing result
 	 */
-	virtual RoutingResult operator()(std::shared_ptr<Network> const& network) = 0;
+	virtual RoutingResult operator()(grenade::common::LinkedTopology const& topology) = 0;
 };
 
 GENPYBIND_MANUAL({
@@ -33,13 +34,13 @@ GENPYBIND_MANUAL({
 
 	struct PyRouter : public routing::Router
 	{
-		virtual RoutingResult operator()(std::shared_ptr<Network> const& network) override
+		virtual RoutingResult operator()(grenade::common::LinkedTopology const& topology) override
 		{
-			PYBIND11_OVERLOAD_PURE(RoutingResult, routing::Router, operator(), network);
+			PYBIND11_OVERLOAD_PURE(RoutingResult, routing::Router, operator(), topology);
 		}
 	};
 
-	parent->py::template class_<routing::Router, PyRouter>(parent, "Router")
+	pybind11::class_<routing::Router, PyRouter, std::shared_ptr<routing::Router>>(parent, "Router")
 	    .def("__call__", &routing::Router::operator());
 })
 

@@ -1,8 +1,14 @@
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 
-#include "grenade/vx/signal_flow/port_restriction.h"
+#include "grenade/common/edge.h"
+#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
+#include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
+#include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "hate/math.h"
 #include "hate/timer.h"
@@ -186,8 +192,7 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::SynapseViewShape cons
 
 bool PlasticityRule::NeuronViewShape::operator==(NeuronViewShape const& other) const
 {
-	return (columns.size() == other.columns.size()) && row == other.row &&
-	       neuron_readout_sources == other.neuron_readout_sources;
+	return (columns.size() == other.columns.size()) && row == other.row;
 }
 
 bool PlasticityRule::NeuronViewShape::operator!=(NeuronViewShape const& other) const
@@ -201,16 +206,6 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::NeuronViewShape const
 	os << "\tcolumns:\n";
 	for (auto const& column : shape.columns) {
 		os << "\t\t" << column << "\n";
-	}
-	os << "\tneuron_readout_sources:\n";
-	for (auto const& readout_source : shape.neuron_readout_sources) {
-		os << "\t\t";
-		if (readout_source) {
-			os << *readout_source;
-		} else {
-			os << "unset";
-		}
-		os << "\n";
 	}
 	os << "\trow: " << shape.row << "\n";
 	os << ")";
@@ -290,17 +285,137 @@ std::ostream& operator<<(std::ostream& os, PlasticityRule::TimedRecordingData co
 	return os;
 }
 
+
+PlasticityRule::Results::Results(RecordingData data) : data(std::move(data)) {}
+
+size_t PlasticityRule::Results::batch_size() const
+{
+	return std::visit(
+	    hate::overloaded{
+	        [](RawRecordingData const& d) { return d.data.size(); },
+	        [](TimedRecordingData const& d) {
+		        if (!d.data_per_synapse.empty()) {
+			        return std::visit(
+			            [](auto const& dd) { return dd.size(); },
+			            d.data_per_synapse.begin()->second.at(0));
+		        }
+		        if (!d.data_per_neuron.empty()) {
+			        return std::visit(
+			            [](auto const& dd) { return dd.size(); },
+			            d.data_per_neuron.begin()->second.at(0));
+		        }
+		        if (!d.data_array.empty()) {
+			        return std::visit(
+			            [](auto const& dd) { return dd.size(); }, d.data_array.begin()->second);
+		        }
+		        throw std::runtime_error("Empty timed recording doesn't define a batch size.");
+	        }},
+	    data);
+}
+
+std::unique_ptr<grenade::common::PortData> PlasticityRule::Results::copy() const
+{
+	return std::make_unique<Results>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> PlasticityRule::Results::move()
+{
+	return std::make_unique<Results>(std::move(*this));
+}
+
+std::ostream& PlasticityRule::Results::print(std::ostream& os) const
+{
+	std::visit(
+	    [&os](auto const& d) {
+		    hate::IndentingOstream ios(os);
+		    ios << "Results(\n";
+		    ios << hate::Indentation("\t");
+		    ios << d << "\n";
+		    ios << hate::Indentation();
+		    ios << ")";
+	    },
+	    data);
+	return os;
+}
+
+bool PlasticityRule::Results::is_equal_to(grenade::common::PortData const& other) const
+{
+	return data == static_cast<Results const&>(other).data;
+}
+
+
+PlasticityRule::Parameterization::Parameterization(std::string kernel) : kernel(std::move(kernel))
+{
+}
+
+std::unique_ptr<grenade::common::PortData> PlasticityRule::Parameterization::copy() const
+{
+	return std::make_unique<Parameterization>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> PlasticityRule::Parameterization::move()
+{
+	return std::make_unique<Parameterization>(std::move(*this));
+}
+
+std::ostream& PlasticityRule::Parameterization::print(std::ostream& os) const
+{
+	return os << "Parameterization(kernel: " << kernel << ")";
+}
+
+bool PlasticityRule::Parameterization::is_equal_to(grenade::common::PortData const& other) const
+{
+	auto const& other_parameterization = static_cast<Parameterization const&>(other);
+	return kernel == other_parameterization.kernel;
+}
+
+
+PlasticityRule::Dynamics::Dynamics(size_t batch_size, Timer timer) :
+    timer(std::move(timer)), m_batch_size(batch_size)
+{
+}
+
+size_t PlasticityRule::Dynamics::batch_size() const
+{
+	return m_batch_size;
+}
+
+std::unique_ptr<grenade::common::PortData> PlasticityRule::Dynamics::copy() const
+{
+	return std::make_unique<Dynamics>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> PlasticityRule::Dynamics::move()
+{
+	return std::make_unique<Dynamics>(std::move(*this));
+}
+
+bool PlasticityRule::Dynamics::is_equal_to(grenade::common::PortData const& other) const
+{
+	return timer == static_cast<Dynamics const&>(other).timer;
+}
+
+std::ostream& PlasticityRule::Dynamics::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "Dynamics(\n";
+	ios << hate::Indentation("\t");
+	ios << timer << "\n";
+	ios << "batch size: " << m_batch_size;
+	ios << hate::Indentation() << "\n)";
+	return os;
+}
+
+
 PlasticityRule::PlasticityRule(
-    std::string kernel,
-    Timer const& timer,
     std::vector<SynapseViewShape> const& synapse_view_shapes,
     std::vector<NeuronViewShape> const& neuron_view_shapes,
     std::optional<Recording> const& recording,
     ID const& id,
-    ChipOnExecutor const& chip_on_executor) :
-    EntityOnChip(chip_on_executor),
-    m_kernel(std::move(kernel)),
-    m_timer(timer),
+    common::ChipOnConnection const& chip_on_connection,
+    grenade::common::TimeDomainOnTopology const& time_domain,
+    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor) :
+    EntityOnChip(chip_on_connection, time_domain, execution_instance_on_executor),
     m_synapse_view_shapes(synapse_view_shapes),
     m_neuron_view_shapes(neuron_view_shapes),
     m_recording(recording),
@@ -796,14 +911,16 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 		throw std::runtime_error("Observable extraction only possible when recording is present.");
 	}
 
+	size_t const output_size =
+	    get_recorded_memory_data_interval().second - get_recorded_memory_data_interval().first;
 	for (auto const& batch : data) {
 		for (auto const& sample : batch) {
-			if (sample.data.size() != output().size) {
+			if (sample.data.size() != output_size) {
 				throw std::runtime_error(
 				    "Size of given data (" + std::to_string(sample.data.size()) +
 				    ") from which to extract recorded "
 				    "data does not match expectation (" +
-				    std::to_string(output().size) + ").");
+				    std::to_string(output_size) + ").");
 			}
 		}
 	}
@@ -1250,16 +1367,6 @@ PlasticityRule::RecordingData PlasticityRule::extract_recording_data(
 	return observable_data;
 }
 
-std::string const& PlasticityRule::get_kernel() const
-{
-	return m_kernel;
-}
-
-PlasticityRule::Timer const& PlasticityRule::get_timer() const
-{
-	return m_timer;
-}
-
 std::vector<PlasticityRule::SynapseViewShape> const& PlasticityRule::get_synapse_view_shapes() const
 {
 	return m_synapse_view_shapes;
@@ -1280,62 +1387,112 @@ PlasticityRule::ID const& PlasticityRule::get_id() const
 	return m_id;
 }
 
-std::vector<Port> PlasticityRule::inputs() const
+bool PlasticityRule::valid_output_port_data(
+    size_t output_port_on_vertex, grenade::common::PortData const& data) const
+{
+	return m_recording && output_port_on_vertex == 0 &&
+	       dynamic_cast<Results const*>(&data) != nullptr;
+}
+
+bool PlasticityRule::valid_input_port_data(
+    size_t input_port_on_vertex, grenade::common::PortData const& data) const
+{
+	return (input_port_on_vertex == (m_synapse_view_shapes.size() + m_neuron_view_shapes.size()) &&
+	        dynamic_cast<Parameterization const*>(&data) != nullptr) ||
+	       (input_port_on_vertex ==
+	            (m_synapse_view_shapes.size() + m_neuron_view_shapes.size() + 1) &&
+	        dynamic_cast<Dynamics const*>(&data) != nullptr);
+}
+
+std::vector<grenade::common::Vertex::Port> PlasticityRule::get_input_ports() const
 {
 	std::vector<Port> ret;
 	for (auto const& shape : m_synapse_view_shapes) {
-		ret.push_back(Port(shape.columns.size(), ConnectionType::SynapticInput));
+		ret.push_back(grenade::common::Vertex::Port(
+		    VertexPortType(ConnectionType::SynapticInput),
+		    grenade::common::Vertex::Port::SumOrSplitSupport::no,
+		    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+		    grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+		    grenade::common::CuboidMultiIndexSequence({shape.columns.size()})));
 	}
 	for (auto const& shape : m_neuron_view_shapes) {
-		ret.push_back(Port(shape.columns.size(), ConnectionType::MembraneVoltage));
+		ret.push_back(grenade::common::Vertex::Port(
+		    VertexPortType(ConnectionType::MembraneVoltage),
+		    grenade::common::Vertex::Port::SumOrSplitSupport::no,
+		    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+		    grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+		    grenade::common::CuboidMultiIndexSequence({shape.columns.size()})));
 	}
+	ret.push_back(grenade::common::Vertex::Port(
+	    ParameterizationPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})})));
+	ret.push_back(grenade::common::Vertex::Port(
+	    DynamicsPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})})));
 	return ret;
 }
 
-Port PlasticityRule::output() const
+std::vector<grenade::common::Vertex::Port> PlasticityRule::get_output_ports() const
 {
-	return Port(
-	    (get_recorded_memory_data_interval().second - get_recorded_memory_data_interval().first),
-	    ConnectionType::Int8);
+	if (!m_recording) {
+		return {};
+	}
+	return {grenade::common::Vertex::Port(
+	    ResultsPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::yes,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
 }
 
-std::ostream& operator<<(std::ostream& os, PlasticityRule const& config)
+std::unique_ptr<grenade::common::Vertex> PlasticityRule::copy() const
 {
-	os << "PlasticityRule(\nkernel:\n" << config.m_kernel << "\ntimer:\n" << config.m_timer;
-	if (config.m_recording) {
+	return std::make_unique<PlasticityRule>(*this);
+}
+
+std::unique_ptr<grenade::common::Vertex> PlasticityRule::move()
+{
+	return std::make_unique<PlasticityRule>(std::move(*this));
+}
+
+std::ostream& PlasticityRule::print(std::ostream& os) const
+{
+	os << "PlasticityRule(\n";
+	if (m_recording) {
 		os << "\nrecording:\n";
-		std::visit([&](auto const& recording) { os << recording << "\n"; }, *config.m_recording);
+		std::visit([&](auto const& recording) { os << recording << "\n"; }, *m_recording);
 	}
-	os << "\n" << config.m_id << "\n";
+	os << "\n" << m_id << "\n";
 	os << ")";
 	return os;
 }
 
-bool PlasticityRule::supports_input_from(
-    SynapseArrayView const& input, std::optional<PortRestriction> const& restriction) const
+bool PlasticityRule::valid_edge_from(Vertex const& source, grenade::common::Edge const& edge) const
 {
-	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction) &&
-	       !restriction;
+	if (!PartitionedVertex::valid_edge_from(source, edge)) {
+		return false;
+	}
+	// to ensure correct mapping we only support a single complete edge to the plasticity rule for
+	// each network entity it acts on
+	if (!edge.get_channels_on_target().is_injective() ||
+	    edge.get_channels_on_target().size() !=
+	        get_input_ports().at(edge.port_on_target).get_channels().size()) {
+		return false;
+	}
+	return true;
 }
 
-bool PlasticityRule::supports_input_from(
-    NeuronView const& input, std::optional<PortRestriction> const& restriction) const
+bool PlasticityRule::is_equal_to(Vertex const& other) const
 {
-	return static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction) &&
-	       !restriction;
+	auto const& other_plasticity = static_cast<PlasticityRule const&>(other);
+	return (m_synapse_view_shapes == other_plasticity.m_synapse_view_shapes) &&
+	       (m_recording == other_plasticity.m_recording) && (m_id == other_plasticity.m_id) &&
+	       EntityOnChip::is_equal_to(other);
 }
 
-bool PlasticityRule::operator==(PlasticityRule const& other) const
-{
-	return (m_kernel == other.m_kernel) && (m_timer == other.m_timer) &&
-	       (m_synapse_view_shapes == other.m_synapse_view_shapes) &&
-	       (m_recording == other.m_recording) && (m_id == other.m_id);
-}
-
-bool PlasticityRule::operator!=(PlasticityRule const& other) const
-{
-	return !(*this == other);
-}
 
 std::ostream& operator<<(
     std::ostream& os,
@@ -1354,6 +1511,7 @@ std::ostream& operator<<(
 		}
 	}
 }
+
 
 std::ostream& operator<<(
     std::ostream& os, PlasticityRule::TimedRecording::ObservablePerNeuron::Layout const& layout)

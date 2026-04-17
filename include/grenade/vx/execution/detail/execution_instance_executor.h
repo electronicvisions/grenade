@@ -1,14 +1,11 @@
 #pragma once
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_on_executor.h"
 #include "grenade/vx/common/chip_on_connection.h"
-#include "grenade/vx/execution/detail/execution_instance_chip_ppu_program_compiler.h"
+#include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/detail/execution_instance_realtime_executor.h"
-#include "grenade/vx/execution/detail/execution_instance_snippet_realtime_executor.h"
 #include "grenade/vx/execution/detail/generator/health_info.h"
 #include "grenade/vx/execution/detail/system.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/ppu.h"
@@ -27,7 +24,7 @@ struct ExecutionInstanceExecutor
 {
 	struct PostProcessor
 	{
-		grenade::common::ExecutionInstanceID execution_instance;
+		grenade::common::ExecutionInstanceOnExecutor execution_instance;
 
 		struct Chip
 		{
@@ -40,45 +37,39 @@ struct ExecutionInstanceExecutor
 
 		ExecutionInstanceRealtimeExecutor::PostProcessor realtime;
 
-		signal_flow::OutputData operator()(backend::PlaybackProgram&& playback_program)
-		    SYMBOL_VISIBLE;
+		std::vector<grenade::common::OutputData> operator()(
+		    backend::PlaybackProgram&& playback_program) SYMBOL_VISIBLE;
 	};
 
 	/**
 	 * Construct executor.
-	 * @param graphs Graphs to use for locality and property lookup
-	 * @param input_data Input datas to use
-	 * @param output_data Output datas to use
-	 * @param configs Chip configuration to use
+	 * @param topologies Topologies to use
+	 * @param execution_instance_vertex_descriptors Vertex descriptors per realtime snippet of
+	 * execution instance to visit
+	 * @param output_data Output data to add results into
+	 * @param input_data Input data to use
 	 * @param hooks Execution instance hooks to use
 	 * @param chips_on_connection Chip identifiers on connection to use
-	 * @param execution_instance Local execution instance to execute
 	 */
 	ExecutionInstanceExecutor(
-	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    signal_flow::InputData const& input_data,
-	    signal_flow::OutputData& output_data,
-	    std::vector<std::map<
-	        common::ChipOnConnection,
-	        std::reference_wrapper<lola::vx::v3::Chip const>>> const& configs,
+	    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+	    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors,
+	    std::vector<grenade::common::OutputData>& output_data,
+	    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
 	    ExecutionInstanceHooks& hooks,
-	    std::vector<common::ChipOnConnection> const& chips_on_connection,
-	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
+	    std::vector<common::ChipOnConnection> const& chips_on_connection) SYMBOL_VISIBLE;
 
 	std::pair<backend::PlaybackProgram, PostProcessor> operator()(
 	    std::map<common::ChipOnConnection, hxcomm::HwdbEntry> const& chip_hwdb_entries) const
 	    SYMBOL_VISIBLE;
 
 private:
-	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;
-	signal_flow::InputData const& m_input_data;
-	signal_flow::OutputData& m_output_data;
-	std::vector<
-	    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
-	    m_configs;
+	std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& m_topologies;
+	std::vector<grenade::common::VertexOnTopology> const& m_execution_instance_vertex_descriptors;
+	std::vector<grenade::common::OutputData>& m_output_data;
+	std::vector<std::reference_wrapper<grenade::common::InputData const>> const& m_input_data;
 	ExecutionInstanceHooks& m_hooks;
 	std::vector<common::ChipOnConnection> m_chips_on_connection;
-	grenade::common::ExecutionInstanceID m_execution_instance;
 };
 
 } // namespace grenade::vx::execution::detail

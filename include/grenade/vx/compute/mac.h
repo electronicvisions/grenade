@@ -2,9 +2,10 @@
 #include <vector>
 #include <gtest/gtest_prod.h>
 
+#include "grenade/common/topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/common/time.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "grenade/vx/signal_flow/vertex/synapse_array_view.h"
 #include "halco/common/geometry.h"
@@ -61,7 +62,7 @@ public:
 	MAC() = default;
 
 	/**
-	 * Create single MAC compute graph wrapper.
+	 * Create single MAC compute topology wrapper.
 	 * @param weights Weight matrix.
 	 * @param num_sends Number of times a input activation is sent to the specific row
 	 * @param wait_between_events Wait time between input events in FPGA cycles
@@ -97,41 +98,47 @@ public:
 private:
 	/**
 	 * Insert a matrix multiplication operation on a synram.
-	 * @param graph Graph to insert into
+	 * @param topology Graph to insert into
 	 * @param weights Weights to use
 	 * @param instance Execution instance to place onto
 	 * @param hemisphere Hemisphere to place onto
 	 * @param madc_recording_neuron Optional location of neuron to record via MADC
 	 * @param crossbar_input_vertex Incoming crossbar input vertex to use
-	 * @return Data output vertex to measured membrane potential values
+	 * @return Tuple of vertex descriptors for CADC readout, MADC readout and neurons
 	 */
-	static std::pair<
-	    signal_flow::Graph::vertex_descriptor,
-	    std::optional<signal_flow::Graph::vertex_descriptor>>
+	static std::tuple<
+	    grenade::common::VertexOnTopology,
+	    std::optional<grenade::common::VertexOnTopology>,
+	    grenade::common::VertexOnTopology>
 	insert_synram(
-	    signal_flow::Graph& graph,
+	    grenade::common::Topology& topology,
+	    grenade::common::InputData& parameterization,
 	    Weights&& weights,
-	    grenade::common::ExecutionInstanceID const& instance,
+	    grenade::common::ExecutionInstanceOnExecutor const& instance,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS const& hemisphere,
 	    std::optional<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& madc_recording_neuron,
-	    signal_flow::Graph::vertex_descriptor crossbar_input_vertex) SYMBOL_VISIBLE;
+	    grenade::common::VertexOnTopology crossbar_input_vertex) SYMBOL_VISIBLE;
 
 	bool m_enable_loopback{false};
-	signal_flow::Graph m_graph{};
+	std::shared_ptr<grenade::common::Topology> m_topology{};
+	grenade::common::InputData m_parameterization{};
+	std::vector<grenade::common::VertexOnTopology> m_neuron_vertices{};
 
-	signal_flow::Graph::vertex_descriptor m_input_vertex{};
-	signal_flow::Graph::vertex_descriptor m_output_vertex{};
+	grenade::common::VertexOnTopology m_input_vertex{};
+	grenade::common::VertexOnTopology m_output_vertex{};
 	Weights m_weights{};
 
-	void build_graph() SYMBOL_VISIBLE;
+	void build_topology() SYMBOL_VISIBLE;
 
 	size_t m_num_sends{};
 	common::Time m_wait_between_events{};
 
 	halco::hicann_dls::vx::v3::AtomicNeuronOnDLS m_madc_recording_neuron;
 	std::string m_madc_recording_path;
-	std::map<grenade::common::ExecutionInstanceID, signal_flow::Graph::vertex_descriptor>
+	std::map<grenade::common::ExecutionInstanceOnExecutor, grenade::common::VertexOnTopology>
 	    m_madc_recording_vertices;
+	std::map<grenade::common::ExecutionInstanceOnExecutor, grenade::common::VertexOnTopology>
+	    m_chip_vertices;
 
 	friend struct cereal::access;
 	template <typename Archive>

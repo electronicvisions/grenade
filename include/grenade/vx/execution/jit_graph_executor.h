@@ -1,8 +1,12 @@
 #pragma once
 #include "grenade/common/connection_on_executor.h"
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/output_data.h"
+#include "grenade/common/topology.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
+#include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/visibility.h"
 #include "lola/vx/v3/chip.h"
 #include <memory>
@@ -10,13 +14,6 @@
 #if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
 #include "pyhxcomm/common/managed_connection.h"
 #endif
-
-namespace grenade::vx::signal_flow {
-struct InputData;
-struct OutputData;
-struct ExecutionInstanceHooks;
-class Graph;
-} // namespace grenade::v::signal_flowx
 
 namespace grenade::vx {
 namespace execution GENPYBIND_TAG_GRENADE_VX_EXECUTION {
@@ -41,8 +38,9 @@ public:
 	    std::map<common::ChipOnConnection, lola::vx::v3::Chip>>
 	    ChipConfigs;
 
-	typedef std::map<grenade::common::ExecutionInstanceID, std::shared_ptr<ExecutionInstanceHooks>>
-	    Hooks;
+	typedef std::
+	    map<grenade::common::ExecutionInstanceOnExecutor, std::shared_ptr<ExecutionInstanceHooks>>
+	        Hooks;
 
 	/**
 	 * Construct executor with active connections from environment.
@@ -96,23 +94,22 @@ private:
 
 	/**
 	 * Check whether the given graph can be executed.
-	 * @param graph Graph instance
+	 * @param topology Topology instance
 	 */
-	bool is_executable_on(signal_flow::Graph const& graph);
+	bool is_executable_on(grenade::common::Topology const& topology);
 
 	/**
 	 * Check that graph can be executed.
 	 * This function combines `is_executable_on` and
 	 * `has_dangling_inputs`.
-	 * @param graph Graph to check
+	 * @param topology Topology to check
 	 */
-	void check(signal_flow::Graph const& graph);
+	void check(grenade::common::Topology const& topology);
 
-	friend signal_flow::OutputData run(
+	friend std::vector<grenade::common::OutputData> run(
 	    JITGraphExecutor& executor,
-	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    std::vector<std::reference_wrapper<ChipConfigs const>> const& configs,
-	    signal_flow::InputData const& inputs,
+	    std::vector<std::shared_ptr<grenade::common::Topology const>> const& topologies,
+	    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& data,
 	    Hooks&& hooks);
 };
 

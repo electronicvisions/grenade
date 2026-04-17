@@ -1,33 +1,47 @@
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 
+#include "grenade/common/vertex_on_topology.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection_run.h"
 #include "grenade/vx/execution/detail/execution_instance_executor.h"
+#include "grenade/vx/execution/detail/generator/capmem.h"
+#include "grenade/vx/execution/detail/generator/get_state.h"
+#include "grenade/vx/execution/detail/generator/health_info.h"
+#include "grenade/vx/execution/detail/generator/madc.h"
+#include "grenade/vx/execution/detail/generator/ppu.h"
+#include "grenade/vx/network/abstract/execution_instance_global.h"
+#include "grenade/vx/ppu.h"
+#include "grenade/vx/ppu/detail/status.h"
+#include "grenade/vx/ppu/detail/stopped.h"
+#include "halco/hicann-dls/vx/v3/ppu.h"
+#include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/omnibus_constants.h"
+#include "haldls/vx/v3/timer.h"
 #include "hate/timer.h"
+#include <mutex>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
 
 ExecutionInstanceNode::ExecutionInstanceNode(
-    signal_flow::OutputData& data_maps,
-    signal_flow::InputData const& input_data_maps,
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    grenade::common::ExecutionInstanceID const& execution_instance,
-    grenade::common::ConnectionOnExecutor const& connection_on_executor,
-    std::vector<
-        std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
-        configs,
+    std::vector<grenade::common::OutputData>& output_data,
+    std::mutex& results_mutex,
+    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+    grenade::common::ExecutionInstanceOnExecutor const& execution_instance,
+    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
     backend::StatefulConnection& connection,
-    ExecutionInstanceHooks& hooks) :
-    data_maps(data_maps),
-    input_data_maps(input_data_maps),
-    graphs(graphs),
+    ExecutionInstanceHooks& hooks,
+    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors) :
+    output_data(output_data),
+    results_mutex(results_mutex),
+    topologies(topologies),
     execution_instance(execution_instance),
-    connection_on_executor(connection_on_executor),
-    configs(configs),
+    input_data(input_data),
     connection(connection),
     hooks(hooks),
+    execution_instance_vertex_descriptors(execution_instance_vertex_descriptors),
     logger(log4cxx::Logger::getLogger("grenade.ExecutionInstanceNode"))
 {}
 
@@ -40,8 +54,8 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 	using namespace lola::vx::v3;
 
 	ExecutionInstanceExecutor executor(
-	    graphs, input_data_maps, data_maps, configs, hooks, connection.get_chips_on_connection(),
-	    execution_instance);
+	    topologies, execution_instance_vertex_descriptors, output_data, input_data, hooks,
+	    connection.get_chips_on_connection());
 
 	hate::Timer const compile_timer;
 
@@ -69,16 +83,32 @@ void ExecutionInstanceNode::operator()(tbb::flow::continue_msg)
 		run_successful = false;
 	}
 
-	auto output_data = post_processor(std::move(playback_program));
+	auto local_results = post_processor(std::move(playback_program));
+
+	// alter global results
+	std::lock_guard lock(results_mutex);
 
 	// add execution duration per hardware to result data map
-	assert(output_data.execution_time_info);
-	output_data.execution_time_info->execution_duration_per_hardware[connection_on_executor] =
-	    run_time_info.execution_duration;
+	if (!local_results.at(local_results.size() - 1)
+	         .execution_instances.contains(execution_instance)) {
+		local_results.at(local_results.size() - 1)
+		    .execution_instances.set(
+		        execution_instance, network::abstract::ExecutionInstanceGlobal());
+	}
+	auto last_results_ptr = local_results.at(local_results.size() - 1)
+	                            .execution_instances.get(execution_instance)
+	                            .copy();
+	auto& last_results =
+	    dynamic_cast<network::abstract::ExecutionInstanceGlobal&>(*last_results_ptr);
+	last_results.device_usage_duration = run_time_info.execution_duration;
+	local_results.at(local_results.size() - 1)
+	    .execution_instances.set(execution_instance, last_results);
 
 	// merge local data map into global data map
 	if (run_successful) {
-		data_maps.merge(output_data);
+		for (size_t i = 0; i < output_data.size(); ++i) {
+			output_data.at(i).merge(local_results.at(i));
+		}
 	}
 
 	// throw exception if run was not successful

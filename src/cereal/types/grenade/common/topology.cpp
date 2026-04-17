@@ -3,6 +3,7 @@
 #include "cereal/types/grenade/common/graph.h"
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 
 namespace grenade::common {
 

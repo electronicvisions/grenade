@@ -14,7 +14,7 @@ PortfolioRouter::PortfolioRouter() : routers()
 
 PortfolioRouter::~PortfolioRouter() {}
 
-RoutingResult PortfolioRouter::operator()(std::shared_ptr<Network> const& network)
+RoutingResult PortfolioRouter::operator()(grenade::common::LinkedTopology const& topology)
 {
 	for (size_t i = 0; i < routers.size(); ++i) {
 		auto& router = routers.at(i);
@@ -22,7 +22,7 @@ RoutingResult PortfolioRouter::operator()(std::shared_ptr<Network> const& networ
 			throw std::logic_error("Unexpected access to moved-from object.");
 		}
 		try {
-			return (*router)(network);
+			return (*router)(topology);
 		} catch (UnsuccessfulRouting const& exception) {
 			auto const logger =
 			    log4cxx::Logger::getLogger("grenade.network.routing.PortfolioRouter");

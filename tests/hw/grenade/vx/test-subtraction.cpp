@@ -1,13 +1,12 @@
 #include <gtest/gtest.h>
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/topology.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/input_data.h"
 #include "grenade/vx/signal_flow/types.h"
-#include "grenade/vx/signal_flow/vertex.h"
 #include "grenade/vx/signal_flow/vertex/transformation/subtraction.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/systime.h"
@@ -26,80 +25,64 @@ TEST(Subtraction, Single)
 {
 	constexpr size_t size = 256;
 
-	grenade::vx::signal_flow::vertex::ExternalInput external_input(
-	    grenade::vx::signal_flow::ConnectionType::DataInt8, size);
+	grenade::vx::signal_flow::vertex::Transformation subtraction(
+	    grenade::vx::signal_flow::vertex::transformation::Subtraction(2, size),
+	    grenade::common::ExecutionInstanceOnExecutor(
+	        grenade::common::ExecutionInstanceID(1), grenade::common::ConnectionOnExecutor()));
 
-	grenade::vx::signal_flow::vertex::DataInput data_input(
-	    grenade::vx::signal_flow::ConnectionType::Int8, size);
+	auto topology = std::make_shared<grenade::common::Topology>();
 
-	grenade::vx::signal_flow::Vertex subtraction(grenade::vx::signal_flow::vertex::Transformation(
-	    std::make_unique<grenade::vx::signal_flow::vertex::transformation::Subtraction>(2, size)));
-
-	grenade::vx::signal_flow::vertex::DataOutput data_output(
-	    grenade::vx::signal_flow::ConnectionType::Int8, size);
-
-	grenade::vx::signal_flow::Graph g;
-
-	grenade::common::ExecutionInstanceID instance;
-
-	auto const v1 = g.add(external_input, instance, {});
-	auto const v2 = g.add(data_input, instance, {v1});
-	auto const v3 = g.add(std::move(subtraction), instance, {v2, v2});
-	auto const v4 = g.add(data_output, instance, {v3});
+	auto const v1 = topology->add_vertex(subtraction);
 
 	// Construct map of one connection and connect to HW
 	grenade::vx::execution::JITGraphExecutor executor;
 
-	// fill graph inputs
-	grenade::vx::signal_flow::InputData input_list;
-	input_list.snippets.resize(1);
+	// fill inputs
+	grenade::common::InputData input_data;
 	std::vector<grenade::vx::signal_flow::Int8> inputs(size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		inputs.at(i + 128) = grenade::vx::signal_flow::Int8(i);
 	}
-	input_list.snippets.at(0).data[v1] = std::vector<
-	    grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>{
-	    {{grenade::vx::common::Time(), inputs}}};
-
-	std::unique_ptr<lola::vx::v3::Chip> chip = std::make_unique<lola::vx::v3::Chip>();
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = *chip;
+	input_data.ports.set(
+	    {v1, 0}, grenade::vx::signal_flow::vertex::Transformation::Dynamics(
+	                 std::vector<grenade::vx::common::TimedDataSequence<
+	                     std::vector<grenade::vx::signal_flow::Int8>>>{
+	                     {{grenade::vx::common::Time(), inputs}}}));
+	input_data.ports.set(
+	    {v1, 1}, grenade::vx::signal_flow::vertex::Transformation::Dynamics(
+	                 std::vector<grenade::vx::common::TimedDataSequence<
+	                     std::vector<grenade::vx::signal_flow::Int8>>>{
+	                     {{grenade::vx::common::Time(), inputs}}}));
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
+	auto const results = grenade::vx::execution::run(executor, topology, input_data);
 
-	EXPECT_EQ(result_map.snippets.at(0).data.size(), 1);
+	EXPECT_EQ(results.batch_size(), 1);
 
-	EXPECT_TRUE(result_map.snippets.at(0).data.find(v4) != result_map.snippets.at(0).data.end());
+	EXPECT_TRUE(results.ports.contains({v1, 0}));
+	auto const& result =
+	    dynamic_cast<grenade::vx::signal_flow::vertex::Transformation::Results const&>(
+	        results.ports.get({v1, 0}));
 	EXPECT_EQ(
 	    std::get<std::vector<
 	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	        result_map.snippets.at(0).data.at(v4))
+	        result.value)
 	        .size(),
 	    1);
 	EXPECT_EQ(
 	    std::get<std::vector<
 	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	        result_map.snippets.at(0).data.at(v4))
-	        .at(0)
-	        .size(),
-	    1);
-	EXPECT_EQ(
-	    std::get<std::vector<
-	        grenade::vx::common::TimedDataSequence<std::vector<grenade::vx::signal_flow::Int8>>>>(
-	        result_map.snippets.at(0).data.at(v4))
+	        result.value)
 	        .at(0)
 	        .at(0)
 	        .data.size(),
 	    size);
 	for (intmax_t i = -128; i < 127; ++i) {
 		EXPECT_EQ(
-		    0, std::get<std::vector<grenade::vx::common::TimedDataSequence<
-		           std::vector<grenade::vx::signal_flow::Int8>>>>(
-		           result_map.snippets.at(0).data.at(v4))
-		           .at(0)
-		           .at(0)
-		           .data.at(i + 128)
-		           .value());
+		    0, static_cast<uint8_t>(std::get<std::vector<grenade::vx::common::TimedDataSequence<
+		                                std::vector<grenade::vx::signal_flow::Int8>>>>(result.value)
+		                                .at(0)
+		                                .at(0)
+		                                .data.at(i + 128)));
 	}
 }

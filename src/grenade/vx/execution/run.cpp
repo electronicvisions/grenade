@@ -1,12 +1,16 @@
 #include "grenade/vx/execution/run.h"
 
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/data.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/partitioned_vertex.h"
+#include "grenade/common/strong_component_invariant_vertex.h"
+#include "grenade/common/topology.h"
+#include "grenade/common/topology_rewrite/strong_component_invariant.h"
 #include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
-#include "grenade/vx/signal_flow/execution_time_info.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
-#include "grenade/vx/signal_flow/output_data.h"
+#include "grenade/vx/network/abstract/execution_instance_global.h"
+#include "grenade/vx/network/abstract/executor_global.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
 #include <chrono>
@@ -20,112 +24,83 @@
 
 namespace grenade::vx::execution {
 
-signal_flow::OutputData run(
+grenade::common::OutputData run(
     JITGraphExecutor& executor,
-    signal_flow::Graph const& graph,
-    JITGraphExecutor::ChipConfigs const& initial_config,
-    signal_flow::InputData const& input,
+    std::shared_ptr<grenade::common::Topology const> const& topology,
+    grenade::common::InputData const& data,
     JITGraphExecutor::Hooks&& hooks)
 {
-	return std::move(
-	    run(executor, std::vector<std::reference_wrapper<signal_flow::Graph const>>{graph},
-	        {initial_config}, input, std::move(hooks)));
+	return std::move(run(executor,
+	                     std::vector<std::shared_ptr<grenade::common::Topology const>>{topology},
+	                     {data}, std::move(hooks))
+	                     .at(0));
 }
 
-namespace {
-
-bool value_equal(signal_flow::Graph::graph_type const& a, signal_flow::Graph::graph_type const& b)
-{
-	return std::equal(
-	           boost::vertices(a).first, boost::vertices(a).second, boost::vertices(b).first,
-	           boost::vertices(b).second) &&
-	       std::equal(
-	           boost::edges(a).first, boost::edges(a).second, boost::edges(b).first,
-	           boost::edges(b).second, [&](auto const& aa, auto const& bb) {
-		           return (boost::source(aa, a) == boost::source(bb, b)) &&
-		                  (boost::target(aa, a) == boost::target(aa, b));
-	           });
-}
-
-} // namespace
-
-signal_flow::OutputData run(
+std::vector<grenade::common::OutputData> run(
     JITGraphExecutor& executor,
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    std::vector<std::reference_wrapper<JITGraphExecutor::ChipConfigs const>> const& configs,
-    signal_flow::InputData const& inputs,
+    std::vector<std::shared_ptr<grenade::common::Topology const>> const& topologies,
+    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& data,
     JITGraphExecutor::Hooks&& hooks)
 {
-	// assure, that all vectors, which contain one element per realtime snippet are of the same size
-	if (graphs.size() != inputs.snippets.size() || graphs.size() != configs.size()) {
-		throw std::logic_error(
-		    "Arguments 'graphs', 'inputs' and 'configs' must be of the same size");
+	// ensure, that all vectors, which contain one element per realtime snippet are of the same size
+	if (topologies.size() != data.size()) {
+		throw std::logic_error("Arguments 'topologies' and 'data' must be of the same size");
 	}
-	// assure, that all vectors contain at least one element, otherwise the experiment is not
+	// ensure, that all vectors contain at least one element, otherwise the experiment is not
 	// existent
-	if (graphs.size() < 1) {
+	if (topologies.size() < 1) {
 		throw std::logic_error(
-		    "Arguments 'graphs', 'inputs' and 'configs' must contain at least one element");
+		    "Arguments 'topologies' and 'data' must contain at least one element");
 	}
 
 	using namespace halco::hicann_dls::vx::v3;
 	hate::Timer const timer;
 
-	auto const& execution_instance_graph = graphs[0].get().get_execution_instance_graph();
-	auto const& execution_instance_map = graphs[0].get().get_execution_instance_map();
-
-	// check, that all graphs have similar execution_instance_graphs/-maps and use the same chips
-	executor.check(graphs[0]);
-	for (size_t i = 1; i < graphs.size(); i++) {
-		executor.check(graphs[i]);
-		if (!value_equal(
-		        execution_instance_graph, graphs[i].get().get_execution_instance_graph())) {
-			throw std::runtime_error(
-			    "graph corresponding to configuration " + std::to_string(i) +
-			    " has differing execution_instance_graph from other graphs");
-		}
-		if (execution_instance_map != graphs[i].get().get_execution_instance_map()) {
-			throw std::runtime_error(
-			    "graph corresponding to configuration " + std::to_string(i) +
-			    " has differing execution_instance_map from other graphs");
-		}
+	// construct linked topology per topology to execute, which contains vertices per strong
+	// component invariant and their dependencies as edges
+	std::vector<std::shared_ptr<grenade::common::LinkedTopology>> execution_instance_topologies;
+	for (auto const& graph : topologies) {
+		execution_instance_topologies.emplace_back(
+		    std::make_shared<grenade::common::LinkedTopology>(graph));
 	}
-	std::map<signal_flow::Graph::vertex_descriptor, std::set<grenade::common::ConnectionOnExecutor>>
-	    vps_per_execution_instance;
-	for (auto const vertex :
-	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
-		auto const get_vps = [&graphs, &vertex](size_t i) {
-			std::set<grenade::common::ConnectionOnExecutor> vps;
-			auto const& vertex_descriptor_map = graphs[i].get().get_vertex_descriptor_map();
-			for (auto const& [vertex_descriptor, _] :
-			     boost::make_iterator_range(vertex_descriptor_map.right.equal_range(vertex))) {
-				auto const& vertex_property =
-				    graphs[i].get().get_vertex_property(vertex_descriptor);
-				std::visit(
-				    [&vps](auto const& vp) {
-					    if constexpr (std::is_base_of_v<
-					                      signal_flow::vertex::EntityOnChip,
-					                      std::decay_t<decltype(vp)>>) {
-						    vps.insert(vp.chip_on_executor.second);
-					    }
-				    },
-				    vertex_property);
-			}
-			return vps;
-		};
-		auto const vps = get_vps(0);
-		vps_per_execution_instance[vertex] = vps;
+	for (auto& execution_instance_topology : execution_instance_topologies) {
+		grenade::common::StrongComponentInvariantRewrite rewrite(execution_instance_topology);
+		rewrite();
+	}
 
-		for (size_t i = 1; i < graphs.size(); i++) {
-			// check, that all graphs use the same chips
-			if (vps != get_vps(i)) {
-				throw std::runtime_error(
-				    "graph corresponding to configuration " + std::to_string(i) +
-				    " uses other connections than other graphs");
-			}
+	std::map<
+	    grenade::common::ExecutionInstanceOnExecutor,
+	    std::vector<grenade::common::VertexOnTopology>>
+	    vertices_per_execution_instance;
+
+	for (size_t i = 0; i < execution_instance_topologies.size(); ++i) {
+		for (auto const& vertex_descriptor : execution_instance_topologies.at(i)->vertices()) {
+			auto const& vertex =
+			    dynamic_cast<grenade::common::StrongComponentInvariantVertex const&>(
+			        execution_instance_topologies.at(i)->get(vertex_descriptor));
+			auto const strong_component_invariant = vertex.get_strong_component_invariant();
+			assert(strong_component_invariant);
+			vertices_per_execution_instance
+			    [dynamic_cast<grenade::common::PartitionedVertex::StrongComponentInvariant const&>(
+			         *strong_component_invariant)
+			         .execution_instance_on_executor.value()]
+			        .push_back(vertex_descriptor);
 		}
 	}
 
+	// check, that all topologies have equal execution instance topologies and use the same
+	// chips
+	for (size_t i = 1; i < topologies.size(); i++) {
+		if (static_cast<grenade::common::Topology const&>(*execution_instance_topologies.at(i)) !=
+		    static_cast<grenade::common::Topology const&>(*execution_instance_topologies.at(0))) {
+			std::stringstream ss;
+			ss << "Graph corresponding to configuration " << i
+			   << " has differing execution instance topology from other topologies:\n";
+			ss << i << ": " << *execution_instance_topologies.at(i) << "\n";
+			ss << "others: " << *execution_instance_topologies.at(0);
+			throw std::runtime_error(ss.str());
+		}
+	}
 
 	// execution graph
 	tbb::flow::graph execution_graph;
@@ -134,72 +109,80 @@ signal_flow::OutputData run(
 
 	// execution nodes
 	std::map<
-	    signal_flow::Graph::vertex_descriptor, tbb::flow::continue_node<tbb::flow::continue_msg>>
+	    grenade::common::ExecutionInstanceOnExecutor,
+	    tbb::flow::continue_node<tbb::flow::continue_msg>>
 	    nodes;
 
-	// global data maps (each for one snippet)
-	signal_flow::OutputData output_activation_maps;
-	output_activation_maps.snippets.resize(graphs.size());
+	// global data maps (each for one realtime_column)
+	std::vector<grenade::common::OutputData> results(topologies.size());
+	std::mutex results_mutex;
 
 	// build execution nodes
-	for (auto const vertex :
-	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
-		auto const execution_instance = execution_instance_map.left.at(vertex);
-		// collect all chips used by execution instance
-		std::set<grenade::common::ConnectionOnExecutor>& connections_on_executor =
-		    vps_per_execution_instance.at(vertex);
-		// TODO: support execution instances without hardware usage
-		if (connections_on_executor.empty()) {
-			assert(executor.m_connections.size() > 0);
-			connections_on_executor.insert(executor.m_connections.begin()->first);
-		}
-		if (connections_on_executor.size() > 1) {
-			throw std::runtime_error(
-			    "Execution instance using multiple connections not supported.");
-		}
-		assert(connections_on_executor.size() == 1);
-		auto const connection_on_executor = *connections_on_executor.begin();
-
-		// vector of configs to pass to execution_instance_node
-		std::vector<
-		    std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>>
-		    execution_node_configs(configs.size());
-		for (size_t i = 0; i < configs.size(); i++) {
-			for (auto const& [chip_on_connection, config] :
-			     configs[i].get().at(execution_instance)) {
-				execution_node_configs.at(i).emplace(chip_on_connection, config);
-			}
-		}
-		if (!hooks.contains(execution_instance)) {
-			hooks[execution_instance] = std::make_shared<ExecutionInstanceHooks>();
-			for (auto const& [chip_on_connection, _] : configs.at(0).get().at(execution_instance)) {
-				hooks.at(execution_instance)->chips[chip_on_connection] = {};
+	for (auto const& [execution_instance_on_executor, execution_instance_vertex_descriptors] :
+	     vertices_per_execution_instance) {
+		if (!hooks.contains(execution_instance_on_executor)) {
+			hooks[execution_instance_on_executor] = std::make_shared<ExecutionInstanceHooks>();
+			for (auto const& chip_on_connection :
+			     executor.m_connections.at(execution_instance_on_executor.connection_on_executor)
+			         .get_chips_on_connection()) {
+				hooks.at(execution_instance_on_executor)->chips[chip_on_connection] = {};
 			}
 		} else {
-			for (auto const& [chip_on_connection, _] : configs.at(0).get().at(execution_instance)) {
-				if (!hooks.at(execution_instance)->chips.contains(chip_on_connection)) {
-					hooks.at(execution_instance)->chips[chip_on_connection] = {};
+			for (auto const& chip_on_connection :
+			     executor.m_connections.at(execution_instance_on_executor.connection_on_executor)
+			         .get_chips_on_connection()) {
+				if (!hooks.at(execution_instance_on_executor)->chips.contains(chip_on_connection)) {
+					hooks.at(execution_instance_on_executor)->chips[chip_on_connection] = {};
 				}
 			}
 		}
 		detail::ExecutionInstanceNode node_body(
-		    output_activation_maps, inputs, graphs, execution_instance, connection_on_executor,
-		    std::move(execution_node_configs), executor.m_connections.at(connection_on_executor),
-		    *(hooks[execution_instance]));
+		    results, results_mutex, execution_instance_topologies, execution_instance_on_executor,
+		    data, executor.m_connections.at(execution_instance_on_executor.connection_on_executor),
+		    *(hooks.at(execution_instance_on_executor)), execution_instance_vertex_descriptors);
 		nodes.insert(std::make_pair(
-		    vertex, tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
+		    execution_instance_on_executor,
+		    tbb::flow::continue_node<tbb::flow::continue_msg>(execution_graph, node_body)));
 	}
 
 	// connect execution nodes
-	for (auto const vertex :
-	     boost::make_iterator_range(boost::vertices(execution_instance_graph))) {
-		if (boost::in_degree(vertex, execution_instance_graph) == 0) {
-			tbb::flow::make_edge(start, nodes.at(vertex));
+	for (auto const vertex_descriptor : execution_instance_topologies.at(0)->vertices()) {
+		if (execution_instance_topologies.at(0)->in_degree(vertex_descriptor) == 0) {
+			auto const& vertex =
+			    dynamic_cast<grenade::common::StrongComponentInvariantVertex const&>(
+			        execution_instance_topologies.at(0)->get(vertex_descriptor));
+			auto const strong_component_invariant = vertex.get_strong_component_invariant();
+			assert(strong_component_invariant);
+			tbb::flow::make_edge(
+			    start,
+			    nodes.at(dynamic_cast<
+			                 grenade::common::PartitionedVertex::StrongComponentInvariant const&>(
+			                 *strong_component_invariant)
+			                 .execution_instance_on_executor.value()));
 		}
 		for (auto const out_edge :
-		     boost::make_iterator_range(boost::out_edges(vertex, execution_instance_graph))) {
-			auto const target = boost::target(out_edge, execution_instance_graph);
-			tbb::flow::make_edge(nodes.at(vertex), nodes.at(target));
+		     execution_instance_topologies.at(0)->out_edges(vertex_descriptor)) {
+			auto const& vertex =
+			    dynamic_cast<grenade::common::StrongComponentInvariantVertex const&>(
+			        execution_instance_topologies.at(0)->get(vertex_descriptor));
+			auto const strong_component_invariant = vertex.get_strong_component_invariant();
+			assert(strong_component_invariant);
+
+			auto const target_descriptor = execution_instance_topologies.at(0)->target(out_edge);
+			auto const& target =
+			    dynamic_cast<grenade::common::StrongComponentInvariantVertex const&>(
+			        execution_instance_topologies.at(0)->get(target_descriptor));
+			auto const target_strong_component_invariant = target.get_strong_component_invariant();
+			assert(strong_component_invariant);
+			tbb::flow::make_edge(
+			    nodes.at(dynamic_cast<
+			                 grenade::common::PartitionedVertex::StrongComponentInvariant const&>(
+			                 *strong_component_invariant)
+			                 .execution_instance_on_executor.value()),
+			    nodes.at(dynamic_cast<
+			                 grenade::common::PartitionedVertex::StrongComponentInvariant const&>(
+			                 *target_strong_component_invariant)
+			                 .execution_instance_on_executor.value()));
 		}
 	}
 
@@ -208,42 +191,34 @@ signal_flow::OutputData run(
 	execution_graph.wait_for_all();
 	std::chrono::nanoseconds execution_duration(timer.get_ns());
 
-	signal_flow::ExecutionTimeInfo execution_time_info;
-	execution_time_info.execution_duration = execution_duration;
-	if (output_activation_maps.execution_time_info) {
-		output_activation_maps.execution_time_info->merge(execution_time_info);
-	} else {
-		output_activation_maps.execution_time_info = execution_time_info;
+	for (auto& result : results) {
+		network::abstract::ExecutorGlobal executor_global;
+		executor_global.execution_duration = execution_duration;
+		result.set_executor(executor_global);
 	}
-	if (!output_activation_maps.execution_health_info) {
-		output_activation_maps.execution_health_info = signal_flow::ExecutionHealthInfo();
-	}
-
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
-	LOG4CXX_INFO(
-	    logger,
-	    "run(): Executed graph in "
-	        << hate::to_string(output_activation_maps.execution_time_info->execution_duration)
-	        << ".");
-	for (auto const& [connection_on_executor, duration_per_chip] :
-	     output_activation_maps.execution_time_info->execution_duration_per_hardware) {
-		for (auto const& [chip_on_connection, duration] : duration_per_chip) {
+	LOG4CXX_INFO(logger, "run(): Executed graph in " << hate::to_string(execution_duration) << ".");
+	for (auto const& [execution_instance_on_executor, execution_instance] :
+	     results[0].execution_instances) {
+		auto const& execution_instance_global =
+		    dynamic_cast<network::abstract::ExecutionInstanceGlobal const&>(execution_instance);
+		for (auto const& [chip_on_connection, duration] :
+		     execution_instance_global.device_usage_duration) {
 			LOG4CXX_INFO(
-			    logger, "run(): Chip at "
-			                << connection_on_executor << ", " << chip_on_connection << " spent "
-			                << hate::to_string(duration) << " in execution, which is "
+			    logger, "run(): Chip at ("
+			                << execution_instance_on_executor << ", " << chip_on_connection
+			                << ") spent " << hate::to_string(duration) << " in execution, which is "
 			                << (static_cast<double>(duration.count()) /
-			                    static_cast<double>(output_activation_maps.execution_time_info
-			                                            ->execution_duration.count()) *
-			                    100.)
+			                    static_cast<double>(execution_duration.count()) * 100.)
 			                << " % of total graph execution time.");
 		}
-	}
-	if (output_activation_maps.execution_health_info) {
-		LOG4CXX_TRACE(logger, "run(): " << *(output_activation_maps.execution_health_info) << ".");
+		if (execution_instance_global.execution_health_info) {
+			LOG4CXX_TRACE(
+			    logger, "run(): " << *execution_instance_global.execution_health_info << ".");
+		}
 	}
 
-	return output_activation_maps;
+	return results;
 }
 
 } // namespace grenade::vx::execution

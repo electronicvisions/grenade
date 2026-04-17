@@ -29,7 +29,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE Calibration
 	 * executor reference.
 	 */
 	virtual void GENPYBIND(hidden) operator()(
-	    grenade::common::LinkedTopology& mapped_topology,
+	    grenade::common::LinkedTopology& topology,
 	    grenade::vx::execution::JITGraphExecutor& executor) const = 0;
 };
 

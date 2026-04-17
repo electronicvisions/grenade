@@ -9,6 +9,7 @@ namespace grenade::vx::signal_flow::vertex::transformation {
 template <typename Archive>
 void Concatenation::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<Function>(this));
 	ar(m_type);
 	ar(m_sizes);
 }

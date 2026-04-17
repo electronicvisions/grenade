@@ -1,5 +1,6 @@
 #include "grenade/vx/network/routing/greedy_router.h"
 
+#include "grenade/common/partitioned_vertex.h"
 #include "grenade/vx/network/build_connection_routing.h"
 #include "grenade/vx/network/routing/greedy/routing_builder.h"
 #include "hate/timer.h"
@@ -39,23 +40,37 @@ GreedyRouter::GreedyRouter(Options const& options) : m_impl(std::make_unique<Imp
 
 GreedyRouter::~GreedyRouter() {}
 
-RoutingResult GreedyRouter::operator()(std::shared_ptr<Network> const& network)
+RoutingResult GreedyRouter::operator()(grenade::common::LinkedTopology const& topology)
 {
 	if (!m_impl) {
 		throw std::logic_error("Unexpected access to moved-from object.");
 	}
 
-	if (!network) {
-		throw std::runtime_error("Routing only possible for non-null network.");
+	std::map<
+	    grenade::common::ExecutionInstanceOnExecutor,
+	    std::vector<grenade::common::VertexOnTopology>>
+	    partitioned_vertices_per_execution_instance;
+
+	for (auto const& vertex_descriptor : topology.get_reference().vertices()) {
+		auto const& partitioned_vertex = dynamic_cast<grenade::common::PartitionedVertex const&>(
+		    topology.get_reference().get(vertex_descriptor));
+		if (partitioned_vertex.get_time_domain()) {
+			partitioned_vertices_per_execution_instance
+			    [partitioned_vertex.get_execution_instance_on_executor().value()]
+			        .push_back(vertex_descriptor);
+		}
 	}
 
 	hate::Timer timer;
 	RoutingResult result;
-	for (auto const& [id, execution_instance] : network->execution_instances) {
-		auto const connection_routing_result = build_connection_routing(execution_instance);
+	for (auto const& [id, partitioned_vertex_descriptors] :
+	     partitioned_vertices_per_execution_instance) {
+		auto const connection_routing_result =
+		    build_connection_routing(topology, partitioned_vertex_descriptors);
 		result.execution_instances.emplace(
-		    id,
-		    m_impl->m_builder.route(id, *network, connection_routing_result, m_impl->m_options));
+		    id, m_impl->m_builder.route(
+		            topology, partitioned_vertex_descriptors, connection_routing_result,
+		            m_impl->m_options));
 	}
 	result.timing_statistics.routing += std::chrono::microseconds(timer.get_us());
 	return result;

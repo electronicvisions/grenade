@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
 
-#include "grenade/vx/signal_flow/graph.h"
+#include "grenade/common/topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/signal_flow/types.h"
 
 namespace cereal {
@@ -29,7 +30,7 @@ public:
 	Addition() = default;
 
 	/**
-	 * Create single Addition compute graph wrapper.
+	 * Create single Addition compute topology wrapper.
 	 * @param other Value to add to given data.
 	 */
 	Addition(std::vector<signal_flow::Int8> const& other) SYMBOL_VISIBLE;
@@ -37,7 +38,6 @@ public:
 	/**
 	 * Run given operation.
 	 * @param inputs Input values to use
-	 * @param config Static chip configuration to be used
 	 * @param executor Executor backend to use
 	 * @return Resulting values
 	 */
@@ -50,10 +50,8 @@ public:
 	size_t output_size() const SYMBOL_VISIBLE;
 
 private:
-	signal_flow::Graph m_graph{};
-	signal_flow::Graph::vertex_descriptor m_input_vertex{};
-	signal_flow::Graph::vertex_descriptor m_other_vertex{};
-	signal_flow::Graph::vertex_descriptor m_output_vertex{};
+	std::shared_ptr<grenade::common::Topology> m_topology{};
+	grenade::common::VertexOnTopology m_vertex{};
 	std::vector<signal_flow::Int8> m_other{};
 
 	friend struct cereal::access;

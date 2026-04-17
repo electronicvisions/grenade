@@ -8,6 +8,7 @@ namespace grenade::vx::signal_flow::vertex::transformation {
 template <typename Archive>
 void ConvertingReLU::serialize(Archive& ar, std::uint32_t const)
 {
+	ar(cereal::base_class<Function>(this));
 	ar(m_size);
 	ar(m_shift);
 }

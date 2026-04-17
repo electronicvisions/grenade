@@ -4,14 +4,18 @@
 #include <set>
 #include <vector>
 
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/execution_instance_on_executor.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/linked_topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/detail/execution_instance_node.h"
 #include "grenade/vx/execution/detail/execution_instance_snippet_data.h"
 #include "grenade/vx/execution/detail/generator/neuron_reset_mask.h"
 #include "grenade/vx/execution/detail/generator/ppu.h"
-#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "haldls/vx/v3/ppu.h"
 #include "haldls/vx/v3/synapse_driver.h"
@@ -38,18 +42,21 @@ class ExecutionInstanceChipSnippetRealtimeExecutor
 public:
 	/**
 	 * Construct builder.
-	 * @param graph Graph to use for locality and property lookup
-	 * @param execution_instance Local execution instance to build for
+	 * @param topology Topology to use
+	 * @param execution_instance_vertex_descriptor Vertex descriptor of execution instance to visit
+	 * @param input_data Input data to visit
 	 * @param data Data accessor
+	 * @param post_vertices Storage for collecting vertices to visit again after hardware execution
 	 * @param ppu_symbols PPU symbols to use for PPU control
 	 * @param timed_recording_index_offset Index offset of each plasticity rule for this snippet,
 	 * which the builder generates
 	 */
 	ExecutionInstanceChipSnippetRealtimeExecutor(
-	    signal_flow::Graph const& graph,
-	    grenade::common::ExecutionInstanceID const& execution_instance,
+	    grenade::common::LinkedTopology const& topology,
+	    grenade::common::VertexOnTopology const& execution_instance_vertex_descriptor,
+	    grenade::common::InputData const& input_data,
 	    ExecutionInstanceSnippetData& data,
-	    std::vector<signal_flow::Graph::vertex_descriptor>& post_vertices,
+	    std::vector<grenade::common::VertexOnTopology>& post_vertices,
 	    std::optional<lola::vx::v3::PPUElfFile::symbols_type> const& ppu_symbols,
 	    std::map<signal_flow::vertex::PlasticityRule::ID, size_t> const&
 	        timed_recording_index_offset) SYMBOL_VISIBLE;
@@ -122,23 +129,24 @@ public:
 	 * @param data Data associated with vertex
 	 */
 	template <typename Vertex>
-	void process(signal_flow::Graph::vertex_descriptor const vertex, Vertex const& data);
+	void process(grenade::common::VertexOnTopology const vertex, Vertex const& data);
 
 private:
-	signal_flow::Graph const& m_graph;
-	grenade::common::ExecutionInstanceID m_execution_instance;
+	grenade::common::LinkedTopology const& m_topology;
+	grenade::common::VertexOnTopology m_execution_instance_vertex_descriptor;
 	common::ChipOnConnection m_chip_on_connection;
 
+	grenade::common::InputData const& m_input_data;
 	ExecutionInstanceSnippetData& m_data;
 
 	std::optional<lola::vx::v3::PPUElfFile::symbols_type> m_ppu_symbols;
 
-	std::vector<signal_flow::Graph::vertex_descriptor>& m_post_vertices;
+	std::vector<grenade::common::VertexOnTopology>& m_post_vertices;
 
 	std::vector<stadls::vx::v3::PlaybackProgram> m_chunked_program;
 
-	std::optional<signal_flow::Graph::vertex_descriptor> m_event_input_vertex;
-	std::optional<signal_flow::Graph::vertex_descriptor> m_event_output_vertex;
+	std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> m_event_input;
+	std::optional<grenade::common::VertexOnTopology> m_event_output_vertex;
 
 	bool m_postprocessing;
 
@@ -176,9 +184,8 @@ private:
 		std::vector<ticket_ppu_type> m_ppu_timer_event_drop_count;
 		ticket_ppu_type m_ppu_scheduler_finished;
 		ticket_ppu_type m_ppu_mailbox;
-		std::
-		    map<signal_flow::Graph::vertex_descriptor, std::vector<stadls::vx::v3::ContainerTicket>>
-		        m_plasticity_rule_recorded_scratchpad_memory;
+		std::map<grenade::common::VertexOnTopology, std::vector<stadls::vx::v3::ContainerTicket>>
+		    m_plasticity_rule_recorded_scratchpad_memory;
 
 		std::vector<generator::PPUCommand::Result> ppu_command_results;
 	};
@@ -187,7 +194,7 @@ private:
 
 	generator::NeuronResetMask m_neuron_resets;
 	// Optional vertex descriptor of MADC readout if the execution instance contains such
-	std::optional<signal_flow::Graph::vertex_descriptor> m_madc_readout_vertex;
+	std::optional<grenade::common::VertexOnTopology> m_madc_readout_vertex;
 
 	std::optional<signal_flow::vertex::CADCMembraneReadoutView::Mode> m_cadc_readout_mode;
 

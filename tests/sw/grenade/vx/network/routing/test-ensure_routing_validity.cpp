@@ -1,18 +1,38 @@
 #include <gtest/gtest.h>
 
+#include "grenade/common/connection_on_executor.h"
+#include "grenade/common/multi_index.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/cell_on_population.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/receptor_on_compartment.h"
+#include "grenade/common/population.h"
+#include "grenade/common/projection.h"
+#include "grenade/common/projection_connector/sequence.h"
+#include "grenade/common/receptor_on_compartment.h"
+#include "grenade/common/time_domain_on_topology.h"
+#include "grenade/common/vertex_on_topology.h"
+#include "grenade/vx/execution/backend/initialized_connection.h"
+#include "grenade/vx/execution/backend/stateful_connection.h"
+#include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/network/abstract/calibration/fixture.h"
+#include "grenade/vx/network/abstract/mapper/greedy.h"
+#include "grenade/vx/network/abstract/population_cell/external_source.h"
+#include "grenade/vx/network/abstract/population_cell/poisson_source.h"
+#include "grenade/vx/network/abstract/population_cell/uncalibrated.h"
+#include "grenade/vx/network/abstract/projection_synapse/uncalibrated.h"
+#include "grenade/vx/network/abstract/recorder/spike.h"
 #include "grenade/vx/network/exception.h"
-#include "grenade/vx/network/network_builder.h"
-#include "grenade/vx/network/network_graph_builder.h"
-#include "grenade/vx/network/routing/greedy_router.h"
 #include "hate/indent.h"
 #include "hate/join.h"
 #include "hate/math.h"
+#include "hxcomm/vx/zeromockconnection.h"
+#include <iterator>
 #include <memory>
 #include <random>
 #include <ranges>
 
 using namespace grenade::vx::network;
-using namespace grenade::vx::network::routing;
 using namespace halco::hicann_dls::vx::v3;
 using namespace halco::common;
 using namespace haldls::vx::v3;
@@ -20,7 +40,7 @@ using namespace haldls::vx::v3;
 
 struct RandomNetworkGenerator
 {
-	RandomNetworkGenerator(uintmax_t seed) : m_seed(seed), m_rng(seed) {}
+	RandomNetworkGenerator(uintmax_t seed) : m_rng(seed) {}
 
 	enum class PopulationType
 	{
@@ -29,9 +49,9 @@ struct RandomNetworkGenerator
 		background
 	};
 
-	std::shared_ptr<Network> operator()()
+	std::shared_ptr<grenade::common::Topology> operator()()
 	{
-		NetworkBuilder builder;
+		auto topology = std::make_shared<grenade::common::Topology>();
 
 		auto const external_populations = get_external_populations();
 		auto const internal_populations = get_internal_populations();
@@ -49,24 +69,54 @@ struct RandomNetworkGenerator
 		}
 		std::shuffle(population_add_order.begin(), population_add_order.end(), m_rng);
 
-		std::map<size_t, PopulationOnExecutionInstance> external_population_descriptors;
-		std::map<size_t, PopulationOnExecutionInstance> internal_population_descriptors;
-		std::map<size_t, PopulationOnExecutionInstance> background_population_descriptors;
+		std::map<size_t, grenade::common::VertexOnTopology> external_population_descriptors;
+		std::map<size_t, grenade::common::VertexOnTopology> internal_population_descriptors;
+		std::map<size_t, grenade::common::VertexOnTopology> background_population_descriptors;
 		for (auto const& [type, index] : population_add_order) {
 			switch (type) {
 				case PopulationType::external: {
 					external_population_descriptors[index] =
-					    builder.add(external_populations.at(index));
+					    topology->add_vertex(external_populations.at(index));
+					auto const recorder = get_recorder(external_populations.at(index));
+					if (!recorder.get_shape().size()) {
+						break;
+					}
+					auto const recorder_descriptor = topology->add_vertex(recorder);
+					topology->add_edge(
+					    external_population_descriptors.at(index), recorder_descriptor,
+					    grenade::common::Edge(
+					        recorder.get_input_ports().at(0).get_channels(),
+					        recorder.get_input_ports().at(0).get_channels()));
 					break;
 				}
 				case PopulationType::internal: {
 					internal_population_descriptors[index] =
-					    builder.add(internal_populations.at(index));
+					    topology->add_vertex(internal_populations.at(index));
+					auto const recorder = get_recorder(internal_populations.at(index));
+					if (!recorder.get_shape().size()) {
+						break;
+					}
+					auto const recorder_descriptor = topology->add_vertex(recorder);
+					topology->add_edge(
+					    internal_population_descriptors.at(index), recorder_descriptor,
+					    grenade::common::Edge(
+					        recorder.get_input_ports().at(0).get_channels(),
+					        recorder.get_input_ports().at(0).get_channels()));
 					break;
 				}
 				case PopulationType::background: {
 					background_population_descriptors[index] =
-					    builder.add(background_populations.at(index));
+					    topology->add_vertex(background_populations.at(index));
+					auto const recorder = get_recorder(background_populations.at(index));
+					if (!recorder.get_shape().size()) {
+						break;
+					}
+					auto const recorder_descriptor = topology->add_vertex(recorder);
+					topology->add_edge(
+					    background_population_descriptors.at(index), recorder_descriptor,
+					    grenade::common::Edge(
+					        recorder.get_input_ports().at(0).get_channels(),
+					        recorder.get_input_ports().at(0).get_channels()));
 					break;
 				}
 				default: {
@@ -79,11 +129,36 @@ struct RandomNetworkGenerator
 		    external_population_descriptors, internal_population_descriptors,
 		    background_population_descriptors, external_populations, internal_populations,
 		    background_populations);
-		for (auto const& proj : projections) {
-			builder.add(proj);
+		for (auto const& [proj, source, target, receptor] : projections) {
+			// don't add empty projections
+			if (proj.size() == 0) {
+				continue;
+			}
+			auto const proj_descriptor = topology->add_vertex(proj);
+
+			auto const target_pop_section =
+			    topology->get(target).get_input_ports().at(0).get_channels().subset_restriction(
+			        *topology->get(target)
+			             .get_input_ports()
+			             .at(0)
+			             .get_channels()
+			             .projection({0, 1})
+			             ->cartesian_product(grenade::common::ListMultiIndexSequence(
+			                 {grenade::common::MultiIndex({receptor.value()})},
+			                 {grenade::common::ReceptorOnCompartmentDimensionUnit()})));
+
+			topology->add_edge(
+			    source, proj_descriptor,
+			    grenade::common::Edge(
+			        topology->get(source).get_output_ports().at(0).get_channels(),
+			        proj.get_input_ports().at(0).get_channels()));
+			topology->add_edge(
+			    proj_descriptor, target,
+			    grenade::common::Edge(
+			        proj.get_output_ports().at(0).get_channels(), *target_pop_section));
 		}
 
-		return builder.done();
+		return topology;
 	}
 
 	size_t get_num_external_sources()
@@ -112,30 +187,38 @@ struct RandomNetworkGenerator
 		return result;
 	}
 
-	std::vector<ExternalSourcePopulation> get_external_populations()
+	std::vector<grenade::common::Population> get_external_populations()
 	{
 		auto const num_sources = get_num_external_sources();
 		auto const num_populations = get_num_external_populations(num_sources);
 		assert(num_sources >= num_populations);
-		std::vector<ExternalSourcePopulation> populations;
+		std::vector<grenade::common::Population> populations;
 		size_t num_unassigned_sources = num_sources;
 		for (size_t pop = 0; pop < num_populations - 1; ++pop) {
 			std::uniform_int_distribution<size_t> d(
 			    0, num_unassigned_sources - (num_populations - pop));
 			auto const size = d(m_rng) + 1;
 			num_unassigned_sources -= size;
-			ExternalSourcePopulation external_source_population;
-			external_source_population.neurons.resize(size);
+			grenade::common::Population external_source_population(
+			    abstract::ExternalSourceNeuron(),
+			    grenade::common::CuboidMultiIndexSequence(
+			        {size}, {grenade::common::CellOnPopulationDimensionUnit()}),
+			    abstract::ExternalSourceNeuron::ParameterSpace(size),
+			    grenade::common::TimeDomainOnTopology());
 			populations.push_back(external_source_population);
 		}
-		ExternalSourcePopulation external_source_population;
-		external_source_population.neurons.resize(num_unassigned_sources);
+		grenade::common::Population external_source_population(
+		    abstract::ExternalSourceNeuron(),
+		    grenade::common::CuboidMultiIndexSequence(
+		        {num_unassigned_sources}, {grenade::common::CellOnPopulationDimensionUnit()}),
+		    abstract::ExternalSourceNeuron::ParameterSpace(num_unassigned_sources),
+		    grenade::common::TimeDomainOnTopology());
 		populations.push_back(external_source_population);
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		assert(
 		    std::accumulate(
 		        populations.begin(), populations.end(), static_cast<size_t>(0),
-		        [](size_t const p, auto const& q) { return p + q.neurons.size(); }) == num_sources);
+		        [](size_t const p, auto const& q) { return p + q.size(); }) == num_sources);
 		return populations;
 	}
 
@@ -162,7 +245,7 @@ struct RandomNetworkGenerator
 		return result;
 	}
 
-	std::vector<Population> get_internal_populations()
+	std::vector<grenade::common::Population> get_internal_populations()
 	{
 		// generate number of neurons and populations
 		auto const num_sources = get_num_internal_sources();
@@ -183,176 +266,102 @@ struct RandomNetworkGenerator
 		}
 		std::shuffle(neurons.begin(), neurons.end(), m_rng);
 
-		std::vector<Population> populations;
+		std::vector<grenade::common::Population> populations;
 		size_t num_unassigned_sources = num_sources;
 		for (size_t pop = 0; pop < num_populations - 1; ++pop) {
 			std::uniform_int_distribution<size_t> d(
 			    0, num_unassigned_sources - (num_populations - pop));
 			auto const size = d(m_rng) + 1;
-			std::vector<AtomicNeuronOnDLS> local_neurons;
-			std::vector<bool> local_enable_record_spikes;
-			Population population;
-			for (size_t i = 0; i < size; ++i) {
-				auto const index = num_sources - num_unassigned_sources + i;
-				population.neurons.push_back(Population::Neuron(
-				    LogicalNeuronOnDLS(
-				        LogicalNeuronCompartments(
-				            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-				        neurons.at(index)),
-				    Population::Neuron::Compartments{
-				        {CompartmentOnLogicalNeuron(),
-				         Population::Neuron::Compartment{
-				             Population::Neuron::Compartment::SpikeMaster(
-				                 0, enable_record_spikes.at(index)),
-				             {{Receptor(Receptor::ID(), Receptor::Type::excitatory),
-				               Receptor(Receptor::ID(), Receptor::Type::inhibitory)}}}}}));
-			}
+			grenade::common::Population population{
+			    abstract::UncalibratedNeuron{
+			        abstract::UncalibratedNeuron::Compartments{
+			            {grenade::common::CompartmentOnNeuron(),
+			             abstract::UncalibratedNeuron::Compartment{
+			                 abstract::UncalibratedNeuron::Compartment::SpikeMaster(0),
+			                 {{{grenade::common::ReceptorOnCompartment(0),
+			                    Receptor::Type::excitatory},
+			                   {grenade::common::ReceptorOnCompartment(1),
+			                    Receptor::Type::inhibitory}}}}}},
+			        LogicalNeuronCompartments(
+			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+			    grenade::common::CuboidMultiIndexSequence(
+			        {size}, grenade::common::MultiIndex({0}),
+			        {grenade::common::CellOnPopulationDimensionUnit()}),
+			    abstract::UncalibratedNeuron::ParameterSpace(
+			        size, {{grenade::common::CompartmentOnNeuron(), 1}}),
+			    grenade::common::TimeDomainOnTopology()};
 			populations.push_back(population);
 			num_unassigned_sources -= size;
 		}
-		Population population;
-		for (size_t i = 0; i < num_unassigned_sources; ++i) {
-			auto const index = num_sources - num_unassigned_sources + i;
-			population.neurons.push_back(Population::Neuron(
-			    LogicalNeuronOnDLS(
+		if (num_unassigned_sources > 0) {
+			grenade::common::Population population{
+			    abstract::UncalibratedNeuron{
+			        abstract::UncalibratedNeuron::Compartments{
+			            {grenade::common::CompartmentOnNeuron(),
+			             abstract::UncalibratedNeuron::Compartment{
+			                 abstract::UncalibratedNeuron::Compartment::SpikeMaster(0),
+			                 {{{grenade::common::ReceptorOnCompartment(0),
+			                    Receptor::Type::excitatory},
+			                   {grenade::common::ReceptorOnCompartment(1),
+			                    Receptor::Type::inhibitory}}}}}},
 			        LogicalNeuronCompartments(
-			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-			        neurons.at(index)),
-			    Population::Neuron::Compartments{
-			        {CompartmentOnLogicalNeuron(),
-			         Population::Neuron::Compartment{
-			             Population::Neuron::Compartment::SpikeMaster(
-			                 0, enable_record_spikes.at(index)),
-			             {{Receptor(Receptor::ID(), Receptor::Type::excitatory),
-			               Receptor(Receptor::ID(), Receptor::Type::inhibitory)}}}}}));
+			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+			    grenade::common::CuboidMultiIndexSequence(
+			        {num_unassigned_sources}, grenade::common::MultiIndex({0}),
+			        {grenade::common::CellOnPopulationDimensionUnit()}),
+			    abstract::UncalibratedNeuron::ParameterSpace(
+			        num_unassigned_sources, {{grenade::common::CompartmentOnNeuron(), 1}}),
+			    grenade::common::TimeDomainOnTopology()};
+			populations.push_back(population);
 		}
-		populations.push_back(population);
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		assert(
 		    std::accumulate(
 		        populations.begin(), populations.end(), static_cast<size_t>(0),
-		        [](size_t const p, auto const& q) { return p + q.neurons.size(); }) == num_sources);
+		        [](size_t const p, auto const& q) { return p + q.size(); }) == num_sources);
 		return populations;
 	}
 
 	size_t get_num_background_populations()
 	{
-		std::uniform_int_distribution<size_t> d(0, BackgroundSpikeSourceOnDLS::size - 1);
+		std::uniform_int_distribution<size_t> d(
+		    0,
+		    (BackgroundSpikeSourceOnDLS::size / 2 /* we always place top and bottom currently */) -
+		        1);
 		return d(m_rng);
 	}
 
-	std::vector<size_t> get_num_background_sources(size_t const num_populations)
+	std::vector<grenade::common::Population> get_background_populations()
 	{
-		size_t num_unassigned_sources = BackgroundSpikeSourceOnDLS::size;
-		std::vector<size_t> sizes;
-		if (num_populations == 0) {
-			return sizes;
-		}
-		for (size_t pop = 0; pop < num_populations - 1; ++pop) {
-			std::uniform_int_distribution<size_t> d(
-			    static_cast<size_t>(0),
-			    std::min(static_cast<size_t>(1), num_unassigned_sources - (num_populations - pop)));
-			auto const size = d(m_rng) + 1;
-			sizes.push_back(size);
-			num_unassigned_sources -= size;
-		}
-		assert(num_unassigned_sources >= 1);
-		std::uniform_int_distribution<size_t> d(
-		    static_cast<size_t>(1), std::min(static_cast<size_t>(2), num_unassigned_sources));
-		sizes.push_back(d(m_rng));
-		std::sort(sizes.begin(), sizes.end(), std::greater{});
-		assert(
-		    std::accumulate(sizes.begin(), sizes.end(), static_cast<size_t>(0)) <=
-		    BackgroundSpikeSourceOnDLS::size);
-		return sizes;
-	}
-
-	std::vector<std::map<HemisphereOnDLS, PADIBusOnPADIBusBlock>> get_background_source_locations()
-	{
-		auto const num_populations = get_num_background_populations();
-		auto const num_sources = get_num_background_sources(num_populations);
-		std::vector<std::map<HemisphereOnDLS, PADIBusOnPADIBusBlock>> locations;
-
-		std::map<HemisphereOnDLS, std::vector<PADIBusOnPADIBusBlock>> all_locations;
-		std::map<HemisphereOnDLS, size_t> used_locations;
-		for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
-			for (auto const padi_bus : iter_all<PADIBusOnPADIBusBlock>()) {
-				all_locations[hemisphere].push_back(padi_bus);
-			}
-			std::shuffle(
-			    all_locations.at(hemisphere).begin(), all_locations.at(hemisphere).end(), m_rng);
-			used_locations[hemisphere] = 0;
-		}
-
-		std::bernoulli_distribution hemisphere_distribution;
-		for (auto const& num : num_sources) {
-			if (num == 2) {
-				std::map<HemisphereOnDLS, PADIBusOnPADIBusBlock> local;
-				for (auto const hemisphere : iter_all<HemisphereOnDLS>()) {
-					local[hemisphere] =
-					    all_locations.at(hemisphere).at(used_locations.at(hemisphere));
-					used_locations.at(hemisphere)++;
-				}
-				locations.push_back(local);
-			} else {
-				assert(num == 1);
-				HemisphereOnDLS hemisphere(hemisphere_distribution(m_rng));
-				while (used_locations.at(hemisphere) == PADIBusOnPADIBusBlock::size) {
-					hemisphere = HemisphereOnDLS(hemisphere_distribution(m_rng));
-				}
-				std::map<HemisphereOnDLS, PADIBusOnPADIBusBlock> local;
-				local[hemisphere] = all_locations.at(hemisphere).at(used_locations.at(hemisphere));
-				used_locations.at(hemisphere)++;
-				locations.push_back(local);
-			}
-		}
-		return locations;
-	}
-
-	std::vector<BackgroundSourcePopulation> get_background_populations()
-	{
-		auto const locations = get_background_source_locations();
-
-		std::bernoulli_distribution enable_random_distribution(
-		    std::uniform_real_distribution<double>{}(m_rng));
-		auto const get_config = [&enable_random_distribution, this]() {
-			BackgroundSourcePopulation::Config config;
-			config.enable_random = enable_random_distribution(m_rng);
-			if (config.enable_random) {
-				std::uniform_int_distribution<BackgroundSpikeSource::Rate::value_type> d_rate(
-				    BackgroundSpikeSource::Rate::min, BackgroundSpikeSource::Rate::max);
-				config.rate = BackgroundSpikeSource::Rate(d_rate(m_rng));
-				std::uniform_int_distribution<BackgroundSpikeSource::Seed::value_type> d_seed(
-				    BackgroundSpikeSource::Seed::min, BackgroundSpikeSource::Seed::max);
-				config.seed = BackgroundSpikeSource::Seed(d_seed(m_rng));
-			}
-			std::uniform_int_distribution<BackgroundSpikeSource::Period::value_type> d_period(
-			    BackgroundSpikeSource::Period::min, BackgroundSpikeSource::Period::max);
-			config.period = BackgroundSpikeSource::Period(d_period(m_rng));
-			return config;
-		};
-
-		std::vector<BackgroundSourcePopulation> populations;
-		for (auto const& location : locations) {
-			auto const config = get_config();
-			size_t size = 1;
-			if (config.enable_random) {
-				std::uniform_int_distribution<size_t> d_size(0, 8);
-				size = hate::math::pow(2, d_size(m_rng));
-			}
-			std::vector<BackgroundSourcePopulation::Neuron> neurons(size, false);
-			populations.push_back(BackgroundSourcePopulation(std::move(neurons), location, config));
+		std::vector<grenade::common::Population> populations;
+		for (size_t i = 0; i < get_num_background_populations(); ++i) {
+			std::uniform_int_distribution<size_t> d_size(0, 8);
+			size_t const size = hate::math::pow(2, d_size(m_rng));
+			grenade::common::Population poisson_source_population(
+			    abstract::PoissonSourceNeuron(),
+			    grenade::common::CuboidMultiIndexSequence(
+			        {size}, {grenade::common::CellOnPopulationDimensionUnit()}),
+			    abstract::PoissonSourceNeuron::ParameterSpace(size),
+			    grenade::common::TimeDomainOnTopology());
+			populations.push_back(poisson_source_population);
 		}
 		std::shuffle(populations.begin(), populations.end(), m_rng);
 		return populations;
 	}
 
 	std::vector<size_t> get_max_num_projections(
-	    std::vector<Population> const& populations_post) const
+	    std::vector<grenade::common::Population> const& populations_post) const
 	{
 		std::vector<size_t> num;
 		for (auto const& pop : populations_post) {
-			num.push_back(pop.neurons.size() * SynapseRowOnSynram::size);
+			num.push_back(
+			    pop.size() *
+			    LogicalNeuronOnDLS(
+			        dynamic_cast<abstract::UncalibratedNeuron const&>(pop.get_cell()).shape,
+			        AtomicNeuronOnDLS())
+			        .get_atomic_neurons()
+			        .size() *
+			    SynapseRowOnSynram::size);
 		}
 		return num;
 	}
@@ -395,13 +404,19 @@ struct RandomNetworkGenerator
 		return populations_pre;
 	}
 
-	std::vector<Projection> get_projections(
-	    std::map<size_t, PopulationOnExecutionInstance> const& external_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& internal_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& background_population_descriptors,
-	    std::vector<ExternalSourcePopulation> const& external_populations,
-	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSourcePopulation> const& background_populations)
+	std::vector<std::tuple<
+	    grenade::common::Projection,
+	    grenade::common::VertexOnTopology,
+	    grenade::common::VertexOnTopology,
+	    grenade::common::ReceptorOnCompartment>>
+	get_projections(
+	    std::map<size_t, grenade::common::VertexOnTopology> const& external_population_descriptors,
+	    std::map<size_t, grenade::common::VertexOnTopology> const& internal_population_descriptors,
+	    std::map<size_t, grenade::common::VertexOnTopology> const&
+	        background_population_descriptors,
+	    std::vector<grenade::common::Population> const& external_populations,
+	    std::vector<grenade::common::Population> const& internal_populations,
+	    std::vector<grenade::common::Population> const& background_populations)
 	{
 		auto const max_num_projections = get_max_num_projections(internal_populations);
 
@@ -425,15 +440,27 @@ struct RandomNetworkGenerator
 		std::vector<std::vector<std::pair<PopulationType, size_t>>> populations_pre;
 		for (size_t i = 0; i < internal_populations.size(); ++i) {
 			populations_pre.push_back(get_projection_partners(
-			    num_projections.at(i), internal_populations.at(i).neurons.size(),
-			    all_populations_pre));
+			    num_projections.at(i), internal_populations.at(i).size(), all_populations_pre));
 		}
 
-		std::vector<Projection> projections;
+		std::vector<std::tuple<
+		    grenade::common::Projection, grenade::common::VertexOnTopology,
+		    grenade::common::VertexOnTopology, grenade::common::ReceptorOnCompartment>>
+		    projections;
+
+		auto const num_connections = get_num_connections(
+		    std::accumulate(max_num_projections.begin(), max_num_projections.end(), 0));
+		double const num_connections_per_projection =
+		    static_cast<double>(num_connections) / static_cast<double>(projections.size());
+
+		auto const population_sizes = get_population_sizes(
+		    external_population_descriptors, internal_population_descriptors,
+		    background_population_descriptors, external_populations, internal_populations,
+		    background_populations);
 
 		for (size_t i = 0; i < internal_populations.size(); ++i) {
 			for (auto const& [type, index] : populations_pre.at(i)) {
-				PopulationOnExecutionInstance population_pre;
+				grenade::common::VertexOnTopology population_pre;
 				switch (type) {
 					case PopulationType::external: {
 						population_pre = external_population_descriptors.at(index);
@@ -451,95 +478,76 @@ struct RandomNetworkGenerator
 						throw std::logic_error("PopulationType not supported.");
 					}
 				}
-				projections.push_back(Projection(
-				    Receptor(Receptor::ID(), Receptor::Type(std::bernoulli_distribution{}(m_rng))),
-				    Projection::Connections(), population_pre,
-				    internal_population_descriptors.at(i)));
+				auto const population_post = internal_population_descriptors.at(i);
+				auto const max_num_connections =
+				    population_sizes.at(population_pre) * population_sizes.at(population_post);
+				auto const num_connections = std::min(
+				    static_cast<size_t>(std::max(num_connections_per_projection, 1.)),
+				    max_num_connections);
+				std::vector<size_t> locations(num_connections);
+				std::ranges::sample(
+				    std::views::iota(static_cast<size_t>(0), max_num_connections),
+				    locations.begin(), num_connections, m_rng);
+				std::shuffle(locations.begin(), locations.end(), m_rng);
+
+				grenade::common::ReceptorOnCompartment receptor(
+				    std::bernoulli_distribution{}(m_rng));
+
+				std::vector<grenade::common::MultiIndex> connections;
+				for (auto const location : locations) {
+					size_t const index_pre = location / population_sizes.at(population_post);
+					size_t const index_post = location % population_sizes.at(population_post);
+					connections.push_back(grenade::common::MultiIndex({index_pre, index_post}));
+				}
+				projections.push_back(std::tuple{
+				    grenade::common::Projection(
+				        abstract::UncalibratedSynapse(),
+				        abstract::UncalibratedSynapse::ParameterSpace(
+				            std::vector<abstract::UncalibratedSynapse::Weight>(
+				                connections.size(), abstract::UncalibratedSynapse::Weight(63))),
+				        grenade::common::SequenceConnector(
+				            grenade::common::CuboidMultiIndexSequence(
+				                {population_sizes.at(population_pre)}),
+				            grenade::common::CuboidMultiIndexSequence(
+				                {population_sizes.at(population_post)}),
+				            grenade::common::ListMultiIndexSequence(
+				                connections,
+				                grenade::common::ListMultiIndexSequence::DimensionUnits(2))),
+				        grenade::common::TimeDomainOnTopology()),
+				    population_pre, population_post, receptor});
 			}
 		}
 
-		auto ret = add_connections(
-		    std::move(projections), external_population_descriptors,
-		    internal_population_descriptors, background_population_descriptors,
-		    external_populations, internal_populations, background_populations);
-		return ret;
+		return projections;
 	}
 
-	typed_array<bool, HemisphereOnDLS> supports_connection(Population const& /*pre*/) const
+	std::map<grenade::common::VertexOnTopology, size_t> get_population_sizes(
+	    std::map<size_t, grenade::common::VertexOnTopology> const& external_population_descriptors,
+	    std::map<size_t, grenade::common::VertexOnTopology> const& internal_population_descriptors,
+	    std::map<size_t, grenade::common::VertexOnTopology> const&
+	        background_population_descriptors,
+	    std::vector<grenade::common::Population> const& external_populations,
+	    std::vector<grenade::common::Population> const& internal_populations,
+	    std::vector<grenade::common::Population> const& background_populations)
 	{
-		return {true, true};
-	}
-
-	typed_array<bool, HemisphereOnDLS> supports_connection(
-	    ExternalSourcePopulation const& /*pre*/) const
-	{
-		return {true, true};
-	}
-
-	typed_array<bool, HemisphereOnDLS> supports_connection(
-	    BackgroundSourcePopulation const& pre) const
-	{
-		typed_array<bool, HemisphereOnDLS> ret;
-		ret.fill(false);
-		for (auto const& [hemisphere, _] : pre.coordinate) {
-			ret[hemisphere] = true;
-		}
-		return ret;
-	}
-
-	bool supports_connection(
-	    std::map<PopulationOnExecutionInstance, typed_array<bool, HemisphereOnDLS>> const& support,
-	    PopulationOnExecutionInstance const& pre_descriptor,
-	    HemisphereOnDLS const& post_hemisphere)
-	{
-		return support.at(pre_descriptor)[post_hemisphere];
-	}
-
-	std::map<PopulationOnExecutionInstance, typed_array<bool, HemisphereOnDLS>>
-	get_supports_connection(
-	    std::map<size_t, PopulationOnExecutionInstance> const& external_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& internal_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& background_population_descriptors,
-	    std::vector<ExternalSourcePopulation> const& external_populations,
-	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSourcePopulation> const& background_populations)
-	{
-		std::map<PopulationOnExecutionInstance, typed_array<bool, HemisphereOnDLS>> ret;
+		std::map<grenade::common::VertexOnTopology, size_t> population_sizes;
 		for (auto const& [index, descriptor] : external_population_descriptors) {
-			ret[descriptor] = supports_connection(external_populations.at(index));
+			population_sizes[descriptor] = external_populations.at(index).size();
 		}
 		for (auto const& [index, descriptor] : internal_population_descriptors) {
-			ret[descriptor] = supports_connection(internal_populations.at(index));
+			population_sizes[descriptor] = internal_populations.at(index).size();
 		}
 		for (auto const& [index, descriptor] : background_population_descriptors) {
-			ret[descriptor] = supports_connection(background_populations.at(index));
-		}
-		return ret;
-	}
-
-	std::map<PopulationOnExecutionInstance, size_t> get_population_sizes(
-	    std::map<size_t, PopulationOnExecutionInstance> const& external_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& internal_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& background_population_descriptors,
-	    std::vector<ExternalSourcePopulation> const& external_populations,
-	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSourcePopulation> const& background_populations)
-	{
-		std::map<PopulationOnExecutionInstance, size_t> population_sizes;
-		for (auto const& [index, descriptor] : external_population_descriptors) {
-			population_sizes[descriptor] = external_populations.at(index).neurons.size();
-		}
-		for (auto const& [index, descriptor] : internal_population_descriptors) {
-			population_sizes[descriptor] = internal_populations.at(index).neurons.size();
-		}
-		for (auto const& [index, descriptor] : background_population_descriptors) {
-			population_sizes[descriptor] = background_populations.at(index).neurons.size();
+			population_sizes[descriptor] = background_populations.at(index).size();
 		}
 		return population_sizes;
 	}
 
 	size_t get_num_connections(size_t max_num_projections)
 	{
+		if (max_num_projections == 0) {
+			return 0;
+		}
 		// to explore different orders of magnitude, we sample approx. logarithmically
 		std::uniform_int_distribution<size_t> d_exponent(0, hate::math::log2(max_num_projections));
 		auto const exponent = d_exponent(m_rng);
@@ -552,73 +560,31 @@ struct RandomNetworkGenerator
 		return result;
 	}
 
-	std::vector<Projection> add_connections(
-	    std::vector<Projection>&& projections,
-	    std::map<size_t, PopulationOnExecutionInstance> const& external_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& internal_population_descriptors,
-	    std::map<size_t, PopulationOnExecutionInstance> const& background_population_descriptors,
-	    std::vector<ExternalSourcePopulation> const& external_populations,
-	    std::vector<Population> const& internal_populations,
-	    std::vector<BackgroundSourcePopulation> const& background_populations)
+	abstract::SpikeRecorder get_recorder(grenade::common::Population const& population)
 	{
-		if (projections.empty()) {
-			return std::move(projections);
+		if (population.size() == 0) {
+			return abstract::SpikeRecorder(
+			    grenade::common::ListMultiIndexSequence(
+			        {}, population.get_output_ports().at(0).get_channels().get_dimension_units()),
+			    grenade::common::TimeDomainOnTopology());
 		}
-		auto const max_num_projections = get_max_num_projections(internal_populations);
-		auto const num_connections = get_num_connections(
-		    std::accumulate(max_num_projections.begin(), max_num_projections.end(), 0));
-		double const num_connections_per_projection =
-		    static_cast<double>(num_connections) / static_cast<double>(projections.size());
-
-		auto const population_sizes = get_population_sizes(
-		    external_population_descriptors, internal_population_descriptors,
-		    background_population_descriptors, external_populations, internal_populations,
-		    background_populations);
-
-		auto const support = get_supports_connection(
-		    external_population_descriptors, internal_population_descriptors,
-		    background_population_descriptors, external_populations, internal_populations,
-		    background_populations);
-
-		for (auto& projection : projections) {
-			auto const max_num_connections = population_sizes.at(projection.population_pre) *
-			                                 population_sizes.at(projection.population_post);
-			auto const num_connections = std::min(
-			    static_cast<size_t>(std::max(num_connections_per_projection, 1.)),
-			    max_num_connections);
-			auto const index =
-			    std::find_if(
-			        internal_population_descriptors.begin(), internal_population_descriptors.end(),
-			        [projection](auto const& p) { return p.second == projection.population_post; })
-			        ->first;
-			std::vector<size_t> locations(num_connections);
-			std::ranges::sample(
-			    std::views::iota(static_cast<size_t>(0), max_num_connections), locations.begin(),
-			    num_connections, m_rng);
-			std::shuffle(locations.begin(), locations.end(), m_rng);
-
-			for (auto const location : locations) {
-				size_t const index_pre = location / population_sizes.at(projection.population_post);
-				size_t const index_post =
-				    location % population_sizes.at(projection.population_post);
-				if (!support.at(projection.population_pre)[internal_populations.at(index)
-				                                               .neurons.at(index_post)
-				                                               .coordinate.get_atomic_neurons()
-				                                               .at(0)
-				                                               .toNeuronRowOnDLS()
-				                                               .toHemisphereOnDLS()]) {
-					continue;
-				}
-				projection.connections.push_back(Projection::Connection(
-				    {index_pre, CompartmentOnLogicalNeuron()},
-				    {index_post, CompartmentOnLogicalNeuron()}, Projection::Connection::Weight()));
-			}
-		}
-		return std::move(projections);
+		auto const population_elements =
+		    population.get_output_ports().at(0).get_channels().get_elements();
+		std::vector<grenade::common::MultiIndex> recorder_elements;
+		std::sample(
+		    population_elements.begin(), population_elements.end(),
+		    std::back_inserter(recorder_elements),
+		    std::uniform_int_distribution{
+		        static_cast<size_t>(0), population_elements.size() - 1}(m_rng),
+		    m_rng);
+		return abstract::SpikeRecorder(
+		    grenade::common::ListMultiIndexSequence(
+		        std::move(recorder_elements),
+		        population.get_output_ports().at(0).get_channels().get_dimension_units()),
+		    grenade::common::TimeDomainOnTopology());
 	}
 
 private:
-	uintmax_t m_seed;
 	std::mt19937 m_rng;
 };
 
@@ -626,18 +592,31 @@ private:
 /**
  * Tests routing with GreedyRouter.
  */
-void test_greedy_router(std::shared_ptr<Network> const& network)
+void test_greedy_router(std::shared_ptr<grenade::common::Topology> const& network)
 {
 	try {
 		// constructs routing
 		using namespace std::literals::chrono_literals;
-		GreedyRouter::Options options;
-		options.synapse_driver_allocation_policy = GreedyRouter::Options::AllocationPolicyGreedy();
-		options.synapse_driver_allocation_timeout = 100ms;
-		GreedyRouter router(options);
-		auto const routing_result = router(network);
-		// check if network is valid
-		[[maybe_unused]] auto const network_graph = build_network_graph(network, routing_result);
+		routing::GreedyRouter::Options options;
+		abstract::GreedyMapper router;
+		routing::GreedyRouter::Options router_options;
+		router_options.synapse_driver_allocation_policy =
+		    routing::GreedyRouter::Options::AllocationPolicyGreedy();
+		router_options.synapse_driver_allocation_timeout = 100ms;
+		router.set_router(std::make_shared<routing::GreedyRouter>(router_options));
+		abstract::FixtureCalibration calibration;
+		std::map<
+		    grenade::common::ConnectionOnExecutor,
+		    grenade::vx::execution::backend::StatefulConnection>
+		    connections;
+		connections.emplace(
+		    grenade::common::ConnectionOnExecutor(),
+		    grenade::vx::execution::backend::StatefulConnection(
+		        grenade::vx::execution::backend::InitializedConnection(
+		            hxcomm::MultiConnection<hxcomm::vx::ZeroMockConnection>()),
+		        {{true}}));
+		grenade::vx::execution::JITGraphExecutor executor(std::move(connections));
+		[[maybe_unused]] auto const mapped_topology = router(network, calibration, executor);
 	} catch (UnsuccessfulRouting const&) {
 	}
 }

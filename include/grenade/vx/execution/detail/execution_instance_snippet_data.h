@@ -1,7 +1,7 @@
 #pragma once
-#include "grenade/vx/signal_flow/data_snippet.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data_snippet.h"
+#include "grenade/common/output_data.h"
+#include "grenade/common/vertex.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "hate/visibility.h"
 #include <map>
 #include <set>
@@ -19,9 +19,7 @@ namespace grenade::vx::execution::detail {
  */
 struct ExecutionInstanceSnippetData
 {
-	ExecutionInstanceSnippetData(
-	    signal_flow::InputDataSnippet const& input_data,
-	    signal_flow::DataSnippet const& global_output_data) SYMBOL_VISIBLE;
+	ExecutionInstanceSnippetData(grenade::common::OutputData const& global_results) SYMBOL_VISIBLE;
 
 	/**
 	 * Insert entry by reference without data copy.
@@ -30,9 +28,9 @@ struct ExecutionInstanceSnippetData
 	 * @param is_output Whether data shall be present in output data structure
 	 */
 	void insert(
-	    signal_flow::Graph::vertex_descriptor descriptor,
-	    signal_flow::Graph::vertex_descriptor reference_descriptor,
-	    bool is_output = false) SYMBOL_VISIBLE;
+	    grenade::common::PortOnTopology descriptor,
+	    grenade::common::PortOnTopology reference_descriptor,
+	    bool is_output = true) SYMBOL_VISIBLE;
 
 	/**
 	 * Insert entry with data copy or move.
@@ -41,17 +39,10 @@ struct ExecutionInstanceSnippetData
 	 * @param is_output Whether data shall be present in output data structure
 	 */
 	template <typename EntryT>
-	void insert(
-	    signal_flow::Graph::vertex_descriptor descriptor, EntryT&& entry, bool is_output = false);
+	void insert(grenade::common::PortOnTopology descriptor, EntryT&& entry, bool is_output = true);
 
-	signal_flow::DataSnippet::Entry const& at(
-	    signal_flow::Graph::vertex_descriptor descriptor) const SYMBOL_VISIBLE;
-
-	/**
-	 * Get runtime from input data with batch entry as outer dimension.
-	 */
-	std::vector<std::map<grenade::common::ExecutionInstanceID, common::Time>> const& get_runtime()
-	    const SYMBOL_VISIBLE;
+	grenade::common::PortData const& at(grenade::common::PortOnTopology descriptor) const
+	    SYMBOL_VISIBLE;
 
 	size_t batch_size() const SYMBOL_VISIBLE;
 
@@ -59,19 +50,13 @@ struct ExecutionInstanceSnippetData
 	 * Extract output data.
 	 * Empties local data storage.
 	 */
-	signal_flow::DataSnippet done() SYMBOL_VISIBLE;
-
-	signal_flow::InputDataSnippet const& get_input_data() const SYMBOL_VISIBLE;
+	grenade::common::OutputData done() SYMBOL_VISIBLE;
 
 private:
-	signal_flow::DataSnippet::Entry extract_at(signal_flow::Graph::vertex_descriptor descriptor);
-
-	signal_flow::InputDataSnippet const& m_input_data;
-	signal_flow::DataSnippet const& m_global_output_data;
-	signal_flow::DataSnippet m_local_data;
-	std::map<signal_flow::Graph::vertex_descriptor, signal_flow::Graph::vertex_descriptor>
-	    m_reference;
-	std::set<signal_flow::Graph::vertex_descriptor> m_is_output;
+	grenade::common::OutputData const& m_global_results;
+	grenade::common::OutputData m_local_results;
+	std::map<grenade::common::PortOnTopology, grenade::common::PortOnTopology> m_reference;
+	std::set<grenade::common::PortOnTopology> m_is_output;
 };
 
 } // namespace grenade::vx::execution::detail

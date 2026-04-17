@@ -2,6 +2,7 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
 
 namespace grenade::vx::compute {
@@ -9,10 +10,8 @@ namespace grenade::vx::compute {
 template <typename Archive>
 void Addition::serialize(Archive& ar, std::uint32_t const)
 {
-	ar(m_graph);
-	ar(m_input_vertex);
-	ar(m_other_vertex);
-	ar(m_output_vertex);
+	ar(m_topology);
+	ar(m_vertex);
 	ar(m_other);
 }
 

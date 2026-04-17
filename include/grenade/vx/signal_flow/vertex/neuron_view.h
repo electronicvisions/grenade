@@ -1,7 +1,8 @@
 #pragma once
+#include "dapr/empty_property.h"
+#include "grenade/common/execution_instance_id.h"
 #include "grenade/vx/ppu/neuron_view_handle.h"
 #include "grenade/vx/signal_flow/connection_type.h"
-#include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
 #include "hate/visibility.h"
@@ -17,93 +18,98 @@ struct access;
 } // namespace cereal
 
 namespace grenade::vx::signal_flow {
-
-struct PortRestriction;
-
 namespace vertex {
-
-struct SynapseArrayView;
 
 /**
  * A view of neuron circuits.
  */
-struct NeuronView : public EntityOnChip
+struct SYMBOL_VISIBLE NeuronView : public EntityOnChip
 {
-	constexpr static bool can_connect_different_execution_instances = false;
+	struct Parameterization : public grenade::common::PortData
+	{
+		struct Config
+		{
+			lola::vx::v3::AtomicNeuron atomic_neuron_config;
+			bool enable_reset;
+
+			bool operator==(Config const& other) const SYMBOL_VISIBLE;
+			bool operator!=(Config const& other) const SYMBOL_VISIBLE;
+
+		private:
+			friend struct cereal::access;
+			template <typename Archive>
+			void serialize(Archive& ar, std::uint32_t version);
+		};
+
+		std::vector<Config> configs;
+
+		Parameterization(std::vector<Config> configs);
+
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
+	};
+
+	/**
+	 * Parameterization port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) ParameterizationPortType
+	    : public dapr::EmptyProperty<ParameterizationPortType, grenade::common::VertexPortType>
+	{};
 
 	typedef std::vector<halco::hicann_dls::vx::v3::NeuronColumnOnDLS> Columns;
-	typedef std::vector<bool> EnableResets;
 	typedef halco::hicann_dls::vx::v3::NeuronRowOnDLS Row;
-
-	struct Config
-	{
-		typedef lola::vx::v3::AtomicNeuron::EventRouting::Address Label;
-		std::optional<Label> label;
-		bool enable_reset;
-
-		bool operator==(Config const& other) const SYMBOL_VISIBLE;
-		bool operator!=(Config const& other) const SYMBOL_VISIBLE;
-
-	private:
-		friend struct cereal::access;
-		template <typename Archive>
-		void serialize(Archive& ar, std::uint32_t version);
-	};
-	typedef std::vector<Config> Configs;
-
-	NeuronView() = default;
 
 	/**
 	 * Construct NeuronView with specified neurons.
 	 * @param columns Neuron columns
 	 * @param enable_resets Enable values for initial reset of the neurons
 	 * @param row Neuron row
-	 * @param chip_on_executor Coordinate of chip to use
+	 * @param chip_on_connection Coordinate of chip to use
+	 * @param time_domain Time domain to use
+	 * @param execution_instance_on_executor Execution instance to use
 	 */
-	template <typename ColumnsT, typename ConfigsT, typename RowT>
-	explicit NeuronView(
-	    ColumnsT&& columns,
-	    ConfigsT&& enable_resets,
-	    RowT&& row,
-	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor());
+	NeuronView(
+	    Columns columns,
+	    Row const& row,
+	    common::ChipOnConnection const& chip_on_connection,
+	    grenade::common::TimeDomainOnTopology const& time_domain,
+	    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor);
 
-	Columns const& get_columns() const SYMBOL_VISIBLE;
-	Configs const& get_configs() const SYMBOL_VISIBLE;
-	Row const& get_row() const SYMBOL_VISIBLE;
+	Row row;
+
+	Columns const& get_columns() const;
 
 	/**
 	 * Convert to neuron view handle for PPU programs.
 	 */
 	ppu::NeuronViewHandle toNeuronViewHandle() const SYMBOL_VISIBLE;
 
-	constexpr static bool variadic_input = true;
-	std::array<Port, 1> inputs() const SYMBOL_VISIBLE;
+	virtual std::vector<Port> get_input_ports() const override;
+	virtual std::vector<Port> get_output_ports() const override;
 
-	Port output() const SYMBOL_VISIBLE;
+	virtual bool valid_edge_from(
+	    Vertex const& source, grenade::common::Edge const& edge) const override;
 
-	friend std::ostream& operator<<(std::ostream& os, NeuronView const& config) SYMBOL_VISIBLE;
+	virtual bool valid_edge_to(
+	    Vertex const& target, grenade::common::Edge const& edge) const override;
 
-	bool supports_input_from(
-	    SynapseArrayView const& input,
-	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
+	virtual std::unique_ptr<Vertex> copy() const override;
+	virtual std::unique_ptr<Vertex> move() override;
 
-	bool operator==(NeuronView const& other) const SYMBOL_VISIBLE;
-	bool operator!=(NeuronView const& other) const SYMBOL_VISIBLE;
+protected:
+	virtual bool is_equal_to(Vertex const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 
 private:
-	void check(Columns const& columns, Configs const& configs) SYMBOL_VISIBLE;
-
-	Columns m_columns{};
-	Configs m_configs{};
-	Row m_row{};
-
+	Columns m_columns;
 	friend struct cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
 };
 
 } // vertex
-
 } // grenade::vx::signal_flow
-
-#include "grenade/vx/signal_flow/vertex/neuron_view.tcc"

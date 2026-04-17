@@ -1,6 +1,5 @@
 #pragma once
 #include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/signal_flow/output_data.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/timer.h"
@@ -131,8 +130,16 @@ struct PPUReadHooks
 		        stadls::vx::v3::ContainerTicket>>
 		    tickets;
 
-		signal_flow::OutputData::ReadPPUSymbols::value_type::mapped_type::mapped_type evaluate()
-		    const;
+		typedef std::map<
+		    std::string,
+		    std::variant<
+		        std::
+		            map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>,
+		        lola::vx::v3::ExternalPPUMemoryBlock,
+		        lola::vx::v3::ExternalPPUDRAMMemoryBlock>>
+		    ReadPPUSymbols;
+
+		ReadPPUSymbols evaluate() const;
 	};
 
 	typedef stadls::vx::v3::PlaybackProgramBuilder Builder;

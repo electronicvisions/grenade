@@ -6,11 +6,11 @@
 #include <memory>
 
 #if defined(__GENPYBIND__) or defined(__GENPYBIND_GENERATED__)
-#include "grenade/vx/network/network.h"
+#include "grenade/common/linked_topology.h"
 #else
-namespace grenade::vx::network {
-struct Network;
-} // namespace grenade::vx::network
+namespace grenade::common {
+struct LinkedTopology;
+} // namespace grenade::common
 #endif
 
 namespace grenade::vx::network {
@@ -21,7 +21,10 @@ namespace routing GENPYBIND_TAG_GRENADE_VX_NETWORK_ROUTING {
  * Can be used to find easy or special-case solutions fast with optimized algorithms and using more
  * general algorithms afterwards.
  */
-struct SYMBOL_VISIBLE GENPYBIND(visible) PortfolioRouter : public Router
+struct SYMBOL_VISIBLE GENPYBIND(
+    visible,
+    holder_type("std::shared_ptr<grenade::vx::network::routing::PortfolioRouter>")) PortfolioRouter
+    : public Router
 {
 	PortfolioRouter();
 	PortfolioRouter(PortfolioRouter const&) = delete;
@@ -33,7 +36,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) PortfolioRouter : public Router
 
 	virtual ~PortfolioRouter();
 
-	virtual RoutingResult operator()(std::shared_ptr<Network> const& network) override;
+	virtual RoutingResult operator()(grenade::common::LinkedTopology const& topology) override;
 };
 
 } // namespace routing

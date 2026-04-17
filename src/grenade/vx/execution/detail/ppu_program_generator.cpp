@@ -1,7 +1,6 @@
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
 
 #include "grenade/vx/ppu.h"
-#include "grenade/vx/signal_flow/vertex.h"
 #include "hate/join.h"
 #include "hate/timer.h"
 #include "hate/type_index.h"
@@ -13,8 +12,10 @@
 namespace grenade::vx::execution::detail {
 
 void PPUProgramGenerator::add(
-    signal_flow::Graph::vertex_descriptor const descriptor,
+    grenade::common::VertexOnTopology const descriptor,
     signal_flow::vertex::PlasticityRule const& rule,
+    signal_flow::vertex::PlasticityRule::Parameterization const& rule_parameterization,
+    signal_flow::vertex::PlasticityRule::Dynamics const& rule_dynamics,
     std::vector<
         std::pair<halco::hicann_dls::vx::v3::SynramOnDLS, ppu::SynapseArrayViewHandle>> const&
         synapses,
@@ -22,7 +23,8 @@ void PPUProgramGenerator::add(
         neurons,
     size_t snippet_index)
 {
-	m_plasticity_rules.push_back({descriptor, rule, synapses, neurons, snippet_index});
+	m_plasticity_rules.push_back(
+	    {descriptor, rule, rule_parameterization, rule_dynamics, synapses, neurons, snippet_index});
 }
 
 namespace {
@@ -97,14 +99,17 @@ std::vector<std::string> PPUProgramGenerator::done()
 	using namespace haldls::vx::v3;
 
 	size_t max_snippet_index = 0;
-	for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] : m_plasticity_rules) {
+	for (
+	    auto const& [i, plasticity_rule, parameterization, dynamics, synapses, neurons, snippet_index] :
+	    m_plasticity_rules) {
 		max_snippet_index = std::max(max_snippet_index, snippet_index);
 	}
 
 	std::map<signal_flow::vertex::PlasticityRule::ID, size_t> timed_recording_num_periods;
-	for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] : m_plasticity_rules) {
-		timed_recording_num_periods[plasticity_rule.get_id()] +=
-		    plasticity_rule.get_timer().num_periods;
+	for (
+	    auto const& [i, plasticity_rule, parameterization, dynamics, synapses, neurons, snippet_index] :
+	    m_plasticity_rules) {
+		timed_recording_num_periods[plasticity_rule.get_id()] += dynamics.timer.num_periods;
 	}
 
 	std::vector<std::string> sources;
@@ -112,10 +117,11 @@ std::vector<std::string> PPUProgramGenerator::done()
 	std::map<signal_flow::vertex::PlasticityRule::ID, std::string> kernel_sources;
 	std::map<signal_flow::vertex::PlasticityRule::ID, std::string> recording_sources;
 	{
-		for (auto const& [_, plasticity_rule, synapses, neurons, snippet_index] :
-		     m_plasticity_rules) {
+		for (
+		    auto const& [_, plasticity_rule, parameterization, dynamics, synapses, neurons, snippet_index] :
+		    m_plasticity_rules) {
 			std::stringstream kernel;
-			auto kernel_str = plasticity_rule.get_kernel();
+			auto kernel_str = parameterization.kernel;
 			std::string const kernel_name("PLASTICITY_RULE_KERNEL");
 			kernel_str.replace(
 			    kernel_str.find(kernel_name), kernel_name.size(),
@@ -217,10 +223,12 @@ Recording recorded_scratchpad_memory_{{id}} __attribute__((section("{{recording_
 	}
 	// plasticity rules
 	// contains: kernel source, set(pair(plasticty vertex descriptor, realtime snippet index))
-	std::map<std::string, std::set<std::pair<size_t, size_t>>> handles_sources;
+	std::map<std::string, std::set<std::pair<grenade::common::VertexOnTopology, size_t>>>
+	    handles_sources;
 	{
-		for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] :
-		     m_plasticity_rules) {
+		for (
+		    auto const& [i, plasticity_rule, parameterization, dynamics, synapses, neurons, snippet_index] :
+		    m_plasticity_rules) {
 			// clang-format off
 			std::string handles_source_template = R"grenadeTemplate(
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
@@ -289,7 +297,7 @@ neuron_view_handle_INDEX = {
 			    {i, snippet_index});
 		}
 	}
-	std::map<std::pair<size_t, size_t>, size_t> handles_indices;
+	std::map<std::pair<grenade::common::VertexOnTopology, size_t>, size_t> handles_indices;
 	for (size_t i = 0; auto const& [handles_source, indices] : handles_sources) {
 		std::string handles_source_copy = handles_source;
 		std::string const index("INDEX");
@@ -311,8 +319,9 @@ neuron_view_handle_INDEX = {
 	    timers;
 	{
 		std::set<std::string> kernel_sources;
-		for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] :
-		     m_plasticity_rules) {
+		for (
+		    auto const& [i, plasticity_rule, parameterization, dynamics, synapses, neurons, snippet_index] :
+		    m_plasticity_rules) {
 			// clang-format off
 			std::string service_function_source_template = R"grenadeTemplate(
 {{recorded_memory_declaration}}
@@ -375,7 +384,7 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 })grenadeTemplate";
 			// clang-format on
 			inja::json parameters;
-			parameters["i"] = i;
+			parameters["i"] = reinterpret_cast<size_t>(i.value());
 			parameters["max_snippet_index"] = max_snippet_index;
 			parameters["snippet_index"] = snippet_index;
 			parameters["recorded_memory_declaration"] =
@@ -398,12 +407,9 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 				    *plasticity_rule.get_recording());
 			}
 			parameters["recording_placement"] = recording_placement;
-			parameters["plasticity_rule"]["timer"]["start"] =
-			    plasticity_rule.get_timer().start.value();
-			parameters["plasticity_rule"]["timer"]["num_periods"] =
-			    plasticity_rule.get_timer().num_periods;
-			parameters["plasticity_rule"]["timer"]["period"] =
-			    plasticity_rule.get_timer().period.value();
+			parameters["plasticity_rule"]["timer"]["start"] = dynamics.timer.start.value();
+			parameters["plasticity_rule"]["timer"]["num_periods"] = dynamics.timer.num_periods;
+			parameters["plasticity_rule"]["timer"]["period"] = dynamics.timer.period.value();
 			parameters["plasticity_rule"]["timer"]["total_num_periods"] =
 			    timed_recording_num_periods.at(plasticity_rule.get_id());
 			parameters["synapses"] = inja::json::array();
@@ -422,7 +428,7 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 			auto const handles_index = handles_indices.at({i, snippet_index});
 			parameters["handles_index"] = handles_indices.at({i, snippet_index});
 			timers[std::make_pair(handles_index, plasticity_rule.get_id())].push_back(
-			    plasticity_rule.get_timer());
+			    dynamics.timer);
 			kernel_sources.insert(inja::render(service_function_source_template, parameters));
 		}
 		std::move(kernel_sources.begin(), kernel_sources.end(), std::back_inserter(sources));
@@ -430,8 +436,9 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 			merge_timers(local_timers);
 		}
 		std::set<std::string> scheduling_sources;
-		for (auto const& [i, plasticity_rule, synapses, neurons, snippet_index] :
-		     m_plasticity_rules) {
+		for (
+		    auto const& [i, plasticity_rule, parameterization, dynamics, synapses, neurons, snippet_index] :
+		    m_plasticity_rules) {
 			auto const handles_index = handles_indices.at({i, snippet_index});
 			for (size_t j = 0; auto const& timer :
 			                   timers.at(std::pair{handles_index, plasticity_rule.get_id()})) {

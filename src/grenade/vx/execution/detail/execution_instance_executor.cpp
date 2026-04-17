@@ -1,16 +1,18 @@
 #include "grenade/vx/execution/detail/execution_instance_executor.h"
 
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/backend/playback_program.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_config_visitor.h"
 #include "grenade/vx/execution/detail/execution_instance_chip_snippet_ppu_usage_visitor.h"
 #include "grenade/vx/execution/detail/generator/madc.h"
 #include "grenade/vx/execution/detail/ppu_program_generator.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
+#include "grenade/vx/network/abstract/execution_instance_global.h"
 #include "grenade/vx/ppu.h"
 #include "grenade/vx/ppu/detail/status.h"
-#include "grenade/vx/signal_flow/execution_time_info.h"
-#include "grenade/vx/signal_flow/output_data.h"
+#include "grenade/vx/signal_flow/vertex/chip.h"
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
@@ -20,57 +22,59 @@
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
 #include "hate/variant.h"
+#include "hxcomm/common/hwdb_entry.h"
 #include "lola/vx/ppu.h"
 #include "stadls/vx/constants.h"
 #include "stadls/vx/v3/playback_program_builder.h"
 #include <filesystem>
+#include <functional>
 #include <iterator>
 #include <boost/range/combine.hpp>
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::execution::detail {
 
-signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
+std::vector<grenade::common::OutputData> ExecutionInstanceExecutor::PostProcessor::operator()(
     backend::PlaybackProgram&& playback_program)
 {
 	auto logger =
 	    log4cxx::Logger::getLogger("grenade.ExecutionInstanceExecutor.Program.PostProcessor");
 
 	size_t const num_realtime_snippets = realtime.snippet_executors.size();
-	signal_flow::OutputData output_data;
-	output_data.snippets.resize(num_realtime_snippets);
+	std::vector<grenade::common::OutputData> results(num_realtime_snippets);
+	std::vector<network::abstract::ExecutionInstanceGlobal> results_global(num_realtime_snippets);
 
 	for (auto const& [chip_on_connection, chip] : chips) {
-		for (size_t i = 0; i < output_data.snippets.size(); i++) {
+		for (size_t i = 0; i < num_realtime_snippets; i++) {
 			// add pre-execution config to result data map
-			output_data.snippets.at(i).pre_execution_chips.emplace(
-			    execution_instance,
+			results_global.at(i).pre_execution_chips.emplace(
+			    chip_on_connection,
 			    std::visit(
 			        [](auto&& system) -> lola::vx::v3::Chip { return std::move(system.chip); },
-			        playback_program.chips.at(chip_on_connection).system_configs[i]));
+			        playback_program.chips.at(chip_on_connection).system_configs.at(i)));
 		}
 	}
 
 	auto realtime_results = realtime(std::move(playback_program));
 
 	for (size_t i = 0; auto& result : realtime_results) {
-		output_data.snippets.at(i).merge(std::move(result.data));
+		results.at(i).merge(std::move(result.data));
 		i++;
 	}
 
-	signal_flow::ExecutionTimeInfo execution_time_info;
 	signal_flow::ExecutionHealthInfo::ExecutionInstance execution_health_info;
 	for (auto const& [chip_on_connection, chip] : chips) {
 		for (auto const& result : realtime_results) {
-			execution_time_info
-			    .realtime_duration_per_execution_instance[execution_instance][chip_on_connection] +=
+			results_global.at(num_realtime_snippets - 1).realtime_duration[chip_on_connection] +=
 			    result.total_realtime_duration.at(chip_on_connection);
 		}
 
 		// extract PPU read hooks
-		output_data.read_ppu_symbols.resize(chip.ppu_read_hooks_results.size());
+		results_global.at(num_realtime_snippets - 1)
+		    .read_ppu_symbols.resize(chip.ppu_read_hooks_results.size());
 		for (size_t b = 0; b < chip.ppu_read_hooks_results.size(); ++b) {
-			output_data.read_ppu_symbols.at(b)[execution_instance][chip_on_connection] =
+			results_global.at(num_realtime_snippets - 1)
+			    .read_ppu_symbols.at(b)[chip_on_connection] =
 			    chip.ppu_read_hooks_results.at(b).evaluate();
 		}
 
@@ -81,34 +85,30 @@ signal_flow::OutputData ExecutionInstanceExecutor::PostProcessor::operator()(
 		}
 	}
 
-	output_data.execution_time_info = execution_time_info;
-
 	// annotate execution health info
-	signal_flow::ExecutionHealthInfo execution_health_info_total;
-	execution_health_info_total.execution_instances[execution_instance] = execution_health_info;
-	output_data.execution_health_info = execution_health_info_total;
+	results_global.at(num_realtime_snippets - 1).execution_health_info = execution_health_info;
 
-	return output_data;
+	for (size_t i = 0; i < num_realtime_snippets; i++) {
+		results.at(i).execution_instances.set(execution_instance, results_global.at(i));
+	}
+
+	return results;
 }
 
 
 ExecutionInstanceExecutor::ExecutionInstanceExecutor(
-    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-    signal_flow::InputData const& input_data,
-    signal_flow::OutputData& output_data,
-    std::vector<
-        std::map<common::ChipOnConnection, std::reference_wrapper<lola::vx::v3::Chip const>>> const&
-        configs,
+    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors,
+    std::vector<grenade::common::OutputData>& output_data,
+    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
     ExecutionInstanceHooks& hooks,
-    std::vector<common::ChipOnConnection> const& chips_on_connection,
-    grenade::common::ExecutionInstanceID const& execution_instance) :
-    m_graphs(graphs),
-    m_input_data(input_data),
+    std::vector<common::ChipOnConnection> const& chips_on_connection) :
+    m_topologies(topologies),
+    m_execution_instance_vertex_descriptors(execution_instance_vertex_descriptors),
     m_output_data(output_data),
-    m_configs(configs),
+    m_input_data(input_data),
     m_hooks(hooks),
-    m_chips_on_connection(chips_on_connection),
-    m_execution_instance(execution_instance)
+    m_chips_on_connection(chips_on_connection)
 {
 }
 
@@ -125,11 +125,9 @@ ExecutionInstanceExecutor::operator()(
 	using namespace stadls::vx::v3;
 
 	assert(
-	    (std::set<size_t>{
-	         m_output_data.snippets.size(), m_input_data.snippets.size(), m_graphs.size(),
-	         m_configs.size()}
-	         .size() == 1));
-	size_t const snippet_count = m_output_data.snippets.size();
+	    (std::set<size_t>{m_output_data.size(), m_topologies.size(), m_input_data.size()}.size() ==
+	     1));
+	size_t const snippet_count = m_output_data.size();
 
 	hate::Timer const configs_timer;
 
@@ -156,37 +154,114 @@ ExecutionInstanceExecutor::operator()(
 			if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(
 			        chip_hwdb_entries.at(chip_on_connection))) {
 				playback_program.chips.at(chip_on_connection)
-				    .system_configs.emplace_back(lola::vx::v3::ChipAndSinglechipFPGA(
-				        m_configs.at(j).at(chip_on_connection).get()));
-			} else if (std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
-			               chip_hwdb_entries.at(chip_on_connection))) {
+				    .system_configs.emplace_back(lola::vx::v3::ChipAndSinglechipFPGA());
+			} else if (
+			    std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
+			        chip_hwdb_entries.at(chip_on_connection)) ||
+			    std::holds_alternative<hxcomm::ZeroMockEntry>(
+			        chip_hwdb_entries.at(chip_on_connection))) {
 				playback_program.chips.at(chip_on_connection)
-				    .system_configs.emplace_back(lola::vx::v3::ChipAndMultichipJboaLeafFPGA(
-				        m_configs.at(j).at(chip_on_connection).get()));
+				    .system_configs.emplace_back(lola::vx::v3::ChipAndMultichipJboaLeafFPGA());
 			} else {
 				throw std::logic_error("Invalid hwdb entry.");
 			}
-
+			for (auto const& inter_graph_hyper_edge_descriptor :
+			     m_topologies.at(j)->inter_graph_hyper_edges_by_linked(
+			         m_execution_instance_vertex_descriptors.at(j))) {
+				for (auto const& vertex_descriptor :
+				     m_topologies.at(j)->references(inter_graph_hyper_edge_descriptor)) {
+					if (auto const chip = dynamic_cast<signal_flow::vertex::Chip const*>(
+					        &m_topologies.at(j)->get_reference().get(vertex_descriptor));
+					    chip) {
+						if (chip->chip_on_connection == chip_on_connection) {
+							if (std::holds_alternative<hwdb4cpp::HXCubeSetupEntry>(
+							        chip_hwdb_entries.at(chip_on_connection))) {
+								playback_program.chips[chip_on_connection].system_configs.at(j) =
+								    lola::vx::v3::ChipAndSinglechipFPGA(
+								        dynamic_cast<
+								            signal_flow::vertex::Chip::Parameterization const&>(
+								            m_input_data.at(j).get().ports.get(
+								                grenade::common::PortOnTopology{
+								                    vertex_descriptor, 0}))
+								            .base);
+							} else if (
+							    std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
+							        chip_hwdb_entries.at(chip_on_connection)) ||
+							    std::holds_alternative<hxcomm::ZeroMockEntry>(
+							        chip_hwdb_entries.at(chip_on_connection))) {
+								playback_program.chips[chip_on_connection].system_configs.at(j) =
+								    lola::vx::v3::ChipAndMultichipJboaLeafFPGA(
+								        dynamic_cast<
+								            signal_flow::vertex::Chip::Parameterization const&>(
+								            m_input_data.at(j).get().ports.get(
+								                grenade::common::PortOnTopology{
+								                    vertex_descriptor, 0}))
+								            .base);
+							} else {
+								throw std::logic_error("Invalid hwdb entry.");
+							}
+							break;
+						}
+					}
+				}
+			}
 			ExecutionInstanceChipSnippetConfigVisitor(
-			    m_graphs.at(j), chip_on_connection, m_execution_instance)(
+			    *m_topologies.at(j), m_execution_instance_vertex_descriptors.at(j),
+			    m_input_data.at(j).get(), chip_on_connection)(
 			    playback_program.chips.at(chip_on_connection).system_configs.at(j));
 		}
 
 		auto const ppu_program = ExecutionInstanceChipPPUProgramCompiler(
-		    m_graphs, m_input_data, m_hooks, chip_on_connection, m_execution_instance)();
+		    m_topologies, m_execution_instance_vertex_descriptors, m_input_data, m_hooks,
+		    chip_on_connection)();
 		ppu_program.apply(playback_program);
 		ppu_programs[chip_on_connection] = ppu_program;
 	}
 
 	auto [realtime_program, realtime_post_processor] = ExecutionInstanceRealtimeExecutor(
-	    m_graphs, m_input_data.snippets, m_output_data.snippets, ppu_programs,
-	    m_chips_on_connection, m_execution_instance)();
+	    m_topologies, m_execution_instance_vertex_descriptors, m_input_data, m_output_data,
+	    ppu_programs, m_chips_on_connection)();
+
+	auto const first_topology_strong_component_invariant_ptr =
+	    m_topologies.at(0)
+	        ->get(m_execution_instance_vertex_descriptors.at(0))
+	        .get_strong_component_invariant();
+	assert(first_topology_strong_component_invariant_ptr);
+	auto const& execution_instance =
+	    dynamic_cast<grenade::common::PartitionedVertex::StrongComponentInvariant const&>(
+	        *first_topology_strong_component_invariant_ptr)
+	        .execution_instance_on_executor.value();
 
 	PostProcessor post_processor;
-	post_processor.execution_instance = m_execution_instance;
+	post_processor.execution_instance = execution_instance;
 	post_processor.realtime = std::move(realtime_post_processor);
 
-	size_t const batch_size = m_input_data.batch_size();
+	// are all equal, use first one
+	size_t const batch_size = m_input_data.at(0).get().batch_size();
+
+	std::optional<common::Time> inter_batch_entry_wait;
+	std::optional<bool> inter_batch_entry_routing_disabled;
+	for (auto const& inter_graph_hyper_edge_descriptor :
+	     m_topologies.at(snippet_count - 1)
+	         ->inter_graph_hyper_edges_by_linked(
+	             m_execution_instance_vertex_descriptors.at(snippet_count - 1))) {
+		for (auto const& vertex_descriptor :
+		     m_topologies.at(snippet_count - 1)->references(inter_graph_hyper_edge_descriptor)) {
+			auto const& vertex =
+			    m_topologies.at(snippet_count - 1)->get_reference().get(vertex_descriptor);
+			if (vertex.get_time_domain()) {
+				auto const& clock_cycle_time_domain_runtimes =
+				    dynamic_cast<network::abstract::ClockCycleTimeDomainRuntimes const&>(
+				        m_input_data.at(snippet_count - 1)
+				            .get()
+				            .time_domain_runtimes.get(*vertex.get_time_domain()));
+				inter_batch_entry_wait = clock_cycle_time_domain_runtimes.inter_batch_entry_wait;
+				inter_batch_entry_routing_disabled =
+				    clock_cycle_time_domain_runtimes.inter_batch_entry_routing_disabled;
+				break;
+			}
+		}
+	}
 
 	// Experiment assembly
 	std::vector<std::map<common::ChipOnConnection, PlaybackProgramBuilder>> assembled_builders;
@@ -324,12 +399,8 @@ ExecutionInstanceExecutor::operator()(
 			assembled_builder.block_until(BarrierOnFPGA(), haldls::vx::v3::Barrier::omnibus);
 			// Inter-batch-entry procedures: disable routing and/or wait
 			{
-				bool disable_routing = true;
-				if (m_input_data.inter_batch_entry_routing_disabled.contains(
-				        m_execution_instance)) {
-					disable_routing =
-					    m_input_data.inter_batch_entry_routing_disabled.at(m_execution_instance);
-				}
+				bool disable_routing =
+				    inter_batch_entry_routing_disabled ? *inter_batch_entry_routing_disabled : true;
 
 				if (disable_routing) {
 					// disable internal event routing to silence network activity and state
@@ -340,11 +411,9 @@ ExecutionInstanceExecutor::operator()(
 				}
 				// Implement inter_batch_entry_wait (ensures minimal waiting time in between batch
 				// entries)
-				if (m_input_data.inter_batch_entry_wait.contains(m_execution_instance)) {
+				if (inter_batch_entry_wait) {
 					assembled_builder.block_until(
-					    TimerOnDLS(),
-					    config_time + m_input_data.inter_batch_entry_wait.at(m_execution_instance)
-					                      .toTimerOnFPGAValue());
+					    TimerOnDLS(), config_time + inter_batch_entry_wait->toTimerOnFPGAValue());
 				}
 				if (disable_routing) {
 					// re-enable internal event routing for next batch entry

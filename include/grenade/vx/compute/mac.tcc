@@ -9,7 +9,7 @@ MAC::MAC(
     halco::hicann_dls::vx::v3::AtomicNeuronOnDLS const& madc_recording_neuron,
     std::string madc_recording_path) :
     m_enable_loopback(enable_loopback),
-    m_graph(false),
+    m_topology(std::make_shared<grenade::common::Topology>()),
     m_input_vertex(),
     m_output_vertex(),
     m_weights(std::forward<Weights>(weights)),
@@ -18,7 +18,7 @@ MAC::MAC(
     m_madc_recording_neuron(madc_recording_neuron),
     m_madc_recording_path(madc_recording_path)
 {
-	build_graph();
+	build_topology();
 }
 
 } // namespace grenade::vx::compute

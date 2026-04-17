@@ -1,7 +1,9 @@
 #pragma once
+#include "dapr/empty_property.h"
+#include "grenade/common/port_data.h"
+#include "grenade/common/port_data/batched.h"
 #include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/event.h"
-#include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule/observable_data_type.h"
@@ -31,8 +33,6 @@ struct Int8;
 
 namespace signal_flow {
 
-struct PortRestriction;
-
 namespace vertex {
 
 struct SynapseArrayView;
@@ -40,10 +40,8 @@ struct SynapseArrayView;
 /**
  * A plasticity rule to operate on synapse array views.
  */
-struct PlasticityRule : public EntityOnChip
+struct SYMBOL_VISIBLE PlasticityRule : public EntityOnChip
 {
-	constexpr static bool can_connect_different_execution_instances = false;
-
 	/**
 	 * Timing information for execution of the rule.
 	 */
@@ -398,6 +396,9 @@ struct PlasticityRule : public EntityOnChip
 		std::map<std::string, std::vector<Entry>> data_per_neuron;
 		std::map<std::string, Entry> data_array;
 
+		bool operator==(TimedRecordingData const& other) const = default;
+		bool operator!=(TimedRecordingData const& other) const = default;
+
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream& os, TimedRecordingData const& data)
 		    SYMBOL_VISIBLE;
@@ -454,13 +455,6 @@ struct PlasticityRule : public EntityOnChip
 		 */
 		NeuronView::Row row;
 
-		typedef lola::vx::v3::AtomicNeuron::Readout::Source NeuronReadoutSource;
-		/**
-		 * Readout source specification per neuron used for static configuration such that the
-		 * plasticity rule can read the specified signal.
-		 */
-		std::vector<std::optional<NeuronReadoutSource>> neuron_readout_sources;
-
 		bool operator==(NeuronViewShape const& other) const SYMBOL_VISIBLE;
 		bool operator!=(NeuronViewShape const& other) const SYMBOL_VISIBLE;
 
@@ -484,12 +478,84 @@ struct PlasticityRule : public EntityOnChip
 		constexpr explicit ID(uintmax_t const value = 0) : base_t(value) {}
 	};
 
-	PlasticityRule() = default;
+	struct Results : public grenade::common::BatchedPortData
+	{
+		RecordingData data;
+
+		Results(RecordingData data);
+
+		virtual size_t batch_size() const override;
+
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
+	};
+
+	/**
+	 * Results port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) ResultsPortType
+	    : public dapr::EmptyProperty<ResultsPortType, grenade::common::VertexPortType>
+	{};
+
+	virtual bool valid_output_port_data(
+	    size_t output_port_on_vertex, grenade::common::PortData const& data) const override;
+
+	struct Parameterization : public grenade::common::PortData
+	{
+		std::string kernel;
+
+		Parameterization(std::string kernel);
+
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
+	};
+
+	virtual bool valid_input_port_data(
+	    size_t input_port_on_vertex, grenade::common::PortData const& data) const override;
+
+	/**
+	 * Parameterization port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) ParameterizationPortType
+	    : public dapr::EmptyProperty<ParameterizationPortType, grenade::common::VertexPortType>
+	{};
+
+	struct Dynamics : public grenade::common::BatchedPortData
+	{
+		Timer timer;
+
+		Dynamics(size_t batch_size, Timer timer);
+
+		virtual size_t batch_size() const override;
+
+		virtual std::unique_ptr<PortData> copy() const override;
+		virtual std::unique_ptr<PortData> move() override;
+
+	protected:
+		virtual std::ostream& print(std::ostream& os) const override;
+		virtual bool is_equal_to(PortData const& other) const override;
+
+	private:
+		size_t m_batch_size;
+	};
+
+	/**
+	 * Dynamics port type.
+	 */
+	struct SYMBOL_VISIBLE GENPYBIND(inline_base("*EmptyProperty*")) DynamicsPortType
+	    : public dapr::EmptyProperty<DynamicsPortType, grenade::common::VertexPortType>
+	{};
 
 	/**
 	 * Construct PlasticityRule with specified kernel, timer and synapse information.
-	 * @param kernel Kernel to apply
-	 * @param timer Timer to use
 	 * @param synapse_view_shapes Shapes of synapse views to alter
 	 * @param neuron_view_shapes Shapes of neuron views to alter
 	 * @param recording Optional recording providing memory for the plasticity rule to store
@@ -497,16 +563,19 @@ struct PlasticityRule : public EntityOnChip
 	 * @param id Identifier of same plasticity rule across realtime snippets.
 	 *           Plasticity rules with equal identifier share their state across realtime snippets.
 	 *           Currently, in addition, the complete provided kernel code is required to be equal.
-	 * @param chip_on_executor Coordinate of chip to use
+	 * @param chip_on_connection Coordinate of chip to use
+	 * @param time_domain Time domain to use
+	 * @param execution_instance_on_executor Execution instance to use
 	 */
 	PlasticityRule(
-	    std::string kernel,
-	    Timer const& timer,
 	    std::vector<SynapseViewShape> const& synapse_view_shapes,
 	    std::vector<NeuronViewShape> const& neuron_view_shapes,
 	    std::optional<Recording> const& recording,
-	    ID const& id = ID(),
-	    ChipOnExecutor const& chip_on_executor = ChipOnExecutor()) SYMBOL_VISIBLE;
+	    ID const& id,
+	    common::ChipOnConnection const& chip_on_connection,
+	    grenade::common::TimeDomainOnTopology const& time_domain,
+	    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor)
+	    SYMBOL_VISIBLE;
 
 	/**
 	 * Size (in bytes) of recorded scratchpad memory, which is stored after execution and
@@ -552,34 +621,25 @@ struct PlasticityRule : public EntityOnChip
 	    std::vector<common::TimedDataSequence<std::vector<signal_flow::Int8>>> const& data) const
 	    SYMBOL_VISIBLE;
 
-	std::string const& get_kernel() const SYMBOL_VISIBLE;
-	Timer const& get_timer() const SYMBOL_VISIBLE;
 	std::vector<SynapseViewShape> const& get_synapse_view_shapes() const SYMBOL_VISIBLE;
 	std::vector<NeuronViewShape> const& get_neuron_view_shapes() const SYMBOL_VISIBLE;
 	std::optional<Recording> get_recording() const SYMBOL_VISIBLE;
 	ID const& get_id() const SYMBOL_VISIBLE;
 
-	constexpr static bool variadic_input = false;
-	std::vector<Port> inputs() const SYMBOL_VISIBLE;
+	std::vector<Port> get_input_ports() const override;
+	std::vector<Port> get_output_ports() const override;
 
-	Port output() const SYMBOL_VISIBLE;
+	virtual bool valid_edge_from(
+	    Vertex const& source, grenade::common::Edge const& edge) const override;
 
-	friend std::ostream& operator<<(std::ostream& os, PlasticityRule const& config) SYMBOL_VISIBLE;
+	virtual std::unique_ptr<Vertex> copy() const override;
+	virtual std::unique_ptr<Vertex> move() override;
 
-	bool supports_input_from(
-	    SynapseArrayView const& input,
-	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
-
-	bool supports_input_from(
-	    NeuronView const& input,
-	    std::optional<PortRestriction> const& restriction) const SYMBOL_VISIBLE;
-
-	bool operator==(PlasticityRule const& other) const SYMBOL_VISIBLE;
-	bool operator!=(PlasticityRule const& other) const SYMBOL_VISIBLE;
+protected:
+	virtual bool is_equal_to(Vertex const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 
 private:
-	std::string m_kernel;
-	Timer m_timer;
 	std::vector<SynapseViewShape> m_synapse_view_shapes;
 	std::vector<NeuronViewShape> m_neuron_view_shapes;
 	std::optional<Recording> m_recording;

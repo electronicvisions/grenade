@@ -37,6 +37,28 @@ bool RecorderInterTopologyHyperEdge::valid(
 	return false;
 }
 
+std::vector<std::vector<std::unique_ptr<PortData>>> RecorderInterTopologyHyperEdge::map_input_data(
+    std::vector<std::vector<std::optional<std::reference_wrapper<PortData const>>>> const&
+        reference_input_data,
+    InterGraphHyperEdgeVertexDescriptors<VertexOnTopology> const& linked_vertex_descriptors,
+    InterGraphHyperEdgeVertexDescriptors<VertexOnTopology> const&,
+    LinkedTopology const&) const
+{
+	std::vector<std::vector<std::unique_ptr<PortData>>> ret(linked_vertex_descriptors.size());
+	for (size_t i = 0; i < linked_vertex_descriptors.size(); ++i) {
+		for (size_t j = 0; j < reference_input_data.at(0).size(); ++j) {
+			if (reference_input_data.at(0).at(j)) {
+				ret.at(i).push_back(std::unique_ptr<PortData>(static_cast<PortData*>(
+				    reference_input_data.at(0).at(j).value().get().copy().release())));
+			} else {
+				ret.at(i).push_back(nullptr);
+			}
+		}
+	}
+
+	return ret;
+}
+
 std::vector<std::vector<std::unique_ptr<PortData>>> RecorderInterTopologyHyperEdge::map_output_data(
     std::vector<std::vector<std::optional<std::reference_wrapper<PortData const>>>> const&
         link_output_data,
@@ -46,6 +68,13 @@ std::vector<std::vector<std::unique_ptr<PortData>>> RecorderInterTopologyHyperEd
 {
 	auto const& reference_recorder = dynamic_cast<Recorder const&>(
 	    topology.get_reference().get(reference_vertex_descriptors.at(0)));
+
+	// if no ports are present return empty output data
+	if (link_output_data.at(0).size() == 0) {
+		std::vector<std::vector<std::unique_ptr<PortData>>> ret;
+		ret.push_back({});
+		return ret;
+	}
 
 	// use the first linked vertex data to get info
 	assert(link_output_data.at(0).size() == 1);

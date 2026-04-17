@@ -8,16 +8,32 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("pyhalco_hicann_dls_vx_v3");
 	parent->py::module::import("pyhaldls_vx_v3");
 	parent->py::module::import("pylola_vx_v3");
+	parent->py::module::import("pyccalix");
+	parent->py::module::import("pygrenade_common");
 	parent->py::module::import("_pygrenade_vx_execution");
 	parent->py::module::import("_pygrenade_vx_signal_flow");
 	parent->py::module::import("_pygrenade_vx_network");
 })
 
 #include "grenade/vx/network/abstract/calibration.h"
+#include "grenade/vx/network/abstract/calibration/fixture.h"
+#include "grenade/vx/network/abstract/calibration/jit.h"
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/execution_instance_global.h"
 #include "grenade/vx/network/abstract/executor_global.h"
 #include "grenade/vx/network/abstract/mapper.h"
+#include "grenade/vx/network/abstract/mapper/greedy.h"
+#include "grenade/vx/network/abstract/mapping/cadc_recorder.h"
+#include "grenade/vx/network/abstract/mapping/calibrated_neuron.h"
+#include "grenade/vx/network/abstract/mapping/chip.h"
+#include "grenade/vx/network/abstract/mapping/external_source_neuron.h"
+#include "grenade/vx/network/abstract/mapping/locally_placed_neuron.h"
+#include "grenade/vx/network/abstract/mapping/madc_recorder.h"
+#include "grenade/vx/network/abstract/mapping/plasticity_rule.h"
+#include "grenade/vx/network/abstract/mapping/poisson_source_neuron.h"
+#include "grenade/vx/network/abstract/mapping/spike_recorder.h"
+#include "grenade/vx/network/abstract/mapping/uncalibrated_neuron.h"
+#include "grenade/vx/network/abstract/mapping/uncalibrated_synapse.h"
 #include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/atomic_neuron_on_compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_connection/conductance.h"
@@ -41,9 +57,11 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/multicompartment/top_bottom.h"
 #include "grenade/vx/network/abstract/multicompartment/unplaced_neuron_circuit.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
+#include "grenade/vx/network/abstract/placement/greedy_placer.h"
 #include "grenade/vx/network/abstract/placement/placer.h"
 #include "grenade/vx/network/abstract/placement_result.h"
 #include "grenade/vx/network/abstract/plasticity_rule.h"
+#include "grenade/vx/network/abstract/plasticity_rule_generator.h"
 #include "grenade/vx/network/abstract/population_cell/calibrated.h"
 #include "grenade/vx/network/abstract/population_cell/delay.h"
 #include "grenade/vx/network/abstract/population_cell/external_source.h"

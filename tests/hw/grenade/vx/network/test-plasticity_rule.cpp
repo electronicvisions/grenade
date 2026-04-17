@@ -1,72 +1,124 @@
+#include "grenade/common/compartment_on_neuron.h"
 #include "grenade/common/execution_instance_id.h"
-#include "grenade/vx/common/chip_on_connection.h"
+#include "grenade/common/input_data.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/cell_on_population.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/compartment_on_neuron.h"
+#include "grenade/common/multi_index_sequence_dimension_unit/receptor_on_compartment.h"
+#include "grenade/common/population.h"
+#include "grenade/common/projection_connector/sequence.h"
+#include "grenade/common/topology.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
-#include "grenade/vx/network/extract_output.h"
-#include "grenade/vx/network/network.h"
-#include "grenade/vx/network/network_builder.h"
-#include "grenade/vx/network/network_graph.h"
-#include "grenade/vx/network/network_graph_builder.h"
-#include "grenade/vx/network/plasticity_rule.h"
-#include "grenade/vx/network/population.h"
-#include "grenade/vx/network/projection.h"
-#include "grenade/vx/network/routing/portfolio_router.h"
-#include "grenade/vx/network/run.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/execution/run.h"
+#include "grenade/vx/network/abstract/calibration/fixture.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
+#include "grenade/vx/network/abstract/execution_instance_global.h"
+#include "grenade/vx/network/abstract/mapper/greedy.h"
+#include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/atomic_neuron_on_compartment.h"
+#include "grenade/vx/network/abstract/plasticity_rule.h"
+#include "grenade/vx/network/abstract/plasticity_rule_generator.h"
+#include "grenade/vx/network/abstract/population_cell/delay.h"
+#include "grenade/vx/network/abstract/population_cell/external_source.h"
+#include "grenade/vx/network/abstract/population_cell/poisson_source.h"
+#include "grenade/vx/network/abstract/population_cell/uncalibrated.h"
+#include "grenade/vx/network/abstract/projection_synapse/uncalibrated.h"
+#include "grenade/vx/network/abstract/recorder/spike.h"
 #include "grenade/vx/signal_flow/types.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
+#include "haldls/vx/v3/background.h"
+#include "haldls/vx/v3/neuron.h"
+#include "haldls/vx/v3/systime.h"
+#include "haldls/vx/v3/timer.h"
 #include "hate/variant.h"
+#include "helper.h"
+#include "hxcomm/vx/connection_from_env.h"
+#include "lola/vx/v3/chip.h"
+#include "stadls/vx/v3/init_generator.h"
+#include "stadls/vx/v3/playback_generator.h"
+#include "stadls/vx/v3/run.h"
+#include <random>
 #include <gtest/gtest.h>
+#include <log4cxx/logger.h>
 
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
 using namespace stadls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
-using namespace grenade::vx::network;
+using namespace grenade::vx::network::abstract;
+using namespace grenade::common;
 
 TEST(PlasticityRule, RawRecording)
 {
-	grenade::common::ExecutionInstanceID instance;
-
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
-
 	// build network
-	NetworkBuilder network_builder;
+	auto topology = std::make_shared<Topology>();
 
-	Population::Neurons neurons{Population::Neuron(
-	    LogicalNeuronOnDLS(
+	auto const chip = get_chip_config_bypass_excitatory();
+	Population population{
+	    UncalibratedNeuron{
+	        UncalibratedNeuron::Compartments{
+	            {grenade::common::CompartmentOnNeuron(),
+	             UncalibratedNeuron::Compartment{
+	                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+	                 {{{grenade::common::ReceptorOnCompartment(0),
+	                    grenade::vx::network::Receptor::Type::excitatory}}}}}},
 	        LogicalNeuronCompartments(
-	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-	        AtomicNeuronOnDLS()),
-	    Population::Neuron::Compartments{
-	        {CompartmentOnLogicalNeuron(),
-	         Population::Neuron::Compartment{
-	             Population::Neuron::Compartment::SpikeMaster(0, true),
-	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
-	Population population{std::move(neurons)};
-	auto const population_descriptor = network_builder.add(population);
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+	    grenade::common::CuboidMultiIndexSequence(
+	        {1}, grenade::common::MultiIndex({0}),
+	        {grenade::common::CellOnPopulationDimensionUnit()}),
+	    UncalibratedNeuron::ParameterSpace(1, {{CompartmentOnNeuron(), 1}}),
+	    grenade::common::TimeDomainOnTopology()};
+	UncalibratedNeuron::ParameterSpace::Parameterization population_input_data;
+	population_input_data.configs.resize(
+	    1, {{grenade::common::CompartmentOnNeuron(),
+	         {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+	population_input_data.base_configs.emplace_back(std::vector<size_t>{0}, chip);
 
-	Projection::Connections projection_connections;
-	for (size_t i = 0; i < population.neurons.size(); ++i) {
-		projection_connections.push_back(
-		    {{i, CompartmentOnLogicalNeuron()},
-		     {i, CompartmentOnLogicalNeuron()},
-		     Projection::Connection::Weight(63)});
-	}
-	Projection projection{
-	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
-	    population_descriptor.toPopulationOnExecutionInstance(),
-	    population_descriptor.toPopulationOnExecutionInstance()};
-	auto const projection_descriptor = network_builder.add(projection);
+	auto const population_descriptor = topology->add_vertex(population);
 
-	PlasticityRule plasticity_rule;
-	plasticity_rule.timer.start = PlasticityRule::Timer::Value(1000);
-	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
-	plasticity_rule.timer.num_periods = 1;
-	plasticity_rule.projections.push_back(projection_descriptor);
-	plasticity_rule.recording = PlasticityRule::RawRecording{8, true};
+	Projection projection(
+	    UncalibratedSynapse{},
+	    UncalibratedSynapse::ParameterSpace{{UncalibratedSynapse::Weight(63)}},
+	    SequenceConnector{
+	        CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}),
+	        ListMultiIndexSequence({MultiIndex({0, 0})})},
+	    TimeDomainOnTopology());
+	UncalibratedSynapse::ParameterSpace::Parameterization projection_input_data(
+	    {UncalibratedSynapse::Weight(1)});
+
+	auto const projection_descriptor = topology->add_vertex(projection);
+
+	topology->add_edge(
+	    population_descriptor, projection_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence(
+	            {1, 1}, MultiIndex({0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+	        CuboidMultiIndexSequence({1}), 0, 0));
+
+	topology->add_edge(
+	    projection_descriptor, population_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence({1}),
+	        CuboidMultiIndexSequence(
+	            {1, 1, 1}, MultiIndex({0, 0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+	             ReceptorOnCompartmentDimensionUnit()}),
+	        0, 0));
+
+	std::vector<CuboidMultiIndexSequence> projection_shapes{CuboidMultiIndexSequence({1})};
+
+	PlasticityRule plasticity_rule(
+	    PlasticityRule::RawRecording{8, true}, PlasticityRule::ID(), {}, {projection_shapes.at(0)},
+	    TimeDomainOnTopology());
+
+	PlasticityRule::Dynamics plasticity_rule_dynamics(
+	    PlasticityRule::Dynamics::Timer{
+	        PlasticityRule::Dynamics::Timer::Value(1000),
+	        PlasticityRule::Dynamics::Timer::Value(10000), 1},
+	    2);
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -82,36 +134,54 @@ TEST(PlasticityRule, RawRecording)
 	kernel << "    recording.memory[i] = i;\n";
 	kernel << "  }\n";
 	kernel << "}\n";
-	plasticity_rule.kernel = kernel.str();
 
-	auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
+	PlasticityRule::Parameterization plasticity_rule_parameterization(kernel.str());
 
-	auto const network = network_builder.done();
-	auto const routing_result = routing::PortfolioRouter()(network);
-	auto const network_graph = build_network_graph(network, routing_result);
+	auto const plasticity_rule_descriptor = topology->add_vertex(plasticity_rule);
 
-	grenade::vx::signal_flow::InputData inputs;
-	inputs.snippets.resize(1);
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+	topology->add_edge(
+	    projection_descriptor, plasticity_rule_descriptor,
+	    Edge(CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}), 1, 0));
 
 	// Construct connection to HW
 	grenade::vx::execution::JITGraphExecutor executor;
 
+	// build network graph
+	FixtureCalibration const calibration;
+	GreedyMapper mapper;
+	auto const mapped_topology =
+	    std::make_shared<LinkedTopology>(mapper(topology, calibration, executor));
+
+	InputData input_data;
+	input_data.time_domain_runtimes.set(
+	    TimeDomainOnTopology(),
+	    ClockCycleTimeDomainRuntimes(
+	        {std::optional<grenade::vx::common::Time>(
+	             grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000),
+	         std::optional<grenade::vx::common::Time>(
+	             grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)},
+	        grenade::vx::common::Time()));
+
+	input_data.ports.set({population_descriptor, 1}, population_input_data);
+	input_data.ports.set({projection_descriptor, 1}, projection_input_data);
+	input_data.ports.set({plasticity_rule_descriptor, 1}, plasticity_rule_parameterization);
+	input_data.ports.set({plasticity_rule_descriptor, 2}, plasticity_rule_dynamics);
+
+	auto const mapped_input_data = mapped_topology->map_root_input_data(input_data);
+
 	// run graph with given inputs and return results
-	auto const result_map = run(executor, network_graph, chip_configs, inputs);
+	auto const mapped_results =
+	    grenade::vx::execution::run(executor, mapped_topology, mapped_input_data);
 
-	auto const result =
-	    std::get<PlasticityRule::RawRecordingData>(
-	        extract_plasticity_rule_recording_data(
-	            result_map.snippets.at(0), network_graph, plasticity_rule_descriptor))
-	        .data;
+	auto const results = mapped_topology->map_root_output_data(mapped_results);
 
-	EXPECT_EQ(result.size(), inputs.batch_size());
+	auto const result = std::get<PlasticityRule::Results::RawData>(
+	                        dynamic_cast<PlasticityRule::Results const&>(
+	                            results.ports.get({plasticity_rule_descriptor, 0}))
+	                            .data)
+	                        .data;
+
+	EXPECT_EQ(result.size(), input_data.batch_size());
 	for (size_t i = 0; i < result.size(); ++i) {
 		auto const& samples = result.at(i);
 		EXPECT_EQ(samples.size(), 8);
@@ -122,132 +192,150 @@ TEST(PlasticityRule, RawRecording)
 	}
 }
 
-TEST(PlasticityRule, TimedRecording)
+TEST(PlasticityRule, TimedRecordingConfig)
 {
-	grenade::common::ExecutionInstanceID instance;
+	auto const chip = get_chip_config_bypass_excitatory();
 
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
-
-	grenade::vx::signal_flow::InputData inputs;
-	inputs.snippets.resize(1);
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)}});
+	InputData input_data;
+	input_data.time_domain_runtimes.set(
+	    TimeDomainOnTopology(),
+	    ClockCycleTimeDomainRuntimes(
+	        {std::optional<grenade::vx::common::Time>(
+	             grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000),
+	         std::optional<grenade::vx::common::Time>(
+	             grenade::vx::common::Time::fpga_clock_cycles_per_us * 10000)},
+	        grenade::vx::common::Time()));
 
 	grenade::vx::execution::JITGraphExecutor executor;
 
 	std::mt19937 rng(std::random_device{}());
 	constexpr size_t num = 10;
 	for (size_t n = 0; n < num; ++n) {
-		Population::Neurons all_neurons;
-		for (auto const neuron : iter_all<AtomicNeuronOnDLS>()) {
-			all_neurons.push_back(Population::Neuron(
-			    LogicalNeuronOnDLS(
-			        LogicalNeuronCompartments(
-			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-			        neuron),
-			    Population::Neuron::Compartments{
-			        {CompartmentOnLogicalNeuron(),
-			         Population::Neuron::Compartment{
-			             Population::Neuron::Compartment::SpikeMaster(0, false),
-			             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}}));
-		}
-
 		// build network
-		NetworkBuilder network_builder;
+		auto topology = std::make_shared<Topology>();
 
 		// FIXME: Fix is required in order in routing
 		std::uniform_int_distribution num_projection_distribution(1, 3);
 		size_t const num_projections = num_projection_distribution(rng);
-		std::vector<ProjectionOnExecutionInstance> projection_descriptors;
-		std::vector<PlasticityRule::PopulationHandle> population_descriptors;
+		std::vector<VertexOnTopology> projection_descriptors;
+		std::vector<VertexOnTopology> population_descriptors;
+		std::vector<std::reference_wrapper<MultiIndexSequence const>> projection_shapes;
+		std::list<CuboidMultiIndexSequence> projection_shapes_storage;
+		std::vector<std::reference_wrapper<MultiIndexSequence const>> population_shapes;
 		for (size_t p = 0; p < num_projections; ++p) {
 			std::uniform_int_distribution neuron_distribution(1, 3);
 
-			Population::Neurons neurons_s;
-			std::sample(
-			    all_neurons.begin(), all_neurons.end(), std::back_inserter(neurons_s),
-			    neuron_distribution(rng), rng);
-			for (auto const& neuron : neurons_s) {
-				all_neurons.erase(std::find(all_neurons.begin(), all_neurons.end(), neuron));
+			// Adding source population
+			size_t const num_neurons_s = neuron_distribution(rng);
+			std::vector<size_t> neuron_indices_s;
+			for (size_t n = 0; n < num_neurons_s; ++n) {
+				neuron_indices_s.push_back(n);
 			}
-			// sort neurons in population because otherwise dense requirement of projection is not
-			// necessarily fulfilled
-			std::stable_sort(neurons_s.begin(), neurons_s.end(), [](auto const& a, auto const& b) {
-				return a.coordinate.get_atomic_neurons()
-				           .at(0)
-				           .toNeuronColumnOnDLS()
-				           .toNeuronEventOutputOnDLS()
-				           .toNeuronEventOutputOnNeuronBackendBlock() <
-				       b.coordinate.get_atomic_neurons()
-				           .at(0)
-				           .toNeuronColumnOnDLS()
-				           .toNeuronEventOutputOnDLS()
-				           .toNeuronEventOutputOnNeuronBackendBlock();
-			});
-			Population population_s{std::move(neurons_s)};
-			auto const population_descriptor_s = network_builder.add(population_s);
+			Population population_s{
+			    UncalibratedNeuron{
+			        UncalibratedNeuron::Compartments{
+			            {grenade::common::CompartmentOnNeuron(),
+			             UncalibratedNeuron::Compartment{
+			                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+			                 {{{grenade::common::ReceptorOnCompartment(0),
+			                    grenade::vx::network::Receptor::Type::excitatory}}}}}},
+			        LogicalNeuronCompartments(
+			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+			    grenade::common::CuboidMultiIndexSequence(
+			        {num_neurons_s}, grenade::common::MultiIndex({0}),
+			        {grenade::common::CellOnPopulationDimensionUnit()}),
+			    UncalibratedNeuron::ParameterSpace(num_neurons_s, {{CompartmentOnNeuron(), 1}}),
+			    grenade::common::TimeDomainOnTopology()};
+			UncalibratedNeuron::ParameterSpace::Parameterization population_s_input_data;
+			population_s_input_data.configs.resize(
+			    num_neurons_s, {{grenade::common::CompartmentOnNeuron(),
+			                     {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+			population_s_input_data.base_configs.emplace_back(neuron_indices_s, chip);
 
-			Population::Neurons neurons_t;
-			std::sample(
-			    all_neurons.begin(), all_neurons.end(), std::back_inserter(neurons_t),
-			    neuron_distribution(rng), rng);
-			for (auto const& neuron : neurons_t) {
-				all_neurons.erase(std::find(all_neurons.begin(), all_neurons.end(), neuron));
+			// Adding target population
+			size_t const num_neurons_t = neuron_distribution(rng);
+			std::vector<size_t> neuron_indices_t;
+			for (size_t n = 0; n < num_neurons_t; ++n) {
+				neuron_indices_t.push_back(n);
 			}
-			// sort neurons in population because otherwise dense requirement of projection is not
-			// necessarily fulfilled
-			std::stable_sort(neurons_t.begin(), neurons_t.end(), [](auto const& a, auto const& b) {
-				return a.coordinate.get_atomic_neurons()
-				           .at(0)
-				           .toNeuronColumnOnDLS()
-				           .toNeuronEventOutputOnDLS()
-				           .toNeuronEventOutputOnNeuronBackendBlock() <
-				       b.coordinate.get_atomic_neurons()
-				           .at(0)
-				           .toNeuronColumnOnDLS()
-				           .toNeuronEventOutputOnDLS()
-				           .toNeuronEventOutputOnNeuronBackendBlock();
-			});
-			Population population_t{std::move(neurons_t)};
-			auto const population_descriptor_t = network_builder.add(population_t);
+			Population population_t{
+			    UncalibratedNeuron{
+			        UncalibratedNeuron::Compartments{
+			            {grenade::common::CompartmentOnNeuron(),
+			             UncalibratedNeuron::Compartment{
+			                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+			                 {{{grenade::common::ReceptorOnCompartment(0),
+			                    grenade::vx::network::Receptor::Type::excitatory}}}}}},
+			        LogicalNeuronCompartments(
+			            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+			    grenade::common::CuboidMultiIndexSequence(
+			        {num_neurons_t}, grenade::common::MultiIndex({0}),
+			        {grenade::common::CellOnPopulationDimensionUnit()}),
+			    UncalibratedNeuron::ParameterSpace(num_neurons_t, {{CompartmentOnNeuron(), 1}}),
+			    grenade::common::TimeDomainOnTopology()};
+			UncalibratedNeuron::ParameterSpace::Parameterization population_t_input_data;
+			population_t_input_data.configs.resize(
+			    num_neurons_t, {{grenade::common::CompartmentOnNeuron(),
+			                     {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+			population_t_input_data.base_configs.emplace_back(neuron_indices_t, chip);
 
-			Projection::Connections projection_connections;
-			for (size_t i = 0; i < population_s.neurons.size(); ++i) {
-				for (size_t j = 0; j < population_t.neurons.size(); ++j) {
-					projection_connections.push_back(
-					    {{i, CompartmentOnLogicalNeuron()},
-					     {j, CompartmentOnLogicalNeuron()},
-					     Projection::Connection::Weight(63)});
-				}
-			}
-			Projection projection{
-			    Receptor(Receptor::ID(), Receptor::Type::excitatory),
-			    std::move(projection_connections),
-			    population_descriptor_s.toPopulationOnExecutionInstance(),
-			    population_descriptor_t.toPopulationOnExecutionInstance()};
-			projection_descriptors.push_back(network_builder.add(projection));
-			PlasticityRule::PopulationHandle population_handle_t;
-			population_handle_t.descriptor = population_descriptor_t;
-			population_handle_t.neuron_readout_sources.resize(
-			    population_t.neurons.size(), {{CompartmentOnLogicalNeuron(), {std::nullopt}}});
-			population_descriptors.push_back(population_handle_t);
+			auto const population_descriptor_s = topology->add_vertex(population_s);
+			auto const population_descriptor_t = topology->add_vertex(population_t);
+
+			Projection projection(
+			    UncalibratedSynapse{},
+			    UncalibratedSynapse::ParameterSpace{std::vector(
+			        population_s.size() * population_t.size(), UncalibratedSynapse::Weight(63))},
+			    SequenceConnector{
+			        CuboidMultiIndexSequence({population_s.size()}),
+			        CuboidMultiIndexSequence({population_t.size()}),
+			        CuboidMultiIndexSequence({population_s.size(), population_t.size()})},
+			    TimeDomainOnTopology());
+			UncalibratedSynapse::ParameterSpace::Parameterization projection_input_data(std::vector(
+			    population_s.size() * population_t.size(), UncalibratedSynapse::Weight(1)));
+
+			auto const projection_descriptor = topology->add_vertex(projection);
+
+			topology->add_edge(
+			    population_descriptor_s, projection_descriptor,
+			    Edge(
+			        CuboidMultiIndexSequence(
+			            {population_s.size(), 1}, MultiIndex({0, 0}),
+			            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+			        CuboidMultiIndexSequence({population_s.size()}), 0, 0));
+
+			topology->add_edge(
+			    projection_descriptor, population_descriptor_t,
+			    Edge(
+			        CuboidMultiIndexSequence({population_t.size()}),
+			        CuboidMultiIndexSequence(
+			            {population_t.size(), 1, 1}, MultiIndex({0, 0, 0}),
+			            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+			             ReceptorOnCompartmentDimensionUnit()}),
+			        0, 0));
+
+			projection_descriptors.push_back(projection_descriptor);
+			projection_shapes_storage.push_back(
+			    CuboidMultiIndexSequence({population_s.size(), population_t.size()}));
+			projection_shapes.push_back(projection_shapes_storage.back());
+			population_shapes.push_back(
+			    dynamic_cast<Population const&>(topology->get(population_descriptor_t))
+			        .get_shape());
+			population_descriptors.push_back(population_descriptor_t);
+
+			input_data.ports.set({population_descriptor_s, 1}, population_s_input_data);
+			input_data.ports.set({population_descriptor_t, 1}, population_t_input_data);
+			input_data.ports.set({projection_descriptor, 1}, projection_input_data);
 		}
 
-		PlasticityRule plasticity_rule;
-		plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
-		plasticity_rule.timer.period = PlasticityRule::Timer::Value(
-		    grenade::vx::common::Time::fpga_clock_cycles_per_us * 3000);
-
 		std::uniform_int_distribution num_periods_distribution(1, 3);
-		plasticity_rule.timer.num_periods = num_periods_distribution(rng);
-
-		plasticity_rule.projections = projection_descriptors;
-		plasticity_rule.populations = population_descriptors;
+		PlasticityRule::Dynamics plasticity_rule_dynamics(
+		    PlasticityRule::Dynamics::Timer{
+		        PlasticityRule::Dynamics::Timer::Value(0),
+		        PlasticityRule::Dynamics::Timer::Value(
+		            grenade::vx::common::Time::fpga_clock_cycles_per_us * 3000),
+		        static_cast<size_t>(num_periods_distribution(rng))},
+		    2);
 
 		std::stringstream kernel;
 		kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -264,7 +352,7 @@ TEST(PlasticityRule, TimedRecording)
 		kernel << "\tstatic size_t period = 0;\n";
 
 		// generate random timed recording
-		PlasticityRule::TimedRecording recording;
+		PlasticityRule::TimedRecordingConfig recording;
 		// select number of observables
 		std::uniform_int_distribution num_observable_distribution(1, 3);
 		size_t const num_observables = num_observable_distribution(rng);
@@ -276,32 +364,32 @@ TEST(PlasticityRule, TimedRecording)
 			switch (std::uniform_int_distribution(0, 2)(rng)) {
 				case 0: { // ObservableArray
 					// select observable size
-					auto obsv =
-					    grenade::vx::network::PlasticityRule::TimedRecording::ObservableArray{
-					        PlasticityRule::TimedRecording::ObservableArray::Type::int8,
-					        std::uniform_int_distribution<size_t>(1, 15)(rng)};
+					auto obsv = PlasticityRule::TimedRecordingConfig::ObservableArray{
+					    PlasticityRule::TimedRecordingConfig::ObservableArray::Type::int8,
+					    std::uniform_int_distribution<size_t>(1, 15)(rng)};
 					// select data type
 					switch (std::uniform_int_distribution{0, 3}(rng)) {
 						case 0: { // int8
-							obsv.type = PlasticityRule::TimedRecording::ObservableArray::Type::int8;
+							obsv.type =
+							    PlasticityRule::TimedRecordingConfig::ObservableArray::Type::int8;
 							expectations.push_back(std::uniform_int_distribution<int8_t>()(rng));
 							break;
 						}
 						case 1: { // uint8
 							obsv.type =
-							    PlasticityRule::TimedRecording::ObservableArray::Type::uint8;
+							    PlasticityRule::TimedRecordingConfig::ObservableArray::Type::uint8;
 							expectations.push_back(std::uniform_int_distribution<uint8_t>()(rng));
 							break;
 						}
 						case 2: { // int16
 							obsv.type =
-							    PlasticityRule::TimedRecording::ObservableArray::Type::int16;
+							    PlasticityRule::TimedRecordingConfig::ObservableArray::Type::int16;
 							expectations.push_back(std::uniform_int_distribution<int16_t>()(rng));
 							break;
 						}
 						case 3: { // uint16
 							obsv.type =
-							    PlasticityRule::TimedRecording::ObservableArray::Type::uint16;
+							    PlasticityRule::TimedRecordingConfig::ObservableArray::Type::uint16;
 							expectations.push_back(std::uniform_int_distribution<uint16_t>()(rng));
 							break;
 						}
@@ -317,36 +405,36 @@ TEST(PlasticityRule, TimedRecording)
 				}
 				case 1: { // ObservablePerSynapse
 					// select memory layout per row
-					auto obsv = PlasticityRule::TimedRecording::ObservablePerSynapse{
-					    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8,
+					auto obsv = PlasticityRule::TimedRecordingConfig::ObservablePerSynapse{
+					    PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::Type::int8,
 					    std::bernoulli_distribution{}(rng)
-					        ? PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
-					              complete_rows
-					        : PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
-					              packed_active_columns};
+					        ? PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+					              LayoutPerRow::complete_rows
+					        : PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+					              LayoutPerRow::packed_active_columns};
 					// select data type
 					switch (std::uniform_int_distribution{0, 3}(rng)) {
 						case 0: { // int8
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+							    Type::int8;
 							expectations.push_back(std::uniform_int_distribution<int8_t>()(rng));
 							break;
 						}
 						case 1: { // uint8
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::uint8;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+							    Type::uint8;
 							expectations.push_back(std::uniform_int_distribution<uint8_t>()(rng));
 							break;
 						}
 						case 2: { // int16
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int16;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+							    Type::int16;
 							expectations.push_back(std::uniform_int_distribution<int16_t>()(rng));
 							break;
 						}
 						case 3: { // uint16
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerSynapse::Type::uint16;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+							    Type::uint16;
 							expectations.push_back(std::uniform_int_distribution<uint16_t>()(rng));
 							break;
 						}
@@ -358,14 +446,14 @@ TEST(PlasticityRule, TimedRecording)
 					// set its value from the PPU to i
 					kernel << "\thate::for_each([](auto& rec) { ";
 					switch (obsv.layout_per_row) {
-						case PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
-						    complete_rows: {
+						case PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+						    LayoutPerRow::complete_rows: {
 							kernel << "for (auto& row: rec) { row = "
 							       << expectations.at(expectations.size() - 1) << "; } },\n";
 							break;
 						}
-						case PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
-						    packed_active_columns: {
+						case PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::
+						    LayoutPerRow::packed_active_columns: {
 							kernel << "for (auto& row: rec) { row.fill("
 							       << expectations.at(expectations.size() - 1) << "); } },\n";
 							break;
@@ -379,36 +467,36 @@ TEST(PlasticityRule, TimedRecording)
 				}
 				case 2: { // ObservablePerNeuron
 					// select memory layout
-					auto obsv = PlasticityRule::TimedRecording::ObservablePerNeuron{
-					    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int8,
+					auto obsv = PlasticityRule::TimedRecordingConfig::ObservablePerNeuron{
+					    PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::Type::int8,
 					    std::bernoulli_distribution{}(rng)
-					        ? PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+					        ? PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::Layout::
 					              complete_row
-					        : PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+					        : PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::Layout::
 					              packed_active_columns};
 					// select data type
 					switch (std::uniform_int_distribution{0, 3}(rng)) {
 						case 0: { // int8
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int8;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::
+							    Type::int8;
 							expectations.push_back(std::uniform_int_distribution<int8_t>()(rng));
 							break;
 						}
 						case 1: { // uint8
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::uint8;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::
+							    Type::uint8;
 							expectations.push_back(std::uniform_int_distribution<uint8_t>()(rng));
 							break;
 						}
 						case 2: { // int16
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::int16;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::
+							    Type::int16;
 							expectations.push_back(std::uniform_int_distribution<int16_t>()(rng));
 							break;
 						}
 						case 3: { // uint16
-							obsv.type =
-							    PlasticityRule::TimedRecording::ObservablePerNeuron::Type::uint16;
+							obsv.type = PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::
+							    Type::uint16;
 							expectations.push_back(std::uniform_int_distribution<uint16_t>()(rng));
 							break;
 						}
@@ -420,12 +508,12 @@ TEST(PlasticityRule, TimedRecording)
 					// set its value from the PPU to i
 					kernel << "\thate::for_each([](auto& rec) { ";
 					switch (obsv.layout) {
-						case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+						case PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::Layout::
 						    complete_row: {
 							kernel << "rec = " << expectations.at(expectations.size() - 1) << ";\n";
 							break;
 						}
-						case PlasticityRule::TimedRecording::ObservablePerNeuron::Layout::
+						case PlasticityRule::TimedRecordingConfig::ObservablePerNeuron::Layout::
 						    packed_active_columns: {
 							kernel << "rec.fill(" << expectations.at(expectations.size() - 1)
 							       << ");\n";
@@ -444,34 +532,68 @@ TEST(PlasticityRule, TimedRecording)
 			}
 		}
 
-		plasticity_rule.recording = recording;
+		PlasticityRule plasticity_rule(
+		    recording, PlasticityRule::ID(), population_shapes, projection_shapes,
+		    TimeDomainOnTopology());
 
 		kernel << "\trecording.time = period * 2 /* f_ppu = 2 * f_fpga */;\n";
 		kernel << "\tperiod++;\n";
-		kernel << "\tperiod %= " << plasticity_rule.timer.num_periods << ";\n";
+		kernel << "\tperiod %= " << plasticity_rule_dynamics.timer.num_periods << ";\n";
 		kernel << "}";
-		plasticity_rule.kernel = kernel.str();
 
-		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
+		PlasticityRule::Parameterization plasticity_rule_parameterization(kernel.str());
 
-		auto const network = network_builder.done();
-		auto const routing_result = routing::PortfolioRouter()(network);
-		auto const network_graph = build_network_graph(network, routing_result);
+		auto const plasticity_rule_descriptor = topology->add_vertex(plasticity_rule);
+
+		for (size_t p = 0; p < projection_descriptors.size(); ++p) {
+			topology->add_edge(
+			    projection_descriptors.at(p), plasticity_rule_descriptor,
+			    Edge(
+			        CuboidMultiIndexSequence({projection_shapes.at(p).get().size()}),
+			        projection_shapes.at(p).get(), 1, p));
+		}
+
+		for (size_t p = 0; p < population_descriptors.size(); ++p) {
+			topology->add_edge(
+			    population_descriptors.at(p), plasticity_rule_descriptor,
+			    Edge(
+			        CuboidMultiIndexSequence(
+			            {population_shapes.at(p).get().size(), 1, 1},
+			            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+			             AtomicNeuronOnCompartmentDimensionUnit()}),
+			        population_shapes.at(p).get(), 1, projection_descriptors.size() + p));
+		}
+
+		input_data.ports.set(
+		    {plasticity_rule_descriptor, population_shapes.size() + projection_shapes.size()},
+		    plasticity_rule_parameterization);
+		input_data.ports.set(
+		    {plasticity_rule_descriptor, population_shapes.size() + projection_shapes.size() + 1},
+		    plasticity_rule_dynamics);
+
+		// build mapped topology
+		FixtureCalibration const calibration;
+		GreedyMapper mapper;
+		auto const mapped_topology =
+		    std::make_shared<LinkedTopology>(mapper(topology, calibration, executor));
+
+		auto const mapped_input_data = mapped_topology->map_root_input_data(input_data);
 
 		// run graph with given inputs and return results
-		EXPECT_NO_THROW((run(executor, network_graph, chip_configs, inputs)));
+		auto const mapped_results =
+		    grenade::vx::execution::run(executor, mapped_topology, mapped_input_data);
 
-		auto const result_map = run(executor, network_graph, chip_configs, inputs);
+		auto const results = mapped_topology->map_root_output_data(mapped_results);
 
-		auto const recording_data = extract_plasticity_rule_recording_data(
-		    result_map.snippets.at(0), network_graph, plasticity_rule_descriptor);
-		auto const& timed_recording_data =
-		    std::get<PlasticityRule::TimedRecordingData>(recording_data);
+		auto const timed_recording_data = std::get<PlasticityRule::Results::TimedData>(
+		    dynamic_cast<PlasticityRule::Results const&>(
+		        results.ports.get({plasticity_rule_descriptor, 0}))
+		        .data);
 
 		for (size_t j = 0; auto const& [name, observable] : recording.observables) {
 			std::visit(
 			    hate::overloaded{
-			        [&](PlasticityRule::TimedRecording::ObservableArray const& obsv) {
+			        [&](PlasticityRule::TimedRecordingConfig::ObservableArray const& obsv) {
 				        EXPECT_TRUE(timed_recording_data.data_array.contains(name));
 				        auto const& data_entry_variant = timed_recording_data.data_array.at(name);
 				        std::visit(
@@ -480,10 +602,11 @@ TEST(PlasticityRule, TimedRecording)
 					                std::get<std::vector<grenade::vx::common::TimedDataSequence<
 					                    std::vector<typename decltype(type)::ElementType>>>>(
 					                    data_entry_variant);
-					            EXPECT_EQ(data_entry.size(), inputs.batch_size());
+					            EXPECT_EQ(data_entry.size(), input_data.batch_size());
 					            for (size_t i = 0; i < data_entry.size(); ++i) {
 						            auto const& samples = data_entry.at(i);
-						            EXPECT_EQ(samples.size(), plasticity_rule.timer.num_periods);
+						            EXPECT_EQ(
+						                samples.size(), plasticity_rule_dynamics.timer.num_periods);
 						            for (size_t time = 0; auto const& sample : samples) {
 							            EXPECT_EQ(sample.time, time);
 							            EXPECT_EQ(sample.data.size(), obsv.size);
@@ -499,32 +622,29 @@ TEST(PlasticityRule, TimedRecording)
 				            },
 				            obsv.type);
 			        },
-			        [&](PlasticityRule::TimedRecording::ObservablePerSynapse const& obsv) {
+			        [&](PlasticityRule::TimedRecordingConfig::ObservablePerSynapse const& obsv) {
 				        EXPECT_TRUE(timed_recording_data.data_per_synapse.contains(name));
 				        auto const& data_entry_variant =
 				            timed_recording_data.data_per_synapse.at(name);
 				        std::visit(
 				            [&](auto type) {
-					            EXPECT_EQ(
-					                data_entry_variant.size(), plasticity_rule.projections.size());
-					            for (size_t p = 0; p < plasticity_rule.projections.size(); ++p) {
+					            EXPECT_EQ(data_entry_variant.size(), projection_shapes.size());
+					            for (size_t p = 0; p < projection_shapes.size(); ++p) {
 						            auto const& data_entry = std::get<std::vector<
 						                grenade::vx::common::TimedDataSequence<std::vector<
 						                    std::vector<typename decltype(type)::ElementType>>>>>(
-						                data_entry_variant.at(plasticity_rule.projections.at(p)));
-						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
+						                data_entry_variant.at(p));
+						            EXPECT_EQ(data_entry.size(), input_data.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
 							            EXPECT_EQ(
-							                samples.size(), plasticity_rule.timer.num_periods);
+							                samples.size(),
+							                plasticity_rule_dynamics.timer.num_periods);
 							            for (size_t time = 0; auto const& sample : samples) {
 								            EXPECT_EQ(sample.time, time);
 								            EXPECT_EQ(
 								                sample.data.size(),
-								                network->execution_instances.at(instance)
-								                    .projections
-								                    .at(plasticity_rule.projections.at(p))
-								                    .connections.size());
+								                projection_shapes.at(p).get().size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
 									            EXPECT_EQ(
 									                static_cast<int>(sample.data.at(i).at(0)),
@@ -538,36 +658,30 @@ TEST(PlasticityRule, TimedRecording)
 				            },
 				            obsv.type);
 			        },
-			        [&](PlasticityRule::TimedRecording::ObservablePerNeuron const& obsv) {
+			        [&](PlasticityRule::TimedRecordingConfig::ObservablePerNeuron const& obsv) {
 				        EXPECT_TRUE(timed_recording_data.data_per_neuron.contains(name));
 				        auto const& data_entry_variant =
 				            timed_recording_data.data_per_neuron.at(name);
 				        std::visit(
 				            [&](auto type) {
-					            EXPECT_EQ(
-					                data_entry_variant.size(), plasticity_rule.populations.size());
-					            for (size_t p = 0; p < plasticity_rule.populations.size(); ++p) {
+					            EXPECT_EQ(data_entry_variant.size(), population_shapes.size());
+					            for (size_t p = 0; p < population_shapes.size(); ++p) {
 						            auto const& data_entry = std::get<std::vector<
 						                grenade::vx::common::TimedDataSequence<std::vector<std::map<
 						                    CompartmentOnLogicalNeuron,
 						                    std::vector<typename decltype(type)::ElementType>>>>>>(
-						                data_entry_variant.at(
-						                    plasticity_rule.populations.at(p).descriptor));
-						            EXPECT_EQ(data_entry.size(), inputs.batch_size());
+						                data_entry_variant.at(p));
+						            EXPECT_EQ(data_entry.size(), input_data.batch_size());
 						            for (size_t i = 0; i < data_entry.size(); ++i) {
 							            auto const& samples = data_entry.at(i);
 							            EXPECT_EQ(
-							                samples.size(), plasticity_rule.timer.num_periods);
+							                samples.size(),
+							                plasticity_rule_dynamics.timer.num_periods);
 							            for (size_t time = 0; auto const& sample : samples) {
 								            EXPECT_EQ(sample.time, time);
 								            EXPECT_EQ(
 								                sample.data.size(),
-								                std::get<Population>(
-								                    network->execution_instances.at(instance)
-								                        .populations.at(
-								                            plasticity_rule.populations.at(p)
-								                                .descriptor))
-								                    .neurons.size());
+								                population_shapes.at(p).get().size());
 								            for (size_t i = 0; i < sample.data.size(); ++i) {
 									            EXPECT_EQ(
 									                static_cast<int>(
@@ -595,64 +709,93 @@ TEST(PlasticityRule, TimedRecording)
 
 TEST(PlasticityRule, ExecutorInitialState)
 {
-	using namespace grenade::vx;
-	using namespace grenade::vx::network;
-
-	grenade::common::ExecutionInstanceID instance;
-
-	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
-
-	signal_flow::InputData inputs;
-	inputs.snippets.resize(1);
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+	InputData input_data;
+	input_data.time_domain_runtimes.set(
+	    TimeDomainOnTopology(),
+	    ClockCycleTimeDomainRuntimes(
+	        {std::optional<grenade::vx::common::Time>(
+	            grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)},
+	        grenade::vx::common::Time()));
 
 	// Construct connection to HW
-	execution::JITGraphExecutor executor;
+	grenade::vx::execution::JITGraphExecutor executor;
 
-	Projection::Connection::Weight weight_63(63);
-	Projection::Connection::Weight weight_32(32);
+	size_t const weight_63 = 63;
+	size_t const weight_32 = 32;
 
 	auto const execute = [&](bool const set_weight) {
-		NetworkBuilder network_builder;
+		auto topology = std::make_shared<Topology>();
 
-		Population::Neurons neurons{Population::Neuron(
-		    LogicalNeuronOnDLS(
+		auto const chip = get_chip_config_bypass_excitatory();
+		Population population{
+		    UncalibratedNeuron{
+		        UncalibratedNeuron::Compartments{
+		            {grenade::common::CompartmentOnNeuron(),
+		             UncalibratedNeuron::Compartment{
+		                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+		                 {{{grenade::common::ReceptorOnCompartment(0),
+		                    grenade::vx::network::Receptor::Type::excitatory}}}}}},
 		        LogicalNeuronCompartments(
-		            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-		        AtomicNeuronOnDLS()),
-		    Population::Neuron::Compartments{
-		        {CompartmentOnLogicalNeuron(),
-		         Population::Neuron::Compartment{
-		             Population::Neuron::Compartment::SpikeMaster(0, false),
-		             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
-		Population population{std::move(neurons)};
-		auto const population_descriptor = network_builder.add(population);
+		            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+		    grenade::common::CuboidMultiIndexSequence(
+		        {1}, grenade::common::MultiIndex({0}),
+		        {grenade::common::CellOnPopulationDimensionUnit()}),
+		    UncalibratedNeuron::ParameterSpace(1, {{CompartmentOnNeuron(), 1}}),
+		    grenade::common::TimeDomainOnTopology()};
+		UncalibratedNeuron::ParameterSpace::Parameterization population_input_data;
+		population_input_data.configs.resize(
+		    1, {{grenade::common::CompartmentOnNeuron(),
+		         {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+		population_input_data.base_configs.emplace_back(std::vector<size_t>{0}, chip);
+		auto const population_descriptor = topology->add_vertex(population);
 
-		Projection::Connections projection_connections;
-		for (size_t i = 0; i < population.neurons.size(); ++i) {
-			projection_connections.push_back(
-			    {{i, CompartmentOnLogicalNeuron()}, {i, CompartmentOnLogicalNeuron()}, weight_63});
-		}
-		Projection projection{
-		    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
-		    population_descriptor, population_descriptor};
-		auto const projection_descriptor = network_builder.add(projection);
+		Projection projection(
+		    UncalibratedSynapse{},
+		    UncalibratedSynapse::ParameterSpace{{UncalibratedSynapse::Weight(63)}},
+		    SequenceConnector{
+		        CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}),
+		        ListMultiIndexSequence({MultiIndex({0, 0})})},
+		    TimeDomainOnTopology());
+		UncalibratedSynapse::ParameterSpace::Parameterization projection_input_data(
+		    {UncalibratedSynapse::Weight(63)});
 
-		PlasticityRule plasticity_rule;
-		plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
-		plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
-		plasticity_rule.timer.num_periods = 1;
-		plasticity_rule.projections.push_back(projection_descriptor);
-		plasticity_rule.recording = PlasticityRule::TimedRecording{
-		    {{"w",
-		      PlasticityRule::TimedRecording::ObservablePerSynapse{
-		          PlasticityRule::TimedRecording::ObservablePerSynapse::Type::int8,
-		          PlasticityRule::TimedRecording::ObservablePerSynapse::LayoutPerRow::
-		              packed_active_columns}}},
-		    true};
+		auto const projection_descriptor = topology->add_vertex(projection);
+
+		topology->add_edge(
+		    population_descriptor, projection_descriptor,
+		    Edge(
+		        CuboidMultiIndexSequence(
+		            {1, 1}, MultiIndex({0, 0}),
+		            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+		        CuboidMultiIndexSequence({1}), 0, 0));
+
+		topology->add_edge(
+		    projection_descriptor, population_descriptor,
+		    Edge(
+		        CuboidMultiIndexSequence({1}),
+		        CuboidMultiIndexSequence(
+		            {1, 1, 1}, MultiIndex({0, 0, 0}),
+		            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+		             ReceptorOnCompartmentDimensionUnit()}),
+		        0, 0));
+
+		std::vector<CuboidMultiIndexSequence> projection_shapes{CuboidMultiIndexSequence({1})};
+
+		PlasticityRule plasticity_rule(
+		    PlasticityRule::TimedRecordingConfig{
+		        {{"w",
+		          PlasticityRule::TimedRecordingConfig::ObservablePerSynapse{
+		              PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::Type::int8,
+		              PlasticityRule::TimedRecordingConfig::ObservablePerSynapse::LayoutPerRow::
+		                  packed_active_columns}}},
+		        true},
+		    PlasticityRule::ID(), {}, {projection_shapes.at(0)}, TimeDomainOnTopology());
+
+		PlasticityRule::Dynamics plasticity_rule_dynamics(
+		    PlasticityRule::Dynamics::Timer{
+		        PlasticityRule::Dynamics::Timer::Value(0),
+		        PlasticityRule::Dynamics::Timer::Value(10000), 1},
+		    1);
 
 		std::stringstream kernel;
 		kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -670,7 +813,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 		kernel << "  }\n";
 		kernel << "  auto w = synapses[0].get_weights(0);\n";
 		if (set_weight) {
-			kernel << "  w = " << static_cast<int>(weight_32.value()) << ";\n";
+			kernel << "  w = " << static_cast<int>(weight_32) << ";\n";
 		}
 		kernel << "  for (size_t i = 0; i < std::get<0>(recording.w).size(); ++i) {\n";
 		kernel << "    size_t active_column = 0;\n";
@@ -681,26 +824,44 @@ TEST(PlasticityRule, ExecutorInitialState)
 		kernel << "  synapses[0].set_weights(w, 0);\n";
 		kernel << "  }\n";
 		kernel << "}\n";
-		plasticity_rule.kernel = kernel.str();
 
-		auto const plasticity_rule_descriptor = network_builder.add(plasticity_rule);
+		PlasticityRule::Parameterization plasticity_rule_parameterization(kernel.str());
 
-		auto const network = network_builder.done();
-		auto const routing_result = routing::PortfolioRouter()(network);
-		auto const network_graph = build_network_graph(network, routing_result);
+		auto const plasticity_rule_descriptor = topology->add_vertex(plasticity_rule);
+
+		topology->add_edge(
+		    projection_descriptor, plasticity_rule_descriptor,
+		    Edge(CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}), 1, 0));
+
+		// build network graph
+		FixtureCalibration const calibration;
+		GreedyMapper mapper;
+		auto const mapped_topology =
+		    std::make_shared<LinkedTopology>(mapper(topology, calibration, executor));
+
+		input_data.ports.set({population_descriptor, 1}, population_input_data);
+		input_data.ports.set({projection_descriptor, 1}, projection_input_data);
+		input_data.ports.set({plasticity_rule_descriptor, 1}, plasticity_rule_parameterization);
+		input_data.ports.set({plasticity_rule_descriptor, 2}, plasticity_rule_dynamics);
+
+		auto const mapped_input_data = mapped_topology->map_root_input_data(input_data);
 
 		// run graph with given inputs and return results
-		auto const result_map = run(executor, network_graph, chip_configs, inputs);
+		auto const mapped_results =
+		    grenade::vx::execution::run(executor, mapped_topology, mapped_input_data);
 
-		auto const result =
-		    std::get<std::vector<common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
-		        std::get<PlasticityRule::TimedRecordingData>(
-		            extract_plasticity_rule_recording_data(
-		                result_map.snippets.at(0), network_graph, plasticity_rule_descriptor))
-		            .data_per_synapse.at("w")
-		            .at(projection_descriptor));
-		assert(result.size() == inputs.batch_size());
-		assert(result.at(0).size() == plasticity_rule.timer.num_periods);
+		auto const results = mapped_topology->map_root_output_data(mapped_results);
+
+		auto const timed_recording_data = std::get<PlasticityRule::Results::TimedData>(
+		    dynamic_cast<PlasticityRule::Results const&>(
+		        results.ports.get({plasticity_rule_descriptor, 0}))
+		        .data);
+
+		auto const result = std::get<
+		    std::vector<grenade::vx::common::TimedDataSequence<std::vector<std::vector<int8_t>>>>>(
+		    timed_recording_data.data_per_synapse.at("w").at(0));
+		EXPECT_EQ(result.size(), input_data.batch_size());
+		EXPECT_EQ(result.at(0).size(), plasticity_rule_dynamics.timer.num_periods);
 		return static_cast<int>(result.at(0).at(0).data.at(0).at(0));
 	};
 
@@ -712,55 +873,83 @@ TEST(PlasticityRule, ExecutorInitialState)
 
 TEST(PlasticityRule, SynapseRowViewHandleRange)
 {
-	using namespace grenade::vx;
-	using namespace grenade::vx::network;
-
-	grenade::common::ExecutionInstanceID instance;
-
-	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
-
-	signal_flow::InputData inputs;
-	inputs.snippets.resize(1);
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+	InputData input_data;
+	input_data.time_domain_runtimes.set(
+	    TimeDomainOnTopology(),
+	    ClockCycleTimeDomainRuntimes(
+	        {std::optional<grenade::vx::common::Time>(
+	            grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)},
+	        grenade::vx::common::Time()));
 
 	// Construct connection to HW
-	execution::JITGraphExecutor executor;
+	grenade::vx::execution::JITGraphExecutor executor;
 
-	NetworkBuilder network_builder;
+	auto topology = std::make_shared<Topology>();
 
-	Population::Neurons neurons{Population::Neuron(
-	    LogicalNeuronOnDLS(
+	auto const chip = get_chip_config_bypass_excitatory();
+	Population population{
+	    UncalibratedNeuron{
+	        UncalibratedNeuron::Compartments{
+	            {grenade::common::CompartmentOnNeuron(),
+	             UncalibratedNeuron::Compartment{
+	                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+	                 {{{grenade::common::ReceptorOnCompartment(0),
+	                    grenade::vx::network::Receptor::Type::excitatory}}}}}},
 	        LogicalNeuronCompartments(
-	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-	        AtomicNeuronOnDLS()),
-	    Population::Neuron::Compartments{
-	        {CompartmentOnLogicalNeuron(),
-	         Population::Neuron::Compartment{
-	             Population::Neuron::Compartment::SpikeMaster(0, false),
-	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
-	Population population{std::move(neurons)};
-	auto const population_descriptor = network_builder.add(population);
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+	    grenade::common::CuboidMultiIndexSequence(
+	        {1}, grenade::common::MultiIndex({0}),
+	        {grenade::common::CellOnPopulationDimensionUnit()}),
+	    UncalibratedNeuron::ParameterSpace(1, {{CompartmentOnNeuron(), 1}}),
+	    grenade::common::TimeDomainOnTopology()};
+	UncalibratedNeuron::ParameterSpace::Parameterization population_input_data;
+	population_input_data.configs.resize(
+	    1, {{grenade::common::CompartmentOnNeuron(),
+	         {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+	population_input_data.base_configs.emplace_back(std::vector<size_t>{0}, chip);
 
-	Projection::Connections projection_connections;
-	for (size_t i = 0; i < population.neurons.size(); ++i) {
-		projection_connections.push_back(
-		    {{i, CompartmentOnLogicalNeuron()},
-		     {i, CompartmentOnLogicalNeuron()},
-		     Projection::Connection::Weight(12)});
-	}
-	Projection projection{
-	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
-	    population_descriptor, population_descriptor};
-	auto const projection_descriptor = network_builder.add(projection);
+	auto const population_descriptor = topology->add_vertex(population);
 
-	PlasticityRule plasticity_rule;
-	plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
-	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
-	plasticity_rule.timer.num_periods = 1;
-	plasticity_rule.projections.push_back(projection_descriptor);
+	Projection projection(
+	    UncalibratedSynapse{},
+	    UncalibratedSynapse::ParameterSpace{{UncalibratedSynapse::Weight(63)}},
+	    SequenceConnector{
+	        CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}),
+	        ListMultiIndexSequence({MultiIndex({0, 0})})},
+	    TimeDomainOnTopology());
+	UncalibratedSynapse::ParameterSpace::Parameterization projection_input_data(
+	    {UncalibratedSynapse::Weight(1)});
+
+	auto const projection_descriptor = topology->add_vertex(projection);
+
+	topology->add_edge(
+	    population_descriptor, projection_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence(
+	            {1, 1}, MultiIndex({0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+	        CuboidMultiIndexSequence({1}), 0, 0));
+
+	topology->add_edge(
+	    projection_descriptor, population_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence({1}),
+	        CuboidMultiIndexSequence(
+	            {1, 1, 1}, MultiIndex({0, 0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+	             ReceptorOnCompartmentDimensionUnit()}),
+	        0, 0));
+
+	std::vector<CuboidMultiIndexSequence> projection_shapes{CuboidMultiIndexSequence({1})};
+
+	PlasticityRule::Dynamics plasticity_rule_dynamics(
+	    PlasticityRule::Dynamics::Timer{
+	        PlasticityRule::Dynamics::Timer::Value(0),
+	        PlasticityRule::Dynamics::Timer::Value(10000), 1},
+	    1);
+
+	PlasticityRule plasticity_rule(
+	    std::nullopt, PlasticityRule::ID(), {}, {projection_shapes.at(0)}, TimeDomainOnTopology());
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -779,82 +968,137 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 	kernel << "  for (auto const synapse_row: make_synapse_row_view_handle_range(synapses)) {\n";
 	kernel << "  }\n";
 	kernel << "}\n";
-	plasticity_rule.kernel = kernel.str();
 
-	network_builder.add(plasticity_rule);
+	PlasticityRule::Parameterization plasticity_rule_parameterization(kernel.str());
 
-	auto const network = network_builder.done();
-	auto const routing_result = routing::PortfolioRouter{}(network);
-	auto const network_graph = build_network_graph(network, routing_result);
+	auto const plasticity_rule_descriptor = topology->add_vertex(plasticity_rule);
 
-	run(executor, network_graph, chip_configs, inputs);
+	topology->add_edge(
+	    projection_descriptor, plasticity_rule_descriptor,
+	    Edge(CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}), 1, 0));
+
+	// build network graph
+	FixtureCalibration const calibration;
+	GreedyMapper mapper;
+	auto const mapped_topology =
+	    std::make_shared<LinkedTopology>(mapper(topology, calibration, executor));
+
+	input_data.ports.set({population_descriptor, 1}, population_input_data);
+	input_data.ports.set({projection_descriptor, 1}, projection_input_data);
+	input_data.ports.set({plasticity_rule_descriptor, 1}, plasticity_rule_parameterization);
+	input_data.ports.set({plasticity_rule_descriptor, 2}, plasticity_rule_dynamics);
+
+	auto const mapped_input_data = mapped_topology->map_root_input_data(input_data);
+
+	// run graph with given inputs and return results
+	auto const mapped_results =
+	    grenade::vx::execution::run(executor, mapped_topology, mapped_input_data);
+
+	EXPECT_NO_THROW(mapped_topology->map_root_output_data(mapped_results));
 }
 
 TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 {
-	using namespace grenade::vx;
-	using namespace grenade::vx::network;
-
-	grenade::common::ExecutionInstanceID instance;
-
-	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
-
-	signal_flow::InputData inputs;
-	inputs.snippets.resize(1);
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+	InputData input_data;
+	input_data.time_domain_runtimes.set(
+	    TimeDomainOnTopology(),
+	    ClockCycleTimeDomainRuntimes(
+	        {std::optional<grenade::vx::common::Time>(
+	            grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)},
+	        grenade::vx::common::Time()));
 
 	// Construct connection to HW
-	execution::JITGraphExecutor executor;
+	grenade::vx::execution::JITGraphExecutor executor;
 
-	NetworkBuilder network_builder;
+	auto topology = std::make_shared<Topology>();
 
-	Population::Neurons neurons{Population::Neuron(
-	    LogicalNeuronOnDLS(
+	auto const chip = get_chip_config_bypass_excitatory();
+	Population population{
+	    UncalibratedNeuron{
+	        UncalibratedNeuron::Compartments{
+	            {grenade::common::CompartmentOnNeuron(),
+	             UncalibratedNeuron::Compartment{
+	                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+	                 {{{grenade::common::ReceptorOnCompartment(0),
+	                    grenade::vx::network::Receptor::Type::excitatory},
+	                   {grenade::common::ReceptorOnCompartment(1),
+	                    grenade::vx::network::Receptor::Type::inhibitory}}}}}},
 	        LogicalNeuronCompartments(
-	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-	        AtomicNeuronOnDLS()),
-	    Population::Neuron::Compartments{
-	        {CompartmentOnLogicalNeuron(),
-	         Population::Neuron::Compartment{
-	             Population::Neuron::Compartment::SpikeMaster(0, false),
-	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory),
-	               Receptor(Receptor::ID(), Receptor::Type::inhibitory)}}}}})};
-	Population population{std::move(neurons)};
-	auto const population_descriptor = network_builder.add(population);
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+	    grenade::common::CuboidMultiIndexSequence(
+	        {1}, grenade::common::MultiIndex({0}),
+	        {grenade::common::CellOnPopulationDimensionUnit()}),
+	    UncalibratedNeuron::ParameterSpace(1, {{CompartmentOnNeuron(), 1}}),
+	    grenade::common::TimeDomainOnTopology()};
+	UncalibratedNeuron::ParameterSpace::Parameterization population_input_data;
+	population_input_data.configs.resize(
+	    1, {{grenade::common::CompartmentOnNeuron(),
+	         {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+	population_input_data.base_configs.emplace_back(std::vector<size_t>{0}, chip);
 
-	Projection::Connections projection_exc_connections;
-	for (size_t i = 0; i < population.neurons.size(); ++i) {
-		projection_exc_connections.push_back(
-		    {{i, CompartmentOnLogicalNeuron()},
-		     {i, CompartmentOnLogicalNeuron()},
-		     Projection::Connection::Weight(0)});
-	}
-	Projection projection_exc{
-	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_exc_connections),
-	    population_descriptor, population_descriptor};
-	auto const projection_exc_descriptor = network_builder.add(projection_exc);
+	auto const population_descriptor = topology->add_vertex(population);
 
-	Projection::Connections projection_inh_connections;
-	for (size_t i = 0; i < population.neurons.size(); ++i) {
-		projection_inh_connections.push_back(
-		    {{i, CompartmentOnLogicalNeuron()},
-		     {i, CompartmentOnLogicalNeuron()},
-		     Projection::Connection::Weight(12)});
-	}
-	Projection projection_inh{
-	    Receptor(Receptor::ID(), Receptor::Type::inhibitory), std::move(projection_inh_connections),
-	    population_descriptor, population_descriptor};
-	auto const projection_inh_descriptor = network_builder.add(projection_inh);
+	Projection projection(
+	    UncalibratedSynapse{},
+	    UncalibratedSynapse::ParameterSpace{{UncalibratedSynapse::Weight(63)}},
+	    SequenceConnector{
+	        CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}),
+	        ListMultiIndexSequence({MultiIndex({0, 0})})},
+	    TimeDomainOnTopology());
+	UncalibratedSynapse::ParameterSpace::Parameterization projection_input_data(
+	    {UncalibratedSynapse::Weight(1)});
 
-	PlasticityRule plasticity_rule;
-	plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
-	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
-	plasticity_rule.timer.num_periods = 1;
-	plasticity_rule.projections.push_back(projection_exc_descriptor);
-	plasticity_rule.projections.push_back(projection_inh_descriptor);
+	auto const projection_exc_descriptor = topology->add_vertex(projection);
+	auto const projection_inh_descriptor = topology->add_vertex(projection);
+
+	topology->add_edge(
+	    population_descriptor, projection_exc_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence(
+	            {1, 1}, MultiIndex({0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+	        CuboidMultiIndexSequence({1}), 0, 0));
+
+	topology->add_edge(
+	    projection_exc_descriptor, population_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence({1}),
+	        CuboidMultiIndexSequence(
+	            {1, 1, 1}, MultiIndex({0, 0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+	             ReceptorOnCompartmentDimensionUnit()}),
+	        0, 0));
+
+	topology->add_edge(
+	    population_descriptor, projection_inh_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence(
+	            {1, 1}, MultiIndex({0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+	        CuboidMultiIndexSequence({1}), 0, 0));
+
+	topology->add_edge(
+	    projection_inh_descriptor, population_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence({1}),
+	        CuboidMultiIndexSequence(
+	            {1, 1, 1}, MultiIndex({0, 0, 1}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+	             ReceptorOnCompartmentDimensionUnit()}),
+	        0, 0));
+
+	std::vector<CuboidMultiIndexSequence> projection_shapes{
+	    CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1})};
+
+	PlasticityRule::Dynamics plasticity_rule_dynamics(
+	    PlasticityRule::Dynamics::Timer{
+	        PlasticityRule::Dynamics::Timer::Value(0),
+	        PlasticityRule::Dynamics::Timer::Value(10000), 1},
+	    1);
+
+	PlasticityRule plasticity_rule(
+	    std::nullopt, PlasticityRule::ID(), {}, {projection_shapes.at(0), projection_shapes.at(1)},
+	    TimeDomainOnTopology());
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -874,68 +1118,119 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 	          "{\n";
 	kernel << "  }\n";
 	kernel << "}\n";
-	plasticity_rule.kernel = kernel.str();
 
-	network_builder.add(plasticity_rule);
+	PlasticityRule::Parameterization plasticity_rule_parameterization(kernel.str());
 
-	auto const network = network_builder.done();
-	auto const routing_result = routing::PortfolioRouter{}(network);
-	auto const network_graph = build_network_graph(network, routing_result);
+	auto const plasticity_rule_descriptor = topology->add_vertex(plasticity_rule);
 
-	run(executor, network_graph, chip_configs, inputs);
+	topology->add_edge(
+	    projection_exc_descriptor, plasticity_rule_descriptor,
+	    Edge(CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}), 1, 0));
+
+	topology->add_edge(
+	    projection_inh_descriptor, plasticity_rule_descriptor,
+	    Edge(CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}), 1, 1));
+
+	// build network graph
+	FixtureCalibration const calibration;
+	GreedyMapper mapper;
+	auto const mapped_topology =
+	    std::make_shared<LinkedTopology>(mapper(topology, calibration, executor));
+
+	input_data.ports.set({population_descriptor, 1}, population_input_data);
+	input_data.ports.set({projection_exc_descriptor, 1}, projection_input_data);
+	input_data.ports.set({projection_inh_descriptor, 1}, projection_input_data);
+	input_data.ports.set({plasticity_rule_descriptor, 2}, plasticity_rule_parameterization);
+	input_data.ports.set({plasticity_rule_descriptor, 3}, plasticity_rule_dynamics);
+
+	auto const mapped_input_data = mapped_topology->map_root_input_data(input_data);
+
+	// run graph with given inputs and return results
+	auto const mapped_results =
+	    grenade::vx::execution::run(executor, mapped_topology, mapped_input_data);
+
+	EXPECT_NO_THROW(mapped_topology->map_root_output_data(mapped_results));
 }
 
 TEST(PlasticityRule, WriteReadPPUSymbol)
 {
-	using namespace grenade::vx;
-	using namespace grenade::vx::network;
-
-	grenade::common::ExecutionInstanceID instance;
-
-	execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
-
-	signal_flow::InputData inputs;
-	inputs.snippets.resize(1);
-	inputs.snippets.at(0).runtime.push_back(
-	    {{instance,
-	      grenade::vx::common::Time(grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)}});
+	InputData input_data;
+	input_data.time_domain_runtimes.set(
+	    TimeDomainOnTopology(),
+	    ClockCycleTimeDomainRuntimes(
+	        {std::optional<grenade::vx::common::Time>(
+	            grenade::vx::common::Time::fpga_clock_cycles_per_us * 1000)},
+	        grenade::vx::common::Time()));
 
 	// Construct connection to HW
-	execution::JITGraphExecutor executor;
+	grenade::vx::execution::JITGraphExecutor executor;
 
-	NetworkBuilder network_builder;
+	auto topology = std::make_shared<Topology>();
 
-	Population::Neurons neurons{Population::Neuron(
-	    LogicalNeuronOnDLS(
+	auto const chip = get_chip_config_bypass_excitatory();
+	Population population{
+	    UncalibratedNeuron{
+	        UncalibratedNeuron::Compartments{
+	            {grenade::common::CompartmentOnNeuron(),
+	             UncalibratedNeuron::Compartment{
+	                 UncalibratedNeuron::Compartment::SpikeMaster(0),
+	                 {{{grenade::common::ReceptorOnCompartment(0),
+	                    grenade::vx::network::Receptor::Type::excitatory}}}}}},
 	        LogicalNeuronCompartments(
-	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}}),
-	        AtomicNeuronOnDLS()),
-	    Population::Neuron::Compartments{
-	        {CompartmentOnLogicalNeuron(),
-	         Population::Neuron::Compartment{
-	             Population::Neuron::Compartment::SpikeMaster(0, false),
-	             {{Receptor(Receptor::ID(), Receptor::Type::excitatory)}}}}})};
-	Population population{std::move(neurons)};
-	auto const population_descriptor = network_builder.add(population);
+	            {{CompartmentOnLogicalNeuron(), {AtomicNeuronOnLogicalNeuron()}}})},
+	    grenade::common::CuboidMultiIndexSequence(
+	        {1}, grenade::common::MultiIndex({0}),
+	        {grenade::common::CellOnPopulationDimensionUnit()}),
+	    UncalibratedNeuron::ParameterSpace(1, {{CompartmentOnNeuron(), 1}}),
+	    grenade::common::TimeDomainOnTopology()};
+	UncalibratedNeuron::ParameterSpace::Parameterization population_input_data;
+	population_input_data.configs.resize(
+	    1, {{grenade::common::CompartmentOnNeuron(),
+	         {chip.neuron_block.atomic_neurons.at(AtomicNeuronOnDLS())}}});
+	population_input_data.base_configs.emplace_back(std::vector<size_t>{0}, chip);
 
-	Projection::Connections projection_connections;
-	for (size_t i = 0; i < population.neurons.size(); ++i) {
-		projection_connections.push_back(
-		    {{i, CompartmentOnLogicalNeuron()},
-		     {i, CompartmentOnLogicalNeuron()},
-		     Projection::Connection::Weight(12)});
-	}
-	Projection projection{
-	    Receptor(Receptor::ID(), Receptor::Type::excitatory), std::move(projection_connections),
-	    population_descriptor, population_descriptor};
-	auto const projection_descriptor = network_builder.add(projection);
+	auto const population_descriptor = topology->add_vertex(population);
 
-	PlasticityRule plasticity_rule;
-	plasticity_rule.timer.start = PlasticityRule::Timer::Value(0);
-	plasticity_rule.timer.period = PlasticityRule::Timer::Value(10000);
-	plasticity_rule.timer.num_periods = 1;
-	plasticity_rule.projections.push_back(projection_descriptor);
+	Projection projection(
+	    UncalibratedSynapse{},
+	    UncalibratedSynapse::ParameterSpace{{UncalibratedSynapse::Weight(63)}},
+	    SequenceConnector{
+	        CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}),
+	        ListMultiIndexSequence({MultiIndex({0, 0})})},
+	    TimeDomainOnTopology());
+	UncalibratedSynapse::ParameterSpace::Parameterization projection_input_data(
+	    {UncalibratedSynapse::Weight(1)});
+
+	auto const projection_descriptor = topology->add_vertex(projection);
+
+	topology->add_edge(
+	    population_descriptor, projection_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence(
+	            {1, 1}, MultiIndex({0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit()}),
+	        CuboidMultiIndexSequence({1}), 0, 0));
+
+	topology->add_edge(
+	    projection_descriptor, population_descriptor,
+	    Edge(
+	        CuboidMultiIndexSequence({1}),
+	        CuboidMultiIndexSequence(
+	            {1, 1, 1}, MultiIndex({0, 0, 0}),
+	            {CellOnPopulationDimensionUnit(), CompartmentOnNeuronDimensionUnit(),
+	             ReceptorOnCompartmentDimensionUnit()}),
+	        0, 0));
+
+	std::vector<CuboidMultiIndexSequence> projection_shapes{CuboidMultiIndexSequence({1})};
+
+	PlasticityRule::Dynamics plasticity_rule_dynamics(
+	    PlasticityRule::Dynamics::Timer{
+	        PlasticityRule::Dynamics::Timer::Value(0),
+	        PlasticityRule::Dynamics::Timer::Value(10000), 1},
+	    1);
+
+	PlasticityRule plasticity_rule(
+	    std::nullopt, PlasticityRule::ID(), {}, {projection_shapes.at(0)}, TimeDomainOnTopology());
 
 	std::stringstream kernel;
 	kernel << "#include \"grenade/vx/ppu/synapse_array_view_handle.h\"\n";
@@ -948,40 +1243,59 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 	kernel << "{\n";
 	kernel << "  static_cast<void>(test);\n";
 	kernel << "}\n";
-	plasticity_rule.kernel = kernel.str();
 
-	network_builder.add(plasticity_rule);
+	PlasticityRule::Parameterization plasticity_rule_parameterization(kernel.str());
 
-	auto const network = network_builder.done();
-	auto const routing_result = routing::PortfolioRouter{}(network);
-	auto const network_graph = build_network_graph(network, routing_result);
+	auto const plasticity_rule_descriptor = topology->add_vertex(plasticity_rule);
 
-	execution::JITGraphExecutor::Hooks hooks;
+	topology->add_edge(
+	    projection_descriptor, plasticity_rule_descriptor,
+	    Edge(CuboidMultiIndexSequence({1}), CuboidMultiIndexSequence({1}), 1, 0));
+
+	// build network graph
+	FixtureCalibration const calibration;
+	GreedyMapper mapper;
+	auto const mapped_topology =
+	    std::make_shared<LinkedTopology>(mapper(topology, calibration, executor));
+
+	input_data.ports.set({population_descriptor, 1}, population_input_data);
+	input_data.ports.set({projection_descriptor, 1}, projection_input_data);
+	input_data.ports.set({plasticity_rule_descriptor, 1}, plasticity_rule_parameterization);
+	input_data.ports.set({plasticity_rule_descriptor, 2}, plasticity_rule_dynamics);
+
+	auto const mapped_input_data = mapped_topology->map_root_input_data(input_data);
+
+	grenade::vx::execution::JITGraphExecutor::Hooks hooks;
 	haldls::vx::v3::PPUMemoryBlock expectation(halco::hicann_dls::vx::v3::PPUMemoryBlockSize(1));
 	expectation.at(0) =
 	    haldls::vx::v3::PPUMemoryWord(haldls::vx::v3::PPUMemoryWord::Value(0x12345678));
-	hooks[grenade::common::ExecutionInstanceID()] =
-	    std::make_shared<execution::ExecutionInstanceHooks>();
-	hooks[grenade::common::ExecutionInstanceID()]
+	hooks[grenade::common::ExecutionInstanceOnExecutor()] =
+	    std::make_shared<grenade::vx::execution::ExecutionInstanceHooks>();
+	hooks[grenade::common::ExecutionInstanceOnExecutor()]
 	    ->chips[grenade::vx::common::ChipOnConnection()]
 	    .write_ppu_symbols["test"] =
 	    std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, haldls::vx::v3::PPUMemoryBlock>{
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::top, expectation},
 	        {halco::hicann_dls::vx::v3::HemisphereOnDLS::bottom, expectation},
 	    };
-	hooks[grenade::common::ExecutionInstanceID()]
+	hooks[grenade::common::ExecutionInstanceOnExecutor()]
 	    ->chips[grenade::vx::common::ChipOnConnection()]
 	    .read_ppu_symbols.insert("test");
 
-	auto const expectation_symbols = hooks.at(grenade::common::ExecutionInstanceID())
+	auto const expectation_symbols = hooks.at(grenade::common::ExecutionInstanceOnExecutor())
 	                                     ->chips[grenade::vx::common::ChipOnConnection()]
 	                                     .write_ppu_symbols;
 
-	auto const result = run(executor, network_graph, chip_configs, inputs, std::move(hooks));
+	// run graph with given inputs and return results
+	auto const mapped_results =
+	    grenade::vx::execution::run(executor, mapped_topology, mapped_input_data, std::move(hooks));
+
+	auto const results = mapped_topology->map_root_output_data(mapped_results);
 
 	EXPECT_EQ(
-	    result.read_ppu_symbols.at(0)
-	        .at(grenade::common::ExecutionInstanceID())
+	    dynamic_cast<ExecutionInstanceGlobal const&>(
+	        results.execution_instances.get(ExecutionInstanceOnExecutor()))
+	        .read_ppu_symbols.at(0)
 	        .at(grenade::vx::common::ChipOnConnection()),
 	    expectation_symbols);
 }

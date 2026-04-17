@@ -1,6 +1,7 @@
 #include "grenade/vx/signal_flow/vertex/crossbar_l2_input.h"
 
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
 

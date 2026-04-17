@@ -1,10 +1,7 @@
 #include "grenade/vx/execution/jit_graph_executor.h"
 
 #include "grenade/vx/common/chip_on_connection.h"
-#include "grenade/vx/common/entity_on_chip.h"
-#include "grenade/vx/execution/backend/initialized_connection.h"
 #include "grenade/vx/execution/backend/stateful_connection.h"
-#include "grenade/vx/signal_flow/graph.h"
 #include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "hate/timer.h"
@@ -106,9 +103,11 @@ JITGraphExecutor::get_hwdb_entry() const
 	return ret;
 }
 
-bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
+bool JITGraphExecutor::is_executable_on(grenade::common::Topology const& topology)
 {
-	std::set<grenade::vx::common::EntityOnChip::ChipOnExecutor> chips_on_executor;
+	std::set<
+	    std::pair<grenade::vx::common::ChipOnConnection, grenade::common::ConnectionOnExecutor>>
+	    chips_on_executor;
 	for (auto const& [connection_on_executor, connection] : m_connections) {
 		auto const local_chips = connection.get_chips_on_connection();
 		for (auto const& chip_on_connection : connection.get_chips_on_connection()) {
@@ -117,35 +116,35 @@ bool JITGraphExecutor::is_executable_on(signal_flow::Graph const& graph)
 	}
 
 	auto const find_chip_of_vertex_property = [&chips_on_executor](auto const& v) {
-		if constexpr (std::is_base_of_v<
-		                  signal_flow::vertex::EntityOnChip, std::decay_t<decltype(v)>>) {
-			return chips_on_executor.contains(v.chip_on_executor);
+		if (auto const entity_on_chip = dynamic_cast<signal_flow::vertex::EntityOnChip const*>(&v);
+		    entity_on_chip) {
+			return chips_on_executor.contains(std::pair{
+			    entity_on_chip->chip_on_connection,
+			    entity_on_chip->get_execution_instance_on_executor()
+			        .value()
+			        .connection_on_executor});
 		}
 		return true;
 	};
 
-	auto const find_chip_of_vertex_descriptor = [&graph,
+	auto const find_chip_of_vertex_descriptor = [&topology,
 	                                             find_chip_of_vertex_property](auto const vertex) {
-		return std::visit(find_chip_of_vertex_property, graph.get_vertex_property(vertex));
+		return find_chip_of_vertex_property(topology.get(vertex));
 	};
 
-	auto const vertices = boost::make_iterator_range(boost::vertices(graph.get_graph()));
+	auto const vertices = topology.vertices();
 	return std::all_of(vertices.begin(), vertices.end(), find_chip_of_vertex_descriptor);
 }
 
-void JITGraphExecutor::check(signal_flow::Graph const& graph)
+void JITGraphExecutor::check(grenade::common::Topology const& topology)
 {
 	auto logger = log4cxx::Logger::getLogger("grenade.JITGraphExecutor");
 	hate::Timer const timer;
 
-	// check execution instance graph is acyclic
-	if (!graph.is_acyclic_execution_instance_graph()) {
-		throw std::runtime_error("Execution instance graph is not acyclic.");
-	}
-
-	// check all physical chips used in the graph are present in the provided connections
-	if (!is_executable_on(graph)) {
-		throw std::runtime_error("Graph requests connection not provided.");
+	// check all DLSGlobal physical chips used in the topology are present in the provided
+	// connections
+	if (!is_executable_on(topology)) {
+		throw std::runtime_error("Not all chips requested by a topology are on given connections.");
 	}
 
 	LOG4CXX_TRACE(

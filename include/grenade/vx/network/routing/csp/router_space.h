@@ -1,5 +1,4 @@
 #pragma once
-#include "grenade/vx/network/network.h"
 #include "grenade/vx/network/routing/csp/route_filter_sequence.h"
 #include "grenade/vx/network/routing/csp/router_options.h"
 #include "grenade/vx/network/routing/csp/router_space_shared_storage.h"

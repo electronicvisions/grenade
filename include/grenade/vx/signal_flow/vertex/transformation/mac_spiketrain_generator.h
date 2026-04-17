@@ -1,6 +1,7 @@
 #pragma once
+#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/port_data.h"
 #include "grenade/vx/common/time.h"
-#include "grenade/vx/signal_flow/port.h"
 #include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
@@ -8,6 +9,7 @@
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
 #include "haldls/vx/v3/event.h"
 #include "haldls/vx/v3/timer.h"
+#include <functional>
 #include <vector>
 #include <gtest/gtest_prod.h>
 
@@ -21,8 +23,6 @@ namespace grenade::vx::signal_flow::vertex::transformation {
 
 struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public Transformation::Function
 {
-	~MACSpikeTrainGenerator() SYMBOL_VISIBLE;
-
 	MACSpikeTrainGenerator() = default;
 
 	/**
@@ -37,16 +37,21 @@ struct SYMBOL_VISIBLE MACSpikeTrainGenerator : public Transformation::Function
 	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::HemisphereOnDLS> const&
 	        hemisphere_sizes,
 	    size_t num_sends,
-	    common::Time wait_between_events) SYMBOL_VISIBLE;
+	    common::Time wait_between_events);
 
-	std::vector<Port> inputs() const SYMBOL_VISIBLE;
-	Port output() const SYMBOL_VISIBLE;
+	virtual std::vector<Port> get_input_ports() const override;
+	virtual std::vector<Port> get_output_ports() const override;
 
-	bool equal(Transformation::Function const& other) const SYMBOL_VISIBLE;
+	virtual std::vector<Transformation::Results> apply(
+	    std::vector<std::reference_wrapper<grenade::common::PortData const>> const& data)
+	    const override;
 
-	Value apply(std::vector<Value> const& value) const SYMBOL_VISIBLE;
+	virtual std::unique_ptr<Function> copy() const override;
+	virtual std::unique_ptr<Function> move() override;
 
-	std::unique_ptr<Transformation::Function> clone() const;
+protected:
+	virtual bool is_equal_to(Function const& other) const override;
+	virtual std::ostream& print(std::ostream& os) const override;
 
 private:
 	FRIEND_TEST(::MACSpikeTrainGenerator, get_spike_label);

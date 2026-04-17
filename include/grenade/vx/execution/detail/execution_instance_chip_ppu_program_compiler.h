@@ -1,9 +1,8 @@
 #pragma once
-#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/linked_topology.h"
 #include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/execution_instance_hooks.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/ppu.h"
 #include "haldls/vx/v3/ppu.h"
@@ -44,26 +43,28 @@ struct ExecutionInstanceChipPPUProgramCompiler
 
 	/**
 	 * Construct compiler.
-	 * @param graphs Graphs to use for locality and property lookup
-	 * @param input_data Input datas to use for runtime extraction
-	 * @param hooks Execution instance hooks to get PPU symbols to read and write
-	 * @param execution_instance Local execution instance to compile for
+	 * @param topologies Topologies to use
+	 * @param execution_instance_vertex_descriptors Vertex descriptors per realtime snippet of
+	 * execution instance to visit
+	 * @param input_data Input data to use
+	 * @param hooks Execution instance hooks to use
+	 * @param chip_on_connection Chip identifier on connection to use
 	 */
 	ExecutionInstanceChipPPUProgramCompiler(
-	    std::vector<std::reference_wrapper<signal_flow::Graph const>> const& graphs,
-	    signal_flow::InputData const& input_data,
+	    std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& topologies,
+	    std::vector<grenade::common::VertexOnTopology> const& execution_instance_vertex_descriptors,
+	    std::vector<std::reference_wrapper<grenade::common::InputData const>> const& input_data,
 	    ExecutionInstanceHooks const& hooks,
-	    common::ChipOnConnection const& chip_on_connection,
-	    grenade::common::ExecutionInstanceID const& execution_instance) SYMBOL_VISIBLE;
+	    common::ChipOnConnection const& chip_on_connection) SYMBOL_VISIBLE;
 
 	Result operator()() const SYMBOL_VISIBLE;
 
 private:
-	std::vector<std::reference_wrapper<signal_flow::Graph const>> const& m_graphs;
-	signal_flow::InputData const& m_input_data;
+	std::vector<std::shared_ptr<grenade::common::LinkedTopology>> const& m_topologies;
+	std::vector<grenade::common::VertexOnTopology> const& m_execution_instance_vertex_descriptors;
+	std::vector<std::reference_wrapper<grenade::common::InputData const>> const& m_input_data;
 	ExecutionInstanceHooks const& m_hooks;
 	common::ChipOnConnection m_chip_on_connection;
-	grenade::common::ExecutionInstanceID m_execution_instance;
 };
 
 } // namespace grenade::vx::execution::detail

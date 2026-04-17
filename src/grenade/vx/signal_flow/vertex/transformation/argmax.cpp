@@ -1,5 +1,10 @@
 #include "grenade/vx/signal_flow/vertex/transformation/argmax.h"
 
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/port_data.h"
+#include "grenade/vx/signal_flow/connection_type.h"
+#include "grenade/vx/signal_flow/vertex/transformation.h"
+#include <functional>
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow::vertex::transformation {
@@ -32,19 +37,19 @@ ArgMax::ArgMax(size_t const size, ConnectionType const type)
 	m_size = size;
 }
 
-ArgMax::~ArgMax() {}
-
-std::vector<Port> ArgMax::inputs() const
+std::vector<Transformation::Function::Port> ArgMax::get_input_ports() const
 {
-	return {Port(m_size, m_type)};
+	return {Port(VertexPortType(m_type), grenade::common::CuboidMultiIndexSequence({m_size}))};
 }
 
-Port ArgMax::output() const
+std::vector<Transformation::Function::Port> ArgMax::get_output_ports() const
 {
-	return Port(1, ConnectionType::UInt32);
+	return {Port(
+	    VertexPortType(ConnectionType::UInt32), grenade::common::CuboidMultiIndexSequence({1}))};
 }
 
-ArgMax::Function::Value ArgMax::apply(std::vector<Function::Value> const& value) const
+std::vector<Transformation::Results> ArgMax::apply(
+    std::vector<std::reference_wrapper<grenade::common::PortData const>> const& data) const
 {
 	auto const compute = [&](auto const& local_data) {
 		// check size match only for first because we know that the data map is valid
@@ -69,7 +74,7 @@ ArgMax::Function::Value ArgMax::apply(std::vector<Function::Value> const& value)
 		return tmps;
 	};
 
-	auto const visitor = [&](auto const& d) -> Function::Value {
+	auto const visitor = [&](auto const& d) -> Transformation::Results::Value {
 		typedef std::remove_cvref_t<decltype(d)> Data;
 		typedef hate::type_list<
 		    std::vector<common::TimedDataSequence<std::vector<signal_flow::UInt32>>>,
@@ -82,20 +87,29 @@ ArgMax::Function::Value ArgMax::apply(std::vector<Function::Value> const& value)
 			throw std::logic_error("ArgMax data type not implemented.");
 		}
 	};
-	return std::visit(visitor, value.at(0));
+	return {
+	    std::visit(visitor, dynamic_cast<Transformation::Dynamics const&>(data.at(0).get()).value)};
 }
 
-bool ArgMax::equal(Transformation::Function const& other) const
-{
-	if (auto const o = dynamic_cast<ArgMax const*>(&other); o != nullptr) {
-		return (m_size == o->m_size) && (m_type == o->m_type);
-	}
-	return false;
-}
-
-std::unique_ptr<Transformation::Function> ArgMax::clone() const
+std::unique_ptr<Transformation::Function> ArgMax::copy() const
 {
 	return std::make_unique<ArgMax>(*this);
+}
+
+std::unique_ptr<Transformation::Function> ArgMax::move()
+{
+	return std::make_unique<ArgMax>(*this);
+}
+
+bool ArgMax::is_equal_to(Transformation::Function const& other) const
+{
+	auto const& o = static_cast<ArgMax const&>(other);
+	return (m_size == o.m_size) && (m_type == o.m_type);
+}
+
+std::ostream& ArgMax::print(std::ostream& os) const
+{
+	return os << "ArgMax(size: " << m_size << ", type: " << m_type << ")";
 }
 
 } // namespace grenade::vx::signal_flow::vertex::transformation

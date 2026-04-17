@@ -1,18 +1,56 @@
 #include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"
 
+#include "grenade/common/edge.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
 #include "grenade/vx/ppu/synapse_array_view_handle.h"
+#include "grenade/vx/signal_flow/vertex/synapse_driver.h"
 #include "halco/hicann-dls/vx/v3/synapse.h"
 #include "halco/hicann-dls/vx/v3/synapse_driver.h"
+#include "hate/indent.h"
 #include <ostream>
 #include <set>
 #include <stdexcept>
 
 namespace grenade::vx::signal_flow::vertex {
 
+SynapseArrayViewSparse::Parameterization::Parameterization(Labels labels, Weights weights) :
+    labels(std::move(labels)), weights(std::move(weights))
+{
+}
+
+std::unique_ptr<grenade::common::PortData> SynapseArrayViewSparse::Parameterization::copy() const
+{
+	return std::make_unique<Parameterization>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> SynapseArrayViewSparse::Parameterization::move()
+{
+	return std::make_unique<Parameterization>(std::move(*this));
+}
+
+std::ostream& SynapseArrayViewSparse::Parameterization::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "Parameterization(\n" << hate::Indentation("\t");
+	for (size_t i = 0; i < labels.size(); ++i) {
+		ios << labels.at(i) << ", " << weights.at(i) << "\n";
+	}
+	ios << hate::Indentation();
+	ios << ")";
+	return os;
+}
+
+bool SynapseArrayViewSparse::Parameterization::is_equal_to(PortData const& other) const
+{
+	auto const& other_parameterization = static_cast<Parameterization const&>(other);
+	return labels == other_parameterization.labels && weights == other_parameterization.weights;
+}
+
+
 bool SynapseArrayViewSparse::Synapse::operator==(Synapse const& other) const
 {
-	return (label == other.label) && (weight == other.weight) && (index_row == other.index_row) &&
-	       (index_column == other.index_column);
+	return (index_row == other.index_row) && (index_column == other.index_column);
 }
 
 bool SynapseArrayViewSparse::Synapse::operator!=(Synapse const& other) const
@@ -56,39 +94,59 @@ void SynapseArrayViewSparse::check(
 	}
 }
 
+SynapseArrayViewSparse::SynapseArrayViewSparse(
+    Synram synram,
+    Rows rows_in,
+    Columns columns_in,
+    Synapses synapses_in,
+    common::ChipOnConnection const& chip_on_connection,
+    grenade::common::TimeDomainOnTopology const& time_domain,
+    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor) :
+    EntityOnChip(chip_on_connection, time_domain, execution_instance_on_executor),
+    synram(synram),
+    rows(),
+    columns(),
+    synapses()
+{
+	check(rows_in, columns_in, synapses_in);
+	rows = std::move(rows_in);
+	columns = std::move(columns_in);
+	synapses = std::move(synapses_in);
+}
+
 boost::iterator_range<SynapseArrayViewSparse::Rows::const_iterator>
 SynapseArrayViewSparse::get_rows() const
 {
-	return {m_rows.begin(), m_rows.end()};
+	return {rows.begin(), rows.end()};
 }
 
 boost::iterator_range<SynapseArrayViewSparse::Columns::const_iterator>
 SynapseArrayViewSparse::get_columns() const
 {
-	return {m_columns.begin(), m_columns.end()};
+	return {columns.begin(), columns.end()};
 }
 
 boost::iterator_range<SynapseArrayViewSparse::Synapses::const_iterator>
 SynapseArrayViewSparse::get_synapses() const
 {
-	return {m_synapses.begin(), m_synapses.end()};
+	return {synapses.begin(), synapses.end()};
 }
 
 SynapseArrayViewSparse::Synram const& SynapseArrayViewSparse::get_synram() const
 {
-	return m_synram;
+	return synram;
 }
 
 ppu::SynapseArrayViewHandle SynapseArrayViewSparse::toSynapseArrayViewHandle() const
 {
 	std::set<halco::hicann_dls::vx::v3::SynapseRowOnSynram> used_rows;
 	std::set<halco::hicann_dls::vx::v3::SynapseOnSynapseRow> used_columns;
-	for (auto const& synapse : m_synapses) {
-		used_rows.insert(m_rows.at(synapse.index_row));
-		used_columns.insert(m_columns.at(synapse.index_column));
+	for (auto const& synapse : synapses) {
+		used_rows.insert(rows.at(synapse.index_row));
+		used_columns.insert(columns.at(synapse.index_column));
 	}
 
-	if (m_synapses.size() != used_rows.size() * used_columns.size()) {
+	if (synapses.size() != used_rows.size() * used_columns.size()) {
 		throw std::runtime_error(
 		    "Conversion to SynapseArrayViewHandle only supported for dense connectivity.");
 	}
@@ -102,45 +160,103 @@ ppu::SynapseArrayViewHandle SynapseArrayViewSparse::toSynapseArrayViewHandle() c
 	return result;
 }
 
-std::vector<Port> SynapseArrayViewSparse::inputs() const
+bool SynapseArrayViewSparse::valid_input_port_data(
+    size_t input_port_on_vertex, grenade::common::PortData const& data) const
 {
-	Port const port(1, ConnectionType::SynapseInputLabel);
-	std::set<halco::hicann_dls::vx::v3::SynapseDriverOnSynapseDriverBlock> drivers;
-	std::for_each(m_rows.begin(), m_rows.end(), [&](auto const& r) {
-		drivers.insert(r.toSynapseDriverOnSynapseDriverBlock());
-	});
-	std::vector<Port> ret;
-	ret.insert(ret.begin(), drivers.size(), port);
-	return ret;
-}
-
-Port SynapseArrayViewSparse::output() const
-{
-	return Port(m_columns.size(), ConnectionType::SynapticInput);
-}
-
-std::ostream& operator<<(std::ostream& os, SynapseArrayViewSparse const& config)
-{
-	os << "SynapseArrayViewSparse(size: [rows: " << config.m_rows.size()
-	   << ", columns: " << config.m_columns.size() << "]" << std::endl;
-	for (auto const& synapse : config.m_synapses) {
-		os << "(" << config.m_rows.at(synapse.index_row) << ", "
-		   << config.m_columns.at(synapse.index_column) << "): " << synapse.weight << ", "
-		   << synapse.label << std::endl;
+	if (input_port_on_vertex != 1) {
+		return false;
 	}
-	os << ")";
+	if (auto const parameterization_ptr = dynamic_cast<Parameterization const*>(&data);
+	    parameterization_ptr) {
+		if (parameterization_ptr->labels.size() != synapses.size()) {
+			return false;
+		}
+		if (parameterization_ptr->weights.size() != synapses.size()) {
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
+std::vector<grenade::common::Vertex::Port> SynapseArrayViewSparse::get_input_ports() const
+{
+	return {
+	    grenade::common::Vertex::Port(
+	        VertexPortType(ConnectionType::SynapseInputLabel),
+	        grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	        grenade::common::CuboidMultiIndexSequence({rows.size()})),
+	    grenade::common::Vertex::Port(
+	        ParameterizationPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	        grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
+}
+
+std::vector<grenade::common::Vertex::Port> SynapseArrayViewSparse::get_output_ports() const
+{
+	return {grenade::common::Vertex::Port(
+	    VertexPortType(ConnectionType::SynapticInput),
+	    grenade::common::Vertex::Port::SumOrSplitSupport::yes, // only yes because of plasticity
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	    grenade::common::CuboidMultiIndexSequence({columns.size()}))};
+}
+
+bool SynapseArrayViewSparse::valid_edge_from(
+    Vertex const& source, grenade::common::Edge const& edge) const
+{
+	if (!PartitionedVertex::valid_edge_from(source, edge)) {
+		return false;
+	}
+	if (auto const synapse_driver = dynamic_cast<SynapseDriver const*>(&source); synapse_driver) {
+		auto const channels_on_target = edge.get_channels_on_target().get_elements();
+		auto const channels_on_source = edge.get_channels_on_source().get_elements();
+		for (size_t i = 0; i < channels_on_target.size(); ++i) {
+			if (synapse_driver->coordinate != halco::hicann_dls::vx::v3::SynapseDriverOnDLS(
+			                                      rows.at(channels_on_target.at(i).value.at(0))
+			                                          .toSynapseDriverOnSynapseDriverBlock(),
+			                                      synram.toSynapseDriverBlockOnDLS())) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+std::unique_ptr<grenade::common::Vertex> SynapseArrayViewSparse::copy() const
+{
+	return std::make_unique<SynapseArrayViewSparse>(*this);
+}
+
+std::unique_ptr<grenade::common::Vertex> SynapseArrayViewSparse::move()
+{
+	return std::make_unique<SynapseArrayViewSparse>(std::move(*this));
+}
+
+std::ostream& SynapseArrayViewSparse::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "SynapseArrayViewSparse(\n" << hate::Indentation("\t");
+	ios << "size: [rows: " << rows.size() << ", columns: " << columns.size() << "]\n";
+	for (auto const& synapse : synapses) {
+		ios << "(" << rows.at(synapse.index_row) << ", " << columns.at(synapse.index_column)
+		    << ")\n";
+	}
+	ios << hate::Indentation();
+	ios << ")";
 	return os;
 }
 
-bool SynapseArrayViewSparse::operator==(SynapseArrayViewSparse const& other) const
+bool SynapseArrayViewSparse::is_equal_to(Vertex const& other) const
 {
-	return (m_synram == other.m_synram) && (m_rows == other.m_rows) &&
-	       (m_columns == other.m_columns) && (m_synapses == other.m_synapses);
-}
-
-bool SynapseArrayViewSparse::operator!=(SynapseArrayViewSparse const& other) const
-{
-	return !(*this == other);
+	auto const& other_synapses = static_cast<SynapseArrayViewSparse const&>(other);
+	return (synram == other_synapses.synram) && (rows == other_synapses.rows) &&
+	       (columns == other_synapses.columns) && (synapses == other_synapses.synapses) &&
+	       EntityOnChip::is_equal_to(other);
 }
 
 } // namespace grenade::vx::signal_flow::vertex

@@ -2,6 +2,7 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 #include <cereal/types/vector.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
@@ -13,7 +14,6 @@ void CADCMembraneReadoutView::serialize(Archive& ar, std::uint32_t const)
 	ar(m_columns);
 	ar(m_synram);
 	ar(m_mode);
-	ar(m_sources);
 }
 
 } // namespace grenade::vx::signal_flow::vertex

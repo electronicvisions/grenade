@@ -2,6 +2,7 @@
 
 #include "cereal/types/halco/common/geometry.h"
 #include "grenade/cerealization.h"
+#include <cereal/types/polymorphic.hpp>
 
 namespace grenade::vx::signal_flow::vertex {
 
@@ -9,8 +10,7 @@ template <typename Archive>
 void BackgroundSpikeSource::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(cereal::base_class<EntityOnChip>(this));
-	ar(CEREAL_NVP(m_config));
-	ar(CEREAL_NVP(m_coordinate));
+	ar(CEREAL_NVP(coordinate));
 }
 
 } // namespace grenade::vx::signal_flow::vertex

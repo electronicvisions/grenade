@@ -1,8 +1,7 @@
 #pragma once
+#include "grenade/common/linked_topology.h"
+#include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/network/connection_routing_result.h"
-#include "grenade/vx/network/network.h"
-#include "grenade/vx/network/population_on_execution_instance.h"
-#include "grenade/vx/network/projection.h"
 #include "grenade/vx/network/receptor.h"
 #include "halco/common/typed_array.h"
 #include "halco/hicann-dls/vx/v3/background.h"
@@ -30,7 +29,8 @@ struct RoutingConstraints
 	 * @param connection_routing_result Result of connection routing
 	 */
 	RoutingConstraints(
-	    Network::ExecutionInstance const& network,
+	    grenade::common::LinkedTopology const& topology,
+	    std::vector<grenade::common::VertexOnTopology> const& partitioned_vertex_descriptors,
 	    ConnectionRoutingResult const& connection_routing_result) SYMBOL_VISIBLE;
 
 	/**
@@ -48,10 +48,16 @@ struct RoutingConstraints
 	{
 		/** Source neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS source;
+		/** Descriptor of source neuron in abstract network. */
+		std::tuple<
+		    grenade::common::VertexOnTopology,
+		    size_t,
+		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
+		    source_descriptor;
 		/** Target neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
-		std::pair<ProjectionOnExecutionInstance, size_t> descriptor;
+		std::pair<grenade::common::VertexOnTopology, size_t> descriptor;
 		/** Receptor type of connection. */
 		Receptor::Type receptor_type;
 
@@ -75,10 +81,16 @@ struct RoutingConstraints
 	{
 		/** Source circuit. */
 		halco::hicann_dls::vx::v3::BackgroundSpikeSourceOnDLS source;
+		/** Descriptor of connection in abstract network. */
+		std::tuple<
+		    grenade::common::VertexOnTopology,
+		    size_t,
+		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
+		    source_descriptor;
 		/** Target neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
-		std::pair<ProjectionOnExecutionInstance, size_t> descriptor;
+		std::pair<grenade::common::VertexOnTopology, size_t> descriptor;
 		/** Receptor type of connection. */
 		Receptor::Type receptor_type;
 
@@ -100,10 +112,16 @@ struct RoutingConstraints
 	 */
 	struct ExternalConnection
 	{
+		/** Source neuron. */
+		std::tuple<
+		    grenade::common::VertexOnTopology,
+		    size_t,
+		    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>
+		    source_descriptor;
 		/** Target neuron. */
 		halco::hicann_dls::vx::v3::AtomicNeuronOnDLS target;
 		/** Descriptor of connection in abstract network. */
-		std::pair<ProjectionOnExecutionInstance, size_t> descriptor;
+		std::pair<grenade::common::VertexOnTopology, size_t> descriptor;
 		/** Receptor type of connection. */
 		Receptor::Type receptor_type;
 
@@ -124,7 +142,7 @@ struct RoutingConstraints
 	 * Get number of external connections placed onto each chip hemisphere per receptor type.
 	 */
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::vector<std::pair<ProjectionOnExecutionInstance, size_t>>>,
+	    std::map<Receptor::Type, std::vector<std::pair<grenade::common::VertexOnTopology, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	get_external_connections_per_hemisphere() const SYMBOL_VISIBLE;
 
@@ -132,7 +150,7 @@ struct RoutingConstraints
 	 * Get number of external sources projecting onto each chip hemisphere per receptor type.
 	 */
 	halco::common::typed_array<
-	    std::map<Receptor::Type, std::set<std::pair<PopulationOnExecutionInstance, size_t>>>,
+	    std::map<Receptor::Type, std::set<std::pair<grenade::common::VertexOnTopology, size_t>>>,
 	    halco::hicann_dls::vx::v3::HemisphereOnDLS>
 	get_external_sources_to_hemisphere() const SYMBOL_VISIBLE;
 
@@ -258,9 +276,27 @@ struct RoutingConstraints
 	halco::common::typed_array<PADIBusConstraints, halco::hicann_dls::vx::v3::PADIBusOnDLS>
 	get_padi_bus_constraints() const SYMBOL_VISIBLE;
 
+	std::map<
+	    grenade::common::VertexOnTopology,
+	    std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
+	get_anchors() const;
+
+	std::map<
+	    std::tuple<
+	        grenade::common::VertexOnTopology,
+	        size_t,
+	        halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron>,
+	    halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>
+	get_internal_sources() const;
+
 private:
-	Network::ExecutionInstance const& m_network;
+	grenade::common::LinkedTopology const& m_topology;
+	std::vector<grenade::common::VertexOnTopology> const& m_partitioned_vertex_descriptors;
 	ConnectionRoutingResult const& m_connection_routing_result;
+
+	mutable std::vector<RoutingConstraints::InternalConnection> m_internal_connections;
+	mutable std::vector<RoutingConstraints::BackgroundConnection> m_background_connections;
+	mutable std::vector<RoutingConstraints::ExternalConnection> m_external_connections;
 };
 
 } // namespace routing::greedy

@@ -5,6 +5,7 @@
 #include "grenade/cerealization.h"
 #include <cereal/types/map.hpp>
 #include <cereal/types/optional.hpp>
+#include <cereal/types/polymorphic.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
@@ -66,15 +67,12 @@ void PlasticityRule::NeuronViewShape::serialize(Archive& ar, std::uint32_t const
 {
 	ar(columns);
 	ar(row);
-	ar(neuron_readout_sources);
 }
 
 template <typename Archive>
 void PlasticityRule::serialize(Archive& ar, std::uint32_t const)
 {
 	ar(cereal::base_class<EntityOnChip>(this));
-	ar(m_kernel);
-	ar(m_timer);
 	ar(m_synapse_view_shapes);
 	ar(m_neuron_view_shapes);
 	ar(m_recording);

@@ -6,17 +6,13 @@ GENPYBIND_MANUAL({
 	parent->py::module::import("pyhalco_hicann_dls_vx_v3");
 	parent->py::module::import("pyhaldls_vx_v3");
 	parent->py::module::import("pylola_vx_v3");
+	parent->py::module::import("pygrenade_common");
 	parent->py::module::import("_pygrenade_vx_common");
 })
 
-#include "grenade/vx/signal_flow/data_snippet.h"
+#include "grenade/vx/signal_flow/connection_type.h"
 #include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/execution_health_info.h"
-#include "grenade/vx/signal_flow/execution_time_info.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input_data.h"
-#include "grenade/vx/signal_flow/input_data_snippet.h"
-#include "grenade/vx/signal_flow/output_data.h"
-#include "grenade/vx/signal_flow/output_data_snippet.h"
-#include "grenade/vx/signal_flow/pack_spikes.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
+#include "grenade/vx/signal_flow/vertex/synapse_array_view_sparse.h"

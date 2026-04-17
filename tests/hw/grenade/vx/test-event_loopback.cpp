@@ -1,12 +1,19 @@
 #include <gtest/gtest.h>
 
+#include "grenade/common/connection_on_executor.h"
 #include "grenade/common/execution_instance_id.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/time_domain_on_topology.h"
+#include "grenade/common/topology.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/execution/run.h"
-#include "grenade/vx/signal_flow/graph.h"
-#include "grenade/vx/signal_flow/input.h"
-#include "grenade/vx/signal_flow/input_data.h"
+#include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
+#include "grenade/vx/signal_flow/event.h"
 #include "grenade/vx/signal_flow/types.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_input.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
+#include "grenade/vx/signal_flow/vertex/crossbar_node.h"
 #include "halco/hicann-dls/vx/v3/chip.h"
 #include "halco/hicann-dls/vx/v3/event.h"
 #include "haldls/vx/v3/systime.h"
@@ -26,54 +33,65 @@ test_event_loopback_single_crossbar_node(
     grenade::vx::execution::JITGraphExecutor& executor,
     std::vector<grenade::vx::signal_flow::TimedSpikeToChipSequence> const& inputs)
 {
-	grenade::vx::signal_flow::vertex::ExternalInput external_input(
-	    grenade::vx::signal_flow::ConnectionType::DataTimedSpikeToChipSequence, 1);
+	grenade::common::ExecutionInstanceOnExecutor instance;
 
-	grenade::vx::signal_flow::vertex::DataInput data_input(
-	    grenade::vx::signal_flow::ConnectionType::TimedSpikeToChipSequence, 1);
-
-	grenade::vx::signal_flow::vertex::CrossbarL2Input crossbar_l2_input;
+	grenade::vx::signal_flow::vertex::CrossbarL2Input crossbar_l2_input(
+	    true, grenade::vx::common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(),
+	    instance);
 
 	grenade::vx::signal_flow::vertex::CrossbarNode crossbar_node(
 	    CrossbarNodeOnDLS(CrossbarInputOnDLS(8 + node.toEnum()), node.toCrossbarOutputOnDLS()),
-	    haldls::vx::v3::CrossbarNode());
+	    grenade::vx::common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(), instance);
 
-	grenade::vx::signal_flow::vertex::CrossbarL2Output crossbar_output;
-	grenade::vx::signal_flow::vertex::DataOutput data_output(
-	    grenade::vx::signal_flow::ConnectionType::TimedSpikeFromChipSequence, 1);
+	grenade::vx::signal_flow::vertex::CrossbarL2Output crossbar_output(
+	    true, grenade::vx::common::ChipOnConnection(), grenade::common::TimeDomainOnTopology(),
+	    instance);
 
-	grenade::vx::signal_flow::Graph g;
+	auto topology = std::make_shared<grenade::common::Topology>();
 
-	grenade::common::ExecutionInstanceID instance;
+	auto const v1 = topology->add_vertex(crossbar_l2_input);
+	auto const v2 = topology->add_vertex(crossbar_node);
+	auto const v3 = topology->add_vertex(crossbar_output);
 
-	auto const v1 = g.add(external_input, instance, {});
-	auto const v2 = g.add(data_input, instance, {v1});
-	auto const v3 = g.add(crossbar_l2_input, instance, {v2});
-	auto const v4 = g.add(crossbar_node, instance, {v3});
-	auto const v5 = g.add(crossbar_output, instance, {v4});
-	auto const v6 = g.add(data_output, instance, {v5});
+	topology->add_edge(
+	    v1, v2,
+	    grenade::common::Edge(
+	        grenade::common::CuboidMultiIndexSequence({1}),
+	        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
+	topology->add_edge(
+	    v2, v3,
+	    grenade::common::Edge(
+	        grenade::common::CuboidMultiIndexSequence({1}),
+	        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
 
-	// fill graph inputs
-	grenade::vx::signal_flow::InputData input_list;
-	input_list.snippets.resize(1);
-	input_list.snippets.at(0).data[v1] = inputs;
 
-	grenade::vx::execution::JITGraphExecutor::ChipConfigs chip_configs;
-	chip_configs[instance][grenade::vx::common::ChipOnConnection()] = lola::vx::v3::Chip();
+	// fill inputs
+	grenade::common::InputData input_data;
+	input_data.ports.set(
+	    {v1, 0}, grenade::vx::signal_flow::vertex::CrossbarL2Input::Dynamics(inputs));
+	input_data.time_domain_runtimes.set(
+	    grenade::common::TimeDomainOnTopology(),
+	    grenade::vx::network::abstract::ClockCycleTimeDomainRuntimes(
+	        std::vector<std::optional<grenade::vx::common::Time>>(inputs.size(), std::nullopt),
+	        grenade::vx::common::Time()));
+
+	input_data.ports.set(
+	    {v2, 1}, grenade::vx::signal_flow::vertex::CrossbarNode::Parameterization(
+	                 haldls::vx::v3::CrossbarNode()));
 
 	// run Graph with given inputs and return results
-	auto const result_map = grenade::vx::execution::run(executor, g, chip_configs, input_list);
+	auto const results = grenade::vx::execution::run(executor, topology, input_data);
 
-	EXPECT_EQ(result_map.snippets.at(0).data.size(), 1);
+	EXPECT_EQ(results.batch_size(), inputs.size());
 
-	EXPECT_TRUE(result_map.snippets.at(0).data.find(v6) != result_map.snippets.at(0).data.end());
-	EXPECT_EQ(
-	    std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	        result_map.snippets.at(0).data.at(v6))
-	        .size(),
-	    inputs.size());
-	return std::get<std::vector<grenade::vx::signal_flow::TimedSpikeFromChipSequence>>(
-	    result_map.snippets.at(0).data.at(v6));
+	EXPECT_TRUE(results.ports.contains({v3, 0}));
+	auto const& result =
+	    dynamic_cast<grenade::vx::signal_flow::vertex::CrossbarL2Output::Results const&>(
+	        results.ports.get({v3, 0}));
+	EXPECT_EQ(result.spikes.size(), inputs.size());
+
+	EXPECT_EQ(result.spikes.size(), inputs.size());
+	return result.spikes;
 }
 
 TEST(JITGraphExecutor, EventLoopback)

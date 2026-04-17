@@ -11,3 +11,4 @@ GENPYBIND_MANUAL({
 
 #include "grenade/vx/execution/execution_instance_hooks.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
+#include "grenade/vx/execution/run.h"

@@ -292,6 +292,16 @@ void PlasticityRule::set_projection_shapes(
 	}
 }
 
+std::vector<std::unique_ptr<grenade::common::MultiIndexSequence>>
+PlasticityRule::get_projection_shapes() const
+{
+	std::vector<std::unique_ptr<grenade::common::MultiIndexSequence>> ret;
+	for (auto const& v : m_projection_shapes) {
+		ret.push_back(v->copy());
+	}
+	return ret;
+}
+
 std::optional<grenade::common::TimeDomainOnTopology> PlasticityRule::get_time_domain() const
 {
 	return m_time_domain;

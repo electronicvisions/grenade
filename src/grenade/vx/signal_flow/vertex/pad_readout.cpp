@@ -1,6 +1,8 @@
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 
-#include "grenade/vx/signal_flow/port_restriction.h"
+#include "grenade/common/edge.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include <ostream>
 #include <set>
@@ -9,90 +11,107 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-bool PadReadoutView::Source::operator==(Source const& other) const
+PadReadoutView::Parameterization::Parameterization() {}
+
+std::unique_ptr<grenade::common::PortData> PadReadoutView::Parameterization::copy() const
 {
-	return coord == other.coord && type == other.type && enable_buffered == other.enable_buffered;
+	return std::make_unique<Parameterization>(*this);
 }
 
-bool PadReadoutView::Source::operator!=(Source const& other) const
+std::unique_ptr<grenade::common::PortData> PadReadoutView::Parameterization::move()
 {
-	return !(*this == other);
+	return std::make_unique<Parameterization>(std::move(*this));
+}
+
+std::ostream& PadReadoutView::Parameterization::print(std::ostream& os) const
+{
+	return os << "Parameterization(enable_buffered: " << enable_buffered << ")";
+}
+
+bool PadReadoutView::Parameterization::is_equal_to(grenade::common::PortData const& other) const
+{
+	auto const& other_parameterization = static_cast<Parameterization const&>(other);
+	return enable_buffered == other_parameterization.enable_buffered;
 }
 
 
 PadReadoutView::PadReadoutView(
-    Source const& source, Coordinate const& coordinate, ChipOnExecutor const& chip_on_executor) :
-    EntityOnChip(chip_on_executor), m_source(source), m_coordinate(coordinate)
-{}
-
-PadReadoutView::Source const& PadReadoutView::get_source() const
+    Source const& source,
+    Coordinate const& coordinate,
+    common::ChipOnConnection const& chip_on_connection,
+    grenade::common::TimeDomainOnTopology const& time_domain,
+    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor) :
+    EntityOnChip(chip_on_connection, time_domain, execution_instance_on_executor),
+    source(source),
+    coordinate(coordinate)
 {
-	return m_source;
 }
 
-PadReadoutView::Coordinate const& PadReadoutView::get_coordinate() const
+bool PadReadoutView::valid_input_port_data(
+    size_t input_port_on_vertex, grenade::common::PortData const& port_data) const
 {
-	return m_coordinate;
+	return input_port_on_vertex == 1 &&
+	       dynamic_cast<Parameterization const*>(&port_data) != nullptr;
 }
 
-std::array<Port, 1> PadReadoutView::inputs() const
+std::vector<grenade::common::Vertex::Port> PadReadoutView::get_input_ports() const
 {
-	return {Port(1, ConnectionType::MembraneVoltage)};
+	return {
+	    grenade::common::Vertex::Port(
+	        VertexPortType(ConnectionType::MembraneVoltage),
+	        grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	        grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})})),
+	    grenade::common::Vertex::Port(
+	        ParameterizationPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	        grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	        grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
 }
 
-Port PadReadoutView::output() const
+std::vector<grenade::common::Vertex::Port> PadReadoutView::get_output_ports() const
 {
-	return Port(1, ConnectionType::ExternalAnalogSignal);
+	return {};
 }
 
-std::ostream& operator<<(std::ostream& os, PadReadoutView const& config)
+bool PadReadoutView::valid_edge_from(Vertex const& source, grenade::common::Edge const& edge) const
 {
-	os << "PadReadoutView(source: " << config.m_source.coord << " coord: " << config.m_coordinate
-	   << ")";
-	return os;
-}
-
-bool PadReadoutView::supports_input_from(
-    NeuronView const& input, std::optional<PortRestriction> const& restriction) const
-{
-	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+	if (!PartitionedVertex::valid_edge_from(source, edge)) {
 		return false;
 	}
-	auto const input_columns = input.get_columns();
-	if (!restriction) {
-		if (input_columns.size() > 1ul) {
-			return false;
-		}
-		for (auto const& input_column : input_columns) {
-			if (m_source.coord != Source::Coord(input_column, input.get_row())) {
-				return false;
-			}
-		}
-		return true;
-	} else {
-		if (!restriction->is_restriction_of(input.output())) {
-			throw std::runtime_error(
-			    "Given restriction is not a restriction of input vertex output port.");
-		}
-		if (restriction->size() > 1ul) {
-			return false;
-		}
-		if (m_source.coord !=
-		    Source::Coord(input_columns.at(restriction->min()), input.get_row())) {
+	if (auto const neuron_ptr = dynamic_cast<NeuronView const*>(&source); neuron_ptr) {
+		auto const channels_on_source = edge.get_channels_on_source().get_elements();
+		if (halco::hicann_dls::vx::v3::AtomicNeuronOnDLS(
+		        neuron_ptr->get_columns().at(channels_on_source.at(0).value.at(0)),
+		        neuron_ptr->row) != this->source) {
 			return false;
 		}
 		return true;
 	}
+	return false;
 }
 
-bool PadReadoutView::operator==(PadReadoutView const& other) const
+std::unique_ptr<grenade::common::Vertex> PadReadoutView::copy() const
 {
-	return (m_source == other.m_source) && (m_coordinate == other.m_coordinate);
+	return std::make_unique<PadReadoutView>(*this);
 }
 
-bool PadReadoutView::operator!=(PadReadoutView const& other) const
+std::unique_ptr<grenade::common::Vertex> PadReadoutView::move()
 {
-	return !(*this == other);
+	return std::make_unique<PadReadoutView>(std::move(*this));
+}
+
+bool PadReadoutView::is_equal_to(Vertex const& other) const
+{
+	auto const& other_pad = static_cast<PadReadoutView const&>(other);
+	return (source == other_pad.source) && (coordinate == other_pad.coordinate) &&
+	       EntityOnChip::is_equal_to(other);
+}
+
+std::ostream& PadReadoutView::print(std::ostream& os) const
+{
+	return os << "PadReadoutView(source: " << source << " coord: " << coordinate << ")";
 }
 
 } // namespace grenade::vx::signal_flow::vertex

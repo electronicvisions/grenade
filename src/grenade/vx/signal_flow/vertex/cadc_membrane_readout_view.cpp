@@ -1,6 +1,9 @@
 #include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
 
-#include "grenade/vx/signal_flow/port_restriction.h"
+#include "grenade/common/edge.h"
+#include "grenade/common/execution_instance_id.h"
+#include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/vx/signal_flow/vertex/entity_on_chip.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 
 #include <numeric>
@@ -11,25 +14,70 @@
 
 namespace grenade::vx::signal_flow::vertex {
 
-void CADCMembraneReadoutView::check(Columns const& columns, Sources const& sources)
+CADCMembraneReadoutView::Results::Results(Samples samples) : samples(std::move(samples)) {}
+
+size_t CADCMembraneReadoutView::Results::batch_size() const
 {
-	std::set<Columns::value_type::value_type> unique;
-	size_t size = 0;
-	for (auto const& column_collection : columns) {
-		unique.insert(column_collection.begin(), column_collection.end());
-		size += column_collection.size();
+	return samples.size();
+}
+
+std::unique_ptr<grenade::common::PortData> CADCMembraneReadoutView::Results::copy() const
+{
+	return std::make_unique<Results>(*this);
+}
+
+std::unique_ptr<grenade::common::PortData> CADCMembraneReadoutView::Results::move()
+{
+	return std::make_unique<Results>(std::move(*this));
+}
+
+std::ostream& CADCMembraneReadoutView::Results::print(std::ostream& os) const
+{
+	hate::IndentingOstream ios(os);
+	ios << "Results(\n";
+	for (size_t b = 0; auto const& batch_entry : samples) {
+		ios << hate::Indentation("\t");
+		ios << b << ":\n";
+		ios << hate::Indentation("\t\t");
+		for (auto const& samples : batch_entry) {
+			ios << samples.time << ": " << hate::join(samples.data, ", ") << "\n";
+		}
+		b++;
 	}
-	if (unique.size() != size) {
+	ios << hate::Indentation();
+	ios << ")";
+	return os;
+}
+
+bool CADCMembraneReadoutView::Results::is_equal_to(grenade::common::PortData const& other) const
+{
+	return samples == static_cast<Results const&>(other).samples;
+}
+
+
+CADCMembraneReadoutView::CADCMembraneReadoutView(
+    Columns columns,
+    Synram const& synram,
+    Mode const& mode,
+    common::ChipOnConnection const& chip_on_connection,
+    grenade::common::TimeDomainOnTopology const& time_domain,
+    grenade::common::ExecutionInstanceOnExecutor const& execution_instance_on_executor) :
+    EntityOnChip(chip_on_connection, time_domain, execution_instance_on_executor),
+    m_columns(),
+    m_synram(synram),
+    m_mode(mode)
+{
+	std::set<Columns::value_type::value_type> unique{columns.begin(), columns.end()};
+	if (unique.size() != columns.size()) {
 		throw std::runtime_error("Column locations provided to CADCReadoutView are not unique.");
 	}
-	if (columns.size() != sources.size()) {
-		throw std::runtime_error("Column size doesn't match source size.");
-	}
-	for (size_t i = 0; i < columns.size(); ++i) {
-		if (columns.at(i).size() != sources.at(i).size()) {
-			throw std::runtime_error("Column size doesn't match source size.");
-		}
-	}
+	m_columns = std::move(columns);
+}
+
+bool CADCMembraneReadoutView::valid_output_port_data(
+    size_t output_port_on_vertex, grenade::common::PortData const& data) const
+{
+	return output_port_on_vertex == 0 && dynamic_cast<Results const*>(&data) != nullptr;
 }
 
 CADCMembraneReadoutView::Columns const& CADCMembraneReadoutView::get_columns() const
@@ -47,91 +95,68 @@ CADCMembraneReadoutView::Mode const& CADCMembraneReadoutView::get_mode() const
 	return m_mode;
 }
 
-CADCMembraneReadoutView::Sources const& CADCMembraneReadoutView::get_sources() const
+std::vector<grenade::common::Vertex::Port> CADCMembraneReadoutView::get_input_ports() const
 {
-	return m_sources;
+	return {grenade::common::Vertex::Port(
+	    VertexPortType(ConnectionType::MembraneVoltage),
+	    grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::not_supported,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	    grenade::common::CuboidMultiIndexSequence({m_columns.size()}))};
 }
 
-std::vector<Port> CADCMembraneReadoutView::inputs() const
+std::vector<grenade::common::Vertex::Port> CADCMembraneReadoutView::get_output_ports() const
 {
-	std::vector<Port> ret;
-	for (auto const& column_collection : m_columns) {
-		ret.push_back(Port(column_collection.size(), ConnectionType::MembraneVoltage));
-	}
-	return ret;
+	return {grenade::common::Vertex::Port(
+	    VertexPortType(ConnectionType::Int8), grenade::common::Vertex::Port::SumOrSplitSupport::yes,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
+	    grenade::common::CuboidMultiIndexSequence({m_columns.size()}))};
 }
 
-Port CADCMembraneReadoutView::output() const
+std::ostream& CADCMembraneReadoutView::print(std::ostream& os) const
 {
-	size_t const size = std::accumulate(
-	    m_columns.begin(), m_columns.end(), static_cast<size_t>(0),
-	    [](auto const& s, auto const& column_collection) { return s + column_collection.size(); });
-	return Port(size, ConnectionType::Int8);
+	return os << "CADCMembraneReadoutView(size: " << m_columns.size() << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, CADCMembraneReadoutView const& config)
+bool CADCMembraneReadoutView::valid_edge_from(
+    Vertex const& source, grenade::common::Edge const& edge) const
 {
-	size_t const size = std::accumulate(
-	    config.m_columns.begin(), config.m_columns.end(), static_cast<size_t>(0),
-	    [](auto const& s, auto const& column_collection) { return s + column_collection.size(); });
-	os << "CADCMembraneReadoutView(size: " << size << ")";
-	return os;
-}
-
-bool CADCMembraneReadoutView::supports_input_from(
-    NeuronView const& input, std::optional<PortRestriction> const& restriction) const
-{
-	if (!static_cast<EntityOnChip const&>(*this).supports_input_from(input, restriction)) {
+	if (!PartitionedVertex::valid_edge_from(source, edge)) {
 		return false;
 	}
-	if (input.get_row().toSynramOnDLS() != m_synram) {
-		return false;
-	}
-	auto const input_columns = input.get_columns();
-	if (!restriction) {
-		// check if any column collection matches the input
-		for (auto const& column_collection : m_columns) {
-			if (input_columns.size() != column_collection.size()) {
-				continue;
-			}
-			if (std::equal(
-			        input_columns.begin(), input_columns.end(), column_collection.begin(),
-			        [](auto const& n, auto const& s) { return s == n.toSynapseOnSynapseRow(); })) {
-				return true;
+	if (auto const neuron_ptr = dynamic_cast<NeuronView const*>(&source); neuron_ptr) {
+		auto const channels_on_target = edge.get_channels_on_target().get_elements();
+		auto const channels_on_source = edge.get_channels_on_source().get_elements();
+		if (neuron_ptr->row != m_synram.toNeuronRowOnDLS()) {
+			return false;
+		}
+		for (size_t i = 0; i < channels_on_target.size(); ++i) {
+			if (neuron_ptr->get_columns().at(channels_on_source.at(i).value.at(0)) !=
+			    m_columns.at(channels_on_target.at(i).value.at(0))) {
+				return false;
 			}
 		}
-		return false;
-	} else {
-		if (!restriction->is_restriction_of(input.output())) {
-			throw std::runtime_error(
-			    "Given restriction is not a restriction of input vertex output port.");
-		}
-		// check if any column collection matches the input
-		for (auto const& column_collection : m_columns) {
-			if (column_collection.size() != restriction->size()) {
-				continue;
-			}
-			assert(restriction->max() < input_columns.size());
-			if (std::equal(
-			        input_columns.begin() + restriction->min(),
-			        input_columns.begin() + restriction->max() + 1, column_collection.begin(),
-			        [](auto const& n, auto const& s) { return s == n.toSynapseOnSynapseRow(); })) {
-				return true;
-			}
-		}
-		return false;
+		return true;
 	}
+	return false;
 }
 
-bool CADCMembraneReadoutView::operator==(CADCMembraneReadoutView const& other) const
+std::unique_ptr<grenade::common::Vertex> CADCMembraneReadoutView::copy() const
 {
-	return (m_columns == other.m_columns) && (m_synram == other.m_synram) &&
-	       (m_mode == other.m_mode) && (m_sources == other.m_sources);
+	return std::make_unique<CADCMembraneReadoutView>(*this);
 }
 
-bool CADCMembraneReadoutView::operator!=(CADCMembraneReadoutView const& other) const
+std::unique_ptr<grenade::common::Vertex> CADCMembraneReadoutView::move()
 {
-	return !(*this == other);
+	return std::make_unique<CADCMembraneReadoutView>(std::move(*this));
+}
+
+bool CADCMembraneReadoutView::is_equal_to(Vertex const& other) const
+{
+	auto const& other_cadc = static_cast<CADCMembraneReadoutView const&>(other);
+	return (m_columns == other_cadc.m_columns) && (m_synram == other_cadc.m_synram) &&
+	       (m_mode == other_cadc.m_mode) && EntityOnChip::is_equal_to(other);
 }
 
 } // namespace grenade::vx::signal_flow::vertex
