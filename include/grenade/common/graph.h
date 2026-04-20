@@ -453,6 +453,18 @@ struct SYMBOL_VISIBLE Graph
 	    Graph const& other, Callback&& callback, VertexEquivalent&& vertex_equivalent) const;
 
 	/**
+	 * Get topologically sorted vertex descriptors.
+	 * @returns topologically sorted vertex descriptors if successful, otherwise empty list
+	 */
+	std::vector<VertexDescriptor> topological_sort() const;
+
+	/**
+	 * Get whether graph is acyclic.
+	 * Tries to perform topological sort.
+	 */
+	bool is_acyclic() const;
+
+	/**
 	 * Get whether graphs are equal.
 	 * This is the case exactly if all vertex descriptors and properties as well as all edge
 	 * descriptors and properties match in order and the edges connect the same vertices.

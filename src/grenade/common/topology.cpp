@@ -2,6 +2,8 @@
 
 #include "grenade/common/edge_on_topology.h"
 #include "grenade/common/graph_impl.tcc"
+#include "grenade/common/linked_topology.h"
+#include "grenade/common/topology_rewrite/strong_component_invariant.h"
 #include "grenade/common/vertex_on_topology.h"
 #include "hate/join.h"
 #include <log4cxx/logger.h>
@@ -175,44 +177,14 @@ void Topology::check_edge(
 
 bool Topology::valid_strong_components() const
 {
-	std::map<size_t, std::set<VertexOnTopology>> strong_components_map;
-	{
-		auto const strong_components_inv = strong_components();
-		for (auto const& [vertex_descriptor, color] : strong_components_inv) {
-			strong_components_map[color].insert(vertex_descriptor);
-		}
-	}
-	for (auto const& [_, strong_component] : strong_components_map) {
-		if (strong_component.size() == 1) {
-			continue;
-		}
-		std::unique_ptr<Vertex::StrongComponentInvariant> last_invariant;
-		for (auto const& vertex_descriptor : strong_component) {
-			auto invariant = get(vertex_descriptor).get_strong_component_invariant();
-			assert(invariant);
-			if (last_invariant && (*last_invariant != *invariant)) {
-				LOG4CXX_ERROR(
-				    log4cxx::Logger::getLogger("grenade.common.Topology"),
-				    "valid_strong_components(): "
-				        << "Invariants not equal in strong component:\n"
-				        << hate::join(
-				               strong_component, "\n",
-				               [&](auto const& vertex_descriptor) {
-					               std::stringstream ss;
-					               ss << vertex_descriptor << ": ";
-					               auto const invariant =
-					                   get(vertex_descriptor).get_strong_component_invariant();
-					               assert(invariant);
-					               ss << *invariant;
-					               return ss.str();
-				               })
-				        << ".");
-				return false;
-			}
-			last_invariant = std::move(invariant);
-		}
-	}
-	return true;
+	// non-owning shared ptr for local use in LinkedTopology
+	std::shared_ptr<Topology const> const this_ptr(this, [](Topology const*) {});
+
+	auto const strong_component_invariant_topology = std::make_shared<LinkedTopology>(this_ptr);
+	StrongComponentInvariantRewrite rewrite(strong_component_invariant_topology);
+	rewrite();
+
+	return strong_component_invariant_topology->is_acyclic();
 }
 
 bool Topology::valid() const

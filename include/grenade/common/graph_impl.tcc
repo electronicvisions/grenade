@@ -1,7 +1,8 @@
 #pragma once
-#include "grenade/common/detail/descriptor_transform.h"
 #include "grenade/common/graph.h"
 
+#include "grenade/common/detail/descriptor_transform.h"
+#include "grenade/common/detail/null_output_iterator.h"
 #include "hate/indent.h"
 #include "hate/type_index.h"
 #include <ostream>
@@ -9,6 +10,7 @@
 #include <stdexcept>
 #include <boost/graph/named_function_params.hpp>
 #include <boost/graph/strong_components.hpp>
+#include <boost/graph/topological_sort.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
@@ -910,6 +912,71 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
 	}
 
 	return vertex_mapping;
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+std::vector<VertexDescriptor>
+Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::topological_sort()
+    const
+{
+	if constexpr (Backend::directed_selector::is_directed) {
+		auto const vertex_index_map = get_backend_vertex_index_map();
+		std::vector<typename Backend::vertex_descriptor> topogically_sorted_backend_vertices;
+		try {
+			boost::topological_sort(
+			    backend(), std::back_inserter(topogically_sorted_backend_vertices),
+			    boost::vertex_index_map(boost::make_assoc_property_map(vertex_index_map)));
+			// using back_inserter yields reverse order, reverse here
+			std::reverse(
+			    topogically_sorted_backend_vertices.begin(),
+			    topogically_sorted_backend_vertices.end());
+		} catch (boost::not_a_dag const&) {
+			return {};
+		}
+		std::vector<VertexDescriptor> ret;
+		for (auto const& vertex : topogically_sorted_backend_vertices) {
+			ret.push_back(m_vertex_descriptors.right.at(vertex));
+		}
+		return ret;
+	} else {
+		throw std::runtime_error("Topological sort not accessible on undirected graph.");
+	}
+}
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::is_acyclic()
+    const
+{
+	if constexpr (Backend::directed_selector::is_directed) {
+		try {
+			auto const vertex_index_map = get_backend_vertex_index_map();
+			boost::topological_sort(
+			    backend(),
+			    grenade::common::detail::NullOutputIterator<typename Backend::vertex_descriptor>{},
+			    boost::vertex_index_map(boost::make_assoc_property_map(vertex_index_map)));
+		} catch (boost::not_a_dag const&) {
+			return false;
+		}
+		return true;
+	} else {
+		throw std::runtime_error("Acyclicity property not implemented for undirected graph.");
+	}
 }
 
 template <

@@ -1,5 +1,7 @@
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/topology.h"
 
+#include "cereal/types/halco/common/geometry.h"
 #include "grenade/common/edge.h"
 #include "grenade/common/multi_index_sequence/list.h"
 #include "grenade/common/vertex.h"
@@ -29,9 +31,15 @@ struct DummyDefaultVertex : public Vertex
 {
 	Port input_port;
 	Port output_port;
+	TimeDomainOnTopology time_domain;
 
 	DummyDefaultVertex() = default;
 	DummyDefaultVertex(Port in, Port out) : input_port(in), output_port(out) {}
+
+	virtual std::optional<TimeDomainOnTopology> get_time_domain() const override
+	{
+		return time_domain;
+	}
 
 	virtual std::vector<Port> get_input_ports() const override
 	{
@@ -73,6 +81,7 @@ private:
 		ar(cereal::base_class<Vertex>(this));
 		ar(input_port);
 		ar(output_port);
+		ar(time_domain);
 	}
 };
 
@@ -96,6 +105,7 @@ TEST(Topology, General)
 	Topology topology;
 
 	auto const vertex_0_descr = topology.add_vertex(default_vertex);
+	default_vertex.time_domain = TimeDomainOnTopology(1);
 	auto const vertex_1_descr = topology.add_vertex(default_vertex);
 	topology.add_edge(
 	    vertex_0_descr, vertex_1_descr,
@@ -142,8 +152,20 @@ TEST(Topology, General)
 	EXPECT_EQ(topology, topology);
 	EXPECT_EQ(topology, Topology(topology));
 
-	topology.add_edge(
+	auto const edge_1_0_descr = topology.add_edge(
 	    vertex_1_descr, vertex_0_descr,
+	    Edge(ListMultiIndexSequence({MultiIndex({1})}), ListMultiIndexSequence({MultiIndex({1})})));
+	EXPECT_FALSE(topology.valid_strong_components());
+	EXPECT_FALSE(topology.valid());
+	topology.remove_edge(edge_1_0_descr);
+
+	// strong component invariant topology not acyclic, since vertex_0 and vertex_2 share strong
+	// component invariant
+	default_vertex.time_domain = TimeDomainOnTopology();
+	auto const vertex_2_descr = topology.add_vertex(default_vertex);
+
+	topology.add_edge(
+	    vertex_1_descr, vertex_2_descr,
 	    Edge(ListMultiIndexSequence({MultiIndex({1})}), ListMultiIndexSequence({MultiIndex({1})})));
 	EXPECT_FALSE(topology.valid_strong_components());
 	EXPECT_FALSE(topology.valid());
@@ -163,7 +185,7 @@ TEST(Topology, Cerealization)
 
 	Vertex::Port port_0(
 	    port_type_0, Vertex::Port::SumOrSplitSupport::no,
-	    Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	    Vertex::Port::ExecutionInstanceTransitionConstraint::supported,
 	    Vertex::Port::RequiresOrGeneratesData::no, channels_0);
 
 	DummyDefaultVertex default_vertex{port_0, port_0};

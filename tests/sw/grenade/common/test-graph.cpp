@@ -266,6 +266,9 @@ TEST(BidirectionalGraph, General)
 	EXPECT_EQ(graph.target(edge_on_graph_1), vertex_on_graph_2);
 	EXPECT_THROW(graph.add_edge(vertex_on_graph_1, vertex_on_graph_2, edge_1), std::runtime_error);
 
+	EXPECT_TRUE(graph.is_acyclic());
+	EXPECT_EQ(graph.topological_sort(), (std::vector{vertex_on_graph_1, vertex_on_graph_2}));
+
 	DummyEdge edge_1_1(10);
 	graph.set(edge_on_graph_1, edge_1_1);
 	EXPECT_EQ(graph.get(edge_on_graph_1), edge_1_1);
@@ -405,6 +408,9 @@ TEST(BidirectionalGraph, General)
 	EXPECT_EQ(graph.out_degree(vertex_on_graph_2), 0);
 	EXPECT_EQ(graph.in_degree(vertex_on_graph_1), 0);
 	auto const edge_on_graph_2_1 = graph.add_edge(vertex_on_graph_2, vertex_on_graph_1, edge_2);
+
+	EXPECT_FALSE(graph.is_acyclic());
+	EXPECT_TRUE(graph.topological_sort().empty());
 
 	EXPECT_THROW(graph.remove_vertex(vertex_on_graph_1), std::runtime_error);
 
@@ -656,6 +662,9 @@ TEST(UndirectedGraph, General)
 	EXPECT_THROW(graph.inv_adjacent_vertices(vertex_on_graph_1), std::out_of_range);
 	EXPECT_THROW(graph.edge_range(vertex_on_graph_1, vertex_on_graph_2), std::out_of_range);
 	EXPECT_THROW(graph.edge_range(vertex_on_graph_2, vertex_on_graph_1), std::out_of_range);
+
+	EXPECT_THROW(graph.topological_sort(), std::runtime_error);
+	EXPECT_THROW(graph.is_acyclic(), std::runtime_error);
 }
 
 TEST(Graph, Move)
