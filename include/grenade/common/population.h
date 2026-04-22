@@ -212,7 +212,12 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 * The cell type defines the population cells' computation performed, its parameters and the
 	 * ports accessible per cell.
 	 */
-	Cell const& get_cell() const;
+	Cell const& get_cell() const GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		parent.def(
+		    "get_cell", [](GENPYBIND_PARENT_TYPE const& self) { return self.get_cell().copy(); });
+	})
 
 	/**
 	 * Set cell type property.
