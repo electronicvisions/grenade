@@ -140,8 +140,8 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CuboidMultiIndexSequence : public Multi
 	virtual void set_dimension_units(DimensionUnits value) override;
 
 	/**
-	 * Get whether all elements of sequence are present in other sequence.
-	 * The dimension units are required to match in addition to geometric inclusion.
+	 * Get whether all elements of other sequence are present in this sequence.
+	 * The dimension units are required to match in addition to set inclusion.
 	 */
 	virtual bool includes(MultiIndexSequence const& other) const override;
 
