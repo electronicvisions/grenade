@@ -51,6 +51,11 @@ JITGraphExecutor::release_connections()
 	return std::move(m_connections);
 }
 
+size_t JITGraphExecutor::size() const
+{
+	return m_connections.size();
+}
+
 std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::ConnectionTimeInfo>>
 JITGraphExecutor::get_time_info() const
 {

@@ -71,6 +71,11 @@ public:
 	std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&&
 	release_connections() SYMBOL_VISIBLE;
 
+	/**
+	 * Get number of contained connections.
+	 */
+	size_t size() const SYMBOL_VISIBLE;
+
 	std::map<grenade::common::ConnectionOnExecutor, std::vector<hxcomm::ConnectionTimeInfo>>
 	get_time_info() const SYMBOL_VISIBLE;
 
