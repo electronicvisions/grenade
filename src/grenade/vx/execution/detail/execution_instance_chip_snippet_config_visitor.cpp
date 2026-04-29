@@ -15,6 +15,7 @@
 #include "hate/type_index.h"
 #include "hate/type_traits.h"
 #include "hate/variant.h"
+#include "lola/vx/cadc.h"
 #include "lola/vx/ppu.h"
 #include <filesystem>
 #include <iterator>
@@ -269,6 +270,16 @@ void ExecutionInstanceChipSnippetConfigVisitor::process(
 {
 	auto& chip =
 	    std::visit([](auto& system) -> lola::vx::v3::Chip& { return system.chip; }, system);
+	// Set CADC switches for reading from the synapses' correlation sensors or neurons' membrane
+	for (auto const coord : halco::common::iter_all<halco::hicann_dls::vx::CADCOnDLS>()) {
+		for (auto const column :
+		     halco::common::iter_all<halco::hicann_dls::vx::CADCChannelColumnOnSynram>()) {
+			chip.cadc_readout_chains[coord].channels_causal[column].enable_connect_correlation =
+			    true;
+			chip.cadc_readout_chains[coord].channels_acausal[column].enable_connect_correlation =
+			    true;
+		}
+	}
 	// handle setting neuron readout parameters
 	for (auto const& neuron_view : data.get_neuron_view_shapes()) {
 		for (size_t i = 0; i < neuron_view.columns.size(); ++i) {

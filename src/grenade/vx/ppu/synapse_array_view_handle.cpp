@@ -34,10 +34,6 @@ SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_causal_correlation(size_
 	if (::ppu != hemisphere || index_row >= rows.size()) {
 		exit(1);
 	}
-	// set switch row to synapse CADC readout on causal channel
-	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b0100'0000),
-	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
 	// disable connections to neuron CADC readout on causal channel
 	libnux::vx::set_row_via_vector(
 	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
@@ -53,10 +49,6 @@ SynapseArrayViewHandle::Row SynapseArrayViewHandle::get_acausal_correlation(size
 	if (::ppu != hemisphere || index_row >= rows.size()) {
 		exit(1);
 	}
-	// set switch row to synapse CADC readout on acausal channel
-	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b1000'0000),
-	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
 	// disable connections to neuron CADC readout on acausal channel
 	libnux::vx::set_row_via_vector(
 	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
@@ -73,10 +65,6 @@ SynapseArrayViewHandle::CorrelationRow SynapseArrayViewHandle::get_correlation(
 	if (::ppu != hemisphere || index_row >= rows.size()) {
 		exit(1);
 	}
-	// set switch row to synapse CADC readout on causal and acausal channel
-	libnux::vx::set_row_via_vector(
-	    libnux::vx::VectorRowMod8(0b1100'0000),
-	    halco::hicann_dls::vx::v3::SynapseRowOnSynram::size * 2 + 2, libnux::vx::dls_raw_base);
 	// disable connections to neuron CADC readout on causal channel
 	libnux::vx::set_row_via_vector(
 	    libnux::vx::VectorRowMod8(0b0000'0000), halco::hicann_dls::vx::v3::SynapseRowOnSynram::size,
