@@ -186,8 +186,13 @@ void MutationBitFlip<EOT>::operator()(EoPopulation<EOT>& pop)
 template <class EOT>
 MutationShiftRound<EOT>::MutationShiftRound(
     double p_shift, size_t min_shift, size_t max_shift, std::mt19937& generator) :
-    m_shift_distribution(p_shift), m_shift_distance(min_shift, max_shift), m_generator(generator)
+    m_shift_distribution(p_shift), m_generator(generator)
 {
+	if (min_shift > max_shift) {
+		throw std::logic_error(
+		    "Minimal shift distance can not be larger than maximum shift distance.");
+	}
+	m_shift_distance = std::uniform_int_distribution<int>(min_shift, max_shift);
 }
 
 template <class EOT>

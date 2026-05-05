@@ -31,7 +31,7 @@ PlacementAlgorithmEvolutionary::PlacementAlgorithmEvolutionary() :
 
 	// Shift mutation
 	m_run_parameters.p_shift = 0.2;
-	m_run_parameters.min_shift = -4;
+	m_run_parameters.min_shift = 1;
 	m_run_parameters.max_shift = 4;
 
 	// Add/Remove mutation
