@@ -1,12 +1,14 @@
 #include "grenade/vx/network/abstract/calibration/jit.h"
 
 #include "ccalix/spiking_calib_options.h"
+#include "ccalix/types.h"
 #include "grenade/common/connection_on_executor.h"
 #include "grenade/common/execution_instance_on_executor.h"
 #include "grenade/common/linked_topology.h"
 #include "grenade/common/partitioned_vertex.h"
 #include "grenade/common/population.h"
 #include "grenade/vx/common/chip_on_connection.h"
+#include "grenade/vx/constants.h"
 #include "grenade/vx/execution/jit_graph_executor.h"
 #include "grenade/vx/network/abstract/calibration/fixture.h"
 #include "grenade/vx/network/abstract/mapping/calibrated_neuron.h"
@@ -48,6 +50,13 @@ void JITCalibration::operator()(
 	                                      halco::hicann_dls::vx::v3::AtomicNeuronOnDLS,
 	                                      CalibratedNeuron::ParameterSpace::CalibrationTarget>>>
 	    calibration_targets;
+	std::map<
+	    grenade::common::ExecutionInstanceOnExecutor,
+	    std::map<
+	        common::ChipOnConnection, std::map<
+	                                      std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>,
+	                                      ccalix::CapacitanceInFarad>>>
+	    membrane_capacitances;
 	for (auto const& inter_graph_hyper_edge_descriptor : topology.inter_graph_hyper_edges()) {
 		auto inter_graph_hyper_edge = topology.get(inter_graph_hyper_edge_descriptor).copy();
 		if (auto const calibrated_ptr =
@@ -103,6 +112,15 @@ void JITCalibration::operator()(
 						                       local_calibration_targets.at(an);
 					}
 				}
+				for (auto const& [compartment_on_neuron, atomic_neurons] :
+				     logical_neuron_compartments) {
+					auto const& local_membrane_capacitance =
+					    parameter_space.membrane_capacitance.at(cell_on_population)
+					        .at(CompartmentOnNeuron(compartment_on_neuron.value()));
+					membrane_capacitances[execution_instance_on_executor]
+					                     [chip_on_connection.value()][atomic_neurons] =
+					                         local_membrane_capacitance;
+				}
 			}
 		}
 		topology.set(inter_graph_hyper_edge_descriptor, std::move(*inter_graph_hyper_edge));
@@ -154,6 +172,21 @@ void JITCalibration::operator()(
 		}
 	}
 
+	// transformation for membrane capacitance from physical units to neuron circuit setting
+	auto const membrane_capacitance_transformation =
+	    [](ccalix::CapacitanceInFarad const& capacitance_in_farad, common::ChipOnConnection const&,
+	       std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> const& atomic_neurons) {
+		    // ideal transformation assuming no parasitic capacitance supporting the capacitance of
+		    // one neuron circuit
+		    std::vector<lola::vx::v3::AtomicNeuron::MembraneCapacitance::CapacitorSize>
+		        capacitor_settings(atomic_neurons.size());
+		    capacitor_settings.at(0) =
+		        lola::vx::v3::AtomicNeuron::MembraneCapacitance::CapacitorSize(
+		            capacitance_in_farad.value() / grenade::vx::ideal_capacitance_per_neuron *
+		            lola::vx::v3::AtomicNeuron::MembraneCapacitance::CapacitorSize::max);
+		    return capacitor_settings;
+	    };
+
 	// perform calibration
 	for (auto const& [execution_instance_on_executor, calibration_targets_on_connection] :
 	     calibration_targets) {
@@ -168,10 +201,22 @@ void JITCalibration::operator()(
 			std::set<haldls::vx::v3::CapMemCell::Value> synapse_dac_bias;
 
 			for (auto const& [atomic_neuron, target] : calibration_target) {
+				ccalix::CapacitanceInFarad cap;
+				if (target.membrane_capacitance_during_calibration) {
+					cap = *target.membrane_capacitance_during_calibration;
+				} else {
+					auto const& per_chip = membrane_capacitances.at(execution_instance_on_executor)
+					                           .at(chip_on_connection);
+					if (per_chip.contains({atomic_neuron})) {
+						cap = per_chip.at(std::vector{atomic_neuron});
+					} else {
+						cap = ccalix::CapacitanceInFarad(2.2e-12);
+					}
+				}
+
 				spiking_calib_target.neuron_target.membrane_capacitance[atomic_neuron] =
-				    target.membrane_capacitance_during_calibration
-				        ? *target.membrane_capacitance_during_calibration
-				        : target.membrane_capacitance;
+				    membrane_capacitance_transformation(cap, chip_on_connection, {atomic_neuron})
+				        .at(0);
 
 				spiking_calib_target.neuron_target.leak[atomic_neuron] = target.v_leak;
 				if (target.tau_membrane) {
@@ -387,19 +432,24 @@ void JITCalibration::operator()(
 					auto const& local_calibration_targets =
 					    parameter_space.calibration_targets.at(cell_on_population)
 					        .at(CompartmentOnNeuron(compartment_on_neuron.value()));
-					for (size_t an = 0; an < atomic_neurons.size(); ++an) {
-						std::optional<common::ChipOnConnection> chip_on_connection;
-						for (auto const& [_, mapped_vertex_index] : anchor.first) {
-							auto const& local_chip_on_connection =
-							    mapped_vertices.at(mapped_vertex_index).get().chip_on_connection;
-							if (chip_on_connection &&
-							    local_chip_on_connection != chip_on_connection.value()) {
-								throw std::runtime_error(
-								    "ChipOnConnection information of neuron views to "
-								    "single model neuron don't match.");
-							}
-							chip_on_connection = local_chip_on_connection;
+					auto const& local_membrane_capacitance =
+					    parameter_space.membrane_capacitance.at(cell_on_population)
+					        .at(CompartmentOnNeuron(compartment_on_neuron.value()));
+					std::optional<common::ChipOnConnection> chip_on_connection;
+					for (auto const& [_, mapped_vertex_index] : anchor.first) {
+						auto const& local_chip_on_connection =
+						    mapped_vertices.at(mapped_vertex_index).get().chip_on_connection;
+						if (chip_on_connection &&
+						    local_chip_on_connection != chip_on_connection.value()) {
+							throw std::runtime_error(
+							    "ChipOnConnection information of neuron views to "
+							    "single model neuron don't match.");
 						}
+						chip_on_connection = local_chip_on_connection;
+					}
+					auto const membrane_capacitor_settings = membrane_capacitance_transformation(
+					    local_membrane_capacitance, chip_on_connection.value(), atomic_neurons);
+					for (size_t an = 0; an < atomic_neurons.size(); ++an) {
 						auto& atomic_neuron_config =
 						    fixture_calibration.chips.at(execution_instance_on_executor)
 						        .at(chip_on_connection.value())
@@ -433,7 +483,7 @@ void JITCalibration::operator()(
 						if (local_calibration_target.membrane_capacitance_during_calibration) {
 							// set requested membrane_capacitance
 							atomic_neuron_config.membrane_capacitance.capacitance =
-							    local_calibration_target.membrane_capacitance;
+							    membrane_capacitor_settings.at(an);
 						}
 					}
 				}

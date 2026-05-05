@@ -93,8 +93,6 @@ std::ostream& operator<<(
 	ios << "CalibrationTarget(\n";
 	ios << hate::Indentation("\t");
 
-	ios << "membrane_capacitance: " << value.membrane_capacitance << "\n";
-
 	ios << "membrane_capacitance_during_calibration: ";
 	if (value.membrane_capacitance_during_calibration) {
 		ios << *value.membrane_capacitance_during_calibration;
@@ -138,14 +136,19 @@ std::ostream& operator<<(
 }
 
 CalibratedNeuron::ParameterSpace::Parameterization::Parameterization(
-    CalibrationTargets calibration_targets, ReadoutSources readout_sources) :
-    calibration_targets(std::move(calibration_targets)), readout_sources(std::move(readout_sources))
+    CalibrationTargets calibration_targets,
+    MembraneCapacitance membrane_capacitance,
+    ReadoutSources readout_sources) :
+    calibration_targets(std::move(calibration_targets)),
+    membrane_capacitance(std::move(membrane_capacitance)),
+    readout_sources(std::move(readout_sources))
 {
 }
 
 size_t CalibratedNeuron::ParameterSpace::Parameterization::size() const
 {
-	if (calibration_targets.size() != readout_sources.size()) {
+	if (calibration_targets.size() != readout_sources.size() ||
+	    calibration_targets.size() != membrane_capacitance.size()) {
 		throw std::runtime_error("Parameterization has inconsistent size.");
 	}
 	return calibration_targets.size();
@@ -168,6 +171,7 @@ CalibratedNeuron::ParameterSpace::Parameterization::get_section(
     grenade::common::MultiIndexSequence const& sequence) const
 {
 	CalibrationTargets section_targets;
+	MembraneCapacitance section_membrane_capacitance;
 	ReadoutSources section_readout_sources;
 
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
@@ -175,13 +179,16 @@ CalibratedNeuron::ParameterSpace::Parameterization::get_section(
 		    "Given sequence not included in parameterization to get section from.");
 	}
 	section_targets.reserve(sequence.size());
+	section_membrane_capacitance.reserve(sequence.size());
 	section_readout_sources.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
 		section_targets.push_back(calibration_targets.at(element.value.at(0)));
+		section_membrane_capacitance.push_back(membrane_capacitance.at(element.value.at(0)));
 		section_readout_sources.push_back(readout_sources.at(element.value.at(0)));
 	}
 	return std::make_unique<CalibratedNeuron::ParameterSpace::Parameterization>(
-	    std::move(section_targets), std::move(section_readout_sources));
+	    std::move(section_targets), std::move(section_membrane_capacitance),
+	    std::move(section_readout_sources));
 }
 
 bool CalibratedNeuron::ParameterSpace::Parameterization::is_equal_to(
@@ -190,6 +197,9 @@ bool CalibratedNeuron::ParameterSpace::Parameterization::is_equal_to(
 	return calibration_targets ==
 	           static_cast<CalibratedNeuron::ParameterSpace::Parameterization const&>(other)
 	               .calibration_targets &&
+	       membrane_capacitance ==
+	           static_cast<CalibratedNeuron::ParameterSpace::Parameterization const&>(other)
+	               .membrane_capacitance &&
 	       readout_sources ==
 	           static_cast<CalibratedNeuron::ParameterSpace::Parameterization const&>(other)
 	               .readout_sources;
@@ -199,25 +209,40 @@ std::ostream& CalibratedNeuron::ParameterSpace::Parameterization::print(std::ost
 {
 	hate::IndentingOstream ios(os);
 	ios << "Parameterization(\n";
+	ios << hate::Indentation("\t");
+	ios << "calibration_targets:\n";
 	for (size_t j = 0; auto const& nrn : calibration_targets) {
-		ios << hate::Indentation("\t");
+		ios << hate::Indentation("\t\t");
 		ios << "neuron_on_population " << j << ":\n";
 		for (auto const& [compartment_on_neuron, config] : nrn) {
-			ios << hate::Indentation("\t\t");
-			ios << compartment_on_neuron << ":\n";
 			ios << hate::Indentation("\t\t\t");
+			ios << compartment_on_neuron << ":\n";
+			ios << hate::Indentation("\t\t\t\t");
 			ios << hate::join(config.begin(), config.end(), "\n");
 		}
 		ios << "\n";
 		j++;
 	}
+	ios << hate::Indentation("\t");
+	ios << "membrane_capacitance:\n";
+	for (size_t j = 0; auto const& neuron_capacitance : membrane_capacitance) {
+		ios << hate::Indentation("\t\t");
+		ios << "neuron_on_population " << j << ":\n";
+		ios << hate::Indentation("\t\t\t");
+		for (auto const& [compartment_on_neuron, capacitance] : neuron_capacitance) {
+			ios << compartment_on_neuron << ": " << capacitance << "\n";
+		}
+		j++;
+	}
+	ios << hate::Indentation("\t");
+	ios << "readout_sources:\n";
 	for (size_t j = 0; auto const& nrn : readout_sources) {
-		ios << hate::Indentation("\t");
+		ios << hate::Indentation("\t\t");
 		ios << "neuron_on_population " << j << ":\n";
 		for (auto const& [compartment_on_neuron, ans] : nrn) {
-			ios << hate::Indentation("\t\t");
-			ios << compartment_on_neuron << ":\n";
 			ios << hate::Indentation("\t\t\t");
+			ios << compartment_on_neuron << ":\n";
+			ios << hate::Indentation("\t\t\t\t");
 			ios << hate::join(ans.begin(), ans.end(), "\n");
 		}
 		ios << "\n";
@@ -228,13 +253,18 @@ std::ostream& CalibratedNeuron::ParameterSpace::Parameterization::print(std::ost
 }
 
 
-CalibratedNeuron::ParameterSpace::ParameterSpace(CalibrationTargets calibration_targets) :
-    calibration_targets(std::move(calibration_targets))
+CalibratedNeuron::ParameterSpace::ParameterSpace(
+    CalibrationTargets calibration_targets, MembraneCapacitance membrane_capacitance) :
+    calibration_targets(std::move(calibration_targets)),
+    membrane_capacitance(std::move(membrane_capacitance))
 {
 }
 
 size_t CalibratedNeuron::ParameterSpace::size() const
 {
+	if (calibration_targets.size() != membrane_capacitance.size()) {
+		throw std::runtime_error("ParameterSpace has inconsistent size.");
+	}
 	return calibration_targets.size();
 }
 
@@ -247,7 +277,8 @@ bool CalibratedNeuron::ParameterSpace::valid(
 		return false;
 	}
 	if (auto const ptr = dynamic_cast<Parameterization const*>(&parameterization); ptr) {
-		if (calibration_targets != ptr->calibration_targets) {
+		if (calibration_targets != ptr->calibration_targets ||
+		    membrane_capacitance != ptr->membrane_capacitance) {
 			return false;
 		}
 		return true;
@@ -272,16 +303,20 @@ CalibratedNeuron::ParameterSpace::get_section(
     grenade::common::MultiIndexSequence const& sequence) const
 {
 	CalibrationTargets section_targets;
+	MembraneCapacitance section_membrane_capacitance;
 
 	if (!grenade::common::CuboidMultiIndexSequence({size()}).includes(sequence)) {
 		throw std::invalid_argument(
 		    "Given sequence not included in parameter space to get section from.");
 	}
 	section_targets.reserve(sequence.size());
+	section_membrane_capacitance.reserve(sequence.size());
 	for (auto const& element : sequence.get_elements()) {
 		section_targets.push_back(calibration_targets.at(element.value.at(0)));
+		section_membrane_capacitance.push_back(membrane_capacitance.at(element.value.at(0)));
 	}
-	return std::make_unique<CalibratedNeuron::ParameterSpace>(std::move(section_targets));
+	return std::make_unique<CalibratedNeuron::ParameterSpace>(
+	    std::move(section_targets), std::move(section_membrane_capacitance));
 }
 
 bool CalibratedNeuron::ParameterSpace::is_equal_to(
@@ -295,16 +330,29 @@ std::ostream& CalibratedNeuron::ParameterSpace::print(std::ostream& os) const
 {
 	hate::IndentingOstream ios(os);
 	ios << "ParameterSpace(\n";
+	ios << hate::Indentation("\t");
+	ios << "calibration_targets:\n";
 	for (size_t j = 0; auto const& nrn : calibration_targets) {
-		ios << hate::Indentation("\t");
+		ios << hate::Indentation("\t\t");
 		ios << "neuron_on_population " << j << ":\n";
 		for (auto const& [compartment_on_neuron, config] : nrn) {
-			ios << hate::Indentation("\t\t");
-			ios << compartment_on_neuron << ":\n";
 			ios << hate::Indentation("\t\t\t");
+			ios << compartment_on_neuron << ":\n";
+			ios << hate::Indentation("\t\t\t\t");
 			ios << hate::join(config.begin(), config.end(), "\n");
 		}
 		ios << "\n";
+		j++;
+	}
+	ios << hate::Indentation("\t");
+	ios << "membrane_capacitance:\n";
+	for (size_t j = 0; auto const& neuron_capacitance : membrane_capacitance) {
+		ios << hate::Indentation("\t\t");
+		ios << "neuron_on_population " << j << ":\n";
+		ios << hate::Indentation("\t\t\t");
+		for (auto const& [compartment_on_neuron, capacitance] : neuron_capacitance) {
+			ios << compartment_on_neuron << ": " << capacitance << "\n";
+		}
 		j++;
 	}
 	ios << hate::Indentation() << "\n)";
@@ -330,6 +378,17 @@ bool CalibratedNeuron::valid(
 				if (!neuron.contains(grenade::common::CompartmentOnNeuron(compartment.value())) ||
 				    neuron.at(grenade::common::CompartmentOnNeuron(compartment.value())).size() !=
 				        atomic_neurons.size()) {
+					return false;
+				}
+			}
+		}
+		for (auto const& capacitance_neuron : ptr->membrane_capacitance) {
+			if (shape.get_compartments().size() != capacitance_neuron.size()) {
+				return false;
+			}
+			for (auto const& [compartment_on_neuron, _] : shape.get_compartments()) {
+				if (!capacitance_neuron.contains(
+				        grenade::common::CompartmentOnNeuron(compartment_on_neuron.value()))) {
 					return false;
 				}
 			}

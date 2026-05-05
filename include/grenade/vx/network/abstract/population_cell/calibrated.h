@@ -25,20 +25,15 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CalibratedNeuron : public LocallyPlaced
 		struct CalibrationTarget
 		{
 			/**
-			 * Selected membrane capacitance.
-			 * The available range is 0 to approximately 2.2 pF, represented as 0 to 63 LSB.
-			 */
-			lola::vx::v3::AtomicNeuron::MembraneCapacitance::CapacitorSize membrane_capacitance{63};
-
-			/**
 			 * Membrane capacitance used during calibration.
 			 * Might be set to be different than `membrane_capacitance` for use in
-			 * larger-than-single-circuit compartments. The available range is 0 to
-			 * approximately 2.2 pF, represented as 0 to 63 LSB. If empty, `membrane_capacitance` is
-			 * used also during calibration.
+			 * larger-than-single-circuit compartments. The available range is 0 to approx. 2.2 pF
+			 * plus a neuron-circuit-specific offset due to parasitic capacitances.
+			 * If empty, `membrane_capacitance` of the parameter space is used also during
+			 * calibration.
 			 */
-			std::optional<lola::vx::v3::AtomicNeuron::MembraneCapacitance::CapacitorSize>
-			    membrane_capacitance_during_calibration{std::nullopt};
+			std::optional<ccalix::CapacitanceInFarad> membrane_capacitance_during_calibration{
+			    std::nullopt};
 
 			/**
 			 * Target CADC read at leak (resting) potential.
@@ -261,6 +256,15 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CalibratedNeuron : public LocallyPlaced
 		    std::map<grenade::common::CompartmentOnNeuron, std::vector<CalibrationTarget>>>
 		    CalibrationTargets;
 
+		/**
+		 * Selected membrane capacitance per compartment per neuron on the population.
+		 * The available range is 0 to approx. 2.2 pF plus a neuron-circuit-specific offset per
+		 * neuron circuit due to parasitic capacitances.
+		 */
+		typedef std::vector<
+		    std::map<grenade::common::CompartmentOnNeuron, ccalix::CapacitanceInFarad>>
+		    MembraneCapacitance;
+
 		struct Parameterization
 		    : public grenade::common::Population::Cell::ParameterSpace::Parameterization
 		{
@@ -269,6 +273,13 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CalibratedNeuron : public LocallyPlaced
 			 * parameter transformation calibration is available.
 			 */
 			CalibrationTargets calibration_targets;
+
+			/**
+			 * Selected membrane capacitance per compartment per neuron on the population.
+			 * The available range is 0 to approx. 2.2 pF plus a neuron-circuit-specific offset per
+			 * neuron circuit due to parasitic capacitances.
+			 */
+			MembraneCapacitance membrane_capacitance;
 
 			/**
 			 * Readout source to select per neuron on population per compartment on neuron per
@@ -281,7 +292,9 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CalibratedNeuron : public LocallyPlaced
 			ReadoutSources readout_sources;
 
 			Parameterization(
-			    CalibrationTargets calibration_targets, ReadoutSources readout_sources);
+			    CalibrationTargets calibration_targets,
+			    MembraneCapacitance membrane_capacitance,
+			    ReadoutSources readout_sources);
 
 			virtual size_t size() const override;
 
@@ -299,7 +312,10 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CalibratedNeuron : public LocallyPlaced
 
 		CalibrationTargets calibration_targets;
 
-		ParameterSpace(CalibrationTargets calibration_targets);
+		MembraneCapacitance membrane_capacitance;
+
+		ParameterSpace(
+		    CalibrationTargets calibration_targets, MembraneCapacitance membrane_capacitance);
 
 		virtual size_t size() const override;
 

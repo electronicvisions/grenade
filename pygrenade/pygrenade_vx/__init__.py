@@ -4,6 +4,8 @@ from pygrenade_vx import execution
 from pygrenade_vx import signal_flow
 from pygrenade_vx import network
 
+from _pygrenade_vx import *
+
 if logger.get_root().get_number_of_appenders() == 0:
     logger.reset()
     logger.default_config(level=logger.LogLevel.WARN)

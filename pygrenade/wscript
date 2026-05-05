@@ -42,6 +42,14 @@ def build(bld):
     )
 
     bld(
+        target='_pygrenade_vx',
+        source='../include/grenade/vx/python_bindings.h',
+        genpybind_tags='grenade_vx',
+        features='genpybind cxx cxxshlib pyext',
+        use=['grenade_vx', 'pyhaldls_vx_v3'],
+    )
+
+    bld(
         target='_pygrenade_vx_common',
         source='../include/grenade/vx/common/python_bindings.h',
         genpybind_tags='grenade_vx_common',
@@ -100,7 +108,8 @@ def build(bld):
     bld(
         target='pygrenade_vx',
         features='py use pylint pycodestyle',
-        use=['_pygrenade_vx_common',
+        use=['_pygrenade_vx',
+             '_pygrenade_vx_common',
              '_pygrenade_vx_execution',
              '_pygrenade_vx_signal_flow',
              '_pygrenade_vx_network',
