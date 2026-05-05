@@ -3,7 +3,7 @@
 #include "halco/common/geometry.h"
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 // Mechanism-ID
 struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE MechanismOnCompartment

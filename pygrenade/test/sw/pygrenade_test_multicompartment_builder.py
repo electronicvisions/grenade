@@ -2,9 +2,11 @@
 # pylint: disable=too-many-locals, too-many-statements
 import unittest
 
-from pygrenade_vx.network.multicompartment.tree import Node, Connection
-from pygrenade_vx.network.multicompartment.neuron_components import Compartment
-from pygrenade_vx.network.multicompartment.morphology_builder import \
+from pygrenade_vx.network.abstract.multicompartment.tree import \
+    Node, Connection
+from pygrenade_vx.network.abstract.multicompartment.neuron_components import \
+    Compartment
+from pygrenade_vx.network.abstract.multicompartment.morphology_builder import \
     MorphologyBuilder
 
 

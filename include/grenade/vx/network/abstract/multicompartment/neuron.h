@@ -10,7 +10,7 @@
 #include <memory>
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 // forward declaration
 struct Neuron;
@@ -33,16 +33,16 @@ extern template class SYMBOL_VISIBLE Graph<
 } // namespace grenade::common
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 /**
  * Graph representation of a multicompartment Neuron.
  * Compartments are represented as graph vertices and connections as graph edges.
  */
 struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
-    : private common::Graph<
+    : private ::grenade::common::Graph<
           Neuron,
-          common::detail::UndirectedGraph,
+          ::grenade::common::detail::UndirectedGraph,
           Compartment,
           CompartmentConnection,
           CompartmentOnNeuron,

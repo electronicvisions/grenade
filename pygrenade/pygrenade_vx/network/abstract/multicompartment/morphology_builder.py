@@ -1,11 +1,12 @@
 from typing import List, Optional
 from copy import deepcopy
 
-from pygrenade_vx.network.multicompartment.neuron_components\
+from pygrenade_vx.network.abstract.multicompartment.neuron_components\
     import Compartment
-from pygrenade_vx.network.multicompartment.neuron import\
+from pygrenade_vx.network.abstract.multicompartment.neuron import\
     Neuron
-from pygrenade_vx.network.multicompartment.tree import Node, Connection
+from pygrenade_vx.network.abstract.multicompartment.tree import\
+    Node, Connection
 
 
 class MorphologyBuilder:

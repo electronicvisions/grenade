@@ -3,7 +3,7 @@
 #include <iostream>
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 /**
  * Stores configuration of the switches of a neuron circuit that interconnect neuron circuits.

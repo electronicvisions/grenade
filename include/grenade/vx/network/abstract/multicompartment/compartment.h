@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Property<Compartment>
 {

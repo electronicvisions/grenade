@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC
-import _pygrenade_vx_network as grenade
+import _pygrenade_vx_network_abstract as grenade
 
 
 class Mechanism(ABC):

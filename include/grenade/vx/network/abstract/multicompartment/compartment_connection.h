@@ -4,7 +4,7 @@
 #include "grenade/vx/network/abstract/parameter_interval.h"
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 // CompartmentConnection
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) CompartmentConnection

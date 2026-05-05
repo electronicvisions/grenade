@@ -1,5 +1,6 @@
-from pygrenade_vx.network.multicompartment.neuron_components import Compartment
-from pygrenade_vx.network.multicompartment.mechanisms import Mechanism
+from pygrenade_vx.network.abstract.multicompartment.neuron_components import\
+    Compartment
+from pygrenade_vx.network.abstract.multicompartment.mechanisms import Mechanism
 
 
 class CompartmentBuilder:

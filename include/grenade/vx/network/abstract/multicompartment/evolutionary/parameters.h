@@ -1,10 +1,13 @@
 #pragma once
+#include "grenade/vx/genpybind.h"
+#include "hate/visibility.h"
 #include <cstddef>
 #include <iostream>
 
-namespace grenade::vx::network::abstract {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
-struct EvolutionaryParameters
+struct SYMBOL_VISIBLE GENPYBIND(visible) EvolutionaryParameters
 {
 	// Seed for RNG
 	size_t seed;
@@ -62,5 +65,5 @@ struct EvolutionaryParameters
 
 std::ostream& operator<<(std::ostream& os, EvolutionaryParameters const& parameters);
 
-
-} // namespace grenade::vx::network::abstract
+} // namespace abstract
+} // namespace grenade::vx::network

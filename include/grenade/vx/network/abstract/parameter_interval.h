@@ -2,7 +2,8 @@
 #include "grenade/vx/genpybind.h"
 #include <iosfwd>
 
-namespace grenade::vx::network::abstract {
+namespace grenade::vx::network {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 template <class T>
 struct ParameterInterval
 {
@@ -34,6 +35,7 @@ std::ostream& operator<<(std::ostream& os, ParameterInterval<T> const& interval)
 typedef ParameterInterval<double> ParameterIntervalDouble GENPYBIND(opaque(false));
 
 
-} // namespace grenade::vx::network::abstract
+} // namespace abstract
+} // namespace grenade::vx::network
 
 #include "grenade/vx/network/abstract/parameter_interval.tcc"

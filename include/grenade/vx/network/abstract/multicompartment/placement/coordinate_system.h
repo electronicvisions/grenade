@@ -9,7 +9,7 @@
 #endif
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 /**
  * A 2d-grid representing the neuron circuits on the BSS-2-chip. Connections between neuron circuits

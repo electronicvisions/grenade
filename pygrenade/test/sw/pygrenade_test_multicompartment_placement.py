@@ -6,9 +6,8 @@ import unittest
 import matplotlib.pyplot as plt
 from matplotlib import lines
 
-import pygrenade_vx.network as grenade
+import pygrenade_vx.network.abstract as grenade
 import pygrenade_vx
-from _pygrenade_vx_network import CoordinateSystem, CompartmentOnNeuron
 
 
 def plot_switch_shared_conductance(axis, i, j):
@@ -241,7 +240,8 @@ def get_syn_compartment(
 
 
 def get_compartment_ids(
-        coordinate_system: CoordinateSystem) -> Set[CompartmentOnNeuron]:
+        coordinate_system: grenade.CoordinateSystem
+) -> Set[grenade.CompartmentOnNeuron]:
     """
     Extract all compartment IDs from the given coordinate_system.
     :param coordinate_system: Coordinate system.
@@ -291,8 +291,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         # Validation not possible since only single circuit is allocated.
@@ -331,8 +330,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -375,8 +373,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -432,8 +429,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -465,9 +461,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         compartment_a_on_neuron = neuron.add_compartment(compartment)
 
-        synaptic_input_a = pygrenade_vx.network\
-            .SynapticInputEnvironmentCurrent(
-                True, grenade.NumberTopBottom(1200, 0, 257))
+        synaptic_input_a = grenade.SynapticInputEnvironmentCurrent(
+            True, grenade.NumberTopBottom(1200, 0, 257))
         environment.add(compartment_a_on_neuron, synaptic_input_a)
 
         neuron_parameter_space = grenade.Neuron.ParameterSpace()
@@ -476,8 +471,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -526,8 +520,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                 compartments[0], comp,
                 grenade.CompartmentConnectionConductance())
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -543,10 +536,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         if not placement_result.finished:
             print("Placement failed.")
 
-        synaptic_input_a = pygrenade_vx\
-            .network\
-            .SynapticInputEnvironmentCurrent(
-                True, grenade.NumberTopBottom(1200, 0, 257))
+        synaptic_input_a = grenade.SynapticInputEnvironmentCurrent(
+            True, grenade.NumberTopBottom(1200, 0, 257))
         environment.add(compartments[0], synaptic_input_a)
 
         self.assertEqual(
@@ -611,8 +602,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             compartment_h_on_neuron,
             grenade.CompartmentConnectionConductance())
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -727,8 +717,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             compartment_m_on_neuron,
             grenade.CompartmentConnectionConductance())
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -860,8 +849,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             compartment_o_on_neuron,
             grenade.CompartmentConnectionConductance())
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
             .run(grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -1019,8 +1007,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             compartment_s_on_neuron,
             grenade.CompartmentConnectionConductance())
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm.run(
             grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)
@@ -1141,8 +1128,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             compartment_al_on_neuron,
             grenade.CompartmentConnectionConductance())
 
-        placement_algorithm = pygrenade_vx.network\
-            .PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         with self.assertRaises(RuntimeError):
             placement_algorithm.run(
                 grenade.CoordinateSystem(), neuron, resources)
@@ -1178,9 +1164,8 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         neuron = grenade.Neuron()
         resources = grenade.ResourceManager()
         environment = grenade.Environment()
-        syn_input = pygrenade_vx.network\
-            .SynapticInputEnvironmentCurrent(
-                True, grenade.NumberTopBottom(5, 0, 5))
+        syn_input = grenade.SynapticInputEnvironmentCurrent(
+            True, grenade.NumberTopBottom(5, 0, 5))
 
         chain_length = 5
         spine_positions = [1, 3]
@@ -1211,7 +1196,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        placement_algorithm = pygrenade_vx.network.PlacementAlgorithmRuleset()
+        placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm.run(
             grenade.CoordinateSystem(), neuron, resources)
         self.assert_valid(placement_result.coordinate_system)

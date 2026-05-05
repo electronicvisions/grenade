@@ -5,7 +5,7 @@
 
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 struct GENPYBIND(inline_base("*")) CompartmentOnNeuron
     : public halco::common::detail::BaseType<CompartmentOnNeuron, size_t>

@@ -9,7 +9,7 @@
 #include "grenade/vx/network/abstract/parameter_interval.h"
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 // Mechanism for Membran Capacitance
 struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputCurrent : public Mechanism

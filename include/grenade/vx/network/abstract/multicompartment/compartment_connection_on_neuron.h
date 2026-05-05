@@ -4,7 +4,7 @@
 #include "halco/common/geometry_numeric_limits.h"
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 struct GENPYBIND(inline_base("*")) CompartmentConnectionOnNeuron
     : public halco::common::detail::BaseType<CompartmentConnectionOnNeuron, size_t>

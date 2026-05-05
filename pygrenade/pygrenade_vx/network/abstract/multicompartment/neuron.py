@@ -1,6 +1,6 @@
 from copy import deepcopy
 from typing import Dict
-import _pygrenade_vx_network as grenade
+import _pygrenade_vx_network_abstract as grenade
 
 
 class Neuron():

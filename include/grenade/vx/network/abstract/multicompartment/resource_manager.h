@@ -11,7 +11,7 @@
 #include <map>
 
 namespace grenade::vx::network {
-namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK {
+namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
 // Structure to know wich Compartment needs how many Neuron-Circuits and if TopBottom is required
 struct GENPYBIND(visible) SYMBOL_VISIBLE ResourceManager
