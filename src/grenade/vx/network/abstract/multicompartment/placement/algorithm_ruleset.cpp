@@ -1141,7 +1141,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branch(
 			}
 
 			PlacementSpot next_spot = select_free_spot(
-			    find_free_spots(coordinates, search_start), required_space, false, false,
+			    find_free_spots(coordinates, search_start), required_space, true, false,
 			    search_block);
 
 			if (search_block) {
@@ -1157,8 +1157,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branch(
 		output_placed(coordinates, compartment);
 
 		// Check if from the compartment on the branch another branching happens.
-		// This is only necessary if the ordering in branch is suboptimal/instable which seems to be
-		// the case.
+		// This is only necessary if the ordering in branch is suboptimal/instable which seems
+		// to be the case.
 		neighbours_unplaced = unplaced_neighbours(neuron, compartment);
 		for (auto const& sub_branch_compartment : neighbours_unplaced) {
 			auto sub_branch = neuron.branch_compartments(sub_branch_compartment, compartment);
