@@ -349,6 +349,7 @@ PlacementSpot PlacementAlgorithmRuleset::select_free_spot(
 		throw std::runtime_error("No valid placement spot found.");
 	}
 	final_spot = large_enough_spots.at(0);
+	LOG4CXX_TRACE(m_logger, "Selected spot: " << final_spot);
 	return final_spot;
 }
 
@@ -469,6 +470,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	if (!virtually) {
 		m_placed_compartments.push_back(compartment);
 		coordinates = coordinates_copy;
+		connect_placed(coordinates, neuron);
 	}
 
 	// Return placed neuron circuit nubmer
@@ -549,6 +551,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	if (!virtually) {
 		m_placed_compartments.push_back(compartment);
 		coordinates = coordinates_copy;
+		connect_placed(coordinates, neuron);
 	}
 
 	// Return placed neuron circuit number
@@ -718,10 +721,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 		// Push Bridge Compartment in list of placed Compartments
 		m_placed_compartments.push_back(compartment);
 		coordinates = coordinates_copy;
+		connect_placed(coordinates, neuron);
 	}
 
 	total_placed += number_placed;
-
 	return total_placed;
 }
 
@@ -868,6 +871,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 		// Push Bridge Compartment in list of placed Compartments
 		m_placed_compartments.push_back(compartment);
 		coordinates = coordinates_copy;
+		connect_placed(coordinates, neuron);
 	}
 
 	total_placed += number_placed;
@@ -1354,31 +1358,14 @@ void PlacementAlgorithmRuleset::connect_distant(
 
 void PlacementAlgorithmRuleset::connect_placed(CoordinateSystem& coordinates, Neuron const& neuron)
 {
-	LOG4CXX_DEBUG(m_logger, "Connecting all newly placed compartments.");
-	std::vector<CompartmentOnNeuron> placed_last_step;
-	if (!m_results.empty()) {
-		placed_last_step = m_results.back().placed_compartments;
-	}
+	LOG4CXX_DEBUG(m_logger, "Connecting all placed compartments.");
 
 	std::set<CompartmentOnNeuron> placed;
 	for (auto compartment : m_placed_compartments) {
 		placed.emplace(compartment);
 	}
 
-	// Check which compartments are placed in this step
-	std::vector<CompartmentOnNeuron> newly_placed;
-	for (size_t i = 0; i < m_placed_compartments.size(); i++) {
-		if (i >= placed_last_step.size()) {
-			newly_placed.push_back(m_placed_compartments[i]);
-		}
-	}
-	LOG4CXX_TRACE(m_logger, "Newly placed: ");
-	for (auto compartment : newly_placed) {
-		LOG4CXX_TRACE(m_logger, compartment);
-	}
-
-
-	for (auto placed_compartment : newly_placed) {
+	for (auto placed_compartment : placed) {
 		for (auto adjacent : neuron.adjacent_compartments(placed_compartment)) {
 			if (placed.contains(adjacent) &&
 			    !m_placed_connections.contains(std::make_pair(placed_compartment, adjacent)) &&
