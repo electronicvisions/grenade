@@ -160,3 +160,13 @@ class Connection:
         self.source = source
         self.target = target
         self.strength = strength
+
+    def get_label(self) -> str:
+        """
+        Generate a label for the current connection.
+
+        The label is based on the labels of the source and target
+        compartments.
+        :return: Label which identifies this connection.
+        """
+        return f"connection.{self.source}...{self.target}"

@@ -21,10 +21,12 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance
 	struct GENPYBIND(visible) SYMBOL_VISIBLE ParameterSpace : public Mechanism::ParameterSpace
 	{
 		// Interval with range of Parameters
+		typedef ParameterInterval<std::optional<double>> OptionalDoubleInterval
+		    GENPYBIND(opaque(false));
 		std::vector<AnalogValueInterval> i_synin_gm;
 		std::vector<AnalogValueInterval> synapse_dac_bias;
 		std::vector<ParameterIntervalDouble> e_reversal;
-		std::vector<ParameterInterval<std::optional<double>>> e_reference;
+		std::vector<OptionalDoubleInterval> e_reference;
 		std::vector<TimeInterval> time_constant;
 
 		struct GENPYBIND(visible) SYMBOL_VISIBLE Parameterization
@@ -79,7 +81,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance
 		    std::vector<AnalogValueInterval> i_synin_gm,
 		    std::vector<AnalogValueInterval> synapse_dac_bias,
 		    std::vector<ParameterIntervalDouble> e_reversal,
-		    std::vector<ParameterInterval<std::optional<double>>> e_reference,
+		    std::vector<OptionalDoubleInterval> e_reference,
 		    std::vector<TimeInterval> time_constant);
 
 		// Property methods

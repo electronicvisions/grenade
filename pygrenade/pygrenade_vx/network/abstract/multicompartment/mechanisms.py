@@ -1,6 +1,12 @@
 from __future__ import annotations
-from abc import ABC
+from copy import copy, deepcopy
+from typing import Dict, Union
+from abc import ABC, abstractmethod
+
 import _pygrenade_vx_network_abstract as grenade
+from _pygrenade_vx_network_abstract import AnalogValueInterval, \
+    CapacitanceInterval, TimeInterval, ParameterIntervalDouble
+import _pygrenade_vx_network as grenade_network
 
 
 class Mechanism(ABC):
@@ -13,10 +19,44 @@ class Mechanism(ABC):
         '''
         self.parameters = {}
 
+    @abstractmethod
     def to_grenade(self):
         '''
-        Create the mechansim in grenade.
+        Create the mechanism in grenade.
         '''
+        raise NotImplementedError()
+
+    @classmethod
+    @abstractmethod
+    def construct_parameter_space(
+        cls,
+        lower_limits: Dict[str, float],
+        upper_limits: Dict[str, float]
+    ) -> grenade.Mechanism.ParameterSpace:
+        """
+        Construct a parameter space with the given limits.
+
+        :param lower_limits: Lower limits of the parameter space.
+            The keys are the names of the parameters.
+        :param upper_limits: Upper limits of the parameter space.
+            The keys are the names of the parameters.
+        :return: Parameter space with the given limits.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    @abstractmethod
+    def construct_parameterization(
+        cls,
+        values: Dict[str, Union[float, int]]
+    ) -> grenade.Mechanism.Parameterization:
+        """
+        Construct a parameterization for the given mechanism.
+
+        :param values: Values for the different parameters.
+            The keys are the names of the parameters.
+        :return: Parameterization.
+        """
         raise NotImplementedError()
 
     def copy(self):
@@ -46,15 +86,26 @@ class MembraneCapacitance(Mechanism):
 
         :return: Grenade object of the mechanism.
         '''
-        parameter_interval_capacitance = grenade.ParameterIntervalDouble(
-            self.parameters["capacitance"], self.parameters["capacitance"])
+        return grenade.MechanismCapacitance(enable_analog_readout=True)
 
-        parameterization = grenade.MechanismCapacitance.\
-            ParameterSpace.Parameterization(self.parameters["capacitance"])
-        parameter_space = grenade.MechanismCapacitance.ParameterSpace(
-            parameter_interval_capacitance, parameterization)
+    @classmethod
+    def construct_parameter_space(
+        cls,
+        lower_limits: Dict[str, float],
+        upper_limits: Dict[str, float]
+    ) -> grenade.MechanismCapacitance.ParameterSpace:
+        intervals = [CapacitanceInterval(float(low), float(high))
+                     for low, high in zip(lower_limits['capacitance'],
+                                          upper_limits['capacitance'])]
+        return grenade.MechanismCapacitance.ParameterSpace(intervals)
 
-        return grenade.MechanismCapacitance(parameter_space)
+    @classmethod
+    def construct_parameterization(
+        cls,
+        values: Dict[str, Union[float, int]]
+    ) -> grenade.MechanismCapacitance.ParameterSpace.Parameterization:
+        return grenade.MechanismCapacitance.ParameterSpace.\
+            Parameterization([float(val) for val in values['capacitance']])
 
     def copy(self) -> MembraneCapacitance:
         '''
@@ -68,20 +119,41 @@ class MembraneCapacitance(Mechanism):
 
 class CurrentBasedSynapse(Mechanism):
     '''
-    Mechanism that defines the parameters
-    of a current based synaptic input.
-    '''
+    Current-based synapse.
 
-    def __init__(self, current: int = 0, time_constant: int = 0):
+    Current-based synapse with a synaptic time constant and an input
+    strength. If all synaptic inputs on a chip have the same strength, the
+    synaptic current injected on the membrane is equalized between
+    different synaptic inputs. Otherewise, the strength is directly
+    translated to `i_bias_gm` of the synaptic input.
+    '''
+    def __init__(self,
+                 receptor_type: str = "excitatory",
+                 *,
+                 strength: int = 500,
+                 time_constant: float = 10e-6,
+                 global_strength: int = 600):
         '''
         Initialize a current based synapse.
 
-        :param current: Strength of the synaptic input.
-        :param time_constant: Time constant of the synaptic input.
+        :param strength: Strength of the synaptic input.
+        :param time_constant: Time constant (in s) of the synaptic input.
+        :param global_strength: Gloabal scaling of the synaptic input
+            strength. Translates to `synapse_dac_bias`. Has to be the same
+            for all synaptic inputs on a chip.
         '''
         super().__init__()
-        self.parameters["current"] = current
+        if receptor_type == "excitatory":
+            self.receptor_type = grenade_network.Receptor.Type.excitatory
+        elif receptor_type == "inhibitory":
+            self.receptor_type = grenade_network.Receptor.Type.inhibitory
+        else:
+            raise RuntimeError("Only excitatory and inhibitory synapses are "
+                               "supported.")
+
+        self.parameters["strength"] = strength
         self.parameters["time_constant"] = time_constant
+        self.parameters["global_strength"] = global_strength
 
     def to_grenade(self) -> grenade.MechanismSynapticInputCurrent:
         '''
@@ -89,20 +161,41 @@ class CurrentBasedSynapse(Mechanism):
 
         :return: Grenade object of the mechanism.
         '''
-        parameter_interval_current = grenade.ParameterIntervalDouble(
-            self.parameters["current"], self.parameters["current"])
-        parameter_interval_time_const = grenade.ParameterIntervalDouble(
-            self.parameters["time_constant"], self.parameters["time_constant"])
+        return grenade.MechanismSynapticInputCurrent(
+            receptor_type=self.receptor_type, enable_analog_readout=True)
 
-        parameterization = grenade.MechanismSynapticInputCurrent.\
-            ParameterSpace.Parameterization(
-                self.parameters["current"], self.parameters["time_constant"])
-        parameter_space = grenade.MechanismSynapticInputCurrent.\
-            ParameterSpace(parameter_interval_current,
-                           parameter_interval_time_const,
-                           parameterization)
+    @classmethod
+    def construct_parameter_space(
+        cls,
+        lower_limits: Dict[str, float],
+        upper_limits: Dict[str, float]
+    ) -> grenade.MechanismSynapticInputCurrent.ParameterSpace:
 
-        return grenade.MechanismSynapticInputCurrent(parameter_space)
+        strengths = [AnalogValueInterval(int(low), int(high))
+                     for low, high in zip(lower_limits["strength"],
+                                          upper_limits["strength"])]
+        global_strengths = [
+            AnalogValueInterval(int(low), int(high)) for low, high in
+            zip(lower_limits["global_strength"],
+                upper_limits["global_strength"])]
+
+        time_constants = [TimeInterval(float(low), float(high))
+                          for low, high in zip(lower_limits["time_constant"],
+                                               upper_limits["time_constant"])]
+        return grenade.MechanismSynapticInputCurrent.ParameterSpace(
+            i_synin_gm=strengths, synapse_dac_bias=global_strengths,
+            time_constant=time_constants)
+
+    @classmethod
+    def construct_parameterization(
+        cls,
+        values: Dict[str, Union[float, int]]
+    ) -> grenade.MechanismSynapticInputCurrent.Parameterization:
+        return grenade.MechanismSynapticInputCurrent.ParameterSpace.\
+            Parameterization(
+                i_synin_gm=[int(s) for s in values["strength"]],
+                synapse_dac_bias=[int(s) for s in values["global_strength"]],
+                time_constant=[float(t) for t in values["time_constant"]])
 
     def copy(self) -> CurrentBasedSynapse:
         '''
@@ -110,9 +203,10 @@ class CurrentBasedSynapse(Mechanism):
 
         :return: Copy of the mechanism.
         '''
-        return CurrentBasedSynapse(
-            current=self.parameters["current"],
-            time_constant=self.parameters["time_constant"])
+        syn = CurrentBasedSynapse()
+        syn.parameters = deepcopy(self.parameters)
+        syn.receptor_type = copy(self.receptor_type)
+        return syn
 
 
 class ConductanceBasedSynapse(Mechanism):
@@ -122,46 +216,88 @@ class ConductanceBasedSynapse(Mechanism):
     '''
 
     def __init__(self,
-                 conductance: int = 0,
-                 potential: int = 0,
-                 time_constant: int = 0):
+                 receptor_type: str = "excitatory",
+                 *,
+                 strength: int = 500,
+                 potential: int = 800,
+                 reference: int = 400,
+                 time_constant: int = 10e-6,
+                 global_strength: int = 600):
         '''
         Initialize a conductance based synapse.
 
-        :param conductance: Strength of the synaptic input.
+        :param strength: Strength of the synaptic input.
         :param potential: Reversal potential.
         :param time_constant: Time constant of the synaptic input.
         '''
         super().__init__()
-        self.parameters["conductance"] = conductance
+
+        if receptor_type == "excitatory":
+            self.receptor_type = grenade_network.Receptor.Type.excitatory
+        elif receptor_type == "inhibitory":
+            self.receptor_type = grenade_network.Receptor.Type.inhibitory
+        else:
+            raise RuntimeError("Only excitatory and inhibitory synapses are "
+                               "supported.")
+
+        self.parameters["strength"] = strength
         self.parameters["potential"] = potential
+        self.parameters["reference"] = reference
         self.parameters["time_constant"] = time_constant
+        self.parameters["global_strength"] = global_strength
 
     def to_grenade(self) -> grenade.MechanismSynapticInputConductance:
         '''
         Create the mechanism in grenade.
 
-        :return: Grenade object of the mechanism.
+        :return: Grenade object of the mechanism and its parameter space.
         '''
-        parameter_interval_conductance = grenade.ParameterIntervalDouble(
-            self.parameters["conductance"], self.parameters["conductance"])
-        parameter_interval_potential = grenade.ParameterIntervalDouble(
-            self.parameters["potential"], self.parameters["potential"])
-        parameter_interval_time_const = grenade.ParameterIntervalDouble(
-            self.parameters["time_constant"], self.parameters["time_constant"])
+        return grenade.MechanismSynapticInputConductance(
+            receptor_type=self.receptor_type, enable_analog_readout=True)
 
-        parameterization = grenade.MechanismSynapticInputConductance.\
-            ParameterSpace.Parameterization(
-                self.parameters["conductance"], self.parameters["potential"],
-                self.parameters["time_constant"])
-        parameter_space = grenade.MechanismSynapticInputConductance.\
-            ParameterSpace(
-                parameter_interval_conductance, parameter_interval_potential,
-                parameter_interval_time_const, parameterization)
+    @classmethod
+    def construct_parameter_space(
+        cls,
+        lower_limits: Dict[str, float],
+        upper_limits: Dict[str, float]
+    ) -> grenade.MechanismSynapticInputConductance.ParameterSpace:
 
-        mechanism_conductance_grenade = \
-            grenade.MechanismSynapticInputConductance(parameter_space)
-        return mechanism_conductance_grenade
+        strengths = [AnalogValueInterval(int(low), int(high))
+                     for low, high in zip(lower_limits["strength"],
+                                          upper_limits["strength"])]
+        potentials = [ParameterIntervalDouble(float(low), float(high))
+                      for low, high in zip(lower_limits["potential"],
+                                           upper_limits["potential"])]
+        OptionalDoubleInterval = grenade.MechanismSynapticInputConductance.\
+            ParameterSpace.OptionalDoubleInterval
+        references = [OptionalDoubleInterval(float(low), float(high))
+                      for low, high in zip(lower_limits["reference"],
+                                           upper_limits["reference"])]
+        global_strengths = [
+            AnalogValueInterval(int(low), int(high)) for low, high in
+            zip(lower_limits["global_strength"],
+                upper_limits["global_strength"])]
+
+        time_constants = [TimeInterval(float(low), float(high))
+                          for low, high in zip(lower_limits["time_constant"],
+                                               upper_limits["time_constant"])]
+        return grenade.MechanismSynapticInputConductance.ParameterSpace(
+            i_synin_gm=strengths, synapse_dac_bias=global_strengths,
+            e_reversal=potentials, e_reference=references,
+            time_constant=time_constants)
+
+    @classmethod
+    def construct_parameterization(
+        cls,
+        values: Dict[str, Union[float, int]]
+    ) -> grenade.MechanismSynapticInputConductance.Parameterization:
+        return grenade.MechanismSynapticInputConductance.ParameterSpace.\
+            Parameterization(
+                i_synin_gm=[int(s) for s in values["strength"]],
+                synapse_dac_bias=[int(s) for s in values["global_strength"]],
+                e_reversal=[int(s) for s in values["potential"]],
+                e_reference=[int(s) for s in values["reference"]],
+                time_constant=[float(t) for t in values["time_constant"]])
 
     def copy(self) -> ConductanceBasedSynapse:
         '''
@@ -169,7 +305,7 @@ class ConductanceBasedSynapse(Mechanism):
 
         :return: Copy of the mechanism.
         '''
-        return ConductanceBasedSynapse(
-            conductance=self.parameters["conductance"],
-            potential=self.parameters["potential"],
-            time_constant=self.parameters["time_constant"])
+        syn = ConductanceBasedSynapse()
+        syn.parameters = deepcopy(self.parameters)
+        syn.receptor_type = copy(self.receptor_type)
+        return syn

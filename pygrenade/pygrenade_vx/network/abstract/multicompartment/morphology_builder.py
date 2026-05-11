@@ -153,12 +153,10 @@ class MorphologyBuilder:
                                                 "type": "simple"}
 
         for connection in connections_full_label:
-            connection_label = "connection." + connection.source + "."\
-                + connection.target + ".conductance"
-            default_parameters[connection_label] = connection.strength
-            translations[connection_label] = {"translated_name":
-                                              connection_label,
-                                              "type": "simple"}
+            param_label = connection.get_label() + ".conductance"
+            default_parameters[param_label] = connection.strength
+            translations[param_label] = {"translated_name": param_label,
+                                         "type": "simple"}
 
         return translations, default_parameters
 

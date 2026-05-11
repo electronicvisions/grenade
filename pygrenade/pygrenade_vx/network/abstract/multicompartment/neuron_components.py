@@ -18,14 +18,18 @@ class Compartment:
 
     def to_grenade(self) -> grenade.Compartment:
         '''
-        Create compartment in grenade.
+        Create compartment and its parameter space in grenade.
 
-        :return: Grenade object of the compartment.
+        :return: Grenade object of the compartment and dictionary with
+            mappings from mechanism label (key) to mechanism on compartment
+            coordinate (value).
         '''
         compartment_grenade = grenade.Compartment()
-        for mechanism in self.mechanisms:
-            compartment_grenade.add(mechanism.to_grenade())
-        return compartment_grenade
+        mappings = {}
+        for label, mechanism in self.mechanisms.items():
+            mappings[label] = compartment_grenade.mechanisms.insert(  # pylint: disable=no-member
+                mechanism.to_grenade())
+        return compartment_grenade, mappings
 
     def copy(self) -> Compartment:
         '''
@@ -54,3 +58,13 @@ class CompartmentConnection:
         self.source = source
         self.target = target
         self.conductance = conductance
+
+    def get_label(self) -> str:
+        """
+        Generate a label for the current connection.
+
+        The label is based on the labels of the source and target
+        compartments.
+        :return: Label which identifies this connection.
+        """
+        return f"connection.{self.source}...{self.target}"

@@ -2,6 +2,10 @@
 # pylint: disable=too-many-locals, too-many-statements
 import unittest
 
+from pygrenade_vx.network.abstract.multicompartment.mechanisms import \
+    CurrentBasedSynapse, MembraneCapacitance
+from pygrenade_vx.network.abstract.multicompartment.compartment_builder \
+    import CompartmentBuilder
 from pygrenade_vx.network.abstract.multicompartment.tree import \
     Node, Connection
 from pygrenade_vx.network.abstract.multicompartment.neuron_components import \
@@ -75,6 +79,26 @@ class SwTestPygrenadeVxMulticompartmentBuilder(unittest.TestCase):
                       labels.keys())
         self.assertIn("branch_e.branch_d.comp_b",
                       labels.keys())
+
+    def test_mapping_to_grenade_neuron(self):
+
+        # test with mechanisms
+        c_builder = CompartmentBuilder()
+        c_builder.add(CurrentBasedSynapse(), label="syn")
+        c_builder.add(MembraneCapacitance(), label="cap")
+        MyCompartment = c_builder.done("MyCompartment")
+
+        builder = MorphologyBuilder()
+
+        comp_a = builder.add_compartment(Compartment(), label="comp_a")
+        comp_b = builder.add_compartment(MyCompartment(), label="comp_b")
+
+        builder.connect([Connection(comp_a, comp_b, 1)], label="branch_a")
+
+        MyNeuron = builder.done("MyNeuron")
+        my_neuron = MyNeuron()
+
+        my_neuron._to_grenade()  # pylint: disable=protected-access
 
 
 if __name__ == "__main__":
