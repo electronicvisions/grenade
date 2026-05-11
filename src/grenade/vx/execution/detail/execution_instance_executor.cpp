@@ -254,11 +254,14 @@ ExecutionInstanceExecutor::operator()(
 			}
 
 			// insert inside_realtime hook
+			AbsoluteTimePlaybackProgramBuilder inside_realtime_hook;
 			if (i < batch_size - 1) {
-				program_builder.copy(local_hooks.inside_realtime);
+				inside_realtime_hook.copy(local_hooks.inside_realtime);
 			} else {
-				program_builder.merge(local_hooks.inside_realtime);
+				inside_realtime_hook.merge(local_hooks.inside_realtime);
 			}
+			inside_realtime_hook += config_time;
+			program_builder.merge(inside_realtime_hook);
 
 			// reset config to initial config at end of each realtime_row if experiment has multiple
 			// configs
