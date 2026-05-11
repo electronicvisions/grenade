@@ -73,34 +73,34 @@ CoordinateLimits PlacementAlgorithmRuleset::find_limits(
 				}
 			}
 
-			if (limit.lower >= coordinates.coordinate_system[y].size()) {
+			if (limit.lower >= coordinates.coordinate_system.at(y).size()) {
 				finished = true;
 				valid_limit = false;
 				continue;
 			}
 
 			// Find next or first Lower Limit
-			for (size_t x = limit.lower; x < coordinates.coordinate_system[y].size(); x++) {
-				if (coordinates.coordinate_system[y][x].compartment == compartment) {
+			for (size_t x = limit.lower; x < coordinates.coordinate_system.at(y).size(); x++) {
+				if (coordinates.coordinate_system.at(y).at(x).compartment == compartment) {
 					limit.lower = x;
 					valid_limit = true;
 					break;
 				}
-				if (x == coordinates.coordinate_system[y].size() - 1) {
+				if (x == coordinates.coordinate_system.at(y).size() - 1) {
 					finished = true;
 					valid_limit = false;
 				}
 			}
 			// Find Upper Limit to Lower Limit
 			if (!finished && valid_limit) {
-				for (size_t x = limit.lower; x < coordinates.coordinate_system[y].size(); x++) {
-					if (x == coordinates.coordinate_system[y].size() - 1) {
+				for (size_t x = limit.lower; x < coordinates.coordinate_system.at(y).size(); x++) {
+					if (x == coordinates.coordinate_system.at(y).size() - 1) {
 						finished = true;
 						limit.upper = x;
 						break;
 					}
-					assert(x + 1 < coordinates.coordinate_system[y].size());
-					if (coordinates.coordinate_system[y][x + 1].compartment != compartment) {
+					assert(x + 1 < coordinates.coordinate_system.at(y).size());
+					if (coordinates.coordinate_system.at(y).at(x + 1).compartment != compartment) {
 						limit.upper = x;
 						break;
 					}
@@ -135,11 +135,11 @@ std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
 	// Direction 1 (right)
 	if (direction == 1) {
 		// Check for free space in requested row
-		for (size_t x = x_start; x < coordinates.coordinate_system[y].size(); x++) {
-			if (coordinates.coordinate_system[y][x].switch_shared_right) {
+		for (size_t x = x_start; x < coordinates.coordinate_system.at(y).size(); x++) {
+			if (coordinates.coordinate_system.at(y).at(x).switch_shared_right) {
 				break;
 			}
-			if (!coordinates.coordinate_system[y][x].compartment) {
+			if (!coordinates.coordinate_system.at(y).at(x).compartment) {
 				// First free spot in x direction is marked
 				if (!spot_found) {
 					spot.x = x;
@@ -167,7 +167,7 @@ std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
 			// Check for free space in opposite row
 			size_t spot_upper_limit = spot.x + spot.free_space.number_total;
 			for (size_t x = spot.x; x < spot_upper_limit; x++) {
-				if (!coordinates.coordinate_system[1 - y][x].compartment) {
+				if (!coordinates.coordinate_system.at(1 - y).at(x).compartment) {
 					if (!spot.found_opposite) {
 						spot.found_opposite = true;
 						spot.x_opposite = x;
@@ -187,10 +187,10 @@ std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
 	else if (direction == -1) {
 		// Check for free space in requested row
 		for (size_t x = x_start; x + 1 > 0; x--) {
-			if (x > 0 && coordinates.coordinate_system[y][x - 1].switch_shared_right) {
+			if (x > 0 && coordinates.coordinate_system.at(y).at(x - 1).switch_shared_right) {
 				break;
 			}
-			if (!coordinates.coordinate_system[y][x].compartment) {
+			if (!coordinates.coordinate_system.at(y).at(x).compartment) {
 				// First free spot in x direction is marked
 				if (!spot_found) {
 					spot.x = x;
@@ -220,7 +220,7 @@ std::vector<PlacementSpot> PlacementAlgorithmRuleset::find_free_spots(
 			// Check for free space in opposit row
 			size_t spot_lower_limit = spot.x - spot.free_space.number_total + 1;
 			for (size_t x = spot.x; x + 1 > spot_lower_limit; x--) {
-				if (!coordinates.coordinate_system[1 - y][x].compartment) {
+				if (!coordinates.coordinate_system.at(1 - y).at(x).compartment) {
 					if (!spot.found_opposite) {
 						spot.found_opposite = true;
 						spot.x_opposite = x;
@@ -333,7 +333,7 @@ PlacementSpot PlacementAlgorithmRuleset::select_free_spot(
 		size_t closest_spot_index;
 
 		while (closest_spots.size() < count) {
-			size_t distance_min = m_results.back().coordinate_system.coordinate_system[0].size();
+			size_t distance_min = m_results.back().coordinate_system.coordinate_system.at(0).size();
 
 			for (size_t i = 0; i < large_enough_spots.size(); i++) {
 				if (large_enough_spots[i].distance < distance_min) {
@@ -438,15 +438,23 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	LOG4CXX_TRACE(m_logger, "PlacementSize: " << required_resources);
 
 	// Start at x_start and place to right in top row (only bottom if requested explicitly)
+	if (x_start + required_resources.number_top > coordinates_copy.coordinate_system.at(0).size()) {
+		throw std::runtime_error("Placement does not fit on coordinate system.");
+	}
 	for (size_t x = x_start; x < x_start + required_resources.number_top; x++) {
-		if (coordinates_copy.coordinate_system[0][x].compartment) {
+		if (coordinates_copy.coordinate_system.at(0).at(x).compartment) {
 			throw std::logic_error("Overlap During Placement at " + std::to_string(x) + ",0");
 		}
 		coordinates_copy.set_compartment(x, 0, compartment);
 		placed_resources += NumberTopBottom(1, 1, 0);
 	}
+
+	if (x_start + required_resources.number_bottom >
+	    coordinates_copy.coordinate_system.at(1).size()) {
+		throw std::runtime_error("Placement does not fit on coordinate system.");
+	}
 	for (size_t x = x_start; x < x_start + required_resources.number_bottom; x++) {
-		if (coordinates_copy.coordinate_system[1][x].compartment) {
+		if (coordinates_copy.coordinate_system.at(1).at(x).compartment) {
 			throw std::logic_error("Overlap During Placement at " + std::to_string(x) + ",1");
 		}
 		coordinates_copy.set_compartment(x, 1, compartment);
@@ -454,10 +462,14 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	}
 	if (required_resources.number_total >
 	    required_resources.number_bottom + required_resources.number_top) {
+		if (x_start + required_resources.number_total - required_resources.number_bottom >
+		    coordinates_copy.coordinate_system.at(y).size()) {
+			throw std::runtime_error("Placement does not fit on coordinate system.");
+		}
 		for (size_t x = x_start + required_resources.number_top;
 		     x < x_start + required_resources.number_total - required_resources.number_bottom;
 		     x++) {
-			if (coordinates_copy.coordinate_system[y][x].compartment) {
+			if (coordinates_copy.coordinate_system.at(y).at(x).compartment) {
 				throw std::logic_error(
 				    "Overlap During Placement at " + std::to_string(x) + "," + std::to_string(y));
 			}
@@ -519,15 +531,22 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	LOG4CXX_TRACE(m_logger, "PlacementSize: " << required_resources);
 
 	// Start at x_start and place to left in top row (only bottom if requested explicitly)
+	if (int(x_start) - int(required_resources.number_top) < 0) {
+		throw std::runtime_error("Placement does not fit on coordinate system.");
+	}
 	for (size_t x = x_start; x > x_start - required_resources.number_top; x--) {
-		if (coordinates_copy.coordinate_system[0][x].compartment) {
+		if (coordinates_copy.coordinate_system.at(0).at(x).compartment) {
 			throw std::logic_error("Overlap During Placement at " + std::to_string(x) + ",0");
 		}
 		coordinates_copy.set_compartment(x, 0, compartment);
 		placed_resources += NumberTopBottom(1, 1, 0);
 	}
+
+	if (int(x_start) - int(required_resources.number_bottom) < 0) {
+		throw std::runtime_error("Placement does not fit on coordinate system.");
+	}
 	for (size_t x = x_start; x > x_start - required_resources.number_bottom; x--) {
-		if (coordinates_copy.coordinate_system[1][x].compartment) {
+		if (coordinates_copy.coordinate_system.at(1).at(x).compartment) {
 			throw std::logic_error("Overlap During Placement at " + std::to_string(x) + ",1");
 		}
 		coordinates_copy.set_compartment(x, 1, compartment);
@@ -535,10 +554,15 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	}
 	if (required_resources.number_total >
 	    required_resources.number_bottom + required_resources.number_top) {
+		if (int(x_start) - int(required_resources.number_total) +
+		        int(required_resources.number_bottom) <
+		    0) {
+			throw std::runtime_error("Placement does not fit on coordinate system.");
+		}
 		for (size_t x = x_start - required_resources.number_top;
 		     x > x_start - required_resources.number_total + required_resources.number_bottom;
 		     x--) {
-			if (coordinates_copy.coordinate_system[y][x].compartment) {
+			if (coordinates_copy.coordinate_system.at(y).at(x).compartment) {
 				throw std::logic_error(
 				    "Overlap During Placement at " + std::to_string(x) + "," + std::to_string(y));
 			}
@@ -595,10 +619,14 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 		coordinates_copy = coordinates;
 	};
 
+	if (x_start > coordinates_copy.coordinate_system.at(0).size()) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
+
 	NumberTopBottom total_placed;
 	// Throw exception if spot is already taken
-	if (coordinates_copy.coordinate_system[0][x_start].compartment ||
-	    coordinates_copy.coordinate_system[1][x_start].compartment) {
+	if (coordinates_copy.coordinate_system.at(0).at(x_start).compartment ||
+	    coordinates_copy.coordinate_system.at(1).at(x_start).compartment) {
 		throw std::logic_error("Cant place bridge: Space already taken.");
 	}
 
@@ -628,8 +656,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 	size_t x_temp = x_start;
 
 	// Place bridge compartments at left limit
-	coordinates_copy.coordinate_system[0][x_temp].compartment = compartment;
-	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).compartment = compartment;
+	coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 
 	// Place leafs inside
 	NumberTopBottom leafs_size = place_leafs(
@@ -640,15 +668,18 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 	x_temp += leafs_size.number_total - leafs_size.number_bottom;
 
 	// Continue shared line of leaf placement
-	coordinates_copy.coordinate_system[0][x_temp].switch_shared_right = true;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).switch_shared_right = true;
 
 	x_temp++;
+	if (x_temp > coordinates_copy.coordinate_system.at(0).size()) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
 
 	// Place bridge compartment in top and bottom row
-	coordinates_copy.coordinate_system[0][x_temp].compartment = compartment;
-	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).compartment = compartment;
+	coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 	// Connect Bridge compartment to bridge on other side of leafs via shared line
-	coordinates_copy.coordinate_system[0][x_temp].switch_circuit_shared = true;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).switch_circuit_shared = true;
 
 	// Select smallest chains without top bottom specification
 	std::map<CompartmentOnNeuron, NumberTopBottom> chains_inside;
@@ -656,7 +687,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 		CompartmentOnNeuron compartment_min = chains_lengthes.begin()->first;
 		// Only chains without specified resources in top row can be placed inside the bridge
 		NumberTopBottom min_size = NumberTopBottom(
-		    coordinates.coordinate_system[0].size(), 0, coordinates.coordinate_system[0].size());
+		    coordinates.coordinate_system.at(0).size(), 0,
+		    coordinates.coordinate_system.at(0).size());
 		// Finding smallest chain
 		for (auto [compartment_temp, neuron_circuits] : chains_lengthes) {
 			if (neuron_circuits < min_size) {
@@ -671,7 +703,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 	// Place inner chains in bottom row
 	size_t x_lower_limit_chains = x_temp;
 	for (auto [compartment_inside, _] : chains_inside) {
-		coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+		coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 		x_temp++;
 		number_placed += NumberTopBottom(1, 0, 1);
 		// Place chain
@@ -683,15 +715,18 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 		total_placed += chain_resources;
 	}
 
+	if (x_temp > coordinates_copy.coordinate_system.at(0).size()) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
 	// Place bridge compartment in top row
 	for (size_t x = x_lower_limit_chains; x < x_temp; x++) {
-		coordinates_copy.coordinate_system[0][x].compartment = compartment;
+		coordinates_copy.coordinate_system.at(0).at(x).compartment = compartment;
 		number_placed += NumberTopBottom(1, 1, 0);
 	}
 
 	// Place bridge compartments at right limit
-	coordinates_copy.coordinate_system[0][x_temp].compartment = compartment;
-	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).compartment = compartment;
+	coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 
 	// Calculate difference if missing resources
 	NumberTopBottom number_required = resources.get_config(compartment);
@@ -710,9 +745,12 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_right(
 	// Place additional compartments to the right in top and bottom row
 	size_t distance = difference.number_total - difference.number_bottom;
 
+	if (x_temp + distance > coordinates_copy.coordinate_system.at(0).size()) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
 	for (size_t x = x_temp; x < x_temp + distance; x++) {
-		coordinates_copy.coordinate_system[0][x].compartment = compartment;
-		coordinates_copy.coordinate_system[1][x].compartment = compartment;
+		coordinates_copy.coordinate_system.at(0).at(x).compartment = compartment;
+		coordinates_copy.coordinate_system.at(1).at(x).compartment = compartment;
 	}
 	number_placed += NumberTopBottom(2 * distance, distance, distance);
 
@@ -749,9 +787,14 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 
 	NumberTopBottom total_placed;
 
+	if (x_start > coordinates_copy.coordinate_system.at(0).size()) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
+
+
 	// Throw exception if spot is already taken
-	if (coordinates_copy.coordinate_system[0][x_start].compartment ||
-	    coordinates_copy.coordinate_system[1][x_start].compartment) {
+	if (coordinates_copy.coordinate_system.at(0).at(x_start).compartment ||
+	    coordinates_copy.coordinate_system.at(1).at(x_start).compartment) {
 		throw std::logic_error("Cant place bridge: Space already taken.");
 	}
 
@@ -779,8 +822,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 	size_t x_temp = x_start;
 
 	// Place bridge compartments at right limit
-	coordinates_copy.coordinate_system[0][x_temp].compartment = compartment;
-	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).compartment = compartment;
+	coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 
 	// Place leafs inside
 	NumberTopBottom leafs_size = place_leafs(
@@ -791,15 +834,18 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 	x_temp -= leafs_size.number_total - leafs_size.number_bottom;
 
 	// Continue shared line of leaf placement
-	coordinates_copy.coordinate_system[0][x_temp - 1].switch_shared_right = true;
+	coordinates_copy.coordinate_system.at(0).at(x_temp - 1).switch_shared_right = true;
 
 	x_temp--;
 
+	if (int(x_temp) < 0) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
 	// Place bridge compartment in top and bottom row
-	coordinates_copy.coordinate_system[0][x_temp].compartment = compartment;
-	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).compartment = compartment;
+	coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 	// Connect Bridge compartment to bridge on other side of leafs via shared line
-	coordinates_copy.coordinate_system[0][x_temp].switch_circuit_shared = true;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).switch_circuit_shared = true;
 
 	// Select smallest chains without top bottom specification
 	std::map<CompartmentOnNeuron, NumberTopBottom> chains_inside;
@@ -807,7 +853,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 		CompartmentOnNeuron compartment_min = chains_lengthes.begin()->first;
 		// Only chains without specified resources in top row can be placed inside the bridge
 		NumberTopBottom min_size = NumberTopBottom(
-		    coordinates.coordinate_system[0].size(), 0, coordinates.coordinate_system[0].size());
+		    coordinates.coordinate_system.at(0).size(), 0,
+		    coordinates.coordinate_system.at(0).size());
 		// Finding smallest chain
 		for (auto [compartment_temp, neuron_circuits] : chains_lengthes) {
 			if (neuron_circuits < min_size) {
@@ -822,7 +869,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 	// Place inner chains in bottom row
 	size_t x_upper_limit_chains = x_temp;
 	for (auto [compartment_inside, _] : chains_inside) {
-		coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+		if (int(x_temp) < 0) {
+			throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+		}
+		coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 		x_temp--;
 		number_placed += NumberTopBottom(1, 0, 1);
 		// Place chain
@@ -835,13 +885,16 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 
 	// Place bridge compartment in top row
 	for (size_t x = x_upper_limit_chains; x > x_temp; x--) {
-		coordinates_copy.coordinate_system[0][x].compartment = compartment;
+		coordinates_copy.coordinate_system.at(0).at(x).compartment = compartment;
 		number_placed += NumberTopBottom(1, 1, 0);
 	}
 
+	if (int(x_temp) < 0) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
 	// Place bridge compartments at left limit
-	coordinates_copy.coordinate_system[0][x_temp].compartment = compartment;
-	coordinates_copy.coordinate_system[1][x_temp].compartment = compartment;
+	coordinates_copy.coordinate_system.at(0).at(x_temp).compartment = compartment;
+	coordinates_copy.coordinate_system.at(1).at(x_temp).compartment = compartment;
 
 	// Calculate difference if missing resources
 	NumberTopBottom number_required = resources.get_config(compartment);
@@ -860,9 +913,12 @@ NumberTopBottom PlacementAlgorithmRuleset::place_bridge_left(
 	// Place additional compartments to the right in top and bottom row
 	size_t distance = difference.number_total - difference.number_bottom;
 
+	if (int(x_temp) - int(distance) < 0) {
+		throw std::runtime_error("Bridge placement does not fit on coordinate system.");
+	}
 	for (size_t x = x_temp; x > x_temp - distance; x--) {
-		coordinates_copy.coordinate_system[0][x].compartment = compartment;
-		coordinates_copy.coordinate_system[1][x].compartment = compartment;
+		coordinates_copy.coordinate_system.at(0).at(x).compartment = compartment;
+		coordinates_copy.coordinate_system.at(1).at(x).compartment = compartment;
 	}
 	number_placed += NumberTopBottom(2 * distance, distance, distance);
 
@@ -903,7 +959,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 
 	NumberTopBottom total_placed;
 	// Connect directly to shared line from this compartment
-	coordinates_copy.coordinate_system[y][x_start].switch_circuit_shared = true;
+	coordinates_copy.coordinate_system.at(y).at(x_start).switch_circuit_shared = true;
 
 	size_t x_temp = x_start + direction;
 
@@ -934,9 +990,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 		if (direction == 1) {
 			auto placed_resources = place_simple_right(
 			    coordinates_copy, neuron, resources_copy, x_temp, y, leaf, virtually);
-			coordinates_copy.coordinate_system[y][x_temp].switch_circuit_shared_conductance = true;
+			coordinates_copy.coordinate_system.at(y).at(x_temp).switch_circuit_shared_conductance =
+			    true;
 			if (x_temp + placed_resources.number_total - placed_resources.number_bottom >
-			    coordinates.coordinate_system[y].size()) {
+			    coordinates.coordinate_system.at(y).size()) {
 				throw std::runtime_error("Placement out of coordinate systems limits.");
 			}
 			x_temp += placed_resources.number_total - placed_resources.number_bottom;
@@ -944,7 +1001,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 		} else if (direction == -1) {
 			auto placed_resources = place_simple_left(
 			    coordinates_copy, neuron, resources_copy, x_temp, y, leaf, virtually);
-			coordinates_copy.coordinate_system[y][x_temp].switch_circuit_shared_conductance = true;
+			coordinates_copy.coordinate_system.at(y).at(x_temp).switch_circuit_shared_conductance =
+			    true;
 			if (placed_resources.number_total - placed_resources.number_bottom > x_temp) {
 				throw std::runtime_error("Placement out of coordinate systems limits.");
 			}
@@ -965,11 +1023,11 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 	// Connect shared line
 	if (direction == 1) {
 		for (size_t x = x_start; x < x_temp - 1; x++) {
-			coordinates_copy.coordinate_system[y][x].switch_shared_right = true;
+			coordinates_copy.coordinate_system.at(y).at(x).switch_shared_right = true;
 		}
 	} else if (direction == -1) {
 		for (size_t x = x_start - 1; x > x_temp; x--) {
-			coordinates_copy.coordinate_system[y][x].switch_shared_right = true;
+			coordinates_copy.coordinate_system.at(y).at(x).switch_shared_right = true;
 		}
 	}
 
@@ -1060,7 +1118,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branch(
 			CoordinateSystem dummy_coordinates;
 			NumberTopBottom required_space = place_bridge(
 			    dummy_coordinates, neuron, resources,
-			    size_t(dummy_coordinates.coordinate_system[0].size() / 2), compartment, 1, true);
+			    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), compartment, 1, true);
 
 			PlacementSpot next_spot = select_free_spot(
 			    find_free_spots(coordinates, search_start), required_space, true, false, true);
@@ -1075,7 +1133,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branch(
 			bool search_block = false;
 			NumberTopBottom required_space = place_simple(
 			    dummy_coordinates, neuron, resources,
-			    size_t(dummy_coordinates.coordinate_system[0].size() / 2), 0, compartment, 1, true);
+			    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), 0, compartment, 1,
+			    true);
 
 			if (required_space.number_top != 0 && required_space.number_bottom != 0) {
 				search_block = true;
@@ -1122,13 +1181,13 @@ void PlacementAlgorithmRuleset::connect_self(
 		size_t X = compartment_coordinates.first;
 		size_t Y = compartment_coordinates.second;
 		// Connection right
-		if (X < coordinates.coordinate_system[Y].size() &&
+		if (X < coordinates.coordinate_system.at(Y).size() &&
 		    coordinates.get_compartment(X + 1, Y) == compartment) {
-			coordinates.coordinate_system[Y][X].switch_right = true;
+			coordinates.coordinate_system.at(Y).at(X).switch_right = true;
 		}
 		// Connection top bottom
 		if (coordinates.get_compartment(X, 1 - Y) == compartment) {
-			coordinates.coordinate_system[Y][X].switch_top_bottom = true;
+			coordinates.coordinate_system.at(Y).at(X).switch_top_bottom = true;
 		}
 	}
 }
@@ -1143,10 +1202,10 @@ void PlacementAlgorithmRuleset::connect_adjacent(
 
 	// Lambda to return wether the connection between two points is blocked.
 	auto occupied = [&coordinates](size_t x_a, size_t x_b, size_t y) -> bool {
-		return (coordinates.coordinate_system[y][x_a].switch_circuit_shared_conductance ||
-		        coordinates.coordinate_system[y][x_b].switch_circuit_shared_conductance) ||
-		       (coordinates.coordinate_system[y][x_a].switch_circuit_shared &&
-		        coordinates.coordinate_system[y][x_b].switch_circuit_shared);
+		return (coordinates.coordinate_system.at(y).at(x_a).switch_circuit_shared_conductance ||
+		        coordinates.coordinate_system.at(y).at(x_b).switch_circuit_shared_conductance) ||
+		       (coordinates.coordinate_system.at(y).at(x_a).switch_circuit_shared &&
+		        coordinates.coordinate_system.at(y).at(x_b).switch_circuit_shared);
 	};
 
 	// Chose Compartment with more connections as source for connection (no resistor)
@@ -1163,12 +1222,13 @@ void PlacementAlgorithmRuleset::connect_adjacent(
 	CoordinateLimits limits_source = find_limits(coordinates, compartment_source);
 
 	for (auto limit : limits_source.top) {
-		if (coordinates.coordinate_system[0][limit.upper + 1].compartment == compartment_target) {
+		if (coordinates.coordinate_system.at(0)[limit.upper + 1].compartment ==
+		    compartment_target) {
 			if (occupied(limit.upper, limit.upper + 1, 0)) {
 				continue;
 			}
 			// Switch connection direction if one already connected
-			if (coordinates.coordinate_system[0][limit.upper + 1].switch_circuit_shared) {
+			if (coordinates.coordinate_system.at(0)[limit.upper + 1].switch_circuit_shared) {
 				LOG4CXX_TRACE(m_logger, "Target already source. Swapping direction of connection.");
 				try_connect_shared(coordinates, limit.upper + 1, limit.upper, 0);
 				return;
@@ -1176,12 +1236,13 @@ void PlacementAlgorithmRuleset::connect_adjacent(
 			try_connect_shared(coordinates, limit.upper, limit.upper + 1, 0);
 			return;
 		} else if (
-		    coordinates.coordinate_system[0][limit.lower - 1].compartment == compartment_target) {
+		    coordinates.coordinate_system.at(0)[limit.lower - 1].compartment ==
+		    compartment_target) {
 			if (occupied(limit.lower, limit.lower - 1, 0)) {
 				continue;
 			}
 			// Switch connection direction if one already connected
-			if (coordinates.coordinate_system[0][limit.lower - 1].switch_circuit_shared) {
+			if (coordinates.coordinate_system.at(0)[limit.lower - 1].switch_circuit_shared) {
 				LOG4CXX_TRACE(m_logger, "Target already source. Swapping direction of connection.");
 
 				try_connect_shared(coordinates, limit.lower - 1, limit.lower, 0);
@@ -1192,12 +1253,13 @@ void PlacementAlgorithmRuleset::connect_adjacent(
 		}
 	}
 	for (auto limit : limits_source.bottom) {
-		if (coordinates.coordinate_system[1][limit.upper + 1].compartment == compartment_target) {
+		if (coordinates.coordinate_system.at(1)[limit.upper + 1].compartment ==
+		    compartment_target) {
 			if (occupied(limit.upper, limit.upper + 1, 1)) {
 				continue;
 			}
 			// Switch connection direction if one already connected
-			if (coordinates.coordinate_system[1][limit.upper + 1].switch_circuit_shared) {
+			if (coordinates.coordinate_system.at(1)[limit.upper + 1].switch_circuit_shared) {
 				LOG4CXX_TRACE(m_logger, "Target already source. Swapping direction of connection.");
 				try_connect_shared(coordinates, limit.upper + 1, limit.upper, 1);
 				return;
@@ -1205,12 +1267,13 @@ void PlacementAlgorithmRuleset::connect_adjacent(
 			try_connect_shared(coordinates, limit.upper, limit.upper + 1, 1);
 			return;
 		} else if (
-		    coordinates.coordinate_system[1][limit.lower - 1].compartment == compartment_target) {
+		    coordinates.coordinate_system.at(1)[limit.lower - 1].compartment ==
+		    compartment_target) {
 			if (occupied(limit.lower, limit.lower - 1, 1)) {
 				continue;
 			}
 			// Switch connection direction if one already connected
-			if (coordinates.coordinate_system[1][limit.lower - 1].switch_circuit_shared) {
+			if (coordinates.coordinate_system.at(1)[limit.lower - 1].switch_circuit_shared) {
 				LOG4CXX_TRACE(m_logger, "Target already source. Swapping direction of connection.");
 				try_connect_shared(coordinates, limit.lower - 1, limit.lower, 1);
 				return;
@@ -1238,7 +1301,7 @@ void PlacementAlgorithmRuleset::connect_distant(
 		throw std::runtime_error("No neuron circuits in same row. Can not connect.");
 	}
 
-	size_t distance = coordinates.coordinate_system[0].size();
+	size_t distance = coordinates.coordinate_system.at(0).size();
 	size_t x_a = 0;
 	size_t x_b = 0;
 	size_t y = 0;
@@ -1247,10 +1310,10 @@ void PlacementAlgorithmRuleset::connect_distant(
 
 	// Lambda to return wether the connection between two points is blocked.
 	auto occupied = [&coordinates](size_t x_a, size_t x_b, size_t y) -> bool {
-		return (coordinates.coordinate_system[y][x_a].switch_circuit_shared_conductance ||
-		        coordinates.coordinate_system[y][x_b].switch_circuit_shared_conductance) ||
-		       (coordinates.coordinate_system[y][x_a].switch_circuit_shared &&
-		        coordinates.coordinate_system[y][x_b].switch_circuit_shared);
+		return (coordinates.coordinate_system.at(y).at(x_a).switch_circuit_shared_conductance ||
+		        coordinates.coordinate_system.at(y).at(x_b).switch_circuit_shared_conductance) ||
+		       (coordinates.coordinate_system.at(y).at(x_a).switch_circuit_shared &&
+		        coordinates.coordinate_system.at(y).at(x_b).switch_circuit_shared);
 	};
 
 	// Check for closest limits in top row
@@ -1260,7 +1323,7 @@ void PlacementAlgorithmRuleset::connect_distant(
 			if (limit_a.lower > limit_b.upper) {
 				// Check if shared line is already used
 				for (size_t x = limit_b.upper; x < limit_a.lower; x++) {
-					if (coordinates.coordinate_system[0][x].switch_shared_right) {
+					if (coordinates.coordinate_system.at(0).at(x).switch_shared_right) {
 						blocked = true;
 					}
 				}
@@ -1278,7 +1341,7 @@ void PlacementAlgorithmRuleset::connect_distant(
 			} else if (limit_a.upper < limit_b.lower) {
 				// Check if shared line is already used
 				for (size_t x = limit_a.upper; x < limit_b.lower; x++) {
-					if (coordinates.coordinate_system[0][x].switch_shared_right) {
+					if (coordinates.coordinate_system.at(0).at(x).switch_shared_right) {
 						blocked = true;
 					}
 				}
@@ -1303,7 +1366,7 @@ void PlacementAlgorithmRuleset::connect_distant(
 			if (limit_a.lower > limit_b.upper) {
 				// Check if shared line is already used
 				for (size_t x = limit_b.upper; x < limit_a.lower; x++) {
-					if (coordinates.coordinate_system[1][x].switch_shared_right) {
+					if (coordinates.coordinate_system.at(1).at(x).switch_shared_right) {
 						blocked = true;
 					}
 				}
@@ -1321,7 +1384,7 @@ void PlacementAlgorithmRuleset::connect_distant(
 			} else if (limit_a.upper < limit_b.lower) {
 				// Check if shared line is already used
 				for (size_t x = limit_a.upper; x < limit_b.lower; x++) {
-					if (coordinates.coordinate_system[1][x].switch_shared_right) {
+					if (coordinates.coordinate_system.at(1).at(x).switch_shared_right) {
 						blocked = true;
 					}
 				}
@@ -1345,9 +1408,9 @@ void PlacementAlgorithmRuleset::connect_distant(
 	}
 
 	// Determine source and target compartment
-	if (coordinates.coordinate_system[y][x_a].switch_circuit_shared) {
+	if (coordinates.coordinate_system.at(y).at(x_a).switch_circuit_shared) {
 		coordinates.connect_shared(x_a, x_b, y);
-	} else if (coordinates.coordinate_system[y][x_b].switch_circuit_shared) {
+	} else if (coordinates.coordinate_system.at(y).at(x_b).switch_circuit_shared) {
 		coordinates.connect_shared(x_b, x_a, y);
 	} else if (
 	    neuron.get_compartment_degree(compartment_a) >
@@ -1415,12 +1478,12 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		if (neighbours_classified.leafs.size() > 1 || neighbours_classified.total() > 4) {
 			place_bridge_right(
 			    result.coordinate_system, neuron, resources,
-			    size_t(result.coordinate_system.coordinate_system[0].size() / 2),
+			    size_t(result.coordinate_system.coordinate_system.at(0).size() / 2),
 			    compartment_first);
 		} else {
 			place_simple_right(
 			    result.coordinate_system, neuron, resources,
-			    size_t(result.coordinate_system.coordinate_system[0].size() / 2), 0,
+			    size_t(result.coordinate_system.coordinate_system.at(0).size() / 2), 0,
 			    compartment_first);
 		}
 
@@ -1519,9 +1582,9 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		}
 		// Else if available place whole chain directly and connect it.
 		else if (neighbours_classified.chains.size() > 0) {
+			next_compartment = neighbours_classified.chains.front();
 			LOG4CXX_DEBUG(m_logger, "Next Compartment to place (Chain): " << next_compartment);
 
-			next_compartment = neighbours_classified.chains.front();
 			std::vector<CompartmentOnNeuron> chain =
 			    neuron.branch_compartments(next_compartment, last_compartment);
 
@@ -1529,7 +1592,7 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 			bool search_block = false;
 			NumberTopBottom required_space = place_chain(
 			    result.coordinate_system, neuron, resources,
-			    size_t(result.coordinate_system.coordinate_system[0].size() / 2), 0, chain, 1,
+			    size_t(result.coordinate_system.coordinate_system.at(0).size() / 2), 0, chain, 1,
 			    true);
 
 			if (required_space.number_top != 0 && required_space.number_bottom != 0) {
@@ -1552,7 +1615,7 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 
 			// Select smallest available branch first.
 			std::set<CompartmentOnNeuron> marked_compartments{last_compartment};
-			size_t min_size = 2 * result.coordinate_system.coordinate_system[0].size() +
+			size_t min_size = 2 * result.coordinate_system.coordinate_system.at(0).size() +
 			                  1; // Does not fit on coordinate system.
 			for (auto const& branch : neighbours_classified.branches) {
 				marked_compartments = {last_compartment};
