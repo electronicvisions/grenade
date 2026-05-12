@@ -970,22 +970,24 @@ NumberTopBottom PlacementAlgorithmRuleset::place_leafs(
 	// Assign NCs to leafs and connect them to shared line via conductance
 	for (auto leaf : leafs) {
 		// Add extra resource requirement for leaf compartment if no resources in the required
-		// row are requested via the compartments mechanisms.
+		// row are requested via the compartments mechanisms
+		NumberTopBottom config = resources_copy.get_config(leaf);
 		if (y == 0 && resources_copy.get_config(leaf).number_top == 0) {
 			LOG4CXX_TRACE(
 			    m_logger, "Leaf placement of leaf in row where no resources are requested. Adding "
 			              "resources.");
-			NumberTopBottom config = resources_copy.get_config(leaf);
-			config += NumberTopBottom(1, 1, 0);
-			resources_copy.set_config(leaf, config);
+			config.number_top += 1;
 		} else if (y == 1 && resources_copy.get_config(leaf).number_bottom == 0) {
 			LOG4CXX_TRACE(
 			    m_logger, "Leaf placement of leaf in row where no resources are requested. Adding "
 			              "resources.");
-			NumberTopBottom config = resources_copy.get_config(leaf);
-			config += NumberTopBottom(1, 0, 1);
-			resources_copy.set_config(leaf, config);
+			config.number_bottom += 1;
 		}
+		// increase total number of resources if needed
+		if (config.number_total <= config.number_top + config.number_bottom) {
+			config.number_total += 1;
+		}
+		resources_copy.set_config(leaf, config);
 
 		if (direction == 1) {
 			auto placed_resources = place_simple_right(
