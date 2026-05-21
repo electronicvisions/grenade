@@ -25,6 +25,11 @@ CADCRecorder::Results::Results(Samples samples) : samples(std::move(samples)) {}
 
 size_t CADCRecorder::Results::batch_size() const
 {
+	return samples.size();
+}
+
+size_t CADCRecorder::Results::size() const
+{
 	if (samples.empty()) {
 		return 0;
 	}
@@ -35,21 +40,6 @@ size_t CADCRecorder::Results::batch_size() const
 		}
 	}
 	return ret;
-}
-
-size_t CADCRecorder::Results::size() const
-{
-	std::set<size_t> sizes;
-	for (auto const& batch_entry : samples) {
-		sizes.insert(batch_entry.size());
-	}
-	if (sizes.empty()) {
-		return 0;
-	}
-	if (sizes.size() != 1) {
-		throw std::runtime_error("Size inhomogeneous across batch entries.");
-	}
-	return *sizes.begin();
 }
 
 void CADCRecorder::Results::set_section(
