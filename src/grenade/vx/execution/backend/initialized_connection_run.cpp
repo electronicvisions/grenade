@@ -147,6 +147,9 @@ stadls::vx::RunTimeInfo run(
     InitializedConnection& connection,
     std::vector<std::reference_wrapper<stadls::vx::v3::PlaybackProgram>> const& programs)
 {
+	if (connection.size() != programs.size()) {
+		throw std::range_error("Connection size does not match number of playback programs.");
+	}
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 
 	stadls::vx::RunTimeInfo ret;

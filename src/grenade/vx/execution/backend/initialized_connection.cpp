@@ -30,7 +30,15 @@ void perform_hardware_check(hxcomm::vx::ConnectionVariant& connection)
 	auto jtag_id_ticket = builder.read(JTAGIdCodeOnDLS());
 	builder.block_until(BarrierOnFPGA(), Barrier::jtag);
 	auto program = builder.done();
-	stadls::vx::v3::run(connection, {program});
+
+	size_t connection_size =
+	    hxcomm::visit_connection([](auto& conn) { return conn.size(); }, connection);
+	std::vector<std::reference_wrapper<PlaybackProgram>> programs;
+	programs.reserve(connection_size);
+	for (size_t i = 0; i < connection_size; i++) {
+		programs.push_back(program);
+	}
+	stadls::vx::v3::run(connection, programs);
 
 	if (dynamic_cast<JTAGIdCode const&>(jtag_id_ticket.get()).get_version() != 3) {
 		std::stringstream ss;
@@ -152,7 +160,12 @@ bool InitializedConnection::is_quiggeldy() const
 
 std::vector<common::ChipOnConnection> InitializedConnection::get_chips_on_connection() const
 {
-	return {common::ChipOnConnection()};
+	std::vector<common::ChipOnConnection> chips;
+	chips.reserve(size());
+	for (size_t i = 0; i < size(); i++) {
+		chips.emplace_back(common::ChipOnConnection(i));
+	}
+	return chips;
 }
 
 size_t InitializedConnection::size() const

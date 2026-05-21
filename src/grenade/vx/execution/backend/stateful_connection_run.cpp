@@ -20,6 +20,9 @@ RunTimeInfo run(StatefulConnection& connection, PlaybackProgram& program)
 	log4cxx::LoggerPtr const logger = log4cxx::Logger::getLogger("grenade.backend.run()");
 
 	auto const chips_on_connection = connection.get_chips_on_connection();
+	if (chips_on_connection.size() != program.chips.size()) {
+		throw std::range_error("Connection size does not match number of playback programs.");
+	}
 
 	// Playback programs run when outscheduled.
 	hate::Timer const schedule_out_replacement_timer;
