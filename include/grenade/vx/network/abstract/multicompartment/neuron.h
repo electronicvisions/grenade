@@ -321,6 +321,11 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	bool valid(ParameterSpace const& parameter_space) const;
 
 	/**
+	 * Check if neuron is fully connected
+	 */
+	bool is_connected() const;
+
+	/**
 	 * Writes neuron topology in graphviz format.
 	 * @param filename File to write graphviz-graph to.
 	 * @param name Name of the graph.

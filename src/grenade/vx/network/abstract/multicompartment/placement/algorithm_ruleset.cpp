@@ -18,6 +18,10 @@ PlacementAlgorithmRuleset::PlacementAlgorithmRuleset(bool depth_search_first) :
 AlgorithmResult PlacementAlgorithmRuleset::run(
     CoordinateSystem const&, Neuron const& neuron, ResourceManager const& resources)
 {
+	if (!neuron.is_connected()) {
+		throw std::runtime_error("Placement of not fully connected neuron is not supported.");
+	}
+
 	size_t step = 0;
 	AlgorithmResult result;
 
@@ -371,7 +375,6 @@ std::set<CompartmentOnNeuron> PlacementAlgorithmRuleset::unplaced_neighbours(
 			unplaced_neighbours.emplace(compartment);
 		}
 	}
-
 	return unplaced_neighbours;
 }
 
@@ -1460,6 +1463,10 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 				}
 			}
 		}
+		if (neighbours_unplaced.empty()) {
+			throw std::logic_error("No unplaced compartments left.");
+		}
+
 		LOG4CXX_DEBUG(
 		    m_logger, "Placed compartment with unplaced neighbours: " << last_compartment);
 

@@ -274,6 +274,11 @@ bool Neuron::valid(ParameterSpace const& parameter_space) const
 	return true;
 }
 
+bool Neuron::is_connected() const
+{
+	return Graph::is_connected();
+}
+
 // Writes neuron topology in graphviz format to be plotted later
 void Neuron::write_graphviz(std::string filename, std::string name)
 {
