@@ -1013,120 +1013,62 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         self.assert_valid(placement_result.coordinate_system)
 
     def test_many_branches(self):
+        """
+        Test pyramidal neuron from literature.
+
+        This test implements the representation of a pyramidal neuron
+        in figure 5c (middle panel) from Wybo, 2021:
+        https://doi.org/10.7554/eLife.60936
+        """
         neuron = grenade.Neuron()
         resources = grenade.ResourceManager()
         environment = grenade.Environment()
 
         compartment, parameter_space = get_cap_compartment(0, 11)
 
-        compartment_aa_on_neuron = neuron.add_compartment(compartment)
-        compartment_ab_on_neuron = neuron.add_compartment(compartment)
-        compartment_ac_on_neuron = neuron.add_compartment(compartment)
-        compartment_ad_on_neuron = neuron.add_compartment(compartment)
-        compartment_ae_on_neuron = neuron.add_compartment(compartment)
-        compartment_af_on_neuron = neuron.add_compartment(compartment)
-        compartment_ag_on_neuron = neuron.add_compartment(compartment)
-        compartment_ah_on_neuron = neuron.add_compartment(compartment)
-        compartment_ai_on_neuron = neuron.add_compartment(compartment)
-        compartment_aj_on_neuron = neuron.add_compartment(compartment)
-        compartment_ak_on_neuron = neuron.add_compartment(compartment)
-        compartment_al_on_neuron = neuron.add_compartment(compartment)
-        compartment_am_on_neuron = neuron.add_compartment(compartment)
-        compartment_an_on_neuron = neuron.add_compartment(compartment)
-        compartment_ao_on_neuron = neuron.add_compartment(compartment)
-        compartment_ap_on_neuron = neuron.add_compartment(compartment)
-        compartment_aq_on_neuron = neuron.add_compartment(compartment)
-        compartment_ar_on_neuron = neuron.add_compartment(compartment)
-        compartment_as_on_neuron = neuron.add_compartment(compartment)
-        compartment_at_on_neuron = neuron.add_compartment(compartment)
-        compartment_au_on_neuron = neuron.add_compartment(compartment)
-        compartment_av_on_neuron = neuron.add_compartment(compartment)
-        compartment_aw_on_neuron = neuron.add_compartment(compartment)
-        compartment_ax_on_neuron = neuron.add_compartment(compartment)
-        compartment_ay_on_neuron = neuron.add_compartment(compartment)
-        compartment_az_on_neuron = neuron.add_compartment(compartment)
-        compartment_ba_on_neuron = neuron.add_compartment(compartment)
-        compartment_bb_on_neuron = neuron.add_compartment(compartment)
-        compartment_bc_on_neuron = neuron.add_compartment(compartment)
+        compartments = {n: neuron.add_compartment(compartment)
+                        for n in range(29)}
+        # compartments are numbered from left to right in a depth first
+        # fashion
+        connections = [(0, 1),
+                       (1, 2),
+                       (2, 3),
+                       (1, 4),
+                       (4, 5),
+                       (0, 6),
+                       (0, 7),
+                       (7, 8),
+                       (8, 9),
+                       (8, 10),
+                       (7, 11),
+                       (0, 12),
+                       (12, 13),
+                       (13, 14),
+                       (14, 15),
+                       (14, 16),
+                       (13, 17),
+                       (12, 18),
+                       (18, 19),
+                       (19, 20),
+                       (20, 21),
+                       (20, 22),
+                       (18, 23),
+                       (0, 24),
+                       (24, 25),
+                       (25, 26),
+                       (25, 27),
+                       (24, 28)]
 
         neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_aa_on_neuron: parameter_space,
-            compartment_ab_on_neuron: parameter_space,
-            compartment_ac_on_neuron: parameter_space,
-            compartment_ad_on_neuron: parameter_space,
-            compartment_ae_on_neuron: parameter_space,
-            compartment_af_on_neuron: parameter_space,
-            compartment_ag_on_neuron: parameter_space,
-            compartment_ah_on_neuron: parameter_space,
-            compartment_ai_on_neuron: parameter_space,
-            compartment_aj_on_neuron: parameter_space,
-            compartment_ak_on_neuron: parameter_space,
-            compartment_al_on_neuron: parameter_space,
-            compartment_am_on_neuron: parameter_space,
-            compartment_an_on_neuron: parameter_space,
-            compartment_ao_on_neuron: parameter_space,
-            compartment_ap_on_neuron: parameter_space,
-            compartment_aq_on_neuron: parameter_space,
-            compartment_ar_on_neuron: parameter_space,
-            compartment_as_on_neuron: parameter_space,
-            compartment_at_on_neuron: parameter_space,
-            compartment_au_on_neuron: parameter_space,
-            compartment_av_on_neuron: parameter_space,
-            compartment_aw_on_neuron: parameter_space,
-            compartment_ax_on_neuron: parameter_space,
-            compartment_ay_on_neuron: parameter_space,
-            compartment_az_on_neuron: parameter_space,
-            compartment_ba_on_neuron: parameter_space,
-            compartment_bb_on_neuron: parameter_space,
-            compartment_bc_on_neuron: parameter_space}
-
+        neuron_parameter_space.compartments = \
+            {comp: parameter_space for comp in compartments.values()}
         resources.add_config(neuron, neuron_parameter_space, environment)
 
-        neuron.add_compartment_connection(
-            compartment_aa_on_neuron,
-            compartment_ab_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_aa_on_neuron,
-            compartment_ac_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_ac_on_neuron,
-            compartment_ad_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_ad_on_neuron,
-            compartment_ae_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_ac_on_neuron,
-            compartment_af_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_af_on_neuron,
-            compartment_ag_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_aa_on_neuron,
-            compartment_ah_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_ah_on_neuron,
-            compartment_ai_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_ah_on_neuron,
-            compartment_aj_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_aj_on_neuron,
-            compartment_ak_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_aj_on_neuron,
-            compartment_al_on_neuron,
-            grenade.CompartmentConnectionConductance())
+        for (parent, child) in connections:
+            neuron.add_compartment_connection(
+                compartments[parent],
+                compartments[child],
+                grenade.CompartmentConnectionConductance())
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         with self.assertRaises(RuntimeError):
