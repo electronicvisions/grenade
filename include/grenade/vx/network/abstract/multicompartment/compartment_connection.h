@@ -10,13 +10,20 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) CompartmentConnection
     : public dapr::Property<CompartmentConnection>
 {
-	CompartmentConnection() = default;
 	struct ParameterSpace
 	{
 		struct Parameterization
-		{};
+		{
+			virtual ~Parameterization();
+		};
+
+		virtual ~ParameterSpace();
+
 		virtual bool valid(Parameterization const& parameterization) = 0;
 	};
+
+	virtual ~CompartmentConnection();
+	CompartmentConnection() = default;
 };
 
 

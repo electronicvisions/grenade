@@ -20,7 +20,11 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Prope
 	{
 		struct GENPYBIND(inline_base("*")) Parameterization
 		    : public Property<Mechanism::ParameterSpace::Parameterization>
-		{};
+		{
+			virtual ~Parameterization();
+		};
+
+		virtual ~ParameterSpace();
 
 		/**
 		 * Check if the given parameterization is valid for the parameter space.
@@ -28,6 +32,8 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Prope
 		 */
 		virtual bool valid(Parameterization const& parameterization) const = 0;
 	};
+
+	virtual ~Mechanism();
 
 	/**
 	 * Check if the given paramter space is valid for the mechanism.
