@@ -64,6 +64,13 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmRuleset : public Plac
 	 */
 	void reset();
 
+	/**
+	 * Get intermediate placement results
+	 *
+	 * Return history of placement results.
+	 */
+	std::vector<AlgorithmResult> get_results() const;
+
 private:
 	/**
 	 * Advances the algorithm one step.

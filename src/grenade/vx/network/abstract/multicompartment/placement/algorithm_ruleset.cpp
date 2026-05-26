@@ -1690,4 +1690,9 @@ void PlacementAlgorithmRuleset::try_connect_shared(
 	}
 }
 
+std::vector<AlgorithmResult> PlacementAlgorithmRuleset::get_results() const
+{
+	return m_results;
+}
+
 } // namespace grenade::vx::network::abstract
