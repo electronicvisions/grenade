@@ -115,10 +115,8 @@ void RecorderTopologyRewrite::operator()() const
 		get_topology().clear_vertex(vertex_descriptor);
 
 		// set links to new recorders
-		for (auto const& new_vertex : new_vertices) {
-			get_topology().add_inter_graph_hyper_edge(
-			    {new_vertex}, {old_reference}, RecorderInterTopologyHyperEdge());
-		}
+		get_topology().add_inter_graph_hyper_edge(
+		    new_vertices, {old_reference}, RecorderInterTopologyHyperEdge());
 
 		// add in-edges to new recorders
 		for (auto const& [source, target, edge] : new_in_edges) {
