@@ -38,8 +38,14 @@ std::ostream& CrossbarL2Input::Dynamics::print(std::ostream& os) const
 {
 	hate::IndentingOstream ios(os);
 	ios << "Dynamics(\n";
-	ios << hate::Indentation("\t");
-	// ios << hate::join(spikes, "\n");
+	for (size_t b = 0; b < batch_size(); b++) {
+		ios << hate::Indentation("\t");
+		ios << "Batch " << b << "\n";
+
+		ios << hate::Indentation("\t\t");
+		ios << hate::join(spikes.at(b), "\n");
+	}
+
 	ios << hate::Indentation() << ")";
 	return os;
 }

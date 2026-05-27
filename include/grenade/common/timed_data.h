@@ -1,4 +1,5 @@
 #pragma once
+#include <iosfwd>
 #include <vector>
 
 namespace grenade::common {
@@ -17,6 +18,9 @@ struct TimedData
 	bool operator==(TimedData const& other) const;
 	bool operator!=(TimedData const& other) const;
 };
+
+template <typename Time, typename T>
+std::ostream& operator<<(std::ostream& os, TimedData<Time, T> const& data);
 
 template <typename Time, typename T>
 using TimedDataSequence = std::vector<TimedData<Time, T>>;
