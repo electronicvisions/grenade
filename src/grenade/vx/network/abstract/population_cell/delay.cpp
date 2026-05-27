@@ -120,9 +120,11 @@ std::ostream& DelayCell::ParameterSpace::print(std::ostream& os) const
 }
 
 
+DelayCell::DelayCell(bool requires_time_domain) : m_requires_time_domain(requires_time_domain) {}
+
 bool DelayCell::requires_time_domain() const
 {
-	return true;
+	return m_requires_time_domain;
 }
 
 bool DelayCell::is_partitionable() const
@@ -151,7 +153,7 @@ std::vector<grenade::common::Vertex::Port> DelayCell::get_input_ports() const
 	return {
 	    grenade::common::Vertex::Port(
 	        Spike(), grenade::common::Vertex::Port::SumOrSplitSupport::yes,
-	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
+	        grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::supported,
 	        grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
 	        grenade::common::CuboidMultiIndexSequence(
 	            {1}, {grenade::common::CompartmentOnNeuronDimensionUnit()})),
@@ -182,14 +184,14 @@ std::unique_ptr<grenade::common::Population::Cell> DelayCell::move()
 	return std::make_unique<DelayCell>(std::move(*this));
 }
 
-bool DelayCell::is_equal_to(grenade::common::Population::Cell const&) const
+bool DelayCell::is_equal_to(grenade::common::Population::Cell const& other) const
 {
-	return true;
+	return m_requires_time_domain == static_cast<DelayCell const&>(other).m_requires_time_domain;
 }
 
 std::ostream& DelayCell::print(std::ostream& os) const
 {
-	return os << "DelayCell()";
+	return os << "DelayCell(requires_time_domain: " << m_requires_time_domain << ")";
 }
 
 } // namespace grenade::vx::network::abstract

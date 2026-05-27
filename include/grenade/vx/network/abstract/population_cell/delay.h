@@ -75,8 +75,15 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) DelayCell : public grenade::common::Pop
 	{};
 
 	/**
-	 * DelayCell requires a time domain, since it is represented by physical circuits
-	 * operating in time.
+	 * Construct DelayCell.
+	 * @param requires_time_domain Whether the delay cell requires a time domain
+	 */
+	DelayCell(bool requires_time_domain = true);
+
+	/**
+	 * DelayCell can require a time domain in the model topology.
+	 * Depending on the implementation it might switch to not supporting a time domain if it is
+	 * implemented on the host computer.
 	 */
 	virtual bool requires_time_domain() const override;
 
@@ -125,6 +132,8 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) DelayCell : public grenade::common::Pop
 protected:
 	virtual bool is_equal_to(grenade::common::Population::Cell const& other) const override;
 	virtual std::ostream& print(std::ostream& os) const override;
+
+	bool m_requires_time_domain;
 };
 
 } // namespace abstract
