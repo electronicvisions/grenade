@@ -8,6 +8,7 @@
 #include <ostream>
 #include <set>
 #include <stdexcept>
+#include <boost/graph/breadth_first_search.hpp>
 #include <boost/graph/named_function_params.hpp>
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/topological_sort.hpp>
@@ -976,6 +977,54 @@ bool Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 		return true;
 	} else {
 		throw std::runtime_error("Acyclicity property not implemented for undirected graph.");
+	}
+}
+
+
+namespace {
+
+template <typename VertexDescriptor, typename MapT>
+struct ReachableFromVisitor : boost::default_bfs_visitor
+{
+	std::vector<VertexDescriptor>& vertices;
+	MapT const& map;
+
+	ReachableFromVisitor(std::vector<VertexDescriptor>& v, MapT const& m) : vertices(v), map(m) {}
+
+	template <typename Vertex, typename GraphT>
+	void discover_vertex(Vertex u, const GraphT&) const
+	{
+		vertices.push_back(VertexDescriptor(map.right.at(u)));
+	}
+};
+
+} // namespace
+
+template <
+    typename Derived,
+    typename Backend,
+    typename Vertex,
+    typename Edge,
+    typename VertexDescriptor,
+    typename EdgeDescriptor,
+    template <typename...>
+    typename Holder>
+std::vector<VertexDescriptor>
+Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>::
+    get_reachable_vertices_from(VertexDescriptor const& source) const
+{
+	if constexpr (Backend::directed_selector::is_directed) {
+		auto vertex_index_map = get_backend_vertex_index_map();
+		std::vector<VertexDescriptor> ret;
+
+		boost::breadth_first_search(
+		    backend(), m_vertex_descriptors.left.at(source),
+		    boost::visitor(ReachableFromVisitor<VertexDescriptor, decltype(m_vertex_descriptors)>(
+		                       ret, m_vertex_descriptors))
+		        .vertex_index_map(boost::make_assoc_property_map(vertex_index_map)));
+		return ret;
+	} else {
+		throw std::runtime_error("Reachable from is not implemented for undirected graph.");
 	}
 }
 

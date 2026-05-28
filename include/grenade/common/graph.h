@@ -465,6 +465,12 @@ struct SYMBOL_VISIBLE Graph
 	bool is_acyclic() const;
 
 	/**
+	 * Get all vertices which are reachable from source vertex.
+	 * @param source Source vertex
+	 */
+	std::vector<VertexDescriptor> get_reachable_vertices_from(VertexDescriptor const& source) const;
+
+	/**
 	 * Get whether graphs are equal.
 	 * This is the case exactly if all vertex descriptors and properties as well as all edge
 	 * descriptors and properties match in order and the edges connect the same vertices.
