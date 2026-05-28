@@ -31,7 +31,12 @@ InputData LinkedTopology::map_reference_input_data(InputData const& reference_in
 		throw std::invalid_argument("Given input_data not valid for reference topology.");
 	}
 	InputData linked_input_data;
-	linked_input_data.time_domain_runtimes = reference_input_data.time_domain_runtimes;
+	for (auto const& [linked_time_domain, reference_time_domain] :
+	     inter_topology_time_domain_edges) {
+		linked_input_data.time_domain_runtimes.set(
+		    linked_time_domain,
+		    reference_input_data.time_domain_runtimes.get(reference_time_domain));
+	}
 	for (auto const& inter_graph_hyper_edge_descriptor : inter_graph_hyper_edges()) {
 		auto const& inter_graph_hyper_edge = get(inter_graph_hyper_edge_descriptor);
 		auto const& reference_vertex_descriptors = references(inter_graph_hyper_edge_descriptor);

@@ -3,6 +3,7 @@
 #include "grenade/common/edge_on_topology.h"
 #include "grenade/common/inter_topology_hyper_edge/identity.h"
 #include "grenade/common/linked_topology.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/vertex_on_topology.h"
 #include <map>
 
@@ -19,9 +20,16 @@ void IdentityReplacementTopologyRewrite::operator()() const
 	auto& topology = get_topology();
 
 	std::map<VertexOnTopology, VertexOnTopology> linked_vertices;
+	std::unordered_set<TimeDomainOnTopology> time_domains;
 	for (auto const vertex : topology.get_reference().vertices()) {
 		auto copy = topology.get_reference().get(vertex).copy();
 		assert(copy);
+
+		auto const& time_domain = copy->get_time_domain();
+		if (time_domain) {
+			time_domains.insert(*time_domain);
+		}
+
 		linked_vertices.emplace(vertex, topology.add_vertex(std::move(*copy)));
 	}
 
@@ -35,6 +43,10 @@ void IdentityReplacementTopologyRewrite::operator()() const
 	for (auto const& [reference, linked] : linked_vertices) {
 		topology.add_inter_graph_hyper_edge(
 		    {linked}, {reference}, IdentityInterTopologyHyperEdge());
+	}
+
+	for (auto const& time_domain : time_domains) {
+		topology.inter_topology_time_domain_edges.emplace(time_domain, time_domain);
 	}
 }
 

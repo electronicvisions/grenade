@@ -5,6 +5,7 @@
 #include "grenade/common/inter_topology_hyper_edge_on_linked_topology.h"
 #include "grenade/common/linked_graph.h"
 #include "grenade/common/output_data.h"
+#include "grenade/common/time_domain_on_topology.h"
 #include "grenade/common/topology.h"
 #include <memory>
 
@@ -85,6 +86,13 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 * Create copy of linked topology with (deep-)copied reference topology.
 	 */
 	LinkedTopology deepcopy() const;
+
+	/**
+	 * Inter-topology time domain edges.
+	 * The key is the linked topology time domain, while the value is the reference topology time
+	 * domain. They are used in mapping the reference input data.
+	 */
+	std::map<TimeDomainOnTopology, TimeDomainOnTopology> inter_topology_time_domain_edges;
 
 protected:
 	virtual std::ostream& print(std::ostream& os) const override;
