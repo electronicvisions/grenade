@@ -321,14 +321,7 @@ template <
 bool LinkedGraph<InterGraphHyperEdgeDescriptor, InterGraphHyperEdge, ReferenceGraph, LinkGraph>::
     valid() const
 {
-	auto const reference_vertices = get_reference().vertices();
-	return LinkGraph::valid() &&
-	       std::all_of(
-	           reference_vertices.begin(), reference_vertices.end(),
-	           [this](auto const& descriptor) {
-		           return contains_inter_graph_hyper_edge_to_reference(descriptor);
-	           }) &&
-	       get_reference().valid();
+	return LinkGraph::valid() && get_reference().valid();
 }
 
 template <

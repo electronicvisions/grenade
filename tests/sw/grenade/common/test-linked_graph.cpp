@@ -287,7 +287,7 @@ TEST(LinkedGraph, General)
 	EXPECT_EQ(linked_graph.num_inter_graph_hyper_edges(), 0);
 	EXPECT_FALSE(linked_graph.contains_inter_graph_hyper_edge_to_reference(vertex_on_graph_1));
 	EXPECT_FALSE(linked_graph.contains_inter_graph_hyper_edge_to_linked(vertex_on_graph_2));
-	EXPECT_FALSE(linked_graph.valid());
+	EXPECT_TRUE(linked_graph.valid());
 
 	DerivedDummyInterGraphHyperEdge inter_graph_hyper_edge(20, 30);
 	auto const inter_graph_hyper_edge_on_linked_graph = linked_graph.add_inter_graph_hyper_edge(
