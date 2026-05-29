@@ -174,7 +174,7 @@ bool ExternalSourceNeuron::valid(
 std::vector<grenade::common::Vertex::Port> ExternalSourceNeuron::get_input_ports() const
 {
 	return {grenade::common::Vertex::Port(
-	    DynamicsPortType(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
+	    Spike(), grenade::common::Vertex::Port::SumOrSplitSupport::no,
 	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::required,
 	    grenade::common::Vertex::Port::RequiresOrGeneratesData::yes,
 	    grenade::common::ListMultiIndexSequence({grenade::common::MultiIndex({0})}))};
