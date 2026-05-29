@@ -100,6 +100,17 @@ bool InputData::valid(Topology const& topology) const
 		auto const input_ports = vertex.get_input_ports();
 		for (size_t input_port_on_vertex = 0; input_port_on_vertex < input_ports.size();
 		     ++input_port_on_vertex) {
+			bool has_in_edge = false;
+			for (auto const& in_edge_descriptor : topology.in_edges(vertex_descr)) {
+				auto const& in_edge = topology.get(in_edge_descriptor);
+				if (in_edge.port_on_target == input_port_on_vertex) {
+					has_in_edge = true;
+				}
+			}
+			if (has_in_edge) {
+				continue;
+			}
+
 			if (input_ports.at(input_port_on_vertex).requires_or_generates_data ==
 			    Vertex::Port::RequiresOrGeneratesData::yes) {
 				if (!ports.contains(std::pair{vertex_descr, input_port_on_vertex})) {
