@@ -273,15 +273,6 @@ bool Vertex::valid_edge_from(Vertex const& source, Edge const& edge) const
 		    << target_input_port.execution_instance_transition_constraint << ").");
 		return false;
 	}
-	// check port requiring and generating data matches between source and target port
-	if (target_input_port.requires_or_generates_data !=
-	    source_output_port.requires_or_generates_data) {
-		GRENADE_VERTEX_VALID_EDGE_FROM_LOG_ERROR(
-		    "Source and target port generating or requiring data isn't compatible: source("
-		    << source_output_port.requires_or_generates_data << ") vs. target("
-		    << target_input_port.requires_or_generates_data << ").");
-		return false;
-	}
 	// check connections lie within target input port (ours)
 	auto const& channels_on_target = edge.get_channels_on_target();
 	if (target_input_port.get_channels().get_dimension_units() !=
