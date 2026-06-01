@@ -1,4 +1,5 @@
 #pragma once
+#include "dapr/map.h"
 #include "dapr/printable.h"
 #include "grenade/common/detail/graph.h"
 #include "grenade/common/edge.h"
@@ -97,6 +98,15 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	 */
 	virtual void set(VertexDescriptor const& descriptor, Vertex&& vertex) override
 	    GENPYBIND(hidden);
+
+	typedef dapr::Map<VertexDescriptor, Vertex> Vertices GENPYBIND(opaque(false));
+	/**
+	 * Set vertex properties.
+	 * @param vertices Vertex properties
+	 * @throws std::out_of_range On vertex not being present in graph
+	 * @throws std::invalid_argument On vertex property change yielding invalid graph
+	 */
+	virtual void set(Vertices vertices);
 
 	/**
 	 * Set edge property.

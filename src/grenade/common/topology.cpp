@@ -78,6 +78,42 @@ void Topology::set(VertexDescriptor const& descriptor, Vertex&& vertex)
 	Graph::set(descriptor, vertex);
 }
 
+void Topology::set(Vertices vertices)
+{
+	Vertices old_vertices;
+	for (auto const& [descriptor, _] : vertices) {
+		// store old vertex to restore if check fails
+		old_vertices.set(descriptor, std::move(Graph::get_mutable(descriptor)));
+		// set new vertex
+		Graph::set(descriptor, std::move(vertices.get(descriptor)));
+	}
+
+	try {
+		// check all edges for all vertices
+		for (auto const& [descriptor, _] : vertices) {
+			for (auto const& in_edge_descriptor : in_edges(descriptor)) {
+				auto const& source_vertex_descriptor = source(in_edge_descriptor);
+				check_edge(
+				    source_vertex_descriptor, descriptor, in_edge_descriptor,
+				    get(source_vertex_descriptor), get(descriptor), get(in_edge_descriptor));
+			}
+			for (auto const& out_edge_descriptor : out_edges(descriptor)) {
+				auto const& target_vertex_descriptor = target(out_edge_descriptor);
+				check_edge(
+				    descriptor, target_vertex_descriptor, out_edge_descriptor, get(descriptor),
+				    get(target_vertex_descriptor), get(out_edge_descriptor));
+			}
+		}
+	} catch (std::invalid_argument const& exception) {
+		// restore old vertices
+		for (auto const& [descriptor, _] : old_vertices) {
+			Graph::set(descriptor, std::move(old_vertices.get(descriptor)));
+		}
+
+		throw exception;
+	}
+}
+
 void Topology::set(EdgeDescriptor const& descriptor, Edge const& edge)
 {
 	auto const& source_vertex_descriptor = source(descriptor);
