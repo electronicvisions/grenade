@@ -122,13 +122,7 @@ std::ostream& operator<<(
 
 	ios << "v_reset: " << value.v_reset << "\n";
 
-	ios << "refractory_period: ";
-	if (value.refractory_period) {
-		ios << *value.refractory_period;
-	} else {
-		ios << "disabled";
-	}
-	ios << "\n";
+	ios << "refractory_period: " << value.refractory_period << "\n";
 
 	ios << "synaptic_input_excitatory: ";
 	std::visit([&ios](auto const& synin) { ios << synin; }, value.synaptic_input_excitatory);

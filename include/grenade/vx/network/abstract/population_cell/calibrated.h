@@ -90,9 +90,8 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CalibratedNeuron : public LocallyPlaced
 
 			/**
 			 * Refractory period mechanism.
-			 * Disabled if empty.
 			 */
-			std::optional<RefractoryPeriod> refractory_period;
+			RefractoryPeriod refractory_period;
 
 			struct CubaSynapticInput
 			{
