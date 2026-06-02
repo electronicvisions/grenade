@@ -27,7 +27,8 @@ LinkedTopology::LinkedTopology(std::shared_ptr<Topology const> reference) :
 
 InputData LinkedTopology::map_reference_input_data(InputData const& reference_input_data) const
 {
-	if (!reference_input_data.valid(get_reference())) {
+	auto const& reference_topology = get_reference();
+	if (!reference_input_data.valid(reference_topology)) {
 		throw std::invalid_argument("Given input_data not valid for reference topology.");
 	}
 	InputData linked_input_data;
@@ -44,7 +45,7 @@ InputData LinkedTopology::map_reference_input_data(InputData const& reference_in
 		std::vector<std::vector<std::optional<std::reference_wrapper<PortData const>>>>
 		    reference_vertex_input_data;
 		for (auto const& vertex_descriptor : reference_vertex_descriptors) {
-			auto const input_ports = get_reference().get(vertex_descriptor).get_input_ports();
+			auto const input_ports = reference_topology.get(vertex_descriptor).get_input_ports();
 			reference_vertex_input_data.push_back({});
 			for (size_t input_port_on_vertex = 0; input_port_on_vertex < input_ports.size();
 			     ++input_port_on_vertex) {
@@ -52,10 +53,11 @@ InputData LinkedTopology::map_reference_input_data(InputData const& reference_in
 				    Vertex::Port::RequiresOrGeneratesData::yes) {
 					bool has_in_edge = false;
 					for (auto const in_edge_descriptor :
-					     get_reference().in_edges(vertex_descriptor)) {
-						if (get_reference().get(in_edge_descriptor).port_on_target ==
+					     reference_topology.in_edges(vertex_descriptor)) {
+						if (reference_topology.get(in_edge_descriptor).port_on_target ==
 						    input_port_on_vertex) {
 							has_in_edge = true;
+							break;
 						}
 					}
 					if (!has_in_edge) {
@@ -75,13 +77,14 @@ InputData LinkedTopology::map_reference_input_data(InputData const& reference_in
 		    reference_vertex_input_data, link_vertex_descriptors, reference_vertex_descriptors,
 		    *this);
 		for (size_t i = 0; i < link_vertex_descriptors.size(); ++i) {
+			auto& local_link_vertex_input_data = link_vertex_input_data.at(i);
 			for (size_t input_port_on_vertex = 0;
-			     input_port_on_vertex < link_vertex_input_data.at(i).size();
+			     input_port_on_vertex < local_link_vertex_input_data.size();
 			     ++input_port_on_vertex) {
-				if (link_vertex_input_data.at(i).at(input_port_on_vertex)) {
+				if (local_link_vertex_input_data.at(input_port_on_vertex)) {
 					linked_input_data.ports.set(
 					    std::pair{link_vertex_descriptors.at(i), input_port_on_vertex},
-					    std::move(*link_vertex_input_data.at(i).at(input_port_on_vertex)));
+					    std::move(*local_link_vertex_input_data.at(input_port_on_vertex)));
 				}
 			}
 		}
