@@ -82,37 +82,27 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 		    assigned_execution_instance_ids.at(root_vertex_descriptor);
 	}
 
-	// store present connection on executor information, reset execution instance on executor
-	std::map<VertexOnTopology, ConnectionOnExecutor> connections_on_executor;
-	for (auto const& vertex_descriptor : get_topology().vertices()) {
-		auto vertex = get_topology().get(vertex_descriptor).copy();
-		auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
-		if (partitioned_vertex.get_execution_instance_on_executor()) {
-			connections_on_executor.emplace(
-			    vertex_descriptor, partitioned_vertex.get_execution_instance_on_executor()
-			                           .value()
-			                           .connection_on_executor);
-		}
-		partitioned_vertex.set_execution_instance_on_executor(std::nullopt);
-		get_topology().set(vertex_descriptor, std::move(partitioned_vertex));
-	}
-
 	// assign found execution instance ids to vertices in topology and restore connection on
 	// executor information.
 	// This yields a correct, but not space-optimized partitioning.
-	for (auto const vertex_descriptor : get_topology().vertices()) {
-		auto vertex = get_topology().get(vertex_descriptor).copy();
-		assert(vertex);
-		auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
-		ExecutionInstanceOnExecutor execution_instance_on_executor;
-		if (connections_on_executor.contains(vertex_descriptor)) {
-			execution_instance_on_executor.connection_on_executor =
-			    connections_on_executor.at(vertex_descriptor);
+	{
+		Topology::Vertices new_vertices;
+		for (auto const& vertex_descriptor : get_topology().vertices()) {
+			auto vertex = get_topology().get(vertex_descriptor).copy();
+			auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
+			ExecutionInstanceOnExecutor execution_instance_on_executor;
+			if (partitioned_vertex.get_execution_instance_on_executor()) {
+				execution_instance_on_executor.connection_on_executor =
+				    partitioned_vertex.get_execution_instance_on_executor()
+				        .value()
+				        .connection_on_executor;
+			}
+			execution_instance_on_executor.execution_instance_id =
+			    assigned_execution_instance_ids.at(vertex_descriptor);
+			partitioned_vertex.set_execution_instance_on_executor(execution_instance_on_executor);
+			new_vertices.set(vertex_descriptor, std::move(partitioned_vertex));
 		}
-		execution_instance_on_executor.execution_instance_id =
-		    assigned_execution_instance_ids.at(vertex_descriptor);
-		partitioned_vertex.set_execution_instance_on_executor(execution_instance_on_executor);
-		get_topology().set(vertex_descriptor, std::move(partitioned_vertex));
+		get_topology().set(std::move(new_vertices));
 	}
 
 	// Construct topology of strong component invariants and check that it is acyclic.
@@ -250,31 +240,27 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 		}
 	}
 
-	// reset execution instance on executor.
-	// this is needed because the checks per vertex alteration in the topology for execution
-	// instance transitions might otherwise fail for intermediate steps
-	for (auto const& vertex_descriptor : get_topology().vertices()) {
-		auto vertex = get_topology().get(vertex_descriptor).copy();
-		auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
-		partitioned_vertex.set_execution_instance_on_executor(std::nullopt);
-		get_topology().set(vertex_descriptor, std::move(partitioned_vertex));
-	}
-
 	// assign found execution instance ids to vertices in topology and restore connection on
 	// executor information
-	for (auto const vertex_descriptor : get_topology().vertices()) {
-		auto vertex = get_topology().get(vertex_descriptor).copy();
-		assert(vertex);
-		auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
-		ExecutionInstanceOnExecutor execution_instance_on_executor;
-		if (connections_on_executor.contains(vertex_descriptor)) {
-			execution_instance_on_executor.connection_on_executor =
-			    connections_on_executor.at(vertex_descriptor);
+	{
+		Topology::Vertices new_vertices;
+		for (auto const vertex_descriptor : get_topology().vertices()) {
+			auto vertex = get_topology().get(vertex_descriptor).copy();
+			assert(vertex);
+			auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
+			ExecutionInstanceOnExecutor execution_instance_on_executor;
+			if (partitioned_vertex.get_execution_instance_on_executor()) {
+				execution_instance_on_executor.connection_on_executor =
+				    partitioned_vertex.get_execution_instance_on_executor()
+				        .value()
+				        .connection_on_executor;
+			}
+			execution_instance_on_executor.execution_instance_id =
+			    assigned_execution_instance_ids.at(vertex_descriptor);
+			partitioned_vertex.set_execution_instance_on_executor(execution_instance_on_executor);
+			new_vertices.set(vertex_descriptor, std::move(partitioned_vertex));
 		}
-		execution_instance_on_executor.execution_instance_id =
-		    assigned_execution_instance_ids.at(vertex_descriptor);
-		partitioned_vertex.set_execution_instance_on_executor(execution_instance_on_executor);
-		get_topology().set(vertex_descriptor, std::move(partitioned_vertex));
+		get_topology().set(std::move(new_vertices));
 	}
 }
 
