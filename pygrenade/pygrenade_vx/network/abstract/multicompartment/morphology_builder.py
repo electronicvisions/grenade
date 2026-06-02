@@ -34,7 +34,7 @@ class MorphologyBuilder:
 
     def add_compartment(self,
                         compartment: Compartment,
-                        label: Optional[str] = None) -> Node:
+                        label: str) -> Node:
         '''
         Add a compartment to the builder.
 
