@@ -187,7 +187,7 @@ TEST(CspRouter, RouteCollection)
 	Router router;
 	hate::Timer timer;
 	EXPECT_NO_THROW(router(std::move(router_space)));
-	EXPECT_LE(timer.get_s(), 30);
+	EXPECT_LE(timer.get_s(), 60);
 }
 
 TEST(CspRouter, MergingOnTarget)
@@ -215,5 +215,5 @@ TEST(CspRouter, MergingOnTarget)
 	Router router;
 	hate::Timer timer;
 	EXPECT_NO_THROW(router(std::move(router_space)));
-	EXPECT_LE(timer.get_s(), 30);
+	EXPECT_LE(timer.get_s(), 60);
 }

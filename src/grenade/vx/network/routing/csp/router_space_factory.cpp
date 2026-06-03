@@ -55,8 +55,8 @@ std::pair<RouteCollector::Routes, RouteCollector::Routes> RouterSpaceFactory::bu
 	for (auto const& [route_limits, routes] : routes_acyclic) {
 		LOG4CXX_TRACE(
 		    m_router_space->m_shared_storage->logger,
-		    "Found " << routes_acyclic.size() << " routes for " << route_limits);
-		num_routes += routes_acyclic.size();
+		    "Found " << routes.size() << " routes for " << route_limits);
+		num_routes += routes.size();
 	}
 
 	LOG4CXX_DEBUG(
@@ -176,7 +176,7 @@ void RouterSpaceFactory::build_route_constraints(
 			// For each source index have array over different routes
 			for (size_t source_index = 0; source_index < source.size(); source_index++) {
 				local_route_activities.at(source_index) =
-				    Gecode::BoolVarArray(*m_router_space, routes_acyclic.size(), 0, 1);
+				    Gecode::BoolVarArray(*m_router_space, routes.size(), 0, 1);
 			}
 		}
 
