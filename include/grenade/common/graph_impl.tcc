@@ -341,9 +341,10 @@ void Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Hol
 	if (in_degree(descriptor) != 0 || out_degree(descriptor) != 0) {
 		throw std::runtime_error("Trying to remove vertex which has connected edges.");
 	}
-	m_vertices.erase(descriptor);
+
 	boost::remove_vertex(m_vertex_descriptors.left.at(descriptor), backend());
 	m_vertex_descriptors.left.erase(descriptor);
+	m_vertices.erase(descriptor);
 }
 
 template <
