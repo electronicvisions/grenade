@@ -135,6 +135,15 @@ void Topology::set(EdgeDescriptor const& descriptor, Edge&& edge)
 	Graph::set(descriptor, edge);
 }
 
+Vertex& Topology::get_mutable(VertexDescriptor const& descriptor)
+{
+	if (!m_has_lazy_validity_checker) {
+		throw std::runtime_error(
+		    "Mutable get operation on topology requires lazy validity checker to be active.");
+	}
+	return Graph::get_mutable(descriptor);
+}
+
 void Topology::check_edge(
     VertexOnTopology const& source,
     VertexOnTopology const& target,

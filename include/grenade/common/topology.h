@@ -36,6 +36,8 @@ extern template SYMBOL_VISIBLE std::ostream& operator<<(
         EdgeOnTopology,
         std::shared_ptr> const& value);
 
+struct TopologyLazyValidityChecker;
+
 
 /**
  * Topology of experiment description.
@@ -127,6 +129,12 @@ struct SYMBOL_VISIBLE GENPYBIND(
 	virtual void set(EdgeDescriptor const& descriptor, Edge&& edge) override GENPYBIND(hidden);
 
 	/**
+	 * Get mutable reference to vertex property.
+	 * @throws std::runtime_error On no lazy validity checker being active
+	 */
+	virtual Vertex& get_mutable(VertexDescriptor const& descriptor) GENPYBIND(hidden);
+
+	/**
 	 * Check whether strong components of topology are valid.
 	 * Ensures, that all strong components vertices feature a homogeneous invariant.
 	 */
@@ -145,8 +153,6 @@ struct SYMBOL_VISIBLE GENPYBIND(
 protected:
 	virtual std::ostream& print(std::ostream& os) const override;
 
-	using Graph::get_mutable;
-
 private:
 	void check_edge(
 	    VertexOnTopology const& source,
@@ -159,6 +165,9 @@ private:
 	friend class cereal::access;
 	template <typename Archive>
 	void serialize(Archive& ar, std::uint32_t);
+
+	friend struct TopologyLazyValidityChecker;
+	bool m_has_lazy_validity_checker{false};
 };
 
 } // namespace common
