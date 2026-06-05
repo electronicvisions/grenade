@@ -7,6 +7,7 @@
 #include "grenade/common/population.h"
 #include "grenade/common/resource_estimator.h"
 #include "grenade/common/time_domain_on_topology.h"
+#include "grenade/common/topology_lazy_validity_checker.h"
 #include "grenade/common/topology_rewrite/strong_component_invariant.h"
 #include "grenade/common/vertex_on_topology.h"
 #include <ctime>
@@ -100,10 +101,10 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 	// executor information.
 	// This yields a correct, but not space-optimized partitioning.
 	{
-		Topology::Vertices new_vertices;
+		TopologyLazyValidityChecker lazy_validity_checker(get_topology());
 		for (auto const& vertex_descriptor : get_topology().vertices()) {
-			auto vertex = get_topology().get(vertex_descriptor).copy();
-			auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
+			auto& partitioned_vertex =
+			    dynamic_cast<PartitionedVertex&>(get_topology().get_mutable(vertex_descriptor));
 			ExecutionInstanceOnExecutor execution_instance_on_executor;
 			if (partitioned_vertex.get_execution_instance_on_executor()) {
 				execution_instance_on_executor.connection_on_executor =
@@ -114,9 +115,7 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 			execution_instance_on_executor.execution_instance_id =
 			    assigned_execution_instance_ids.at(vertex_descriptor);
 			partitioned_vertex.set_execution_instance_on_executor(execution_instance_on_executor);
-			new_vertices.set(vertex_descriptor, std::move(partitioned_vertex));
 		}
-		get_topology().set(std::move(new_vertices));
 	}
 
 	// Construct topology of strong component invariants and check that it is acyclic.
@@ -257,11 +256,10 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 	// assign found execution instance ids to vertices in topology and restore connection on
 	// executor information
 	{
-		Topology::Vertices new_vertices;
+		TopologyLazyValidityChecker lazy_validity_checker(get_topology());
 		for (auto const vertex_descriptor : get_topology().vertices()) {
-			auto vertex = get_topology().get(vertex_descriptor).copy();
-			assert(vertex);
-			auto& partitioned_vertex = dynamic_cast<PartitionedVertex&>(*vertex);
+			auto& partitioned_vertex =
+			    dynamic_cast<PartitionedVertex&>(get_topology().get_mutable(vertex_descriptor));
 			ExecutionInstanceOnExecutor execution_instance_on_executor;
 			if (partitioned_vertex.get_execution_instance_on_executor()) {
 				execution_instance_on_executor.connection_on_executor =
@@ -272,9 +270,7 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 			execution_instance_on_executor.execution_instance_id =
 			    assigned_execution_instance_ids.at(vertex_descriptor);
 			partitioned_vertex.set_execution_instance_on_executor(execution_instance_on_executor);
-			new_vertices.set(vertex_descriptor, std::move(partitioned_vertex));
 		}
-		get_topology().set(std::move(new_vertices));
 	}
 }
 
