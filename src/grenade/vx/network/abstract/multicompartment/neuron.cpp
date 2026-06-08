@@ -11,6 +11,7 @@
 #include "hate/indent.h"
 #include "hate/join.h"
 #include <fstream>
+#include <log4cxx/logger.h>
 
 namespace grenade::common {
 template class Graph<
@@ -154,6 +155,9 @@ bool Neuron::ParameterSpace::valid(
 		}
 		return true;
 	}
+	LOG4CXX_DEBUG(
+	    log4cxx::Logger::getLogger("grenade.vx.network.abstract.Neuron"),
+	    "Wrong parameterization type supplied.");
 	return false;
 }
 

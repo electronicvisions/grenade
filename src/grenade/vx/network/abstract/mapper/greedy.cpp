@@ -121,6 +121,7 @@ grenade::common::LinkedTopology GreedyMapper::operator()(
 
 	// map multi-compartment neurons to locally-placed calibrated neurons
 	{
+		LOG4CXX_TRACE(m_logger, "Performing local placement rewrite.");
 		MulticompartmentNeuronRewrite local_placement_rewrite(
 		    mapped_topology, std::make_unique<PlacementAlgorithmRuleset>());
 		local_placement_rewrite();

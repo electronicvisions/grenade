@@ -22,11 +22,17 @@
 #include <Python.h>
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
+#include <log4cxx/logger.h>
 #include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 namespace grenade::vx::network::abstract {
+
+JITCalibration::JITCalibration() :
+    m_logger(log4cxx::Logger::getLogger("grenade.network.abstract.calibration.JITCalibration"))
+{
+}
 
 void JITCalibration::operator()(
     grenade::common::LinkedTopology& topology,
@@ -364,6 +370,7 @@ void JITCalibration::operator()(
 			auto pyspiking_calib_target = pycalix_spiking.attr("SpikingCalibTarget")();
 			pyspiking_calib_target.cast<ccalix::SpikingCalibTarget&>() = spiking_calib_target;
 			// TODO: deduplicate, only needed because of cache paths
+			LOG4CXX_INFO(m_logger, "Start calibration.");
 			if (cache_paths) {
 				auto calibration_result = calibrate_func(
 				    pyspiking_calib_target, options, *cache_paths, false,

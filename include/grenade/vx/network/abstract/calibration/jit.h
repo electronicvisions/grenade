@@ -9,6 +9,11 @@
 #include <string>
 #include <vector>
 
+namespace log4cxx {
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+} // namespace log4cxx
+
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
 
@@ -17,7 +22,7 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
  */
 struct GENPYBIND(visible) SYMBOL_VISIBLE JITCalibration : public Calibration
 {
-	JITCalibration() = default;
+	JITCalibration();
 
 	std::optional<std::vector<std::string>> cache_paths;
 	ccalix::SpikingCalibOptions options;
@@ -26,6 +31,9 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE JITCalibration : public Calibration
 	virtual void operator()(
 	    grenade::common::LinkedTopology& topology,
 	    grenade::vx::execution::JITGraphExecutor& executor) const override;
+
+private:
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace abstract

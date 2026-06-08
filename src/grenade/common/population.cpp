@@ -12,6 +12,7 @@
 #include "hate/indent.h"
 #include <memory>
 #include <stdexcept>
+#include <log4cxx/logger.h>
 
 namespace grenade::common {
 
@@ -62,12 +63,18 @@ bool Population::valid_input_port_data(size_t input_port_on_vertex, PortData con
 {
 	if (auto const ptr = dynamic_cast<Cell::Dynamics const*>(&data); ptr) {
 		if (ptr->size() != size()) {
+			LOG4CXX_DEBUG(
+			    log4cxx::Logger::getLogger("grenade.common.Population"),
+			    "Input data size does not match population size.");
 			return false;
 		}
 		return m_cell->valid(input_port_on_vertex, *ptr);
 	}
 	if (auto const ptr = dynamic_cast<Cell::ParameterSpace::Parameterization const*>(&data); ptr) {
 		if (ptr->size() != size()) {
+			LOG4CXX_DEBUG(
+			    log4cxx::Logger::getLogger("grenade.common.Population"),
+			    "Input data size does not match population size.");
 			return false;
 		}
 		return m_parameter_space->valid(input_port_on_vertex, *ptr);
