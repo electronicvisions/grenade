@@ -237,16 +237,18 @@ bool Vertex::valid_edge_from(Vertex const& source, Edge const& edge) const
 	auto const target_input_ports = get_input_ports();
 	if (edge.port_on_target >= target_input_ports.size()) {
 		GRENADE_VERTEX_VALID_EDGE_FROM_LOG_ERROR(
-		    "Port on target out of range of ports on target vertex: ("
-		    << edge.port_on_target << ") vs. (" << target_input_ports.size() << ").");
+		    "Port (" << edge.port_on_target
+		             << ") on target out of range (number of ports on target: "
+		             << target_input_ports.size() << ").");
 		return false;
 	}
 	// check port index exists on source
 	auto const source_output_ports = source.get_output_ports();
 	if (edge.port_on_source >= source_output_ports.size()) {
 		GRENADE_VERTEX_VALID_EDGE_FROM_LOG_ERROR(
-		    "Port on source out of range of ports on source vertex: ("
-		    << edge.port_on_source << ") vs. (" << source_output_ports.size() << ").");
+		    "Port (" << edge.port_on_source
+		             << ") on source out of range (number of ports on source: "
+		             << source_output_ports.size() << ").");
 		return false;
 	}
 	// check port types match

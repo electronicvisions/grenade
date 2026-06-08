@@ -5,6 +5,7 @@
 #include "grenade/common/linked_topology.h"
 #include "grenade/common/topology_rewrite/strong_component_invariant.h"
 #include "grenade/common/vertex_on_topology.h"
+#include "hate/indent.h"
 #include "hate/join.h"
 #include <log4cxx/logger.h>
 
@@ -144,20 +145,40 @@ void Topology::check_edge(
 {
 	if (!source_vertex.valid_edge_to(target_vertex, edge)) {
 		std::stringstream ss;
-		ss << "Edge from source (" << source << ") to target (" << target
-		   << ") is not valid for the source vertex to the target vertex:\n";
-		ss << source_vertex << "\n";
-		ss << target_vertex << "\n";
-		ss << edge << "\n";
+		hate::IndentingOstream iss(ss);
+		iss << "Edge is not valid for the given source vertex:\n";
+
+		iss << hate::Indentation();
+		iss << "Source " << source << ":\n";
+		iss << hate::Indentation("\t");
+		iss << source_vertex << "\n";
+
+		iss << hate::Indentation();
+		iss << "Target " << target << ":\n";
+		iss << hate::Indentation("\t");
+		iss << target_vertex << "\n";
+
+		iss << hate::Indentation();
+		iss << edge << "\n";
 		throw std::invalid_argument(ss.str());
 	}
 	if (!target_vertex.valid_edge_from(source_vertex, edge)) {
 		std::stringstream ss;
-		ss << "Edge from source (" << source << ") to target (" << target
-		   << ") is not valid for the target vertex from the source vertex:\n";
-		ss << source_vertex << "\n";
-		ss << target_vertex << "\n";
-		ss << edge << "\n";
+		hate::IndentingOstream iss(ss);
+		iss << "Edge is not valid for the given target vertex:\n";
+
+		iss << hate::Indentation();
+		iss << "Source " << source << ":\n";
+		iss << hate::Indentation("\t");
+		iss << source_vertex << "\n";
+
+		iss << hate::Indentation();
+		iss << "Target " << target << ":\n";
+		iss << hate::Indentation("\t");
+		iss << target_vertex << "\n";
+
+		iss << hate::Indentation();
+		iss << edge << "\n";
 		throw std::invalid_argument(ss.str());
 	}
 	auto const target_vertex_ports = target_vertex.get_input_ports();
