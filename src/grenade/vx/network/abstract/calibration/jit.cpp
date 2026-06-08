@@ -269,7 +269,7 @@ void JITCalibration::operator()(
 				    target.synaptic_input_inhibitory);
 			}
 
-			if (synapse_dac_bias.size() != 1) {
+			if (synapse_dac_bias.size() > 1) {
 				throw std::runtime_error(
 				    "synapse_dac_bias is required to be equal for all neurons on one chip.");
 			}
@@ -295,7 +295,9 @@ void JITCalibration::operator()(
 			    spiking_calib_target.neuron_target.cuba_synin)
 			    .i_synin_gm[halco::hicann_dls::vx::v3::SynapticInputOnNeuron::inhibitory] =
 			    *i_synin_gm.at(1).begin();
-			spiking_calib_target.neuron_target.synapse_dac_bias = *synapse_dac_bias.begin();
+			if (!synapse_dac_bias.empty()) {
+				spiking_calib_target.neuron_target.synapse_dac_bias = *synapse_dac_bias.begin();
+			}
 
 			auto pyspiking_calib_target = pycalix_spiking.attr("SpikingCalibTarget")();
 			pyspiking_calib_target.cast<ccalix::SpikingCalibTarget&>() = spiking_calib_target;
