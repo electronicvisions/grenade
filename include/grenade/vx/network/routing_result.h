@@ -1,6 +1,7 @@
 #pragma once
 #include "grenade/common/execution_instance_on_executor.h"
 #include "grenade/common/vertex_on_topology.h"
+#include "grenade/vx/common/chip_on_connection.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/connection_routing_result.h"
 #include "halco/hicann-dls/vx/v3/event.h"
@@ -26,7 +27,7 @@ namespace network GENPYBIND_TAG_GRENADE_VX_NETWORK {
  */
 struct GENPYBIND(visible) RoutingResult
 {
-	struct ExecutionInstance
+	struct Chip
 	{
 		ConnectionRoutingResult connection_routing_result;
 
@@ -121,13 +122,16 @@ struct GENPYBIND(visible) RoutingResult
 		    CrossbarNodes;
 		CrossbarNodes crossbar_nodes;
 
-		ExecutionInstance() = default;
+		Chip() = default;
 
 		GENPYBIND(stringstream)
-		friend std::ostream& operator<<(std::ostream&, ExecutionInstance const&) SYMBOL_VISIBLE;
+		friend std::ostream& operator<<(std::ostream&, Chip const&) SYMBOL_VISIBLE;
 	};
 
-	std::map<grenade::common::ExecutionInstanceOnExecutor, ExecutionInstance> execution_instances;
+	std::map<
+	    grenade::common::ExecutionInstanceOnExecutor,
+	    std::map<grenade::vx::common::ChipOnConnection, Chip>>
+	    chips;
 
 	struct TimingStatistics
 	{

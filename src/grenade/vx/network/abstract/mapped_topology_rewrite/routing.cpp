@@ -164,8 +164,9 @@ void RoutingRewrite::operator()() const
 				auto const& partitioned_vertex = dynamic_cast<grenade::common::Population const&>(
 				    get_topology().get_reference().get(partitioned_vertex_descriptor));
 				auto const& partitioned_vertex_labels =
-				    routing_result.execution_instances
+				    routing_result.chips
 				        .at(partitioned_vertex.get_execution_instance_on_executor().value())
+				        .at(grenade::vx::common::ChipOnConnection())
 				        .external_spike_labels.at(partitioned_vertex_descriptor);
 				ExternalSourceNeuronMapping::Labels::value_type local_labels;
 				for (size_t i = 0; i < partitioned_vertex.get_shape().size(); ++i) {
@@ -195,8 +196,9 @@ void RoutingRewrite::operator()() const
 					        get_topology().get_reference().get(partitioned_vertex_descriptor));
 					assert(p == 0);
 					auto const& local_labels =
-					    routing_result.execution_instances
+					    routing_result.chips
 					        .at(partitioned_vertex.get_execution_instance_on_executor().value())
+					        .at(grenade::vx::common::ChipOnConnection())
 					        .background_spike_source_labels.at(partitioned_vertex_descriptor);
 
 					auto const& mapped_vertex =
@@ -216,8 +218,9 @@ void RoutingRewrite::operator()() const
 					        .at(0)
 					        .get_neuron_label();
 					poisson_source_neuron_mapping->masks.at(i) =
-					    routing_result.execution_instances
+					    routing_result.chips
 					        .at(partitioned_vertex.get_execution_instance_on_executor().value())
+					        .at(grenade::vx::common::ChipOnConnection())
 					        .background_spike_source_masks.at(partitioned_vertex_descriptor)
 					        .at(hemisphere);
 					p++;
@@ -254,8 +257,9 @@ void RoutingRewrite::operator()() const
 					        .get_placed_compartments();
 					for (auto const& [compartment, atomic_neurons] : placed_compartments) {
 						auto const& local_labels =
-						    routing_result.execution_instances
+						    routing_result.chips
 						        .at(partitioned_vertex.get_execution_instance_on_executor().value())
+						        .at(grenade::vx::common::ChipOnConnection())
 						        .internal_neuron_labels.at(partitioned_vertex_descriptor)
 						        .at(n)
 						        .at(compartment);
@@ -287,7 +291,7 @@ void RoutingRewrite::operator()() const
 	for (auto const& [execution_instance, partitioned_vertices] :
 	     partitioned_vertices_per_execution_instance) {
 		auto const& local_routing_result =
-		    routing_result.execution_instances.at(execution_instance);
+		    routing_result.chips.at(execution_instance).at(grenade::vx::common::ChipOnConnection());
 
 		std::optional<grenade::common::TimeDomainOnTopology> time_domain;
 
@@ -311,7 +315,7 @@ void RoutingRewrite::operator()() const
 
 					std::map<
 					    halco::hicann_dls::vx::v3::SynramOnDLS,
-					    std::vector<RoutingResult::ExecutionInstance::PlacedConnection>>
+					    std::vector<RoutingResult::Chip::PlacedConnection>>
 					    placed_connections;
 					for (size_t c = 0; auto const& conn : local_connections) {
 						for (auto const& syn : conn) {
@@ -1013,7 +1017,7 @@ void RoutingRewrite::operator()() const
 	for (auto const& [execution_instance, partitioned_vertices] :
 	     partitioned_vertices_per_execution_instance) {
 		auto const& local_routing_result =
-		    routing_result.execution_instances.at(execution_instance);
+		    routing_result.chips.at(execution_instance).at(grenade::vx::common::ChipOnConnection());
 
 		// add inter-exection-instance spike forwarding
 		for (auto const& partitioned_vertex_descriptor : partitioned_vertices) {
@@ -1136,10 +1140,11 @@ void RoutingRewrite::operator()() const
 											        channel_on_spike_recorder.value.at(0));
 
 											auto const& local_labels =
-											    routing_result.execution_instances
+											    routing_result.chips
 											        .at(population
 											                ->get_execution_instance_on_executor()
 											                .value())
+											        .at(grenade::vx::common::ChipOnConnection())
 											        .external_spike_labels.at(
 											            partitioned_vertex_descriptor);
 
@@ -1222,9 +1227,10 @@ void RoutingRewrite::operator()() const
 								    channel_on_spike_recorder.value.at(0));
 
 								auto const& local_labels =
-								    routing_result.execution_instances
+								    routing_result.chips
 								        .at(population->get_execution_instance_on_executor()
 								                .value())
+								        .at(grenade::vx::common::ChipOnConnection())
 								        .external_spike_labels.at(partitioned_vertex_descriptor)
 								        .at(channel_on_population.value.at(0));
 

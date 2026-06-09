@@ -38,7 +38,7 @@ struct RoutingBuilder
 {
 	RoutingBuilder() SYMBOL_VISIBLE;
 
-	typedef RoutingResult::ExecutionInstance Result;
+	typedef RoutingResult::Chip Result;
 
 	Result route(
 	    grenade::common::LinkedTopology const& topology,

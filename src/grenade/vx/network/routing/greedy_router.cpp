@@ -48,29 +48,34 @@ RoutingResult GreedyRouter::operator()(grenade::common::LinkedTopology const& to
 
 	std::map<
 	    grenade::common::ExecutionInstanceOnExecutor,
-	    std::vector<grenade::common::VertexOnTopology>>
-	    partitioned_vertices_per_execution_instance;
+	    std::map<
+	        grenade::vx::common::ChipOnConnection, std::vector<grenade::common::VertexOnTopology>>>
+	    partitioned_vertices_per_chip_per_execution_instance;
+
+	grenade::vx::common::ChipOnConnection dummy_chip; // TO-DO Replace this
 
 	for (auto const& vertex_descriptor : topology.get_reference().vertices()) {
 		auto const& partitioned_vertex = dynamic_cast<grenade::common::PartitionedVertex const&>(
 		    topology.get_reference().get(vertex_descriptor));
 		if (partitioned_vertex.get_time_domain()) {
-			partitioned_vertices_per_execution_instance
-			    [partitioned_vertex.get_execution_instance_on_executor().value()]
+			partitioned_vertices_per_chip_per_execution_instance
+			    [partitioned_vertex.get_execution_instance_on_executor().value()][dummy_chip]
 			        .push_back(vertex_descriptor);
 		}
 	}
 
 	hate::Timer timer;
 	RoutingResult result;
-	for (auto const& [id, partitioned_vertex_descriptors] :
-	     partitioned_vertices_per_execution_instance) {
-		auto const connection_routing_result =
-		    build_connection_routing(topology, partitioned_vertex_descriptors);
-		result.execution_instances.emplace(
-		    id, m_impl->m_builder.route(
-		            topology, partitioned_vertex_descriptors, connection_routing_result,
-		            m_impl->m_options));
+	for (auto const& [id, execution_instance_vertex_descriptors] :
+	     partitioned_vertices_per_chip_per_execution_instance) {
+		for (auto const& [chip, chip_vertex_descriptors] : execution_instance_vertex_descriptors) {
+			auto const connection_routing_result =
+			    build_connection_routing(topology, chip_vertex_descriptors);
+			result.chips[id].emplace(
+			    chip, m_impl->m_builder.route(
+			              topology, chip_vertex_descriptors, connection_routing_result,
+			              m_impl->m_options));
+		}
 	}
 	result.timing_statistics.routing += std::chrono::microseconds(timer.get_us());
 	return result;

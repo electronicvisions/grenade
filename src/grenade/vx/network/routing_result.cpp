@@ -7,15 +7,13 @@
 namespace grenade::vx::network {
 
 std::ostream& operator<<(
-    std::ostream& os,
-    grenade::vx::network::RoutingResult::ExecutionInstance::PlacedConnection const& connection)
+    std::ostream& os, grenade::vx::network::RoutingResult::Chip::PlacedConnection const& connection)
 {
 	os << connection.label << " " << connection.synapse_row << " " << connection.synapse_on_row;
 	return os;
 }
 
-std::ostream& operator<<(
-    std::ostream& os, grenade::vx::network::RoutingResult::ExecutionInstance const& result)
+std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult::Chip const& result)
 {
 	os << "Connections:\n";
 	for (auto const& [descriptor, projection] : result.connections) {
@@ -92,8 +90,10 @@ std::ostream& operator<<(
 std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult const& result)
 {
 	os << "RoutingResult(\n";
-	for (auto const& [id, execution_instance] : result.execution_instances) {
-		os << id << ": " << execution_instance << "\n";
+	for (auto const& [id, execution_instance_result] : result.chips) {
+		for (auto const& [chip, chip_result] : execution_instance_result) {
+			os << id << ", " << chip << ": " << chip_result << "\n";
+		}
 	}
 	os << ")";
 	return os;
