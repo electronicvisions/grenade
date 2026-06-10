@@ -58,6 +58,20 @@ void ExecutionInstanceTopologyRewrite::operator()() const
 		disjoint_vertex_sets.make_set(vertex_descriptor);
 	}
 
+	// merge IDs of vertices on strongly connected component
+	std::map<size_t, std::set<VertexOnTopology>> strongly_connected_components;
+	for (auto const& [vertex_descriptor, color] : strongly_connected_component_coloring) {
+		strongly_connected_components[color].insert(vertex_descriptor);
+	}
+	for (auto const& [_, vertex_descriptors] : strongly_connected_components) {
+		for (auto const& vertex_descriptor : vertex_descriptors) {
+			if (vertex_descriptor == *vertex_descriptors.begin()) {
+				continue;
+			}
+			disjoint_vertex_sets.union_set(*vertex_descriptors.begin(), vertex_descriptor);
+		}
+	}
+
 	// merge IDs of vertices connected by edges which don't support execution instance transition.
 	for (auto const edge_descriptor : get_topology().edges()) {
 		auto const& edge = get_topology().get(edge_descriptor);
