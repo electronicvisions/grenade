@@ -189,9 +189,8 @@ void PopulationTopologyRewrite::operator()() const
 				    dynamic_cast<Population const&>(get_topology().get(new_vertex_descriptor));
 				auto const new_output_ports = new_vertex.get_output_ports();
 				auto const channels_on_source =
-				    new_output_ports.at(out_edge.port_on_source)
-				        .get_channels()
-				        .subset_restriction(out_edge.get_channels_on_source());
+				    out_edge.get_channels_on_source().subset_restriction(
+				        new_output_ports.at(out_edge.port_on_source).get_channels());
 				assert(channels_on_source);
 				if (channels_on_source->size() == 0) {
 					continue;
