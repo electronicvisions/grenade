@@ -1082,87 +1082,71 @@ NumberTopBottom PlacementAlgorithmRuleset::place_chain(
 	return resources_placed;
 }
 
-NumberTopBottom PlacementAlgorithmRuleset::place_branch(
+NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
     CoordinateSystem& coordinates,
     Neuron const& neuron,
     ResourceManager const& resources,
-    CompartmentOnNeuron const& search_start,
-    std::vector<CompartmentOnNeuron> const& branch)
+    CompartmentOnNeuron const& compartment,
+    CompartmentOnNeuron const& parent)
 {
 	LOG4CXX_DEBUG(m_logger, "Placing Branch");
 
 	NumberTopBottom total_resources;
 
-	for (auto const& compartment : branch) {
-		if (std::set<CompartmentOnNeuron>(
-		        m_placed_compartments.begin(), m_placed_compartments.end())
-		        .contains(compartment)) {
-			continue;
+	if (std::set<CompartmentOnNeuron>(m_placed_compartments.begin(), m_placed_compartments.end())
+	        .contains(compartment)) {
+		throw std::runtime_error("Comaprtment already placed.");
+	}
+
+	auto neighbours_unplaced = unplaced_neighbours(neuron, compartment);
+	auto neighbours_classified = neuron.classify_neighbours(compartment, neighbours_unplaced);
+
+	// Place bridge if required
+	// In a branch if a compartment has any leaf neighbours it is placed as a bridge structure
+	// with the leaf inside. This is not space efficient but allows the placed compartment to be
+	// connectable in all directions, independent of the leaf.
+	// The additional condition of having at least two neigbours in total is to limit the
+	// placement of bridges to cases where not just a single leaf is connected.
+	// For a branch the second condition is true for all compartments but the leafs.
+	if (neighbours_classified.leafs.size() > 0 && neighbours_classified.total() > 1) {
+		CoordinateSystem dummy_coordinates;
+		NumberTopBottom required_space = place_bridge(
+		    dummy_coordinates, neuron, resources,
+		    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), compartment, 1, true);
+
+		PlacementSpot next_spot = select_free_spot(
+		    find_free_spots(coordinates, parent), required_space, true, false, true);
+
+		total_resources += place_bridge(
+		    coordinates, neuron, resources, next_spot.get_free_block_space().first, compartment,
+		    next_spot.direction);
+	}
+	// Simple placement
+	else {
+		CoordinateSystem dummy_coordinates;
+		bool search_block = false;
+		NumberTopBottom required_space = place_simple(
+		    dummy_coordinates, neuron, resources,
+		    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), 0, compartment, 1, true);
+
+		if (required_space.number_top != 0 && required_space.number_bottom != 0) {
+			search_block = true;
 		}
 
-		auto neighbours_unplaced = unplaced_neighbours(neuron, compartment);
-		auto neighbours_classified = neuron.classify_neighbours(compartment, neighbours_unplaced);
+		PlacementSpot next_spot = select_free_spot(
+		    find_free_spots(coordinates, parent), required_space, true, false, search_block);
 
-		// Place bridge if required
-		// In a branch if a compartment has any leaf neighbours it is placed as a bridge structure
-		// with the leaf inside. This is not space efficient but allows the placed compartment to be
-		// connectable in all directions, independent of the leaf.
-		// The additional condition of having at least two neigbours in total is to limit the
-		// placement of bridges to cases where not just a single leaf is connected.
-		// For a branch the second condition is true for all compartments but the leafs.
-		if (neighbours_classified.leafs.size() > 0 && neighbours_classified.total() > 1) {
-			CoordinateSystem dummy_coordinates;
-			NumberTopBottom required_space = place_bridge(
-			    dummy_coordinates, neuron, resources,
-			    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), compartment, 1, true);
-
-			PlacementSpot next_spot = select_free_spot(
-			    find_free_spots(coordinates, search_start), required_space, true, false, true);
-
-			total_resources += place_bridge(
-			    coordinates, neuron, resources, next_spot.get_free_block_space().first, compartment,
+		if (search_block) {
+			total_resources += place_simple(
+			    coordinates, neuron, resources, next_spot.get_free_block_space().first, next_spot.y,
+			    compartment, next_spot.direction);
+		} else {
+			total_resources += place_simple(
+			    coordinates, neuron, resources, next_spot.x, next_spot.y, compartment,
 			    next_spot.direction);
 		}
-		// Simple placement
-		else {
-			CoordinateSystem dummy_coordinates;
-			bool search_block = false;
-			NumberTopBottom required_space = place_simple(
-			    dummy_coordinates, neuron, resources,
-			    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), 0, compartment, 1,
-			    true);
-
-			if (required_space.number_top != 0 && required_space.number_bottom != 0) {
-				search_block = true;
-			}
-
-			PlacementSpot next_spot = select_free_spot(
-			    find_free_spots(coordinates, search_start), required_space, true, false,
-			    search_block);
-
-			if (search_block) {
-				total_resources += place_simple(
-				    coordinates, neuron, resources, next_spot.get_free_block_space().first,
-				    next_spot.y, compartment, next_spot.direction);
-			} else {
-				total_resources += place_simple(
-				    coordinates, neuron, resources, next_spot.x, next_spot.y, compartment,
-				    next_spot.direction);
-			}
-		}
-		output_placed(coordinates, compartment);
-
-		// Check if from the compartment on the branch another branching happens.
-		// This is only necessary if the ordering in branch is suboptimal/instable which seems
-		// to be the case.
-		neighbours_unplaced = unplaced_neighbours(neuron, compartment);
-		for (auto const& sub_branch_compartment : neighbours_unplaced) {
-			auto sub_branch = neuron.branch_compartments(sub_branch_compartment, compartment);
-			total_resources +=
-			    place_branch(coordinates, neuron, resources, compartment, sub_branch);
-			continue;
-		}
 	}
+	output_placed(coordinates, compartment);
 
 	return total_resources;
 }
@@ -1567,10 +1551,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		else if (neighbours_classified.chains.size() > 0) {
 			next_compartment = neighbours_classified.chains.front();
 			LOG4CXX_DEBUG(m_logger, "Next Compartment to place (Chain): " << next_compartment);
-
 			std::vector<CompartmentOnNeuron> chain =
 			    neuron.branch_compartments(next_compartment, last_compartment);
-
 			// Virtually place chain to determine required space.
 			bool search_block = false;
 			NumberTopBottom required_space = place_chain(
@@ -1611,12 +1593,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 
 			LOG4CXX_DEBUG(m_logger, "Next Compartment to place (Branch): " << next_compartment);
 
-			std::vector<CompartmentOnNeuron> branch_compartments =
-			    neuron.branch_compartments(next_compartment, last_compartment);
-
-
-			place_branch(
-			    result.coordinate_system, neuron, resources, last_compartment, branch_compartments);
+			place_branching_compartment(
+			    result.coordinate_system, neuron, resources, next_compartment, last_compartment);
 
 		}
 		// Else throw error (no unplaced neighbours)

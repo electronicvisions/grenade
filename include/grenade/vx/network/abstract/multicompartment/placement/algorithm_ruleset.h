@@ -274,20 +274,21 @@ private:
 	    bool virtually = false);
 
 	/**
-	 * Place a branch of compartments. This can include simple placements and bridge placements.
+	 * Place a single compartment from which the morphology branches.
+	 *
 	 * @param coordinates Current configuration. (Or empty for virtual placement)
 	 * @param neuron Neuron to be placed.
 	 * @param resources Resources required by compartments of neuron.
-	 * @param search_start Adjacent compartment from where on free space is searched.
-	 * @param branch List of compartments which should be placed. The compartments have to form
-	 * a branch for the algorithm to work
+	 * @param compartment Compartment which should be placed.
+	 * @param parent Adjacent compartment which has already been placed and from
+	 *               which a connection to `compartment` is established.
 	 */
-	NumberTopBottom place_branch(
+	NumberTopBottom place_branching_compartment(
 	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    CompartmentOnNeuron const& search_start,
-	    std::vector<CompartmentOnNeuron> const& branch);
+	    CompartmentOnNeuron const& compartment,
+	    CompartmentOnNeuron const& parent);
 
 	/**
 	 * Connect all neuron circuits belonging to one compartment directly.
