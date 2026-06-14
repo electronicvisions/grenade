@@ -477,16 +477,10 @@ void CoordinateSystem::connect_shared(size_t x_source, size_t x_target, size_t y
 	// Set shared line
 	if (x_source < x_target) {
 		for (size_t x = x_source; x < x_target; x++) {
-			if (coordinate_system[y][x].switch_shared_right) {
-				throw std::logic_error("Shared line already used. Can not use to connect.");
-			}
 			coordinate_system[y][x].switch_shared_right = true;
 		}
 	} else {
 		for (size_t x = x_target; x < x_source; x++) {
-			if (coordinate_system[y][x].switch_shared_right) {
-				throw std::logic_error("Shared line already used. Can not use to connect.");
-			}
 			coordinate_system[y][x].switch_shared_right = true;
 		}
 	}

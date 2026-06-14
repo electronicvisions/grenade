@@ -88,34 +88,57 @@ private:
 	 * @param coordiantes Current configuration.
 	 * @param x_start Column to start search at.
 	 * @param y Row to search in.
+	 * @param neighbours Neighbours of the compartment from which a connection is
+	 *                   searched.
 	 * @param direction Direction to search in.
+	 * @param search_block If a block should be searched, i.e. only spots where the
+	 *                     top and bottom are free are returned.
 	 */
 	std::vector<PlacementSpot> find_free_spots(
-	    CoordinateSystem const& coordinates, size_t x_start, size_t y, int direction = 1);
+	    CoordinateSystem const& coordinates,
+	    size_t x_start,
+	    size_t y,
+	    std::set<CompartmentOnNeuron> const& neighbours,
+	    int direction = 1,
+	    bool search_block = false);
 
 	/**
 	 * Finds all free spots next to a placed compartment.
 	 * @param coordiantes Current configuration.
 	 * @param compartment Compartment to search free spots next to.
+	 * @param neighbours Neighbours of `compartment`.
+	 * @param search_block If a block should be searched, i.e. only spots where the
+	 *                     top and bottom are free are returned.
 	 */
 	std::vector<PlacementSpot> find_free_spots(
-	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment);
+	    CoordinateSystem const& coordinates,
+	    CompartmentOnNeuron const& compartment,
+	    std::set<CompartmentOnNeuron> const& neighbours,
+	    bool search_block = false);
 
 
 	/**
 	 * Select a sufficiently large free spot.
+	 *
+	 * First, spots which are too small are disregarded.
+	 * We first order spots based on the y coordinate. Here, we count
+	 * the number of connections of the parent compartment to the shared line and
+	 * prefer the row in which more connections are placed. This aims to only
+	 * block one shared line (for later placements) if possible.
+	 * On equal number of connections to the shared line, we order the spots by
+	 * distance to the parent compartment (we prefer shorter distances) and next
+	 * by the available space (we prefer bigger spaces).
 	 * @param spots Free spots.
 	 * @param min_spot_size Spot size required.
-	 * @param closest Prioritize closer spots.
-	 * @param largest Prioritize larger spots.
-	 * @param block Only consider rectangluar spots.
+	 * @param coordinates Current state of the coordinate system.
+	 * @param parent_compartment Parent of the compartment for which a free spot
+	 * 		                     is selected.
 	 */
 	PlacementSpot select_free_spot(
 	    std::vector<PlacementSpot> spots,
 	    NumberTopBottom const& min_spot_size,
-	    bool closest = true,
-	    bool largest = false,
-	    bool block = false);
+	    CoordinateSystem& coordinates,
+	    CompartmentOnNeuron const& parent_compartment);
 
 	/**
 	 * Determine unplaced neighbours
@@ -180,97 +203,20 @@ private:
 	    bool virtually = false);
 
 	/**
-	 * Place a bridge like structure which can interconnect a large number of compartments.
-	 *
-	 * At the given x-coordinate neuron circuits are assigned in the top row.
-	 * At the left-most and right-most circuits neuron circuits in the bottom
-	 * row are also assigned. This resembles a bridge like structure. For example:
-	 *
-	 * top    x-x-x-x-x-x
-	 * bottom x         x
-	 * @param coordinates Current configuration. (Or empty for virutal placement)
-	 * @param neuron Neuron to be placed.
-	 * @param resources Required resources by compartments of neuron.
-	 * @param x_start Column to start placement from.
-	 * @param compartment Compartment to be placed as a bridge.
-	 * @param direction Direction of placement.
-	 * @param virtually Dummy placement to determine required spot size.
-	 * @return Number of allocated neuron circuits.
-	 */
-	NumberTopBottom place_bridge(
-	    CoordinateSystem& coordinates,
-	    Neuron const& neuron,
-	    ResourceManager const& resources,
-	    size_t x_start,
-	    CompartmentOnNeuron const& compartment,
-	    int direction = 1,
-	    bool virtually = false);
-
-	/**
-	 * Place a bridge structure to the right. See place_bridge for more information.
-	 */
-	NumberTopBottom place_bridge_right(
-	    CoordinateSystem& coordinates,
-	    Neuron const& neuron,
-	    ResourceManager const& resources,
-	    size_t x_start,
-	    CompartmentOnNeuron const& compartment,
-	    bool virtually = false);
-
-	/**
-	 * Place a bridge structure to the left. See place_bridge for more information.
-	 */
-	NumberTopBottom place_bridge_left(
-	    CoordinateSystem& coordinates,
-	    Neuron const& neuron,
-	    ResourceManager const& resources,
-	    size_t x_start,
-	    CompartmentOnNeuron const& compartment,
-	    bool virtually = false);
-
-
-	/**
-	 * Place multiple leafs.
-	 * @param coordinates Current configuration. (Or empty for virutal placement)
-	 * @param neuron Neuron to be placed.
-	 * @param resources Resources required by comaprtment of neuron.
-	 * @param x Column to start placement.
-	 * @param y Row to start placement.
-	 * @param compartment Compartment whichs leafs are placed.
-	 * @param leafs List of leaf compartments.
-	 * @param direction Direction of placement.
-	 * @param virtually Dummy placement to determine required spot size.
-	 */
-	NumberTopBottom place_leafs(
-	    CoordinateSystem& coordinates,
-	    Neuron const& neuron,
-	    ResourceManager const& resources,
-	    size_t x,
-	    size_t y,
-	    CompartmentOnNeuron compartment,
-	    std::vector<CompartmentOnNeuron> const& leafs,
-	    int direction = 1,
-	    bool virtually = false);
-
-	/**
 	 * Place multiple compartment that are connected as a chain.
 	 * @param coordinates Current configuration. (Or empty for virtual placement)
 	 * @param neuron Neuron to be placed.
 	 * @param resources Resources required by compartments of neuron.
-	 * @param x Column to start placement from.
-	 * @param y Row to start placement from.
+	 * @param spot Spot where the chain should be placed.
 	 * @param chain List of chain compartments.
-	 * @param direction Direction of placement.
 	 * @param virtually Dummy placement to determine required spot size.
 	 */
 	NumberTopBottom place_chain(
 	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    size_t x,
-	    size_t y,
+	    PlacementSpot const& spot,
 	    std::vector<CompartmentOnNeuron> const& chain,
-	    int direction = 1,
 	    bool virtually = false);
 
 	/**
@@ -298,39 +244,6 @@ private:
 	void connect_self(CoordinateSystem& coordinates, CompartmentOnNeuron const& compartment);
 
 	/**
-	 * Connect two compartments that are directly adjacent.
-	 * @param coordinates Current configuration.
-	 * @param neuron Neuron to be placed.
-	 * @param compartment_a One compartment to be connected.
-	 * @param compartment_b Other compartment to be connected.
-	 */
-	void connect_adjacent(
-	    CoordinateSystem& coordinates,
-	    Neuron const& neuron,
-	    CompartmentOnNeuron const& compartment_a,
-	    CompartmentOnNeuron const& compartment_b);
-
-	/**
-	 * Connect two compartment that are not directly adjacent.
-	 * @param coordinates Current configuration.
-	 * @param neuron Neuron to be placed.
-	 * @param compartment_a One compartment to be connected.
-	 * @param comaprmtent_b Other compartment to be connected.
-	 */
-	void connect_distant(
-	    CoordinateSystem& coordinates,
-	    Neuron const& neuron,
-	    CompartmentOnNeuron const& compartment_a,
-	    CompartmentOnNeuron const& compartment_b);
-
-	/**
-	 * Connect all compartments placed in this step to all placed neighbours.
-	 * @param coordinates Current configuration.
-	 * @param neuron Neuron to be placed.
-	 */
-	void connect_placed(CoordinateSystem& coordinates, Neuron const& neuron);
-
-	/**
 	 * Logs information about latest placement.
 	 * @param coordinates Current configuration.
 	 * @param compartment Compartment to log placement information about.
@@ -338,22 +251,8 @@ private:
 	void output_placed(
 	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
 
-	/**
-	 * Helper function for trying to connect and catching the error. This makes a runtime error out
-	 * of a logic error raised by the coordinate system. The error type is important for automatic
-	 * placement testing, as only runtime errors are caught.
-	 * @param coordinates Coordiante system to place the connection on.
-	 * @param x_first First circuits x-coordinate.
-	 * @param x_second Second circuits x-coordiante.
-	 *@param y Y-Coordinate for connection.
-	 */
-	void try_connect_shared(CoordinateSystem& coordiantes, size_t x_left, size_t x_right, size_t y);
-
-
 	// List of IDs of placed compartments
 	std::vector<CompartmentOnNeuron> m_placed_compartments;
-	// Set of fully connected compartments
-	std::set<std::pair<CompartmentOnNeuron, CompartmentOnNeuron>> m_placed_connections;
 	// Results
 	std::vector<AlgorithmResult> m_results;
 

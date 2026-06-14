@@ -30,12 +30,17 @@ std::pair<size_t, NumberTopBottom> PlacementSpot::get_free_block_space() const
 	return std::make_pair(x_block, NumberTopBottom(2 * x_range, x_range, x_range));
 }
 
+size_t PlacementSpot::distance() const
+{
+	return std::max(x_parent, x) - std::min(x_parent, x);
+}
+
 std::ostream& operator<<(std::ostream& os, PlacementSpot const& spot)
 {
 	return os << "PlacementSpot: "
-	          << "\n[x= " << spot.x << ", y= " << spot.y << ", dir= " << spot.direction
-	          << ", found_opposite= " << spot.found_opposite << ", x_opposite= " << spot.x_opposite
-	          << "]\n"
+	          << "\n[x_parent= " << spot.x_parent << ", x= " << spot.x << ", y= " << spot.y
+	          << ", dir= " << spot.direction << ", found_opposite= " << spot.found_opposite
+	          << ", x_opposite= " << spot.x_opposite << "]\n"
 	          << spot.free_space << "\n";
 }
 
