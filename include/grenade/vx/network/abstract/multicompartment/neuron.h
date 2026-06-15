@@ -210,7 +210,18 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 * @return Pair of iterators to begin and end of adjacent compartments.
 	 */
 	boost::iterator_range<AdjacencyIterator> adjacent_compartments(
-	    CompartmentOnNeuron const& descriptor) const;
+	    CompartmentOnNeuron const& descriptor) const GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		parent.def(
+		    "adjacent_compartments",
+		    [](GENPYBIND_PARENT_TYPE const& self,
+		       grenade::vx::network::abstract::CompartmentOnNeuron const& descriptor) {
+			    auto const iterators = self.adjacent_compartments(descriptor);
+			    return std::vector<grenade::vx::network::abstract::CompartmentOnNeuron>(
+			        iterators.begin(), iterators.end());
+		    });
+	})
 
 	/**
 	 * Return mapping of compartments between this and other neuron.
