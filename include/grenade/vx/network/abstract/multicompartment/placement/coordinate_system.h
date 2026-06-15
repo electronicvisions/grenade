@@ -25,6 +25,17 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	bool connected(size_t x, size_t y) const;
 
 	/**
+	 * Check if the given neuron circuit is connected to the shared line.
+	 * Either directly or via the resistor. Here, we only consider
+	 * connections starting from the neuron circuit at (x, y). I.e. we do
+	 * not consider connections form (x+1, y) even if the two neuron
+	 * circuits are connected to each other.
+	 * @param x x coordinate of the neuron circuit.
+	 * @param y y coordinate of the neuron circuit.
+	 */
+	bool connected_to_shared_line(size_t x, size_t y) const;
+
+	/**
 	 * Check if neuron circuit is connected to its left neighbor circuit via conductance.
 	 * @param x x coordinate of the neuron circuit.
 	 * @param y y coordinate of the neuron circuit.

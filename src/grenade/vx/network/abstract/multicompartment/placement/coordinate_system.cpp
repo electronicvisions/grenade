@@ -72,6 +72,13 @@ bool CoordinateSystem::connected(size_t x, size_t y) const
 	    (connected_shared_conductance(x, y).size() != 0));
 }
 
+// Checks for connection to shared line
+bool CoordinateSystem::connected_to_shared_line(size_t x, size_t y) const
+{
+	return (
+	    coordinate_system[y][x].switch_circuit_shared ||
+	    coordinate_system[y][x].switch_circuit_shared_conductance);
+}
 
 bool CoordinateSystem::connected_right_shared(size_t x, size_t y) const
 {
