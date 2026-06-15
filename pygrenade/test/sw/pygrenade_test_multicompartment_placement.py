@@ -916,128 +916,27 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             set(dictionary.keys()))
 
     def test_purkinje(self):
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment()
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
-        compartment_b_on_neuron = neuron.add_compartment(compartment)
-        compartment_c_on_neuron = neuron.add_compartment(compartment)
-        compartment_d_on_neuron = neuron.add_compartment(compartment)
-        compartment_e_on_neuron = neuron.add_compartment(compartment)
-        compartment_f_on_neuron = neuron.add_compartment(compartment)
-        compartment_g_on_neuron = neuron.add_compartment(compartment)
-        compartment_h_on_neuron = neuron.add_compartment(compartment)
-        compartment_i_on_neuron = neuron.add_compartment(compartment)
-        compartment_j_on_neuron = neuron.add_compartment(compartment)
-        compartment_k_on_neuron = neuron.add_compartment(compartment)
-        compartment_l_on_neuron = neuron.add_compartment(compartment)
-        compartment_m_on_neuron = neuron.add_compartment(compartment)
-        compartment_n_on_neuron = neuron.add_compartment(compartment)
-        compartment_o_on_neuron = neuron.add_compartment(compartment)
-        compartment_p_on_neuron = neuron.add_compartment(compartment)
-        compartment_q_on_neuron = neuron.add_compartment(compartment)
-        compartment_r_on_neuron = neuron.add_compartment(compartment)
-        compartment_s_on_neuron = neuron.add_compartment(compartment)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space,
-            compartment_b_on_neuron: parameter_space,
-            compartment_c_on_neuron: parameter_space,
-            compartment_d_on_neuron: parameter_space,
-            compartment_e_on_neuron: parameter_space,
-            compartment_f_on_neuron: parameter_space,
-            compartment_g_on_neuron: parameter_space,
-            compartment_h_on_neuron: parameter_space,
-            compartment_i_on_neuron: parameter_space,
-            compartment_j_on_neuron: parameter_space,
-            compartment_k_on_neuron: parameter_space,
-            compartment_l_on_neuron: parameter_space,
-            compartment_m_on_neuron: parameter_space,
-            compartment_n_on_neuron: parameter_space,
-            compartment_o_on_neuron: parameter_space,
-            compartment_p_on_neuron: parameter_space,
-            compartment_q_on_neuron: parameter_space,
-            compartment_r_on_neuron: parameter_space,
-            compartment_s_on_neuron: parameter_space}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
-
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_b_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_c_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_d_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_d_on_neuron,
-            compartment_e_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_e_on_neuron,
-            compartment_f_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_e_on_neuron,
-            compartment_g_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_d_on_neuron,
-            compartment_h_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_h_on_neuron,
-            compartment_i_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_i_on_neuron,
-            compartment_j_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_j_on_neuron,
-            compartment_k_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_j_on_neuron,
-            compartment_l_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_h_on_neuron,
-            compartment_m_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_m_on_neuron,
-            compartment_n_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_m_on_neuron,
-            compartment_o_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_o_on_neuron,
-            compartment_p_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_o_on_neuron,
-            compartment_q_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_q_on_neuron,
-            compartment_r_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_q_on_neuron,
-            compartment_s_on_neuron,
-            grenade.CompartmentConnectionConductance())
+        # compartments are numbered from left to right in a depth first
+        # fashion
+        connections = [(0, 1),
+                       (1, 2),
+                       (2, 3),
+                       (3, 4),
+                       (4, 5),
+                       (5, 6),
+                       (5, 7),
+                       (3, 8),
+                       (8, 9),
+                       (9, 10),
+                       (10, 11),
+                       (10, 12),
+                       (9, 13),
+                       (8, 14),
+                       (2, 15),
+                       (15, 16),
+                       (15, 17),
+                       (1, 18)]
+        neuron, resources = neuron_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm.run(
