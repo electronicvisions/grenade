@@ -169,7 +169,7 @@ private:
 	NumberTopBottom place_simple(
 	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
-	    ResourceManager const& resources,
+	    NumberTopBottom required_resources,
 	    size_t x_start,
 	    size_t y,
 	    CompartmentOnNeuron const& compartment,
@@ -183,7 +183,7 @@ private:
 	NumberTopBottom place_simple_right(
 	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
-	    ResourceManager const& resources,
+	    NumberTopBottom required_resources,
 	    size_t x_start,
 	    size_t y,
 	    CompartmentOnNeuron const& compartment,
@@ -196,7 +196,7 @@ private:
 	NumberTopBottom place_simple_left(
 	    CoordinateSystem& coordinates,
 	    Neuron const& neuron,
-	    ResourceManager const& resources,
+	    NumberTopBottom required_resources,
 	    size_t x_start,
 	    size_t y,
 	    CompartmentOnNeuron const& compartment,

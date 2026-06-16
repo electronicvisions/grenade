@@ -412,7 +412,7 @@ std::set<CompartmentOnNeuron> PlacementAlgorithmRuleset::unplaced_neighbours(
 NumberTopBottom PlacementAlgorithmRuleset::place_simple(
     CoordinateSystem& coordinates,
     Neuron const& neuron,
-    ResourceManager const& resources,
+    NumberTopBottom required_resources,
     size_t x_start,
     size_t y,
     CompartmentOnNeuron const& compartment,
@@ -421,10 +421,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple(
 {
 	if (direction == 1) {
 		return place_simple_right(
-		    coordinates, neuron, resources, x_start, y, compartment, virtually);
+		    coordinates, neuron, required_resources, x_start, y, compartment, virtually);
 	} else if (direction == -1) {
 		return place_simple_left(
-		    coordinates, neuron, resources, x_start, y, compartment, virtually);
+		    coordinates, neuron, required_resources, x_start, y, compartment, virtually);
 	} else {
 		throw std::invalid_argument("Invalid direction.");
 	}
@@ -433,7 +433,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple(
 NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
     CoordinateSystem& coordinates,
     Neuron const& neuron,
-    ResourceManager const& resources,
+    NumberTopBottom required_resources,
     size_t x_start,
     size_t y,
     CompartmentOnNeuron const& compartment,
@@ -447,7 +447,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	LOG4CXX_TRACE(m_logger, "Virtual placement: " << virtually);
 	LOG4CXX_DEBUG(m_logger, "Placing right: " << compartment << " at " << x_start << "," << y);
 
-	NumberTopBottom required_resources = resources.get_config(compartment);
 	NumberTopBottom placed_resources;
 
 	// If not leaf increase size
@@ -537,7 +536,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
     CoordinateSystem& coordinates,
     Neuron const& neuron,
-    ResourceManager const& resources,
+    NumberTopBottom required_resources,
     size_t x_start,
     size_t y,
     CompartmentOnNeuron const& compartment,
@@ -551,7 +550,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	LOG4CXX_TRACE(m_logger, "Virtual placement: " << virtually);
 	LOG4CXX_DEBUG(m_logger, "Placing left: " << compartment << " at " << x_start << "," << y);
 
-	NumberTopBottom required_resources = resources.get_config(compartment);
 	NumberTopBottom placed_resources;
 
 	// If not leaf increase size
@@ -661,7 +659,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_chain(
 	for (auto compartment : chain) {
 		if (spot.direction == 1) {
 			NumberTopBottom resources_compartment = place_simple_right(
-			    coordinates_copy, neuron, resources, x_temp, spot.y, compartment, virtually);
+			    coordinates_copy, neuron, resources.get_config(compartment), x_temp, spot.y,
+			    compartment, virtually);
 			coordinates_copy.connect_shared(x_parent, x_temp, spot.y);
 			if (spot.y == 0) {
 				x_parent = x_temp + resources_compartment.number_top - 1;
@@ -674,7 +673,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_chain(
 			resources_placed += resources_compartment;
 		} else if (spot.direction == -1) {
 			NumberTopBottom resources_compartment = place_simple_left(
-			    coordinates_copy, neuron, resources, x_temp, spot.y, compartment, virtually);
+			    coordinates_copy, neuron, resources.get_config(compartment), x_temp, spot.y,
+			    compartment, virtually);
 			coordinates_copy.connect_shared(x_parent, x_temp, spot.y);
 			if (spot.y == 0) {
 				x_parent = x_temp - resources_compartment.number_top + 1;
@@ -717,7 +717,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 	CoordinateSystem dummy_coordinates;
 	bool search_block = false;
 	NumberTopBottom required_space = place_simple(
-	    dummy_coordinates, neuron, resources,
+	    dummy_coordinates, neuron, resources.get_config(compartment),
 	    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), 0, compartment, 1, true);
 
 	if (required_space.number_top != 0 && required_space.number_bottom != 0) {
@@ -734,7 +734,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 	    parent);
 
 	total_resources += place_simple(
-	    coordinates, neuron, resources, next_spot.x, next_spot.y, compartment, next_spot.direction);
+	    coordinates, neuron, resources.get_config(compartment), next_spot.x, next_spot.y,
+	    compartment, next_spot.direction);
 	coordinates.connect_shared(next_spot.x_parent, next_spot.x, next_spot.y);
 	output_placed(coordinates, compartment);
 
@@ -788,7 +789,7 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		CompartmentNeighbours neighbours_classified = neuron.classify_neighbours(compartment_first);
 
 		place_simple_right(
-		    result.coordinate_system, neuron, resources,
+		    result.coordinate_system, neuron, resources.get_config(compartment_first),
 		    size_t(result.coordinate_system.coordinate_system.at(0).size() / 2), 0,
 		    compartment_first);
 
@@ -845,8 +846,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 			CoordinateSystem coordinate_dummy;
 			bool search_block = false;
 			NumberTopBottom required_space = place_simple(
-			    coordinate_dummy, neuron, resources, size_t(coordinate_dummy[0].size() / 2), 0,
-			    next_compartment, 1, true);
+			    coordinate_dummy, neuron, resources.get_config(next_compartment),
+			    size_t(coordinate_dummy[0].size() / 2), 0, next_compartment, 1, true);
 
 			if (required_space.number_top != 0 && required_space.number_bottom != 0) {
 				search_block = true;
@@ -858,8 +859,8 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 			    required_space, result.coordinate_system, last_compartment);
 
 			place_simple(
-			    result.coordinate_system, neuron, resources, next_spot.x, next_spot.y,
-			    next_compartment, next_spot.direction);
+			    result.coordinate_system, neuron, resources.get_config(next_compartment),
+			    next_spot.x, next_spot.y, next_compartment, next_spot.direction);
 			result.coordinate_system.connect_shared(next_spot.x_parent, next_spot.x, next_spot.y);
 
 		}
