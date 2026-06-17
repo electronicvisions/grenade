@@ -33,14 +33,6 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmRuleset : public Plac
 	PlacementAlgorithmRuleset();
 
 	/**
-	 * Constructs Placement-Algorithm with specified placement pattern.
-	 * For depth_search_first enabled the neuron is placed in depth first starting from the
-	 * largest compartment. Elsewise the neuron is placed in breadth first.
-	 * @param depth_search_first Wether the neuron should be placed in depth first.
-	 */
-	PlacementAlgorithmRuleset(bool depth_search_first);
-
-	/**
 	 * Executes placement algorithm.
 	 * @param coordinate_system Initial state of coordinate system.
 	 * @param neuron Target neuron to be placed.
@@ -366,9 +358,6 @@ private:
 
 
 	log4cxx::LoggerPtr m_logger;
-
-	// Wether algorithm should search first in breadth or depth.
-	bool m_depth_search_first = false;
 };
 
 } // namespace abstract

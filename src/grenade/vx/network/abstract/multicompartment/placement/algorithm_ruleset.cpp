@@ -9,12 +9,6 @@ PlacementAlgorithmRuleset::PlacementAlgorithmRuleset() :
 {
 }
 
-PlacementAlgorithmRuleset::PlacementAlgorithmRuleset(bool depth_search_first) :
-    m_logger(log4cxx::Logger::getLogger("grenade.MC.Placement.Ruleset")),
-    m_depth_search_first(depth_search_first)
-{
-}
-
 AlgorithmResult PlacementAlgorithmRuleset::run(
     CoordinateSystem const&, Neuron const& neuron, ResourceManager const& resources)
 {
@@ -1503,31 +1497,18 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		// Set of unplaced neighbours of last compartment
 		std::set<CompartmentOnNeuron> neighbours_unplaced;
 
-		// Iterate over placed compartments to find next compartment to place
-		if (m_depth_search_first) {
-			for (std::vector<CompartmentOnNeuron>::reverse_iterator it =
-			         m_placed_compartments.rbegin();
-			     it != m_placed_compartments.rend(); it++) {
-				last_compartment = *it;
-				neighbours_unplaced = unplaced_neighbours(neuron, *it);
+		// Find next compartment to place
+		for (std::vector<CompartmentOnNeuron>::reverse_iterator it = m_placed_compartments.rbegin();
+		     it != m_placed_compartments.rend(); it++) {
+			last_compartment = *it;
+			neighbours_unplaced = unplaced_neighbours(neuron, *it);
 
-				// If unplaced neighbours take this compartment.
-				if (neighbours_unplaced.size() > 0) {
-					break;
-				}
+			// If unplaced neighbours take this compartment.
+			if (neighbours_unplaced.size() > 0) {
+				break;
 			}
 		}
-		// Else do breadth-first-placement by default
-		else {
-			for (auto placed_compartment : m_placed_compartments) {
-				last_compartment = placed_compartment;
-				neighbours_unplaced = unplaced_neighbours(neuron, placed_compartment);
 
-				if (neighbours_unplaced.size() > 0) {
-					break;
-				}
-			}
-		}
 		if (neighbours_unplaced.empty()) {
 			throw std::logic_error("No unplaced compartments left.");
 		}
