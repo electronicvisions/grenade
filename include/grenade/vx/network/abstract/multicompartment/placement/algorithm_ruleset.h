@@ -203,21 +203,15 @@ private:
 	    bool virtually = false);
 
 	/**
-	 * Place multiple compartment that are connected as a chain.
-	 * @param coordinates Current configuration. (Or empty for virtual placement)
+	 * Determine how many resources placing the given chain requires.
 	 * @param neuron Neuron to be placed.
 	 * @param resources Resources required by compartments of neuron.
-	 * @param spot Spot where the chain should be placed.
 	 * @param chain List of chain compartments.
-	 * @param virtually Dummy placement to determine required spot size.
 	 */
-	NumberTopBottom place_chain(
-	    CoordinateSystem& coordinates,
+	NumberTopBottom get_chain_space(
 	    Neuron const& neuron,
 	    ResourceManager const& resources,
-	    PlacementSpot const& spot,
-	    std::vector<CompartmentOnNeuron> const& chain,
-	    bool virtually = false);
+	    std::vector<CompartmentOnNeuron> const& chain);
 
 	/**
 	 * Place a single compartment from which the morphology branches.

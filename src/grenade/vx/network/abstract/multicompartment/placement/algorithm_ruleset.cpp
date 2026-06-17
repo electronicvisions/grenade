@@ -494,17 +494,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total < 2) {
 		required_resources.number_total = 2;
 	}
-	if (neuron.get_compartment_degree(compartment) > 2) {
-		if (required_resources.number_total < 4) {
-			required_resources.number_total = 4;
-		}
-		if (required_resources.number_bottom < 2) {
-			required_resources.number_bottom = 2;
-		}
-		if (required_resources.number_top < 2) {
-			required_resources.number_top = 2;
-		}
-	}
 
 	LOG4CXX_TRACE(m_logger, "PlacementSize: " << required_resources);
 
@@ -594,19 +583,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	NumberTopBottom placed_resources;
 
 	// If not leaf increase size
-	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total == 1) {
+	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total < 2) {
 		required_resources.number_total = 2;
-	}
-	if (neuron.get_compartment_degree(compartment) > 2) {
-		if (required_resources.number_total < 4) {
-			required_resources.number_total = 4;
-		}
-		if (required_resources.number_bottom < 2) {
-			required_resources.number_bottom = 2;
-		}
-		if (required_resources.number_top < 2) {
-			required_resources.number_top = 2;
-		}
 	}
 
 	LOG4CXX_TRACE(m_logger, "PlacementSize: " << required_resources);
@@ -678,20 +656,18 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	return placed_resources;
 }
 
-NumberTopBottom PlacementAlgorithmRuleset::place_chain(
-    CoordinateSystem& coordinates,
+NumberTopBottom PlacementAlgorithmRuleset::get_chain_space(
     Neuron const& neuron,
     ResourceManager const& resources,
-    PlacementSpot const& spot,
-    std::vector<CompartmentOnNeuron> const& chain,
-    bool virtually)
+    std::vector<CompartmentOnNeuron> const& chain)
 {
-	CoordinateSystem coordinates_copy;
-	if (!virtually) {
-		coordinates_copy = coordinates;
-	};
+	CoordinateSystem coordinates;
+	PlacementSpot spot;
+	spot.y = 0;
+	spot.x = coordinates.coordinate_system.at(0).size() / 2;
+	spot.x_parent = spot.x - 1;
+	spot.direction = 1;
 
-	LOG4CXX_DEBUG(m_logger, "Placing chain at: " << spot.x << "," << spot.y);
 	size_t x_parent = spot.x_parent;
 	size_t x_temp = spot.x;
 
@@ -700,9 +676,9 @@ NumberTopBottom PlacementAlgorithmRuleset::place_chain(
 	for (auto compartment : chain) {
 		if (spot.direction == 1) {
 			NumberTopBottom resources_compartment = place_simple_right(
-			    coordinates_copy, neuron, resources.get_config(compartment), x_temp, spot.y,
-			    compartment, virtually);
-			coordinates_copy.connect_shared(x_parent, x_temp, spot.y);
+			    coordinates, neuron, resources.get_config(compartment), x_temp, spot.y, compartment,
+			    true);
+			coordinates.connect_shared(x_parent, x_temp, spot.y);
 			if (spot.y == 0) {
 				x_parent = x_temp + resources_compartment.number_top - 1;
 				x_temp += resources_compartment.number_top;
@@ -714,9 +690,9 @@ NumberTopBottom PlacementAlgorithmRuleset::place_chain(
 			resources_placed += resources_compartment;
 		} else if (spot.direction == -1) {
 			NumberTopBottom resources_compartment = place_simple_left(
-			    coordinates_copy, neuron, resources.get_config(compartment), x_temp, spot.y,
-			    compartment, virtually);
-			coordinates_copy.connect_shared(x_parent, x_temp, spot.y);
+			    coordinates, neuron, resources.get_config(compartment), x_temp, spot.y, compartment,
+			    true);
+			coordinates.connect_shared(x_parent, x_temp, spot.y);
 			if (spot.y == 0) {
 				x_parent = x_temp - resources_compartment.number_top + 1;
 				x_temp -= resources_compartment.number_top;
@@ -728,9 +704,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_chain(
 		}
 	}
 
-	if (!virtually) {
-		coordinates = coordinates_copy;
-	}
 	// Return number of placed neuron circuits
 	return resources_placed;
 }
@@ -754,11 +727,24 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 	auto neighbours_unplaced = unplaced_neighbours(neuron, compartment);
 	auto neighbours_classified = neuron.classify_neighbours(compartment, neighbours_unplaced);
 
+	NumberTopBottom required_resources = resources.get_config(compartment);
+	// Increase number of resources based on connectivity
+	if (neuron.get_compartment_degree(compartment) > 2) {
+		if (required_resources.number_top < 2) {
+			required_resources.number_top += 2 - required_resources.number_top;
+		}
+		if (required_resources.number_bottom < 2) {
+			required_resources.number_bottom += 2 - required_resources.number_bottom;
+		}
+		required_resources.number_total = std::max(
+		    required_resources.number_total,
+		    required_resources.number_top + required_resources.number_bottom);
+	}
 	// TODO: this might select spots where the rest of the branch does not fit.
 	CoordinateSystem dummy_coordinates;
 	bool search_block = false;
 	NumberTopBottom required_space = place_simple(
-	    dummy_coordinates, neuron, resources.get_config(compartment),
+	    dummy_coordinates, neuron, required_resources,
 	    size_t(dummy_coordinates.coordinate_system.at(0).size() / 2), 0, compartment, 1, true);
 
 	if (required_space.number_top != 0 && required_space.number_bottom != 0) {
@@ -775,8 +761,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 	    parent);
 
 	total_resources += place_simple(
-	    coordinates, neuron, resources.get_config(compartment), next_spot.x, next_spot.y,
-	    compartment, next_spot.direction);
+	    coordinates, neuron, required_resources, next_spot.x, next_spot.y, compartment,
+	    next_spot.direction);
 	coordinates.connect_shared(next_spot.x_parent, next_spot.x, next_spot.y);
 	output_placed(coordinates, compartment);
 
@@ -829,8 +815,23 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		// Classify neighbours
 		CompartmentNeighbours neighbours_classified = neuron.classify_neighbours(compartment_first);
 
+		NumberTopBottom required_resources = resources.get_config(compartment_first);
+		// Increase number of resources based on connectivity
+		if (neuron.get_compartment_degree(compartment_first) > 2) {
+			if (required_resources.number_top < 2) {
+				required_resources.number_top += 2 - required_resources.number_top;
+			}
+			if (required_resources.number_bottom < 2) {
+				required_resources.number_bottom += 2 - required_resources.number_bottom;
+				;
+			}
+			required_resources.number_total = std::max(
+			    required_resources.number_total,
+			    required_resources.number_top + required_resources.number_bottom);
+		}
+
 		place_simple_right(
-		    result.coordinate_system, neuron, resources.get_config(compartment_first),
+		    result.coordinate_system, neuron, required_resources,
 		    size_t(result.coordinate_system.coordinate_system.at(0).size() / 2), 0,
 		    compartment_first);
 
@@ -922,16 +923,9 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 			LOG4CXX_DEBUG(m_logger, "Next Compartment to place (Chain): " << next_compartment);
 			std::vector<CompartmentOnNeuron> chain =
 			    neuron.branch_compartments(next_compartment, last_compartment);
-			// Virtually place chain to determine required space.
-			bool search_block = false;
-			PlacementSpot virt_spot;
-			virt_spot.y = 0;
-			virt_spot.x = result.coordinate_system.coordinate_system.at(0).size() / 2;
-			virt_spot.x_parent = virt_spot.x - 1;
-			virt_spot.direction = 1;
-			NumberTopBottom required_space =
-			    place_chain(result.coordinate_system, neuron, resources, virt_spot, chain, true);
+			NumberTopBottom required_space = get_chain_space(neuron, resources, chain);
 
+			bool search_block = false;
 			if (required_space.number_top != 0 && required_space.number_bottom != 0) {
 				search_block = true;
 			}
@@ -941,7 +935,10 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 			        result.coordinate_system, last_compartment, neighbours, search_block),
 			    required_space, result.coordinate_system, last_compartment);
 
-			place_chain(result.coordinate_system, neuron, resources, next_spot, chain);
+			place_simple(
+			    result.coordinate_system, neuron, resources.get_config(next_compartment),
+			    next_spot.x, next_spot.y, next_compartment, next_spot.direction);
+			result.coordinate_system.connect_shared(next_spot.x_parent, next_spot.x, next_spot.y);
 		}
 		// Else select branch
 		else if (neighbours_classified.branches.size() > 0) {
