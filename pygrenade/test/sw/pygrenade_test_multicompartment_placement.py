@@ -1,13 +1,45 @@
 # !/usr/bin/env python
 # pylint: disable=too-many-locals, too-many-statements, too-many-lines
-from typing import Set, Tuple
+from typing import List, Set, Tuple
 import unittest
 
 import matplotlib.pyplot as plt
 from matplotlib import lines
+import numpy as np
 
 import pygrenade_vx.network.abstract as grenade
 import pygrenade_vx
+
+
+def neuron_from_edgelist(connections: List[Tuple[int, int]]
+                         ) -> Tuple[grenade.Neuron, grenade.ResourceManager]:
+    """
+    Create a grenade neuron and its resources from an edgelist.
+
+    :param connections: List defining the connections of different
+        compartments.
+    :return: Constructed neuron and resource manager.
+    """
+
+    neuron = grenade.Neuron()
+    resources = grenade.ResourceManager()
+    environment = grenade.Environment()
+
+    compartment, parameter_space = get_cap_compartment()
+
+    compartments = {n: neuron.add_compartment(compartment)
+                    for n in range(np.max(connections) + 1)}
+    neuron_parameter_space = grenade.Neuron.ParameterSpace()
+    neuron_parameter_space.compartments = \
+        {comp: parameter_space for comp in compartments.values()}
+    resources.add_config(neuron, neuron_parameter_space, environment)
+
+    for (parent, child) in connections:
+        neuron.add_compartment_connection(
+            compartments[parent],
+            compartments[child],
+            grenade.CompartmentConnectionConductance())
+    return neuron, resources
 
 
 def plot_switch_shared_conductance(axis, i, j):
@@ -1020,14 +1052,6 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         in figure 5c (middle panel) from Wybo, 2021:
         https://doi.org/10.7554/eLife.60936
         """
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment(0, 11)
-
-        compartments = {n: neuron.add_compartment(compartment)
-                        for n in range(29)}
         # compartments are numbered from left to right in a depth first
         # fashion
         connections = [(0, 1),
@@ -1058,17 +1082,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                        (25, 26),
                        (25, 27),
                        (24, 28)]
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = \
-            {comp: parameter_space for comp in compartments.values()}
-        resources.add_config(neuron, neuron_parameter_space, environment)
-
-        for (parent, child) in connections:
-            neuron.add_compartment_connection(
-                compartments[parent],
-                compartments[child],
-                grenade.CompartmentConnectionConductance())
+        neuron, resources = neuron_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         with self.assertRaises(RuntimeError):
