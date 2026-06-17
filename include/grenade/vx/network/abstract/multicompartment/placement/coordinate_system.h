@@ -137,6 +137,16 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	    size_t x, size_t y, CompartmentOnNeuron const& compartment);
 
 	/**
+	 * Assign compartment descriptor to the neuron circuit and to all directly connected neuron
+	 * circuits. Also via shared line.
+	 * @param x x coordinate of the neuron circuit.
+	 * @param y y coordinate of the neuron circuit.
+	 * @param compartment Compartment descriptor.
+	 */
+	NumberTopBottom assign_compartment_direct(
+	    size_t x, size_t y, CompartmentOnNeuron const& compartment);
+
+	/**
 	 * Check if the compartment has neuron circuits of even and odd parity.
 	 * @param compartment Compartment descriptor.
 	 */

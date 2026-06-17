@@ -1,4 +1,5 @@
 #include "grenade/vx/network/abstract/multicompartment/placement/coordinate_system.h"
+#include <iostream>
 
 namespace grenade::vx::network::abstract {
 
@@ -393,6 +394,20 @@ NumberTopBottom CoordinateSystem::assign_compartment_adjacent(
 	return number_neuron_circuits;
 }
 
+NumberTopBottom CoordinateSystem::assign_compartment_direct(
+    size_t x, size_t y, CompartmentOnNeuron const& compartment)
+{
+	if (coordinate_system[y][x].compartment) {
+		return NumberTopBottom();
+	}
+
+	NumberTopBottom number_neuron_circuits = assign_compartment_adjacent(x, y, compartment);
+	for (auto [x_connected, y_connected] : connected_shared_short(x, y)) {
+		number_neuron_circuits += assign_compartment_direct(x_connected, y_connected, compartment);
+	}
+	return number_neuron_circuits;
+}
+
 
 std::pair<bool, bool> CoordinateSystem::parity(CompartmentOnNeuron const& compartment) const
 {
@@ -524,14 +539,7 @@ CoordinateSystem::construct_neuron()
 
 				// Assign ID to connected neuron circuits
 				NumberTopBottom allocated_neuron_circuits =
-				    coordinate_copy.assign_compartment_adjacent(x, y, descriptor);
-				for (auto [x_connected, y_connected] :
-				     coordinate_copy.connected_shared_short(x, y)) {
-					if (!coordinate_copy.coordinate_system[y][x].compartment) {
-						allocated_neuron_circuits += coordinate_copy.assign_compartment_adjacent(
-						    x_connected, y_connected, descriptor);
-					}
-				}
+				    coordinate_copy.assign_compartment_direct(x, y, descriptor);
 
 				// Add allocated resources to resource map
 				allocated_resources.emplace(descriptor, allocated_neuron_circuits);
