@@ -282,6 +282,10 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 
 	/**
 	 * Distinguishes chains from branches.
+	 *
+	 * We include linear branches with singular leafs as a chain since
+	 * these structures can be mapped to a single row on the hardware.
+	 *
 	 * @param compartment Compartment from which the potential chain starts.
 	 * @param marked_compartments Compartments to ignore for the branch.
 	 * @return True if a chain and fasle if a branch.

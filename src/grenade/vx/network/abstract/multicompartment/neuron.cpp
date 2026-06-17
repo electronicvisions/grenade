@@ -173,17 +173,17 @@ bool Neuron::is_chain(
     CompartmentOnNeuron const& compartment,
     std::set<CompartmentOnNeuron>& marked_compartments) const
 {
-	if (get_compartment_degree(compartment) > 2) {
-		return false;
-	}
-
 	marked_compartments.emplace(compartment);
 
+	size_t non_leaf_neighbours = 0;
 	for (auto adjacent_compartment : adjacent_compartments(compartment)) {
 		if (marked_compartments.contains(adjacent_compartment)) {
 			continue;
 		}
-		if (!is_chain(adjacent_compartment, marked_compartments)) {
+		if (get_compartment_degree(adjacent_compartment) > 1) {
+			non_leaf_neighbours++;
+		}
+		if ((non_leaf_neighbours > 1) || !is_chain(adjacent_compartment, marked_compartments)) {
 			return false;
 		}
 	}
