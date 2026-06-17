@@ -344,7 +344,7 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	void write_graphviz(std::string filename, std::string name);
 };
 
-std::ostream& operator<<(std::ostream& os, Neuron const& neuron);
+std::ostream& operator<<(std::ostream& os, Neuron const& neuron) SYMBOL_VISIBLE;
 
 
 } // namespace abstract
