@@ -1085,9 +1085,9 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         neuron, resources = neuron_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
-        with self.assertRaises(RuntimeError):
-            placement_algorithm.run(
-                grenade.CoordinateSystem(), neuron, resources)
+        placement_result = placement_algorithm.run(
+            grenade.CoordinateSystem(), neuron, resources)
+        self.assert_valid(placement_result.coordinate_system)
 
     def test_spiny_dendrite(self):
         comp_branch, param_space_branch = get_cap_compartment(0, 1)

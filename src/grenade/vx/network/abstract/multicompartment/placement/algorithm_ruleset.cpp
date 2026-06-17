@@ -430,6 +430,47 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple(
 	}
 }
 
+size_t PlacementAlgorithmRuleset::get_available_directions(
+    CoordinateSystem& coordinates,
+    CompartmentOnNeuron const& compartment,
+    std::set<CompartmentOnNeuron> const& neighbours)
+{
+	LOG4CXX_DEBUG(m_logger, "Check available directions for " << compartment);
+	auto spots = find_free_spots(coordinates, compartment, neighbours, true);
+	std::set<std::pair<int, int>> directions;
+	for (const auto& s : spots) {
+		directions.emplace(s.direction, s.y);
+	}
+	assert(directions.size() <= 4);
+	return directions.size();
+}
+
+
+void PlacementAlgorithmRuleset::add_bridge(
+    CoordinateSystem& coordinates,
+    CompartmentOnNeuron const& compartment,
+    std::set<CompartmentOnNeuron> const& children)
+{
+	// size of a "pillar" to add
+	NumberTopBottom space{2, 1, 1};
+
+	PlacementSpot spot = select_free_spot(
+	    find_free_spots(coordinates, compartment, children, true), space, coordinates, compartment);
+
+	LOG4CXX_DEBUG(m_logger, "Placing bridge for " << compartment << " at " << spot);
+
+	coordinates.set_compartment(spot.x, 0, compartment);
+	coordinates.set_compartment(spot.x, 1, compartment);
+	connect_self(coordinates, compartment);
+
+	// Connect circuits
+	coordinates.coordinate_system.at(spot.y).at(spot.x_parent).switch_circuit_shared = true;
+	coordinates.coordinate_system.at(spot.y).at(spot.x).switch_circuit_shared = true;
+	for (size_t x = std::min(spot.x, spot.x_parent); x < std::max(spot.x, spot.x_parent); x++) {
+		coordinates.coordinate_system.at(spot.y).at(x).switch_shared_right = true;
+	}
+}
+
 NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
     CoordinateSystem& coordinates,
     Neuron const& neuron,
@@ -833,6 +874,17 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		std::set<CompartmentOnNeuron> neighbours;
 		for (auto compartment : neuron.adjacent_compartments(last_compartment)) {
 			neighbours.emplace(compartment);
+		}
+
+		// Extend the parent compartment if needed.
+		// Only extend if all leafs and two branches/chains have been placed.
+		size_t to_place =
+		    (neighbours_classified.branches.size() + neighbours_classified.chains.size());
+		size_t available_directions =
+		    get_available_directions(result.coordinate_system, last_compartment, neighbours);
+		if ((neighbours_classified.leafs.size() == 0) && (to_place > 1) &&
+		    (available_directions < 2)) {
+			add_bridge(result.coordinate_system, last_compartment, neighbours);
 		}
 
 		// Selection of next compartment to be placed

@@ -237,6 +237,58 @@ private:
 	    CompartmentOnNeuron const& parent);
 
 	/**
+	 * Expand the compartment with a bridge.
+	 *
+	 * A bridge expands a compartment via the shared line. This allows additional
+	 * compartments to be placed.
+	 * Let's consider the example of a compartment A with several chains attached.
+	 * Let's assume, the shared line is blocked to the left.
+	 * Then, placing a bridge after placing the first chain (B, C) increases the
+	 * number of possible connections from one to two in this step:
+	 *
+	 * blocked  -  -------------
+	 *          $  |           |
+	 *          A--A           A
+	 *          |  |           |
+	 *          A--A  B--B  C  A
+	 *          |  |  $  |  $
+	 * blocked --  ----  ----
+	 *
+	 * Here "-" and "|" represent direct connections and "$" connections via a
+	 * resistor.
+	 * The bridge is the structure:
+	 *
+	 *      -------------
+	 *      |           |
+	 * ...--A           A
+	 *      |           |
+	 * ...--A           A
+	 *
+	 * @param coordinates Current configuration. (Or empty for virtual placement)
+	 * @param compartment Compartment to which a bridge should be added
+	 * @param children Children of the compartment for which a bridge should be added
+	 */
+	void add_bridge(
+	    CoordinateSystem& coordinates,
+	    CompartmentOnNeuron const& compartment,
+	    std::set<CompartmentOnNeuron> const& children);
+
+	/**
+	 * Determine in how many directions (top left, top right, bottom left, bottom right)
+	 * connections are still possible.
+	 *
+	 * @param coordinates Current configuration. (Or empty for virtual placement)
+	 * @param compartment Compartment for which to check available connections.
+	 * @param neighbours Neighbours of the compartment from which a connection is
+	 *                   searched.
+	 * @return Number of directions in which connections are possible.
+	 */
+	size_t get_available_directions(
+	    CoordinateSystem& coordinates,
+	    CompartmentOnNeuron const& compartment,
+	    std::set<CompartmentOnNeuron> const& neighbours);
+
+	/**
 	 * Connect all neuron circuits belonging to one compartment directly.
 	 * @param coordinates Current configuration.
 	 * @param compartment Compartment to be connected.
