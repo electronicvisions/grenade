@@ -25,7 +25,6 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) TopologyRewrite
 protected:
 	LinkedTopology& get_topology() const;
 
-private:
 	std::shared_ptr<LinkedTopology> m_topology;
 };
 

@@ -9,7 +9,7 @@
 #include "grenade/common/topology_rewrite/add_linked_topology.h"
 #include "grenade/common/topology_rewrite/execution_instance.h"
 #include "grenade/common/topology_rewrite/identity_replacement.h"
-#include "grenade/common/topology_rewrite/population.h"
+#include "grenade/common/topology_rewrite/populations_per_execution_instance.h"
 #include "grenade/common/topology_rewrite/projection.h"
 #include "grenade/common/topology_rewrite/recorder.h"
 #include "grenade/common/vertex_on_topology.h"
@@ -155,7 +155,7 @@ grenade::common::LinkedTopology GreedyMapper::operator()(
 		}
 
 		hate::Timer population_rewrite_timer;
-		PopulationTopologyRewrite population_rewrite(
+		PopulationsPerExecutionInstanceTopologyRewrite population_rewrite(
 		    population_resource_estimator, executor_system_resources, mapped_topology);
 		population_rewrite();
 		LOG4CXX_TRACE(

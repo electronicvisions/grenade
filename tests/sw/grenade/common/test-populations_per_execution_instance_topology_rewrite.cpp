@@ -1,4 +1,4 @@
-#include "grenade/common/topology_rewrite/population.h"
+#include "grenade/common/topology_rewrite/populations_per_execution_instance.h"
 
 #include "grenade/common/connection_on_executor.h"
 #include "grenade/common/edge.h"
@@ -238,7 +238,7 @@ struct DummyResourceEstimator : ResourceEstimator
 
 } // namespace
 
-TEST(PopulationTopologyRewrite, General)
+TEST(PopulationsPerExecutionInstanceTopologyRewrite, General)
 {
 	DummyCell dummy_cell;
 
@@ -261,11 +261,12 @@ TEST(PopulationTopologyRewrite, General)
 
 	DummyResourceEstimator dummy_resource_estimator(*linked_topology);
 
-	PopulationTopologyRewrite::SystemResources system_resources{
+	PopulationsPerExecutionInstanceTopologyRewrite::SystemResources system_resources{
 	    {ConnectionOnExecutor(1), DummyResource({3})},
 	    {ConnectionOnExecutor(2), DummyResource({4})}};
 
-	PopulationTopologyRewrite rewrite(dummy_resource_estimator, system_resources, linked_topology);
+	PopulationsPerExecutionInstanceTopologyRewrite rewrite(
+	    dummy_resource_estimator, system_resources, linked_topology);
 	rewrite();
 
 	EXPECT_EQ(linked_topology->num_vertices(), 4);
