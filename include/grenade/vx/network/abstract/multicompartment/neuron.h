@@ -196,7 +196,15 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	 * @return Pair of iterators to begin and end of all compartments.
 	 */
 	typedef VertexIterator CompartmentIterator;
-	boost::iterator_range<CompartmentIterator> compartments() const;
+	boost::iterator_range<CompartmentIterator> compartments() const GENPYBIND(hidden);
+
+	GENPYBIND_MANUAL({
+		parent.def("compartments", [](GENPYBIND_PARENT_TYPE const& self) {
+			auto const iterators = self.compartments();
+			return std::vector<grenade::common::CompartmentOnNeuron>(
+			    iterators.begin(), iterators.end());
+		});
+	})
 
 	/**
 	 * Return iterators to begin and end of all connections.
