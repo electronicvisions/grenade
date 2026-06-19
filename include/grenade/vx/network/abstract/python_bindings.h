@@ -40,6 +40,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/evolutionary/parameters.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/capacitance.h"
+#include "grenade/vx/network/abstract/multicompartment/mechanism/leak.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_conductance.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_current.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
