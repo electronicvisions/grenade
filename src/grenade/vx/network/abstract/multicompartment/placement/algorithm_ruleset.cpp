@@ -470,6 +470,20 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 			coordinates_copy.set_compartment(x, y, compartment);
 			placed_resources += NumberTopBottom(1, 1 - y, y);
 		}
+	} else if ((y == 0) and (required_resources.number_top == 0)) {
+		// always place at least one circuit in the requested row
+		if (coordinates_copy.coordinate_system.at(0).at(x_start).compartment) {
+			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",0");
+		}
+		coordinates_copy.set_compartment(x_start, 0, compartment);
+		placed_resources += NumberTopBottom(1, 1, 0);
+	} else if ((y == 1) and (required_resources.number_bottom == 0)) {
+		// always place at least one circuit in the requested row
+		if (coordinates_copy.coordinate_system.at(1).at(x_start).compartment) {
+			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",1");
+		}
+		coordinates_copy.set_compartment(x_start, 1, compartment);
+		placed_resources += NumberTopBottom(1, 0, 1);
 	}
 
 
@@ -563,8 +577,21 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 			coordinates_copy.set_compartment(x, y, compartment);
 			placed_resources += NumberTopBottom(1, 1 - y, y);
 		}
+	} else if ((y == 0) and (required_resources.number_top == 0)) {
+		// always place at least one circuit in the requested row
+		if (coordinates_copy.coordinate_system.at(0).at(x_start).compartment) {
+			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",0");
+		}
+		coordinates_copy.set_compartment(x_start, 0, compartment);
+		placed_resources += NumberTopBottom(1, 1, 0);
+	} else if ((y == 1) and (required_resources.number_bottom == 0)) {
+		// always place at least one circuit in the requested row
+		if (coordinates_copy.coordinate_system.at(1).at(x_start).compartment) {
+			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",1");
+		}
+		coordinates_copy.set_compartment(x_start, 1, compartment);
+		placed_resources += NumberTopBottom(1, 0, 1);
 	}
-
 
 	// Place internal Connections
 	connect_self(coordinates_copy, compartment);
