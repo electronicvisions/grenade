@@ -530,7 +530,7 @@ CoordinateSystem::construct_neuron()
 	for (size_t x = 0; x < coordinate_copy.coordinate_system[0].size(); x++) {
 		for (size_t y = 0; y < coordinate_copy.coordinate_system.size(); y++) {
 			if (!(coordinate_copy.coordinate_system[y][x].compartment) &&
-			    coordinate_copy.connected(x, y)) {
+			    coordinate_system[y][x].compartment) {
 				// Add Compartment to Neuron
 				Compartment compartment;
 				CompartmentOnNeuron descriptor = neuron.add_compartment(compartment);
@@ -558,6 +558,13 @@ CoordinateSystem::construct_neuron()
 				continue;
 			}
 			for (auto neighbour_coordinates : coordinate_copy.connected_shared_conductance(x, y)) {
+				if (!coordinate_copy
+				         .coordinate_system[neighbour_coordinates.second]
+				                           [neighbour_coordinates.first]
+				         .compartment) {
+					throw std::runtime_error("Can not construct neuron. Shared line connected to "
+					                         "neuron circuit without compartment.");
+				}
 				// Check if already connected on neuron
 				if (neuron.neighbour(
 				        coordinate_copy.coordinate_system[y][x].compartment.value(),
