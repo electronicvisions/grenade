@@ -104,6 +104,15 @@ JITGraphExecutor::get_hwdb_entry() const
 	return ret;
 }
 
+std::map<grenade::common::ConnectionOnExecutor, size_t> JITGraphExecutor::connection_sizes() const
+{
+	std::map<grenade::common::ConnectionOnExecutor, size_t> sizes;
+	for (auto const& [connection_on_executor, connection] : m_connections) {
+		sizes.emplace(connection_on_executor, connection.get_chips_on_connection().size());
+	}
+	return sizes;
+}
+
 bool JITGraphExecutor::is_executable_on(grenade::common::Topology const& topology)
 {
 	std::set<
