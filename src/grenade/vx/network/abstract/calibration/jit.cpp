@@ -406,23 +406,24 @@ void JITCalibration::operator()(
 						atomic_neuron_config.multicompartment.connect_soma_right =
 						    local_calibration_target.inter_atomic_neuron_connectivity
 						        .connect_soma_right;
-						atomic_neuron_config.multicompartment.connect_right =
+						atomic_neuron_config.multicompartment.connect_vertical =
 						    local_calibration_target.inter_atomic_neuron_connectivity
 						        .connect_vertical;
 						atomic_neuron_config.multicompartment.connect_right =
-						    local_calibration_target.inter_atomic_neuron_connectivity
-						        .connect_vertical;
-						// apply inter-compartment conductance calibration result
-						if (local_calibration_target.inter_atomic_neuron_connectivity.tau_icc) {
-							atomic_neuron_config.multicompartment.i_bias_nmda =
-							    inter_compartment_conductances.at(execution_instance_on_executor)
-							        .at(atomic_neurons.at(an));
-						}
+						    local_calibration_target.inter_atomic_neuron_connectivity.connect_right;
+						atomic_neuron_config.multicompartment.enable_conductance =
+						    local_calibration_target.inter_atomic_neuron_connectivity.tau_icc
+						        .has_value();
 						// disable membrane time constant
 						if (!local_calibration_target.tau_membrane) {
 							atomic_neuron_config.leak.i_bias =
 							    lola::vx::v3::AtomicNeuron::AnalogValue(0);
 							atomic_neuron_config.leak.enable_division = true;
+							atomic_neuron_config.leak.enable_multiplication = false;
+						}
+						// disable threshold
+						if (!local_calibration_target.v_threshold) {
+							atomic_neuron_config.threshold.enable = false;
 						}
 						if (local_calibration_target.membrane_capacitance_during_calibration) {
 							// set requested membrane_capacitance
