@@ -15,6 +15,7 @@
 #include "grenade/vx/signal_flow/vertex/cadc_membrane_readout_view.h"
 #include "grenade/vx/signal_flow/vertex/crossbar_l2_input.h"
 #include "grenade/vx/signal_flow/vertex/crossbar_l2_output.h"
+#include "grenade/vx/signal_flow/vertex/input_routing_table.h"
 #include "grenade/vx/signal_flow/vertex/plasticity_rule.h"
 #include "grenade/vx/signal_flow/vertex/transformation.h"
 #include "halco/hicann-dls/vx/hemisphere.h"
@@ -109,6 +110,13 @@ void ExecutionInstanceChipSnippetRealtimeExecutor::process(
 	m_event_input.resize(m_input_data.batch_size());
 	for (auto const& in_edge_descriptor : m_topology.get_reference().in_edges(vertex)) {
 		auto const& source_descriptor = m_topology.get_reference().source(in_edge_descriptor);
+		// If data comes from a routing table no input data is required.
+		if (auto const input_routing_table =
+		        dynamic_cast<signal_flow::vertex::InputRoutingTable const*>(
+		            &m_topology.get_reference().get(source_descriptor));
+		    input_routing_table) {
+			continue;
+		}
 		auto const& source_results = m_data.at({source_descriptor, 0});
 		if (auto const crossbar_l2_output_results =
 		        dynamic_cast<signal_flow::vertex::CrossbarL2Output::Results const*>(
