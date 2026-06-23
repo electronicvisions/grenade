@@ -213,7 +213,6 @@ ConnectionRoutingResult build_connection_routing(
 				}
 			}
 			for (size_t p = 0; p < max_num_synapses; ++p) {
-				std::vector<size_t> indices;
 				for (size_t i = 0; i < num_synapses.size(); ++i) {
 					for (auto const& [receptor, num] : num_synapses.at(i)) {
 						// only find new hardware synapse, if the current connection requires
@@ -264,7 +263,6 @@ ConnectionRoutingResult build_connection_routing(
 
 						local_result.at(i).atomic_neurons_on_target_compartment[receptor].push_back(
 						    neuron_on_compartment);
-						indices.push_back(i);
 					}
 				}
 			}
