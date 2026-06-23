@@ -1,9 +1,15 @@
 #pragma once
+#include "ccalix/types.h"
 #include "grenade/vx/genpybind.h"
+#include "haldls/vx/v3/cadc.h"
+#include "hate/visibility.h"
+#include "lola/vx/v3/neuron.h"
 #include <iosfwd>
 
 namespace grenade::vx::network {
 namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
+
+
 template <class T>
 struct ParameterInterval
 {
@@ -31,8 +37,18 @@ private:
 template <typename T>
 std::ostream& operator<<(std::ostream& os, ParameterInterval<T> const& interval);
 
+extern template struct SYMBOL_VISIBLE ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>;
+extern template struct SYMBOL_VISIBLE ParameterInterval<haldls::vx::v3::CADCSampleQuad::Value>;
+extern template struct SYMBOL_VISIBLE ParameterInterval<ccalix::CapacitanceInFarad>;
+extern template struct SYMBOL_VISIBLE ParameterInterval<ccalix::TimeInS>;
 
+typedef ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue> AnalogValueInterval
+    GENPYBIND(opaque(false));
+typedef ParameterInterval<haldls::vx::v3::CADCSampleQuad::Value> CADCInterval
+    GENPYBIND(opaque(false));
+typedef ParameterInterval<ccalix::CapacitanceInFarad> CapacitanceInterval GENPYBIND(opaque(false));
 typedef ParameterInterval<double> ParameterIntervalDouble GENPYBIND(opaque(false));
+typedef ParameterInterval<ccalix::TimeInS> TimeInterval GENPYBIND(opaque(false));
 
 
 } // namespace abstract

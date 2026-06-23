@@ -39,4 +39,9 @@ std::ostream& operator<<(std::ostream& os, ParameterInterval<T> const& interval)
 {
 	return os << "[" << interval.get_lower() << ", " << interval.get_upper() << "]";
 }
+
+template struct ParameterInterval<lola::vx::v3::AtomicNeuron::AnalogValue>;
+template struct ParameterInterval<haldls::vx::v3::CADCSampleQuad::Value>;
+template struct ParameterInterval<ccalix::CapacitanceInFarad>;
+template struct ParameterInterval<ccalix::TimeInS>;
 } // namespace grenade::vx::network::abstract
