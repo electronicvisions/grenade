@@ -18,8 +18,7 @@ def get_locally_placed_neuron_coordinates(
               one per neuron on population
     """
     # pylint: disable=too-many-locals
-    population = mapped_topology.get_reference().get_reference()\
-        .get(population_descriptor)
+    population = mapped_topology.get_root().get(population_descriptor)
 
     cell = population.get_cell()
     assert isinstance(cell, _pygrenade_vx_network_abstract.LocallyPlacedNeuron)
