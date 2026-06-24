@@ -1,6 +1,7 @@
 from pygrenade_vx.network.abstract.multicompartment.neuron_components import\
     Compartment
-from pygrenade_vx.network.abstract.multicompartment.mechanisms import Mechanism
+from pygrenade_vx.network.abstract.multicompartment.mechanisms import \
+    Mechanism, MembraneCapacitance
 
 
 class CompartmentBuilder:
@@ -37,6 +38,16 @@ class CompartmentBuilder:
 
         :return: Built compartment class.
         '''
+
+        # All compartments have to have a capacitance mechanism
+        has_cap = False
+        for mechanism in self.mechanisms.values():
+            if isinstance(mechanism, MembraneCapacitance):
+                has_cap = True
+                break
+        if not has_cap:
+            raise RuntimeError("Each compartment has to have a "
+                               "'MembraneCapacitance' mechanism.")
         new_compartment_class = type(name, (Compartment, ), {
             "_default_mechanisms": self.mechanisms
         })
