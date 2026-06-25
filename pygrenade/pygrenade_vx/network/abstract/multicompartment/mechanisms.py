@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 import _pygrenade_vx_network_abstract as grenade
 from _pygrenade_vx_network_abstract import AnalogValueInterval, \
-    CapacitanceInterval, TimeInterval, ParameterIntervalDouble
+    CADCInterval, CapacitanceInterval, TimeInterval, ParameterIntervalDouble
 import _pygrenade_vx_network as grenade_network
 
 
@@ -309,3 +309,86 @@ class ConductanceBasedSynapse(Mechanism):
         syn.parameters = deepcopy(self.parameters)
         syn.receptor_type = copy(self.receptor_type)
         return syn
+
+
+class Fire(Mechanism):
+    '''
+    The Fire mechanisms controls the threshold and reset.
+    '''
+
+    def __init__(self,
+                 v_threshold: int = 110,
+                 v_reset: int = 60,
+                 tau_ref: float = 5e-6,
+                 holdoff_time: float = 1e-6):
+        '''
+        Initialize fire mechanism.
+
+        :param v_threshold: Threshold potential (in CADC values).
+        :param v_reset: Reset potential (in CADC values).
+        :param tau_ref: Refractory period (in seconds).
+        :param holdoff_time: Time (in s) for which the neuron is no
+            longer clamped to the reset potential but the threhsold
+            comparator is still disabled.
+        '''
+        super().__init__()
+
+        self.parameters["v_threshold"] = v_threshold
+        self.parameters["v_reset"] = v_reset
+        self.parameters["tau_ref"] = tau_ref
+        self.parameters["holdoff_time"] = holdoff_time
+
+    def to_grenade(self) -> grenade.MechanismFire:
+        '''
+        Create the mechanism in grenade.
+
+        :return: Grenade object of the mechanism and its parameter space.
+        '''
+        return grenade.MechanismFire()
+
+    @classmethod
+    def construct_parameter_space(
+        cls,
+        lower_limits: Dict[str, float],
+        upper_limits: Dict[str, float]
+    ) -> grenade.MechanismFire.ParameterSpace:
+
+        v_thres = [CADCInterval(int(low), int(high))
+                   for low, high in zip(lower_limits["v_threshold"],
+                                        upper_limits["v_threshold"])]
+        v_res = [CADCInterval(int(low), int(high))
+                 for low, high in zip(lower_limits["v_reset"],
+                                      upper_limits["v_reset"])]
+
+        tau_refs = [TimeInterval(float(low), float(high))
+                    for low, high in zip(lower_limits["tau_ref"],
+                                         upper_limits["tau_ref"])]
+        holdoffs = [TimeInterval(float(low), float(high))
+                    for low, high in zip(lower_limits["holdoff_time"],
+                                         upper_limits["holdoff_time"])]
+        return grenade.MechanismFire.ParameterSpace(
+            threshold_potential=v_thres,
+            reset_potential=v_res,
+            refractory_time=tau_refs,
+            holdoff_time=holdoffs)
+
+    @classmethod
+    def construct_parameterization(
+        cls,
+        values: Dict[str, Union[float, int]]
+    ) -> grenade.MechanismFire.Parameterization:
+        return grenade.MechanismFire.ParameterSpace.Parameterization(
+            threshold_potential=[int(s) for s in values["v_threshold"]],
+            reset_potential=[int(s) for s in values["v_reset"]],
+            refractory_time=[float(t) for t in values["tau_ref"]],
+            holdoff_time=[float(t) for t in values["holdoff_time"]])
+
+    def copy(self) -> Fire:
+        '''
+        Create copy of the mechanism.
+
+        :return: Copy of the mechanism.
+        '''
+        mech = Fire()
+        mech.parameters = deepcopy(self.parameters)
+        return mech
