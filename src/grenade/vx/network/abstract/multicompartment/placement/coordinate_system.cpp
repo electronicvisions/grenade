@@ -340,8 +340,7 @@ std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conduc
 		return connected_circuits;
 	}
 
-	// Check for connected compartments on the right. This compartment needs to be connected
-	// directly to the shared line and the other compartment needs to be connected via conductance.
+	// Check for connected compartments on the right
 	size_t x_temp = x;
 	while (x_temp < coordinate_system[y].size() - 1 &&
 	       coordinate_system[y][x_temp].switch_shared_right) {
@@ -354,8 +353,7 @@ std::vector<std::pair<size_t, size_t>> CoordinateSystem::connected_shared_conduc
 		x_temp++;
 	}
 
-	// Check for connected compartments on the left. This compartment needs to be connected
-	// directly to the shared line and the other compartment needs to be connected via conductance.
+	// Check for connected compartments on the left
 	if (x == 0) {
 		return connected_circuits;
 	}
