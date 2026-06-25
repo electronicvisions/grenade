@@ -392,3 +392,68 @@ class Fire(Mechanism):
         mech = Fire()
         mech.parameters = deepcopy(self.parameters)
         return mech
+
+
+class Leak(Mechanism):
+    '''
+    The Leak mechanism.
+    '''
+
+    def __init__(self,
+                 v_leak: int = 110,
+                 tau_mem: float = 5e-6):
+        '''
+        Initialize leak mechanism.
+
+        :param v_leak: Leak potential (in CADC values).
+        :param tau_mem: Membrane time constant (in seconds).
+        '''
+        super().__init__()
+
+        self.parameters["v_leak"] = v_leak
+        self.parameters["tau_mem"] = tau_mem
+
+    def to_grenade(self) -> grenade.MechanismLeak:
+        '''
+        Create the mechanism in grenade.
+
+        :return: Grenade object of the mechanism and its parameter space.
+        '''
+        return grenade.MechanismLeak()
+
+    @classmethod
+    def construct_parameter_space(
+        cls,
+        lower_limits: Dict[str, float],
+        upper_limits: Dict[str, float]
+    ) -> grenade.MechanismLeak.ParameterSpace:
+
+        v_leaks = [CADCInterval(int(low), int(high))
+                   for low, high in zip(lower_limits["v_leak"],
+                                        upper_limits["v_leak"])]
+
+        tau_mems = [TimeInterval(float(low), float(high))
+                    for low, high in zip(lower_limits["tau_mem"],
+                                         upper_limits["tau_mem"])]
+        return grenade.MechanismLeak.ParameterSpace(
+            potential=v_leaks,
+            time_constant=tau_mems)
+
+    @classmethod
+    def construct_parameterization(
+        cls,
+        values: Dict[str, Union[float, int]]
+    ) -> grenade.MechanismLeak.Parameterization:
+        return grenade.MechanismLeak.ParameterSpace.Parameterization(
+            potential=[int(s) for s in values["v_leak"]],
+            time_constant=[float(t) for t in values["tau_mem"]])
+
+    def copy(self) -> Leak:
+        '''
+        Create copy of the mechanism.
+
+        :return: Copy of the mechanism.
+        '''
+        mech = Leak()
+        mech.parameters = deepcopy(self.parameters)
+        return mech
