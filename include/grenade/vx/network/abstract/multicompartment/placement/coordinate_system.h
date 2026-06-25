@@ -192,6 +192,11 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	    std::map<CompartmentOnNeuron, NumberTopBottom>>
 	construct_neuron();
 
+	/**
+	 * Align coordinate system to the left, i.e. remove unused circuits on the left.
+	 **/
+	void align_left();
+
 	// Constructor
 	CoordinateSystem() = default;
 

@@ -591,6 +591,31 @@ CoordinateSystem::construct_neuron()
 	return {std::move(neuron), compartment_mapping, allocated_resources};
 }
 
+void CoordinateSystem::align_left()
+{
+	size_t left_most_used_circuit = coordinate_system[0].size();
+	for (size_t y = 0; y < coordinate_system.size(); y++) {
+		for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+			if (connected(x, y)) {
+				left_most_used_circuit = std::min(x, left_most_used_circuit);
+				break;
+			}
+		}
+	}
+
+	for (size_t y = 0; y < coordinate_system.size(); y++) {
+		for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+			if (x < coordinate_system[0].size() - left_most_used_circuit) {
+				// copy configuration from the right
+				set(x, y, coordinate_system[y][x + left_most_used_circuit]);
+			} else {
+				// look up to the right exceeds coordinate system width -> set empty neuron circuit
+				set(x, y, NeuronCircuit());
+			}
+		}
+	}
+}
+
 void CoordinateSystem::clear()
 {
 	for (size_t y = 0; y < 2; y++) {
