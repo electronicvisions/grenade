@@ -4,9 +4,10 @@
 
 namespace grenade::vx::network::abstract {
 
-PlacementAlgorithmRuleset::PlacementAlgorithmRuleset() :
-    m_logger(log4cxx::Logger::getLogger("grenade.MC.Placement.Ruleset"))
+PlacementAlgorithmRuleset::PlacementAlgorithmRuleset(bool save_steps) :
+    m_save_steps(save_steps), m_logger(log4cxx::Logger::getLogger("grenade.MC.Placement.Ruleset"))
 {
+	m_results.push_back(AlgorithmResult());
 }
 
 AlgorithmResult PlacementAlgorithmRuleset::run(
@@ -17,12 +18,14 @@ AlgorithmResult PlacementAlgorithmRuleset::run(
 	}
 
 	size_t step = 0;
-	AlgorithmResult result;
 
 	while (true) {
-		result = run_one_step(neuron, resources, step);
-		if (result.finished) {
-			return result;
+		run_one_step(neuron, resources, step);
+		if (m_save_steps) {
+			m_results.push_back(m_results.back());
+		}
+		if (m_results.back().finished) {
+			return m_results.back();
 		}
 		step++;
 	}
@@ -35,8 +38,8 @@ std::unique_ptr<PlacementAlgorithm> PlacementAlgorithmRuleset::clone() const
 
 void PlacementAlgorithmRuleset::reset()
 {
-	m_placed_compartments.clear();
 	m_results.clear();
+	m_results.push_back(AlgorithmResult());
 }
 
 // Find right and left limit of compartment placed
@@ -396,7 +399,7 @@ std::set<CompartmentOnNeuron> PlacementAlgorithmRuleset::unplaced_neighbours(
 
 	for (auto compartment : neuron.adjacent_compartments(compartment)) {
 		bool placed = false;
-		for (auto placed_compartment : m_placed_compartments) {
+		for (auto placed_compartment : m_results.back().placed_compartments) {
 			if (compartment == placed_compartment) {
 				placed = true;
 				break;
@@ -555,7 +558,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	connect_self(coordinates_copy, compartment);
 
 	if (!virtually) {
-		m_placed_compartments.push_back(compartment);
+		m_results.back().placed_compartments.push_back(compartment);
 		coordinates = coordinates_copy;
 	}
 
@@ -648,7 +651,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	connect_self(coordinates_copy, compartment);
 
 	if (!virtually) {
-		m_placed_compartments.push_back(compartment);
+		m_results.back().placed_compartments.push_back(compartment);
 		coordinates = coordinates_copy;
 	}
 
@@ -719,7 +722,9 @@ NumberTopBottom PlacementAlgorithmRuleset::place_branching_compartment(
 
 	NumberTopBottom total_resources;
 
-	if (std::set<CompartmentOnNeuron>(m_placed_compartments.begin(), m_placed_compartments.end())
+	if (std::set<CompartmentOnNeuron>(
+	        m_results.back().placed_compartments.begin(),
+	        m_results.back().placed_compartments.end())
 	        .contains(compartment)) {
 		throw std::runtime_error("Comaprtment already placed.");
 	}
@@ -791,19 +796,14 @@ void PlacementAlgorithmRuleset::connect_self(
 }
 
 // Runs Placement Algorithm one step
-AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
+void PlacementAlgorithmRuleset::run_one_step(
     Neuron const& neuron, ResourceManager const& resources, size_t step)
 {
-	AlgorithmResult result;
-	if (!m_results.empty()) {
-		result = m_results.back();
-	}
-
 	LOG4CXX_DEBUG(
 	    m_logger,
 	    "\n\n______________________________Step: " << step << "______________________________\n\n");
 
-
+	auto& result = m_results.back();
 	// Place Compartment with most Connections in center of coordinate System
 	if (step == 0) {
 		// Find largest compartment (By number of connections)
@@ -840,8 +840,6 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 	}
 	// Every step apart from first one
 	else {
-		m_placed_compartments = m_results.back().placed_compartments;
-
 		// Last placed compartment
 		CompartmentOnNeuron last_compartment;
 		// Compartment placed next
@@ -850,8 +848,9 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		std::set<CompartmentOnNeuron> neighbours_unplaced;
 
 		// Find next compartment to place
-		for (std::vector<CompartmentOnNeuron>::reverse_iterator it = m_placed_compartments.rbegin();
-		     it != m_placed_compartments.rend(); it++) {
+		for (std::vector<CompartmentOnNeuron>::reverse_iterator it =
+		         m_results.back().placed_compartments.rbegin();
+		     it != m_results.back().placed_compartments.rend(); it++) {
 			last_compartment = *it;
 			neighbours_unplaced = unplaced_neighbours(neuron, *it);
 
@@ -969,23 +968,19 @@ AlgorithmResult PlacementAlgorithmRuleset::run_one_step(
 		}
 	}
 
-	// Save Placement Result for backtracking
-	result.placed_compartments = m_placed_compartments;
-	m_results.push_back(result);
-
 	// Check that no compartment is acounted twice for in the placed compartments.
 	assert(
-	    m_placed_compartments.size() ==
-	    std::set<CompartmentOnNeuron>(m_placed_compartments.begin(), m_placed_compartments.end())
+	    m_results.back().placed_compartments.size() ==
+	    std::set<CompartmentOnNeuron>(
+	        m_results.back().placed_compartments.begin(),
+	        m_results.back().placed_compartments.end())
 	        .size());
 
 	// Check if finished
-	if (neuron.num_compartments() == m_placed_compartments.size()) {
+	if (neuron.num_compartments() == m_results.back().placed_compartments.size()) {
 		result.finished = true;
 		LOG4CXX_DEBUG(m_logger, "Placement finished succesfully.");
 	}
-
-	return result;
 }
 
 void PlacementAlgorithmRuleset::output_placed(

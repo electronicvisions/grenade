@@ -30,7 +30,12 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
  */
 struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithmRuleset : public PlacementAlgorithm
 {
-	PlacementAlgorithmRuleset();
+	/*
+	 * Constructor.
+	 *
+	 * @param save_steps Save results for each step.
+	 */
+	PlacementAlgorithmRuleset(bool save_steps = false);
 
 	/**
 	 * Executes placement algorithm.
@@ -72,8 +77,7 @@ private:
 	 * @param resources Resource requirements of the target neuron.
 	 * @param step Step number.
 	 */
-	AlgorithmResult run_one_step(
-	    Neuron const& neuron, ResourceManager const& resources, size_t step);
+	void run_one_step(Neuron const& neuron, ResourceManager const& resources, size_t step);
 
 	/**
 	 * Finds all lower and upper limits of a placed compartment.
@@ -297,11 +301,8 @@ private:
 	void output_placed(
 	    CoordinateSystem const& coordinates, CompartmentOnNeuron const& compartment) const;
 
-	// List of IDs of placed compartments
-	std::vector<CompartmentOnNeuron> m_placed_compartments;
-	// Results
+	bool m_save_steps;
 	std::vector<AlgorithmResult> m_results;
-
 
 	log4cxx::LoggerPtr m_logger;
 };
