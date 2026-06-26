@@ -219,10 +219,9 @@ MAC::insert_synram(
 		topology.add_edge(
 		    v1, v3,
 		    grenade::common::Edge(
-		        grenade::common::CuboidMultiIndexSequence({1}),
 		        grenade::common::CuboidMultiIndexSequence(
 		            {1}, grenade::common::MultiIndex({madc_readout_column})),
-		        0, 0));
+		        grenade::common::CuboidMultiIndexSequence({1}), 0, 0));
 		return {v2, v3, v1};
 	}
 	return {v2, std::nullopt, v1};
