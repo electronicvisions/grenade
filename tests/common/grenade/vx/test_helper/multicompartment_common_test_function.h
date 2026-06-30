@@ -43,9 +43,8 @@ inline auto test_neuron_placement = [](std::string file_name,
 	if (file_name != "") {
 		file.open(file_name);
 
-		file << "Number of compartments ; Success of Placement ; Total testing time ; Time for "
-		        "generation of neuron ; Time for placement of neuron ; Space efficiency of "
-		        "placement\n";
+		file << "Number of compartments; Success of Placement; Total testing time; Time for "
+		        "generation of neuron; Time for placement of neuron\n";
 	}
 
 
