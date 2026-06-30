@@ -1,4 +1,5 @@
 #pragma once
+#include "grenade/common/connection_on_executor.h"
 #include "grenade/common/linked_topology.h"
 #include "grenade/vx/genpybind.h"
 #include "grenade/vx/network/abstract/placement_result.h"
@@ -20,7 +21,11 @@ struct SYMBOL_VISIBLE Placer
 	 * @param topology Topology to find placement result for
 	 * @return Placement result
 	 */
-	virtual PlacementResult operator()(grenade::common::LinkedTopology const& topology) const = 0;
+	virtual PlacementResult operator()(
+	    grenade::common::LinkedTopology const& topology,
+	    std::map<
+	        grenade::common::ConnectionOnExecutor,
+	        std::vector<common::ChipOnConnection>> const& chips_per_connection) const = 0;
 };
 
 GENPYBIND_MANUAL({
@@ -29,9 +34,14 @@ GENPYBIND_MANUAL({
 	struct PyPlacer : public Placer
 	{
 		virtual PlacementResult operator()(
-		    grenade::common::LinkedTopology const& topology) const override
+		    grenade::common::LinkedTopology const& topology,
+		    std::map<
+		        grenade::common::ConnectionOnExecutor,
+		        std::vector<grenade::vx::common::ChipOnConnection>> const& chips_per_connection)
+		    const override
 		{
-			PYBIND11_OVERLOAD_PURE(PlacementResult, Placer, operator(), topology);
+			PYBIND11_OVERLOAD_PURE(
+			    PlacementResult, Placer, operator(), topology, chips_per_connection);
 		}
 	};
 

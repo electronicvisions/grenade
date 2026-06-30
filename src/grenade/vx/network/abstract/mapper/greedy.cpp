@@ -225,7 +225,7 @@ grenade::common::LinkedTopology GreedyMapper::operator()(
 
 	// back end topology
 	hate::Timer mapping_timer;
-	auto placement_result = m_placer(*mapped_topology);
+	auto placement_result = m_placer(*mapped_topology, executor.get_chips_per_connection());
 
 	{
 		AddLinkedTopologyRewrite add_linked_topology(mapped_topology);

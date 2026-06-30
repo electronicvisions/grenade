@@ -42,55 +42,67 @@ void PlacementRewrite::operator()() const
 {
 	std::map<
 	    grenade::common::ExecutionInstanceOnExecutor,
-	    std::vector<grenade::common::VertexOnTopology>>
-	    partitioned_vertices_per_execution_instance;
-
+	    std::map<
+	        grenade::vx::common::ChipOnConnection, std::set<grenade::common::VertexOnTopology>>>
+	    populations_per_chip_per_execution_instance;
 	for (auto const& vertex_descriptor : get_topology().get_reference().vertices()) {
-		auto const& partitioned_vertex = dynamic_cast<grenade::common::PartitionedVertex const&>(
-		    get_topology().get_reference().get(vertex_descriptor));
-		auto const& execution_instance_on_executor =
-		    partitioned_vertex.get_execution_instance_on_executor().value();
-		partitioned_vertices_per_execution_instance[execution_instance_on_executor].push_back(
-		    vertex_descriptor);
+		for (auto const& [execution_instance, execution_instance_placement_result] :
+		     placement_result.chips) {
+			for (auto const& [chip, chip_placement_result] : execution_instance_placement_result) {
+				if (chip_placement_result.neuron_anchors.contains(vertex_descriptor) ||
+				    chip_placement_result.background_locations.contains(vertex_descriptor) ||
+				    chip_placement_result.external_sources.contains(vertex_descriptor)) {
+					auto const& partitioned_vertex =
+					    dynamic_cast<grenade::common::PartitionedVertex const&>(
+					        get_topology().get_reference().get(vertex_descriptor));
+					assert(
+					    execution_instance ==
+					    partitioned_vertex.get_execution_instance_on_executor().value());
+					populations_per_chip_per_execution_instance[execution_instance][chip].insert(
+					    vertex_descriptor);
+				}
+			}
+		}
 	}
 
-	for (auto const& [execution_instance, partitioned_vertices] :
-	     partitioned_vertices_per_execution_instance) {
-		// add populations to mapped graph
-		std::optional<grenade::common::VertexOnTopology> crossbar_l2_input;
-		std::optional<ExternalSourceNeuronMapping> external_source_neuron_mapping;
-		std::vector<grenade::common::VertexOnTopology>
-		    external_source_neuron_partitioned_vertex_descriptors;
+	for (auto const& [execution_instance, populations_per_chip] :
+	     populations_per_chip_per_execution_instance) {
+		for (auto const& [chip, population_descriptors] : populations_per_chip) {
+			auto const& chip_placement_result =
+			    placement_result.chips.at(execution_instance).at(chip);
 
-		std::map<
-		    halco::hicann_dls::vx::v3::BackgroundSpikeSourceOnDLS,
-		    grenade::common::VertexOnTopology>
-		    background_spike_sources;
+			// add populations to mapped graph
+			std::optional<grenade::common::VertexOnTopology> crossbar_l2_input;
+			std::optional<ExternalSourceNeuronMapping> external_source_neuron_mapping;
 
-		std::map<
-		    grenade::common::VertexOnTopology,
-		    std::map<halco::hicann_dls::vx::v3::NeuronRowOnDLS, grenade::common::VertexOnTopology>>
-		    locally_placed_neuron_populations;
+			std::map<
+			    halco::hicann_dls::vx::v3::BackgroundSpikeSourceOnDLS,
+			    grenade::common::VertexOnTopology>
+			    background_spike_sources;
 
-		std::optional<grenade::common::TimeDomainOnTopology> time_domain;
+			std::map<
+			    grenade::common::VertexOnTopology,
+			    std::map<
+			        halco::hicann_dls::vx::v3::NeuronRowOnDLS, grenade::common::VertexOnTopology>>
+			    locally_placed_neuron_populations;
 
-		for (auto const& partitioned_vertex_descriptor : partitioned_vertices) {
-			auto const& partitioned_vertex =
-			    get_topology().get_reference().get(partitioned_vertex_descriptor);
+			std::optional<grenade::common::TimeDomainOnTopology> time_domain;
 
-			if (auto const partitioned_population =
-			        dynamic_cast<grenade::common::Population const*>(&partitioned_vertex);
-			    partitioned_population) {
-				time_domain = partitioned_population->get_time_domain();
-				if (auto const partitioned_external_source =
+			for (auto const& vertex_descriptor : population_descriptors) {
+				auto const& vertex = get_topology().get_reference().get(vertex_descriptor);
+
+				auto const population = dynamic_cast<grenade::common::Population const&>(vertex);
+				time_domain = population.get_time_domain();
+
+				// External sources
+				if (auto const external_source =
 				        dynamic_cast<grenade::vx::network::abstract::ExternalSourceNeuron const*>(
-				            &partitioned_population->get_cell());
-				    partitioned_external_source) {
+				            &population.get_cell());
+				    external_source) {
 					if (!crossbar_l2_input) {
 						crossbar_l2_input =
 						    get_topology().add_vertex(signal_flow::vertex::CrossbarL2Input(
-						        true, common::ChipOnConnection(), time_domain.value(),
-						        execution_instance));
+						        true, chip, time_domain.value(), execution_instance));
 						external_source_neuron_mapping = ExternalSourceNeuronMapping({});
 					} else {
 						if (get_topology()
@@ -100,27 +112,21 @@ void PlacementRewrite::operator()() const
 						        .requires_or_generates_data ==
 						    grenade::common::Vertex::Port::RequiresOrGeneratesData::no) {
 							get_topology().set(
-							    *crossbar_l2_input, signal_flow::vertex::CrossbarL2Input(
-							                            true, common::ChipOnConnection(),
-							                            time_domain.value(), execution_instance));
+							    *crossbar_l2_input,
+							    signal_flow::vertex::CrossbarL2Input(
+							        true, chip, time_domain.value(), execution_instance));
 							external_source_neuron_mapping = ExternalSourceNeuronMapping({});
 						}
 					}
-					auto const partitioned_vertex_descriptor_it = std::find(
-					    external_source_neuron_partitioned_vertex_descriptors.begin(),
-					    external_source_neuron_partitioned_vertex_descriptors.end(),
-					    partitioned_vertex_descriptor);
-					if (partitioned_vertex_descriptor_it ==
-					    external_source_neuron_partitioned_vertex_descriptors.end()) {
-						external_source_neuron_partitioned_vertex_descriptors.push_back(
-						    partitioned_vertex_descriptor);
-					}
-				} else if (auto const partitioned_poisson_source = dynamic_cast<
-				               grenade::vx::network::abstract::PoissonSourceNeuron const*>(
-				               &partitioned_population->get_cell());
-				           partitioned_poisson_source) {
+
+				}
+				// Background poisson neurons
+				else if (auto const poisson_source = dynamic_cast<
+				             grenade::vx::network::abstract::PoissonSourceNeuron const*>(
+				             &population.get_cell());
+				         poisson_source) {
 					for (auto const& [hemisphere, padi_bus_on_block] :
-					     placement_result.background_locations.at(partitioned_vertex_descriptor)) {
+					     chip_placement_result.background_locations.at(vertex_descriptor)) {
 						auto const coordinate =
 						    halco::hicann_dls::vx::v3::BackgroundSpikeSourceOnDLS(
 						        padi_bus_on_block +
@@ -128,26 +134,28 @@ void PlacementRewrite::operator()() const
 						            halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock::size);
 						background_spike_sources[coordinate] =
 						    get_topology().add_vertex(signal_flow::vertex::BackgroundSpikeSource(
-						        coordinate, common::ChipOnConnection(), time_domain.value(),
-						        execution_instance));
+						        coordinate, chip, time_domain.value(), execution_instance));
 						get_topology().add_inter_graph_hyper_edge(
-						    {background_spike_sources.at(coordinate)},
-						    {partitioned_vertex_descriptor}, PoissonSourceNeuronMapping({}, {}));
+						    {background_spike_sources.at(coordinate)}, {vertex_descriptor},
+						    PoissonSourceNeuronMapping({}, {}));
 					}
-				} else if (auto const partitioned_locally_placed_neuron = dynamic_cast<
-				               grenade::vx::network::abstract::LocallyPlacedNeuron const*>(
-				               &partitioned_population->get_cell());
-				           partitioned_locally_placed_neuron) {
+
+				}
+				// Internal sources
+				else if (auto const locally_placed_neuron = dynamic_cast<
+				             grenade::vx::network::abstract::LocallyPlacedNeuron const*>(
+				             &population.get_cell());
+				         locally_placed_neuron) {
 					std::map<
 					    halco::hicann_dls::vx::v3::NeuronRowOnDLS,
 					    std::vector<halco::hicann_dls::vx::v3::NeuronColumnOnDLS>>
 					    neuron_locations;
 
-					for (auto const& neuron_anchor :
-					     placement_result.neuron_anchors.at(partitioned_vertex_descriptor)) {
+					for (auto const& [_, neuron_anchor] :
+					     chip_placement_result.neuron_anchors.at(vertex_descriptor)) {
 						auto const placed_compartments =
 						    halco::hicann_dls::vx::v3::LogicalNeuronOnDLS(
-						        partitioned_locally_placed_neuron->shape, neuron_anchor)
+						        locally_placed_neuron->shape, neuron_anchor)
 						        .get_placed_compartments();
 						for (auto const& [compartment, atomic_neurons] : placed_compartments) {
 							for (auto const& atomic_neuron : atomic_neurons) {
@@ -161,74 +169,73 @@ void PlacementRewrite::operator()() const
 					std::map<halco::hicann_dls::vx::v3::HemisphereOnDLS, size_t>
 					    mapped_vertex_indices;
 					for (size_t r = 0; auto const& [row, columns] : neuron_locations) {
-						locally_placed_neuron_populations[partitioned_vertex_descriptor][row] =
+						locally_placed_neuron_populations[vertex_descriptor][row] =
 						    get_topology().add_vertex(signal_flow::vertex::NeuronView(
-						        columns, row, common::ChipOnConnection(), time_domain.value(),
-						        execution_instance));
+						        columns, row, chip, time_domain.value(), execution_instance));
 						mapped_vertex_descriptors.push_back(
-						    locally_placed_neuron_populations.at(partitioned_vertex_descriptor)
-						        .at(row));
+						    locally_placed_neuron_populations.at(vertex_descriptor).at(row));
 						mapped_vertex_indices[row.toHemisphereOnDLS()] = r;
 						r++;
 					}
 
 					LocallyPlacedNeuronMapping::Anchors anchors;
 
-					// TODO: could be easier if routing result is stored directly per partitioned
-					// vertex, possible since the links are in the graph
-					auto const& partitioned_vertex_section =
+					// TODO: could be easier if routing result is stored directly per
+					// partitioned vertex, possible since the links are in the graph
+					auto const& vertex_section =
 					    dynamic_cast<grenade::common::Population const&>(
-					        get_topology().get_reference().get(partitioned_vertex_descriptor))
+					        get_topology().get_reference().get(vertex_descriptor))
 					        .get_shape();
-					auto const partitioned_vertex_index_sequence =
-					    grenade::common::CuboidMultiIndexSequence({partitioned_population->size()})
+					auto const vertex_index_sequence =
+					    grenade::common::CuboidMultiIndexSequence({population.size()})
 					        .related_sequence_subset_restriction(
-					            partitioned_population->get_shape(), partitioned_vertex_section);
-					for (size_t i = 0;
-					     auto const& index : partitioned_vertex_index_sequence->get_elements()) {
+					            population.get_shape(), vertex_section);
+					for (size_t i = 0; auto const& index : vertex_index_sequence->get_elements()) {
 						anchors[index.value.at(0)] = {
 						    mapped_vertex_indices,
-						    placement_result.neuron_anchors.at(partitioned_vertex_descriptor)
-						        .at(i)};
+						    chip_placement_result.neuron_anchors.at(vertex_descriptor).at(i)};
 						i++;
 					}
 
-					if (auto const partitioned_uncalibrated_neuron =
-					        dynamic_cast<UncalibratedNeuron const*>(
-					            partitioned_locally_placed_neuron);
-					    partitioned_uncalibrated_neuron) {
+					if (auto const uncalibrated_neuron =
+					        dynamic_cast<UncalibratedNeuron const*>(locally_placed_neuron);
+					    uncalibrated_neuron) {
 						get_topology().add_inter_graph_hyper_edge(
-						    std::move(mapped_vertex_descriptors), {partitioned_vertex_descriptor},
+						    std::move(mapped_vertex_descriptors), {vertex_descriptor},
 						    UncalibratedNeuronMapping({}, std::move(anchors)));
-					} else if (auto const partitioned_calibrated_neuron =
-					               dynamic_cast<CalibratedNeuron const*>(
-					                   partitioned_locally_placed_neuron);
-					           partitioned_calibrated_neuron) {
+					} else if (auto const calibrated_neuron =
+					               dynamic_cast<CalibratedNeuron const*>(locally_placed_neuron);
+					           calibrated_neuron) {
 						get_topology().add_inter_graph_hyper_edge(
-						    std::move(mapped_vertex_descriptors), {partitioned_vertex_descriptor},
+						    std::move(mapped_vertex_descriptors), {vertex_descriptor},
 						    CalibratedNeuronMapping({}, {}, std::move(anchors)));
 					}
 				}
 			}
-		}
-		if (crossbar_l2_input) {
-			get_topology().add_inter_graph_hyper_edge(
-			    {*crossbar_l2_input}, external_source_neuron_partitioned_vertex_descriptors,
-			    *external_source_neuron_mapping);
-		}
 
-		if (!locally_placed_neuron_populations.empty()) {
-			auto const mapped_vertex_descriptor =
-			    get_topology().add_vertex(signal_flow::vertex::Chip(
-			        common::ChipOnConnection(), time_domain.value(), execution_instance));
-			std::vector<grenade::common::VertexOnTopology> partitioned_vertex_descriptors;
-			for (auto const& [partitioned_vertex_descriptor, _] :
-			     locally_placed_neuron_populations) {
-				partitioned_vertex_descriptors.push_back(partitioned_vertex_descriptor);
+			std::vector<grenade::common::VertexOnTopology>
+			    external_source_neuron_vertex_descriptors;
+			external_source_neuron_vertex_descriptors.insert(
+			    external_source_neuron_vertex_descriptors.end(),
+			    placement_result.chips.at(execution_instance).at(chip).external_sources.begin(),
+			    placement_result.chips.at(execution_instance).at(chip).external_sources.end());
+			if (crossbar_l2_input) {
+				get_topology().add_inter_graph_hyper_edge(
+				    {*crossbar_l2_input}, external_source_neuron_vertex_descriptors,
+				    *external_source_neuron_mapping);
 			}
-			get_topology().add_inter_graph_hyper_edge(
-			    {mapped_vertex_descriptor}, std::move(partitioned_vertex_descriptors),
-			    ChipMapping(std::nullopt));
+
+			if (!locally_placed_neuron_populations.empty()) {
+				auto const mapped_vertex_descriptor = get_topology().add_vertex(
+				    signal_flow::vertex::Chip(chip, time_domain.value(), execution_instance));
+				std::vector<grenade::common::VertexOnTopology> vertex_descriptors;
+				for (auto const& [vertex_descriptor, _] : locally_placed_neuron_populations) {
+					vertex_descriptors.push_back(vertex_descriptor);
+				}
+				get_topology().add_inter_graph_hyper_edge(
+				    {mapped_vertex_descriptor}, std::move(vertex_descriptors),
+				    ChipMapping(std::nullopt));
+			}
 		}
 	}
 }

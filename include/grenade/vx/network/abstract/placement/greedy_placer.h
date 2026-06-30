@@ -20,7 +20,12 @@ namespace abstract GENPYBIND_TAG_GRENADE_VX_NETWORK_ABSTRACT {
  */
 struct SYMBOL_VISIBLE GENPYBIND(visible) GreedyPlacer : public Placer
 {
-	GreedyPlacer();
+	/**
+	 * Construct greedy placer.
+	 * @param population_chip_splitting Whether a single population can be split on multiple chips
+	 * on a multichip setup.
+	 */
+	GreedyPlacer(bool population_chip_splitting = false);
 
 	typedef std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> NeuronPermutation;
 	typedef std::vector<halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>
@@ -44,12 +49,17 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) GreedyPlacer : public Placer
 	 * @return Placement result
 	 */
 	virtual PlacementResult operator()(
-	    grenade::common::LinkedTopology const& topology) const override;
+	    grenade::common::LinkedTopology const& topology,
+	    std::map<
+	        grenade::common::ConnectionOnExecutor,
+	        std::vector<common::ChipOnConnection>> const& chips_per_connection) const override;
 
 private:
 	NeuronPermutation m_neuron_permutation;
 	BackgroundSourcePermutation m_background_source_permutation;
 	log4cxx::LoggerPtr m_logger;
+
+	bool m_population_chip_splitting;
 };
 
 } // namespace abstract

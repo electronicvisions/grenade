@@ -43,10 +43,11 @@
 
 namespace grenade::vx::network::abstract {
 
-GreedyPlacer::GreedyPlacer() :
+GreedyPlacer::GreedyPlacer(bool population_chip_splitting) :
     m_neuron_permutation(),
     m_background_source_permutation(),
-    m_logger(log4cxx::Logger::getLogger("grenade.network.abstract.GreedyPlacer"))
+    m_logger(log4cxx::Logger::getLogger("grenade.network.abstract.GreedyPlacer")),
+    m_population_chip_splitting(population_chip_splitting)
 {
 	for (auto const atomic_neuron :
 	     halco::common::iter_all<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>()) {
@@ -86,22 +87,33 @@ GreedyPlacer::BackgroundSourcePermutation const& GreedyPlacer::get_background_so
 	return m_background_source_permutation;
 }
 
-PlacementResult GreedyPlacer::operator()(grenade::common::LinkedTopology const& topology) const
+PlacementResult GreedyPlacer::operator()(
+    grenade::common::LinkedTopology const& topology,
+    std::map<grenade::common::ConnectionOnExecutor, std::vector<common::ChipOnConnection>> const&
+        chips_per_connection) const
 {
 	hate::Timer mapping_timer;
 	using namespace grenade::common;
 
 	std::map<
 	    grenade::common::ExecutionInstanceOnExecutor,
-	    std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>
+	    std::map<
+	        common::ChipOnConnection, std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS>>>
 	    available_neuron_circuits;
 
 	std::map<
 	    grenade::common::ExecutionInstanceOnExecutor,
-	    std::vector<halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>>
+	    std::map<
+	        common::ChipOnConnection,
+	        std::vector<halco::hicann_dls::vx::v3::PADIBusOnPADIBusBlock>>>
 	    available_background_circuits;
 
 	PlacementResult placement_result;
+	std::map<
+	    grenade::common::VertexOnTopology,
+	    std::set<std::pair<
+	        grenade::common::ExecutionInstanceOnExecutor, grenade::vx::common::ChipOnConnection>>>
+	    population_chips;
 
 	for (auto const vertex_descriptor : topology.vertices()) {
 		if (!dynamic_cast<PartitionedVertex const&>(topology.get(vertex_descriptor))
@@ -117,53 +129,157 @@ PlacementResult GreedyPlacer::operator()(grenade::common::LinkedTopology const& 
 			    neuron_ptr) {
 				if (!available_neuron_circuits.contains(
 				        population_ptr->get_execution_instance_on_executor().value())) {
-					available_neuron_circuits[population_ptr->get_execution_instance_on_executor()
-					                              .value()] = m_neuron_permutation;
+					for (auto const& chip : chips_per_connection.at(
+					         population_ptr->get_execution_instance_on_executor()
+					             .value()
+					             .connection_on_executor)) {
+						available_neuron_circuits
+						    [population_ptr->get_execution_instance_on_executor().value()][chip] =
+						        m_neuron_permutation;
+					}
 				}
-				auto& local_available_neuron_circuits = available_neuron_circuits.at(
-				    *population_ptr->get_execution_instance_on_executor());
+				auto const& execution_instance =
+				    *population_ptr->get_execution_instance_on_executor();
+				auto& available_neuron_circuits_per_chip =
+				    available_neuron_circuits.at(execution_instance);
 
-				auto const& sequence = population_ptr->get_shape();
+				auto const& population_shape = population_ptr->get_shape();
 
-				for (size_t i = 0; i < sequence.size(); ++i) {
-					bool placed = false;
-					for (auto const& anchor : local_available_neuron_circuits) {
-						try {
-							halco::hicann_dls::vx::v3::LogicalNeuronOnDLS logical_neuron(
-							    neuron_ptr->shape, anchor);
+				if (!m_population_chip_splitting) {
+					size_t num_required_neuron_circuits =
+					    population_shape.size() *
+					    halco::hicann_dls::vx::v3::LogicalNeuronOnDLS(
+					        neuron_ptr->shape, halco::hicann_dls::vx::v3::AtomicNeuronOnDLS())
+					        .get_atomic_neurons()
+					        .size();
 
-
-							auto const atomic_neurons = logical_neuron.get_atomic_neurons();
-							if (!std::all_of(
-							        atomic_neurons.begin(), atomic_neurons.end(),
-							        [local_available_neuron_circuits](auto const& atomic_neuron) {
-								        return std::find(
-								                   local_available_neuron_circuits.begin(),
-								                   local_available_neuron_circuits.end(),
-								                   atomic_neuron) !=
-								               local_available_neuron_circuits.end();
-							        })) {
-								continue;
-							}
-
-							placement_result.neuron_anchors[vertex_descriptor].push_back(anchor);
-							for (auto const& atomic_neuron : atomic_neurons) {
-								local_available_neuron_circuits.erase(std::find(
-								    local_available_neuron_circuits.begin(),
-								    local_available_neuron_circuits.end(), atomic_neuron));
-							}
-							placed = true;
+					std::optional<grenade::vx::common::ChipOnConnection> suitable_chip;
+					for (auto const& [chip, available_circuits] :
+					     available_neuron_circuits_per_chip) {
+						if (available_circuits.size() >= num_required_neuron_circuits) {
+							suitable_chip = chip;
 							break;
-						} catch (std::runtime_error const&) {
-							// this can happen if we can't construct the logical neuron coordinate
-							// with the given anchor, for example when the neuron then overlaps
-							// across the two neuron blocks with internal inter-neuron-circuit
-							// connectivity
-							continue;
 						}
 					}
-					if (!placed) {
-						throw std::runtime_error("Placement unsuccessful.");
+					if (!suitable_chip) {
+						throw std::runtime_error(
+						    "Placement unsuccessful. No chip found where population fits onto.");
+					}
+
+					for (size_t i = 0; i < population_shape.size(); ++i) {
+						bool placed = false;
+						auto& available_neuron_circuits =
+						    available_neuron_circuits_per_chip.at(suitable_chip.value());
+
+						for (auto const& anchor : available_neuron_circuits) {
+							try {
+								halco::hicann_dls::vx::v3::LogicalNeuronOnDLS logical_neuron(
+								    neuron_ptr->shape, anchor);
+
+								auto const atomic_neurons = logical_neuron.get_atomic_neurons();
+								if (!std::all_of(
+								        atomic_neurons.begin(), atomic_neurons.end(),
+								        [&available_neuron_circuits](auto const& atomic_neuron) {
+									        return std::find(
+									                   available_neuron_circuits.begin(),
+									                   available_neuron_circuits.end(),
+									                   atomic_neuron) !=
+									               available_neuron_circuits.end();
+								        })) {
+									continue;
+								}
+
+								placement_result.chips[execution_instance][suitable_chip.value()]
+								    .neuron_anchors[vertex_descriptor]
+								    .emplace(i, anchor);
+								for (auto const& atomic_neuron : atomic_neurons) {
+									available_neuron_circuits.erase(std::find(
+									    available_neuron_circuits.begin(),
+									    available_neuron_circuits.end(), atomic_neuron));
+								}
+								population_chips[vertex_descriptor].insert(
+								    {execution_instance, suitable_chip.value()});
+								placed = true;
+								break;
+							} catch (std::runtime_error const&) {
+								// this can happen if we can't construct the logical neuron
+								// coordinate with the given anchor, for example when the neuron
+								// then overlaps across the two neuron blocks with internal
+								// inter-neuron-circuit connectivity
+								continue;
+							}
+						}
+						if (!placed) {
+							throw std::runtime_error("Placement unsuccessful.");
+						}
+					}
+
+				}
+				// Split population on multiple chips
+				else {
+					for (size_t i = 0; i < population_shape.size(); ++i) {
+						bool placed = false;
+
+						auto chip_available_neuron_circuits =
+						    available_neuron_circuits_per_chip.begin();
+						while (chip_available_neuron_circuits !=
+						       available_neuron_circuits_per_chip.end()) {
+							for (auto const& anchor : chip_available_neuron_circuits->second) {
+								try {
+									halco::hicann_dls::vx::v3::LogicalNeuronOnDLS logical_neuron(
+									    neuron_ptr->shape, anchor);
+
+									auto const atomic_neurons = logical_neuron.get_atomic_neurons();
+									if (!std::all_of(
+									        atomic_neurons.begin(), atomic_neurons.end(),
+									        [&chip_available_neuron_circuits](
+									            auto const& atomic_neuron) {
+										        return std::find(
+										                   chip_available_neuron_circuits->second
+										                       .begin(),
+										                   chip_available_neuron_circuits->second
+										                       .end(),
+										                   atomic_neuron) !=
+										               chip_available_neuron_circuits->second.end();
+									        })) {
+										continue;
+									}
+
+									placement_result
+									    .chips[execution_instance]
+									          [chip_available_neuron_circuits->first]
+									    .neuron_anchors[vertex_descriptor]
+									    .emplace(i, anchor);
+									for (auto const& atomic_neuron : atomic_neurons) {
+										chip_available_neuron_circuits->second.erase(std::find(
+										    chip_available_neuron_circuits->second.begin(),
+										    chip_available_neuron_circuits->second.end(),
+										    atomic_neuron));
+									}
+									population_chips[vertex_descriptor].insert(
+									    {execution_instance,
+									     chip_available_neuron_circuits->first});
+									placed = true;
+									break;
+								} catch (std::runtime_error const&) {
+									// this can happen if we can't construct the logical neuron
+									// coordinate with the given anchor, for example when the neuron
+									// then overlaps across the two neuron blocks with internal
+									// inter-neuron-circuit connectivity
+									continue;
+								}
+							}
+
+							// If not placed on current chip try to place on next chip.
+							if (!placed) {
+								chip_available_neuron_circuits++;
+							} else {
+								break;
+							}
+						}
+						if (!placed) {
+							throw std::runtime_error("Placement unsuccessful.");
+						}
 					}
 				}
 			} else if (auto const neuron_ptr =
@@ -171,33 +287,128 @@ PlacementResult GreedyPlacer::operator()(grenade::common::LinkedTopology const& 
 			           neuron_ptr) {
 				if (!available_background_circuits.contains(
 				        *population_ptr->get_execution_instance_on_executor())) {
-					available_background_circuits
-					    [population_ptr->get_execution_instance_on_executor().value()] =
-					        m_background_source_permutation;
+					for (auto const& chip : chips_per_connection.at(
+					         population_ptr->get_execution_instance_on_executor()
+					             .value()
+					             .connection_on_executor)) {
+						available_background_circuits
+						    [population_ptr->get_execution_instance_on_executor().value()][chip] =
+						        m_background_source_permutation;
+					}
 				}
-				auto& local_available_background_circuits = available_background_circuits.at(
-				    *population_ptr->get_execution_instance_on_executor());
 
 				auto const& sequence = population_ptr->get_shape();
 
-				// we support populations of size <=256 and map them to one background generator per
-				// hemisphere
+				// we support populations of size <=256 and map them to one background generator
+				// per hemisphere
 				if (sequence.size() > 256) {
 					// each circuit can only represent up to 256 sources
 					throw std::runtime_error("Placement unsuccessful.");
 				}
-				if (!local_available_background_circuits.empty()) {
-					for (auto const hemisphere :
-					     halco::common::iter_all<halco::hicann_dls::vx::v3::HemisphereOnDLS>()) {
-						placement_result.background_locations[vertex_descriptor][hemisphere] =
-						    *local_available_background_circuits.begin();
+
+				auto const& execution_instance =
+				    *population_ptr->get_execution_instance_on_executor();
+				auto& available_background_circuits_per_chip =
+				    available_background_circuits.at(execution_instance);
+
+
+				std::optional<grenade::vx::common::ChipOnConnection> suitable_chip;
+				for (auto const& [chip, available_circuits] :
+				     available_background_circuits_per_chip) {
+					if (!available_circuits.empty()) {
+						suitable_chip = chip;
+						break;
 					}
-					local_available_background_circuits.erase(
-					    local_available_background_circuits.begin());
-				} else {
-					throw std::runtime_error("Placement unsuccessful.");
+				}
+				if (!suitable_chip) {
+					throw std::runtime_error(
+					    "Placement unsuccessful. No chip found where population fits onto.");
+				}
+
+				auto& available_circuits =
+				    available_background_circuits_per_chip.at(suitable_chip.value());
+				for (auto const hemisphere :
+				     halco::common::iter_all<halco::hicann_dls::vx::v3::HemisphereOnDLS>()) {
+					placement_result.chips[execution_instance][suitable_chip.value()]
+					    .background_locations[vertex_descriptor][hemisphere] =
+					    available_circuits.front();
+				}
+				available_circuits.erase(available_circuits.begin());
+
+				population_chips[vertex_descriptor].insert(
+				    {execution_instance, suitable_chip.value()});
+			}
+		}
+	}
+
+	// Place external populations on each chip where they are used.
+	for (auto const vertex_descriptor : topology.vertices()) {
+		auto const population_ptr =
+		    dynamic_cast<grenade::common::Population const*>(&topology.get(vertex_descriptor));
+		if (population_ptr == nullptr) {
+			continue;
+		}
+
+		auto const external_neuron_ptr =
+		    dynamic_cast<ExternalSourceNeuron const*>(&(population_ptr->get_cell()));
+		if (external_neuron_ptr == nullptr) {
+			continue;
+		}
+
+		// Iterate over all outgoing projections.
+		bool placed = false;
+		bool has_recorder = false;
+		for (auto const& out_edge_descriptor : topology.out_edges(vertex_descriptor)) {
+			auto const& target_vertex_descriptor = topology.target(out_edge_descriptor);
+			if (!dynamic_cast<grenade::common::Projection const*>(
+			        &topology.get(target_vertex_descriptor))) {
+				if (dynamic_cast<grenade::common::Recorder const*>(
+				        &topology.get(target_vertex_descriptor))) {
+					has_recorder = true;
+				}
+				continue;
+			}
+			// Iterate over all target populations.
+			for (auto const& projection_out_edge_descriptor :
+			     topology.out_edges(target_vertex_descriptor)) {
+				auto const& projection_target_descriptor =
+				    topology.target(projection_out_edge_descriptor);
+				auto const* target_population_ptr =
+				    dynamic_cast<grenade::common::Population const*>(
+				        &topology.get(projection_target_descriptor));
+				if (target_population_ptr == nullptr) {
+					continue;
+				}
+
+				if (!dynamic_cast<LocallyPlacedNeuron const*>(
+				        &(target_population_ptr->get_cell())) &&
+				    !dynamic_cast<PoissonSourceNeuron const*>(
+				        &(target_population_ptr->get_cell()))) {
+					continue;
+				}
+				// Place external population at each chip where target population is
+				// placed.
+				for (auto const& [target_population_execution_instance, target_population_chip] :
+				     population_chips.at(projection_target_descriptor)) {
+					placement_result.chips.at(target_population_execution_instance)
+					    .at(target_population_chip)
+					    .external_sources.insert(vertex_descriptor);
+					placed = true;
 				}
 			}
+		}
+
+		// If external population is not connected to any internal population or background
+		// population but to a recorder it is placed on the first chip on the execution
+		// instance.
+		if (!placed && has_recorder) {
+			auto const& execution_instance =
+			    population_ptr->get_execution_instance_on_executor().value();
+			auto const& chip =
+			    chips_per_connection.at(execution_instance.connection_on_executor).at(0);
+
+			placement_result.chips[execution_instance][chip].external_sources.insert(
+			    vertex_descriptor);
 		}
 	}
 

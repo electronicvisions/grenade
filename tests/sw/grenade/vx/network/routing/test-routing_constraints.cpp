@@ -84,7 +84,10 @@ std::shared_ptr<LinkedTopology> get_placed_topology(std::shared_ptr<Topology> co
 		execution_instance_rewrite();
 	}
 
-	auto placement_result = abstract::GreedyPlacer()(*mapped_topology);
+
+	std::map<ConnectionOnExecutor, std::vector<grenade::vx::common::ChipOnConnection>> chips = {
+	    {ConnectionOnExecutor(), {grenade::vx::common::ChipOnConnection()}}};
+	auto placement_result = abstract::GreedyPlacer()(*mapped_topology, chips);
 
 	{
 		AddLinkedTopologyRewrite add_linked_topology(mapped_topology);

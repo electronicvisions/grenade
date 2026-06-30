@@ -102,6 +102,9 @@ public:
 
 	std::map<grenade::common::ConnectionOnExecutor, size_t> connection_sizes() const SYMBOL_VISIBLE;
 
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<common::ChipOnConnection>>
+	get_chips_per_connection() const SYMBOL_VISIBLE;
+
 private:
 	std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection> m_connections;
 

@@ -119,6 +119,19 @@ std::map<grenade::common::ConnectionOnExecutor, size_t> JITGraphExecutor::connec
 	return sizes;
 }
 
+std::map<grenade::common::ConnectionOnExecutor, std::vector<common::ChipOnConnection>>
+JITGraphExecutor::get_chips_per_connection() const
+{
+	std::map<grenade::common::ConnectionOnExecutor, std::vector<common::ChipOnConnection>>
+	    chips_per_connection;
+
+	for (auto const& [connection_on_executor, connection] : m_connections) {
+		chips_per_connection[connection_on_executor] = connection.get_chips_on_connection();
+	}
+
+	return chips_per_connection;
+}
+
 bool JITGraphExecutor::is_executable_on(grenade::common::Topology const& topology)
 {
 	std::set<
