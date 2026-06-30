@@ -23,13 +23,15 @@ using namespace grenade::vx::network::abstract;
  * @param max_num_compartments Upper limit for compartments on a test neuron.
  * @param max_num_synaptic_inputs Upper limit for the number of synaptic inputs on a compartment.
  * @param algorithm Placement-Algorithm for testing.
+ * @param parallel If true, excute runs in parallel.
  */
 inline auto test_neuron_placement = [](std::string file_name,
                                        log4cxx::LoggerPtr logger,
                                        size_t num_runs,
                                        size_t max_num_compartments,
                                        size_t max_num_synaptic_inputs,
-                                       std::unique_ptr<PlacementAlgorithm> algorithm) {
+                                       std::unique_ptr<PlacementAlgorithm> algorithm,
+                                       bool parallel = true) {
 	NeuronGenerator neuron_generator;
 
 	// File for test result output.
@@ -100,14 +102,18 @@ inline auto test_neuron_placement = [](std::string file_name,
 
 
 	std::vector<std::future<std::vector<TestResult>>> run_results;
+	if (parallel) {
+		LOG4CXX_WARN(
+		    logger, "Running in parallel mode: timings are not reliable for performance analysis.");
+	}
 
 	for (size_t run_count = 0; run_count < num_runs; run_count++) {
 		LOG4CXX_DEBUG(
 		    logger, "Run: " + std::to_string(run_count) + " / " + std::to_string(num_runs));
 
 		run_results.push_back(std::async(
-		    std::launch::async, test_neuron_placement_run, logger, max_num_compartments,
-		    max_num_synaptic_inputs, algorithm->clone()));
+		    parallel ? std::launch::async : std::launch::deferred, test_neuron_placement_run,
+		    logger, max_num_compartments, max_num_synaptic_inputs, algorithm->clone()));
 	}
 
 	if (file_name != "") {
