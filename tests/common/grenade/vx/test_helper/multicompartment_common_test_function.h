@@ -36,8 +36,6 @@ inline auto test_neuron_placement = [](std::string file_name,
                                        std::unique_ptr<PlacementAlgorithm> algorithm,
                                        bool parallel = true,
                                        size_t num_warmup = 0) {
-	NeuronGenerator neuron_generator;
-
 	// File for test result output.
 	std::ofstream file;
 	if (file_name != "") {
@@ -47,13 +45,12 @@ inline auto test_neuron_placement = [](std::string file_name,
 		        "generation of neuron; Time for placement of neuron\n";
 	}
 
-
-	auto test_neuron_placement_run = [&neuron_generator](
-	                                     log4cxx::LoggerPtr logger, size_t num_runs,
-	                                     size_t num_compartments, size_t max_num_synaptic_inputs,
-	                                     std::unique_ptr<PlacementAlgorithm> algorithm,
-	                                     size_t num_warmup) -> std::vector<TestResult> {
+	auto test_neuron_placement_run = [](log4cxx::LoggerPtr logger, size_t num_runs,
+	                                    size_t num_compartments, size_t max_num_synaptic_inputs,
+	                                    std::unique_ptr<PlacementAlgorithm> algorithm,
+	                                    size_t num_warmup) -> std::vector<TestResult> {
 		std::vector<TestResult> results;
+		NeuronGenerator neuron_generator;
 
 		for (size_t run_count = 0; run_count < num_runs + num_warmup; run_count++) {
 			TestResult result;
