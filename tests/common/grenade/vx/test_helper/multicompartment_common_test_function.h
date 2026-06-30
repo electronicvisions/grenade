@@ -24,6 +24,9 @@ using namespace grenade::vx::network::abstract;
  * @param max_num_synaptic_inputs Upper limit for the number of synaptic inputs on a compartment.
  * @param algorithm Placement-Algorithm for testing.
  * @param parallel If true, excute runs in parallel.
+ * @param num_warmup Number of neurons to geenrate before staarting the test. This can be
+ * 		helpful to warmup the caches.
+ *
  */
 inline auto test_neuron_placement = [](std::string file_name,
                                        log4cxx::LoggerPtr logger,
@@ -31,7 +34,8 @@ inline auto test_neuron_placement = [](std::string file_name,
                                        size_t max_num_compartments,
                                        size_t max_num_synaptic_inputs,
                                        std::unique_ptr<PlacementAlgorithm> algorithm,
-                                       bool parallel = true) {
+                                       bool parallel = true,
+                                       size_t num_warmup = 0) {
 	NeuronGenerator neuron_generator;
 
 	// File for test result output.
@@ -45,14 +49,14 @@ inline auto test_neuron_placement = [](std::string file_name,
 	}
 
 
-	auto test_neuron_placement_run =
-	    [&neuron_generator](
-	        log4cxx::LoggerPtr logger, size_t max_num_compartments, size_t max_num_synaptic_inputs,
-	        std::unique_ptr<PlacementAlgorithm> algorithm) -> std::vector<TestResult> {
+	auto test_neuron_placement_run = [&neuron_generator](
+	                                     log4cxx::LoggerPtr logger, size_t num_runs,
+	                                     size_t num_compartments, size_t max_num_synaptic_inputs,
+	                                     std::unique_ptr<PlacementAlgorithm> algorithm,
+	                                     size_t num_warmup) -> std::vector<TestResult> {
 		std::vector<TestResult> results;
 
-		for (size_t num_compartments = 1; num_compartments <= max_num_compartments;
-		     num_compartments++) {
+		for (size_t run_count = 0; run_count < num_runs + num_warmup; run_count++) {
 			TestResult result;
 			result.num_compartments = num_compartments;
 			result.success = false;
@@ -85,16 +89,20 @@ inline auto test_neuron_placement = [](std::string file_name,
 
 			result.time_placement = timer_placement.get_us();
 			result.time_total = timer_test.get_us();
-			results.push_back(result);
 
-			if (result.success) {
-				LOG4CXX_DEBUG(
-				    logger, "Number of compartments: " + std::to_string(num_compartments) +
-				                "Placement Successfull.");
-			} else {
-				LOG4CXX_DEBUG(
-				    logger, "Number of compartments: " + std::to_string(num_compartments) +
-				                "Placement Failed.");
+			// Only save results when warmup is over
+			if (run_count >= num_warmup) {
+				results.push_back(result);
+
+				if (result.success) {
+					LOG4CXX_DEBUG(
+					    logger, "Number of compartments: " + std::to_string(num_compartments) +
+					                "Placement Successfull.");
+				} else {
+					LOG4CXX_DEBUG(
+					    logger, "Number of compartments: " + std::to_string(num_compartments) +
+					                "Placement Failed.");
+				}
 			}
 		}
 		return results;
@@ -107,13 +115,16 @@ inline auto test_neuron_placement = [](std::string file_name,
 		    logger, "Running in parallel mode: timings are not reliable for performance analysis.");
 	}
 
-	for (size_t run_count = 0; run_count < num_runs; run_count++) {
+	for (size_t num_compartments = 1; num_compartments <= max_num_compartments;
+	     num_compartments++) {
 		LOG4CXX_DEBUG(
-		    logger, "Run: " + std::to_string(run_count) + " / " + std::to_string(num_runs));
+		    logger, "Number of compartments: " + std::to_string(num_compartments) + " / " +
+		                std::to_string(max_num_compartments));
 
 		run_results.push_back(std::async(
 		    parallel ? std::launch::async : std::launch::deferred, test_neuron_placement_run,
-		    logger, max_num_compartments, max_num_synaptic_inputs, algorithm->clone()));
+		    logger, num_runs, num_compartments, max_num_synaptic_inputs, algorithm->clone(),
+		    num_warmup));
 	}
 
 	if (file_name != "") {
