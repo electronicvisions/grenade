@@ -604,11 +604,6 @@ void RoutingRewrite::operator()() const
 			               dynamic_cast<CADCRecorder const*>(&partitioned_vertex);
 			           partitioned_cadc_recorder) {
 				std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> atomic_neurons;
-
-				std::map<
-				    grenade::common::VertexOnTopology,
-				    std::pair<grenade::common::Edge, grenade::common::EdgeOnTopology>>
-				    mapped_edges;
 				for (auto const in_edge_descriptor :
 				     get_topology().get_reference().in_edges(partitioned_vertex_descriptor)) {
 					auto const source_vertex_descriptor =
@@ -617,18 +612,6 @@ void RoutingRewrite::operator()() const
 					auto const& partitioned_source_population =
 					    dynamic_cast<grenade::common::Population const&>(
 					        get_topology().get_reference().get(source_vertex_descriptor));
-					auto const target_channels_on_recorder =
-					    grenade::common::CuboidMultiIndexSequence(
-					        {partitioned_cadc_recorder->get_input_ports()
-					             .at(in_edge.port_on_target)
-					             .get_channels()
-					             .size()})
-					        .related_sequence_subset_restriction(
-					            partitioned_cadc_recorder->get_input_ports()
-					                .at(in_edge.port_on_target)
-					                .get_channels(),
-					            in_edge.get_channels_on_target())
-					        ->get_elements();
 					auto const& internal_source_neuron = dynamic_cast<LocallyPlacedNeuron const&>(
 					    partitioned_source_population.get_cell());
 
@@ -676,13 +659,8 @@ void RoutingRewrite::operator()() const
 						neuron_index++;
 					}
 
-					auto const& mapped_neuron_views =
-					    locally_placed_neuron_populations.at(execution_instance)
-					        .at(source_vertex_descriptor);
-
 					auto const& in_edge_channels_on_source = in_edge.get_channels_on_source();
-					for (size_t population_atomic_neuron_index = 0;
-					     auto const& in_edge_channel_on_source :
+					for (auto const& in_edge_channel_on_source :
 					     in_edge_channels_on_source.get_elements()) {
 						auto const neuron_on_population =
 						    in_edge_channel_on_source.value.at(cell_on_population_dimension);
@@ -701,30 +679,6 @@ void RoutingRewrite::operator()() const
 						        .at(compartment_on_neuron)
 						        .at(atomic_neuron_on_compartment);
 						atomic_neurons.push_back(atomic_neuron);
-
-						auto const& mapped_neuron_view_descriptor =
-						    mapped_neuron_views.at(atomic_neuron.toNeuronRowOnDLS());
-						auto const& mapped_neuron_view =
-						    dynamic_cast<signal_flow::vertex::NeuronView const&>(
-						        get_topology().get(mapped_neuron_view_descriptor));
-						size_t const column = std::distance(
-						    mapped_neuron_view.get_columns().begin(),
-						    std::find(
-						        mapped_neuron_view.get_columns().begin(),
-						        mapped_neuron_view.get_columns().end(),
-						        atomic_neuron.toNeuronColumnOnDLS()));
-						assert(column < mapped_neuron_view.get_columns().size());
-						mapped_edges.emplace(
-						    mapped_neuron_view_descriptor,
-						    std::pair{
-						        grenade::common::Edge(
-						            grenade::common::ListMultiIndexSequence(
-						                {grenade::common::MultiIndex({column})}),
-						            grenade::common::ListMultiIndexSequence(
-						                {grenade::common::MultiIndex(
-						                    {population_atomic_neuron_index})})),
-						        in_edge_descriptor});
-						population_atomic_neuron_index++;
 					}
 				}
 
@@ -758,10 +712,6 @@ void RoutingRewrite::operator()() const
 			               dynamic_cast<MADCRecorder const*>(&partitioned_vertex);
 			           partitioned_madc_recorder) {
 				auto& atomic_neurons = madc_recorder_locations[partitioned_vertex_descriptor];
-				std::map<
-				    grenade::common::VertexOnTopology,
-				    std::pair<grenade::common::Edge, grenade::common::EdgeOnTopology>>
-				    mapped_edges;
 
 				for (auto const in_edge_descriptor :
 				     get_topology().get_reference().in_edges(partitioned_vertex_descriptor)) {
@@ -771,18 +721,6 @@ void RoutingRewrite::operator()() const
 					auto const& partitioned_source_population =
 					    dynamic_cast<grenade::common::Population const&>(
 					        get_topology().get_reference().get(source_vertex_descriptor));
-					auto const target_channels_on_recorder =
-					    grenade::common::CuboidMultiIndexSequence(
-					        {partitioned_madc_recorder->get_input_ports()
-					             .at(in_edge.port_on_target)
-					             .get_channels()
-					             .size()})
-					        .related_sequence_subset_restriction(
-					            partitioned_madc_recorder->get_input_ports()
-					                .at(in_edge.port_on_target)
-					                .get_channels(),
-					            in_edge.get_channels_on_target())
-					        ->get_elements();
 					auto const& internal_source_neuron = dynamic_cast<LocallyPlacedNeuron const&>(
 					    partitioned_source_population.get_cell());
 
@@ -816,10 +754,6 @@ void RoutingRewrite::operator()() const
 					size_t const atomic_neuron_on_compartment_dimension =
 					    *atomic_neuron_on_compartment_dimensions.begin();
 
-					auto const& mapped_neuron_views =
-					    locally_placed_neuron_populations.at(execution_instance)
-					        .at(source_vertex_descriptor);
-
 					// This maps neurons on the source population to their index on the population,
 					// wich might differ (due to previous splitting of a larger population).
 					std::map<size_t, size_t> neuron_indices;
@@ -835,8 +769,7 @@ void RoutingRewrite::operator()() const
 					}
 
 					auto const& in_edge_channels_on_source = in_edge.get_channels_on_source();
-					for (size_t population_atomic_neuron_index = 0;
-					     auto const& in_edge_channel : in_edge_channels_on_source.get_elements()) {
+					for (auto const& in_edge_channel : in_edge_channels_on_source.get_elements()) {
 						auto const& neuron_on_population =
 						    in_edge_channel.value.at(neuron_on_population_dimension);
 						halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron(
@@ -853,30 +786,6 @@ void RoutingRewrite::operator()() const
 						        .at(atomic_neuron_on_compartment);
 
 						atomic_neurons.push_back(atomic_neuron);
-
-						auto const& mapped_neuron_view_descriptor =
-						    mapped_neuron_views.at(atomic_neuron.toNeuronRowOnDLS());
-						auto const& mapped_neuron_view =
-						    dynamic_cast<signal_flow::vertex::NeuronView const&>(
-						        get_topology().get(mapped_neuron_view_descriptor));
-						size_t const column = std::distance(
-						    mapped_neuron_view.get_columns().begin(),
-						    std::find(
-						        mapped_neuron_view.get_columns().begin(),
-						        mapped_neuron_view.get_columns().end(),
-						        atomic_neuron.toNeuronColumnOnDLS()));
-						assert(column < mapped_neuron_view.get_columns().size());
-						mapped_edges.emplace(
-						    mapped_neuron_view_descriptor,
-						    std::pair{
-						        grenade::common::Edge(
-						            grenade::common::ListMultiIndexSequence(
-						                {grenade::common::MultiIndex({column})}),
-						            grenade::common::ListMultiIndexSequence(
-						                {grenade::common::MultiIndex(
-						                    {population_atomic_neuron_index})})),
-						        in_edge_descriptor});
-						population_atomic_neuron_index++;
 					}
 				}
 
@@ -885,10 +794,6 @@ void RoutingRewrite::operator()() const
 			               dynamic_cast<PadRecorder const*>(&partitioned_vertex);
 			           partitioned_pad_recorder) {
 				std::vector<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> atomic_neurons;
-				std::map<
-				    grenade::common::VertexOnTopology,
-				    std::pair<grenade::common::Edge, grenade::common::EdgeOnTopology>>
-				    mapped_edges;
 
 				for (auto const in_edge_descriptor :
 				     get_topology().get_reference().in_edges(partitioned_vertex_descriptor)) {
@@ -932,10 +837,6 @@ void RoutingRewrite::operator()() const
 					size_t const atomic_neuron_on_compartment_dimension =
 					    *atomic_neuron_on_compartment_dimensions.begin();
 
-					auto const& mapped_neuron_views =
-					    locally_placed_neuron_populations.at(execution_instance)
-					        .at(source_vertex_descriptor);
-
 					// This maps neurons on the source population to their index on the population,
 					// wich might differ (due to previous splitting of a larger population).
 					std::map<size_t, size_t> neuron_indices;
@@ -951,8 +852,7 @@ void RoutingRewrite::operator()() const
 					}
 
 					auto const& in_edge_channels_on_source = in_edge.get_channels_on_source();
-					for (size_t population_atomic_neuron_index = 0;
-					     auto const& in_edge_channel : in_edge_channels_on_source.get_elements()) {
+					for (auto const& in_edge_channel : in_edge_channels_on_source.get_elements()) {
 						auto const& neuron_on_population =
 						    in_edge_channel.value.at(neuron_on_population_dimension);
 						halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron compartment_on_neuron(
@@ -970,30 +870,6 @@ void RoutingRewrite::operator()() const
 						        .at(atomic_neuron_on_compartment);
 
 						atomic_neurons.push_back(atomic_neuron);
-
-						auto const& mapped_neuron_view_descriptor =
-						    mapped_neuron_views.at(atomic_neuron.toNeuronRowOnDLS());
-						auto const& mapped_neuron_view =
-						    dynamic_cast<signal_flow::vertex::NeuronView const&>(
-						        get_topology().get(mapped_neuron_view_descriptor));
-						size_t const column = std::distance(
-						    mapped_neuron_view.get_columns().begin(),
-						    std::find(
-						        mapped_neuron_view.get_columns().begin(),
-						        mapped_neuron_view.get_columns().end(),
-						        atomic_neuron.toNeuronColumnOnDLS()));
-						assert(column < mapped_neuron_view.get_columns().size());
-						mapped_edges.emplace(
-						    mapped_neuron_view_descriptor,
-						    std::pair{
-						        grenade::common::Edge(
-						            grenade::common::ListMultiIndexSequence(
-						                {grenade::common::MultiIndex({column})}),
-						            grenade::common::ListMultiIndexSequence(
-						                {grenade::common::MultiIndex(
-						                    {population_atomic_neuron_index})})),
-						        in_edge_descriptor});
-						population_atomic_neuron_index++;
 					}
 				}
 
