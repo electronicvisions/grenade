@@ -399,7 +399,19 @@ NumberTopBottom CoordinateSystem::assign_compartment_direct(
 		return NumberTopBottom();
 	}
 
-	NumberTopBottom number_neuron_circuits = assign_compartment_adjacent(x, y, compartment);
+	coordinate_system[y][x].compartment = compartment;
+	NumberTopBottom number_neuron_circuits = NumberTopBottom(1, 1 - y, y);
+
+	if (connected_right(x, y)) {
+		number_neuron_circuits += assign_compartment_direct(x + 1, y, compartment);
+	}
+	if (connected_left(x, y)) {
+		number_neuron_circuits += assign_compartment_direct(x - 1, y, compartment);
+	}
+	if (connected_top_bottom(x, y)) {
+		number_neuron_circuits += assign_compartment_direct(x, 1 - y, compartment);
+	}
+
 	for (auto [x_connected, y_connected] : connected_shared_short(x, y)) {
 		number_neuron_circuits += assign_compartment_direct(x_connected, y_connected, compartment);
 	}
