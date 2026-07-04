@@ -153,6 +153,11 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	std::pair<bool, bool> parity(CompartmentOnNeuron const& compartment) const;
 
 	/**
+	 * Return set of all compartments.
+	 */
+	std::set<CompartmentOnNeuron> get_compartments() const;
+
+	/**
 	 * Return set of all compartments that have neuron circuits in columns with even parity.
 	 */
 	std::set<CompartmentOnNeuron> even_parity() const;
@@ -173,6 +178,13 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	void connect_shared(size_t x_source, size_t x_target, size_t y);
 
 	/**
+	 * Return number of neuron circuits allocated to the given compartment.
+	 * @param compartment Compartment descriptor.
+	 * @return Number of allocated neuron circuits.
+	 */
+	NumberTopBottom get_resources(CompartmentOnNeuron const compartment) const;
+
+	/**
 	 * Return coordinates of all neuron circuits with the given compartment descriptor assigned.
 	 * @param compartment Compartment descriptor.
 	 */
@@ -181,16 +193,23 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 
 	/**
 	 * Construct a neuron based on the state of the coordinate-system.
+	 *
+	 * The construction preserves the compartment IDs assigned to the neuron
+	 * circuits.
+	 * For the construction to work, compartment IDs have to be assigned to the
+	 * different neuron circuits and these IDs have to start at 0 and have to be
+	 * contiguous.
+	 *
+	 * Note, when the assignment of compartment IDs should not be preserved, a map
+	 * between assigned compartment IDs and compartment IDs in the constructed
+	 * neuron could be returned. In this case, the already assigned compartment IDs
+	 * could start at any number and would not have to be contiguous.
+	 *
 	 * @param coordinate_system Coordinate system from which a neuron is constructed.
-	 * @return Constructed neuron, map from compartment assigned to coordinate system to
-	 * compartments of constructed neuron and map over all newly constructed compartments with their
-	 * allocated resources.
+	 * @return Constructed neuron and map over all newly constructed
+	 * 		compartments with their allocated resources.
 	 */
-	std::tuple<
-	    Neuron,
-	    std::map<CompartmentOnNeuron, CompartmentOnNeuron>,
-	    std::map<CompartmentOnNeuron, NumberTopBottom>>
-	construct_neuron();
+	std::tuple<Neuron, std::map<CompartmentOnNeuron, NumberTopBottom>> construct_neuron();
 
 	/**
 	 * Align coordinate system to the left, i.e. remove unused circuits on the left.

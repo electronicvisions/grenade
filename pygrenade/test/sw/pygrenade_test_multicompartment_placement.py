@@ -302,7 +302,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         :param coordinate_system: coordinate system from which a neuron is
             constructed.
         '''
-        neuron_placed, _, _ = coordinate_system.construct_neuron()
+        neuron_placed, _ = coordinate_system.construct_neuron()
         cls.assertTrue(neuron_placed.compartments_connected(),
                        "Placment result yields a neuron which is "
                        "not fully connected.")

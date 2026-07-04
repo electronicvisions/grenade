@@ -445,6 +445,21 @@ std::pair<bool, bool> CoordinateSystem::parity(CompartmentOnNeuron const& compar
 }
 
 
+std::set<CompartmentOnNeuron> CoordinateSystem::get_compartments() const
+{
+	std::set<CompartmentOnNeuron> compartments;
+	for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+		for (size_t y = 0; y < coordinate_system.size(); y++) {
+			if (coordinate_system[y][x].compartment) {
+				compartments.emplace(coordinate_system[y][x].compartment.value());
+			}
+		}
+	}
+
+	return compartments;
+}
+
+
 std::set<CompartmentOnNeuron> CoordinateSystem::even_parity() const
 {
 	std::set<CompartmentOnNeuron> compartments;
@@ -477,7 +492,6 @@ std::set<CompartmentOnNeuron> CoordinateSystem::odd_parity() const
 
 	return compartments;
 }
-
 
 void CoordinateSystem::connect_shared(size_t x_source, size_t x_target, size_t y)
 {
@@ -513,92 +527,89 @@ std::vector<std::pair<int, int>> CoordinateSystem::find_neuron_circuits(
 	return results;
 }
 
-std::tuple<
-    Neuron,
-    std::map<CompartmentOnNeuron, CompartmentOnNeuron>,
-    std::map<CompartmentOnNeuron, NumberTopBottom>>
+
+NumberTopBottom CoordinateSystem::get_resources(CompartmentOnNeuron const compartment) const
+{
+	NumberTopBottom resources;
+
+	for (auto const& coord : find_neuron_circuits(compartment)) {
+		resources += NumberTopBottom(1, 1 - coord.second, coord.second);
+	}
+
+	return resources;
+}
+
+
+std::tuple<Neuron, std::map<CompartmentOnNeuron, NumberTopBottom>>
 CoordinateSystem::construct_neuron()
 {
 	Neuron neuron;
-	CoordinateSystem coordinate_copy = *this;
 	std::map<CompartmentOnNeuron, NumberTopBottom> allocated_resources;
-	std::map<CompartmentOnNeuron, CompartmentOnNeuron> compartment_mapping;
 
-	for (size_t x = 0; x < coordinate_copy.coordinate_system[0].size(); x++) {
-		for (size_t y = 0; y < coordinate_copy.coordinate_system.size(); y++) {
-			coordinate_copy.coordinate_system[y][x].compartment = std::nullopt;
-		}
+	// find all assigned compartments
+	auto compartments = get_compartments();
+
+	if (compartments.empty()) {
+		return {std::move(neuron), allocated_resources};
 	}
 
-	// Iterate over coordinate-system to find compartments with switches set
-	for (size_t x = 0; x < coordinate_copy.coordinate_system[0].size(); x++) {
-		for (size_t y = 0; y < coordinate_copy.coordinate_system.size(); y++) {
-			if (!(coordinate_copy.coordinate_system[y][x].compartment) &&
-			    coordinate_system[y][x].compartment) {
-				// Add Compartment to Neuron
-				Compartment compartment;
-				CompartmentOnNeuron descriptor = neuron.add_compartment(compartment);
-				compartment_mapping.emplace(
-				    coordinate_system[y][x].compartment.value(), descriptor);
-
-				// Assign ID to connected neuron circuits
-				NumberTopBottom allocated_neuron_circuits =
-				    coordinate_copy.assign_compartment_direct(x, y, descriptor);
-
-				// Add allocated resources to resource map
-				allocated_resources.emplace(descriptor, allocated_neuron_circuits);
-			}
-		}
+	// test that there are no gaps and compartments start at zero
+	if (*compartments.begin() != CompartmentOnNeuron(0)) {
+		throw std::runtime_error("Can not construct neuron. Compartment ids "
+		                         "do not start at zero.");
+	}
+	if (*compartments.rbegin() != CompartmentOnNeuron(compartments.size() - 1)) {
+		throw std::runtime_error("Can not construct neuron. Compartment ids "
+		                         "are not contiguous.");
 	}
 
-	// Add Compartment Connections
+	// create compartments and collect resources
+	for (auto const compartment_id : compartments) {
+		Compartment compartment;
+		auto descriptor = neuron.add_compartment(compartment);
+		assert(descriptor == compartment_id);
+
+		allocated_resources.emplace(compartment_id, get_resources(compartment_id));
+	}
+
+	// for each neuron circuits search for connected neighbors
 	CompartmentConnectionConductance connection;
-
-	// For each neuron circuits search for connected neighbours
-	for (size_t x = 0; x < coordinate_copy.coordinate_system[0].size(); x++) {
-		for (size_t y = 0; y < coordinate_copy.coordinate_system.size(); y++) {
+	for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+		for (size_t y = 0; y < coordinate_system.size(); y++) {
 			// Find all connected compartments
-			if (!coordinate_copy.coordinate_system[y][x].compartment) {
+			if (!coordinate_system[y][x].compartment) {
 				continue;
 			}
-			for (auto neighbour_coordinates : coordinate_copy.connected_shared_conductance(x, y)) {
-				if (!coordinate_copy
-				         .coordinate_system[neighbour_coordinates.second]
-				                           [neighbour_coordinates.first]
+			for (auto neighbour_coordinates : connected_shared_conductance(x, y)) {
+				if (!coordinate_system[neighbour_coordinates.second][neighbour_coordinates.first]
 				         .compartment) {
 					throw std::runtime_error("Can not construct neuron. Shared line connected to "
 					                         "neuron circuit without compartment.");
 				}
 				// Check if already connected on neuron
 				if (neuron.neighbour(
-				        coordinate_copy.coordinate_system[y][x].compartment.value(),
-				        coordinate_copy
-				            .coordinate_system[neighbour_coordinates.second]
-				                              [neighbour_coordinates.first]
+				        coordinate_system[y][x].compartment.value(),
+				        coordinate_system[neighbour_coordinates.second][neighbour_coordinates.first]
 				            .compartment.value())) {
 					continue;
 				}
 				// Check for connection with itself
-				if (coordinate_copy.coordinate_system[y][x].compartment ==
-				    coordinate_copy
-				        .coordinate_system[neighbour_coordinates.second]
-				                          [neighbour_coordinates.first]
+				if (coordinate_system[y][x].compartment ==
+				    coordinate_system[neighbour_coordinates.second][neighbour_coordinates.first]
 				        .compartment) {
 					continue;
 				}
 				// Add connection
 				neuron.add_compartment_connection(
-				    coordinate_copy.coordinate_system[y][x].compartment.value(),
-				    coordinate_copy
-				        .coordinate_system[neighbour_coordinates.second]
-				                          [neighbour_coordinates.first]
+				    coordinate_system[y][x].compartment.value(),
+				    coordinate_system[neighbour_coordinates.second][neighbour_coordinates.first]
 				        .compartment.value(),
 				    connection);
 			}
 		}
 	}
 
-	return {std::move(neuron), compartment_mapping, allocated_resources};
+	return {std::move(neuron), allocated_resources};
 }
 
 void CoordinateSystem::align_left()
