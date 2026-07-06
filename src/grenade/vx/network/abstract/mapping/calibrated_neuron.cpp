@@ -96,6 +96,15 @@ CalibratedNeuronMapping::map_input_data(
 				auto const& compartment_readout_sources =
 				    readout_sources.at(neuron_on_model)
 				        .at(grenade::common::CompartmentOnNeuron(compartment_on_neuron));
+				if (compartment_readout_sources.size() != atomic_neurons.size()) {
+					std::stringstream ss;
+					ss << "Number of specified readout sources("
+					   << compartment_readout_sources.size()
+					   << ") does not match number of atomic neurons(" << atomic_neurons.size()
+					   << ") on compartment " << compartment_on_neuron << ".";
+					throw std::logic_error(ss.str());
+				}
+
 				for (size_t i = 0; i < atomic_neurons.size(); ++i) {
 					if (atomic_neurons.at(i).toNeuronRowOnDLS() == mapped_vertex.row) {
 						size_t const column_index = std::distance(
