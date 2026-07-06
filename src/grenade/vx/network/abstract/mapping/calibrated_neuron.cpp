@@ -56,7 +56,8 @@ bool CalibratedNeuronMapping::valid(
 std::vector<std::vector<std::unique_ptr<grenade::common::PortData>>>
 CalibratedNeuronMapping::map_input_data(
     std::vector<
-        std::vector<std::optional<std::reference_wrapper<grenade::common::PortData const>>>> const&,
+        std::vector<std::optional<std::reference_wrapper<grenade::common::PortData const>>>> const&
+        model_vertex_parameterization,
     grenade::common::InterGraphHyperEdgeVertexDescriptors<grenade::common::VertexOnTopology> const&
         linked_vertex_descriptors,
     grenade::common::InterGraphHyperEdgeVertexDescriptors<grenade::common::VertexOnTopology> const&
@@ -67,6 +68,11 @@ CalibratedNeuronMapping::map_input_data(
 	    dynamic_cast<grenade::common::Population const&>(
 	        topology.get_reference().get(reference_vertex_descriptors.at(0)))
 	        .get_cell());
+
+	auto const& model_neuron_parameterization =
+	    dynamic_cast<CalibratedNeuron::ParameterSpace::Parameterization const&>(
+	        model_vertex_parameterization.at(0).at(1).value().get());
+	auto const& readout_sources = model_neuron_parameterization.readout_sources;
 
 	std::vector<std::vector<signal_flow::vertex::NeuronView::Parameterization::Config>>
 	    mapped_configs(linked_vertex_descriptors.size());
@@ -87,6 +93,9 @@ CalibratedNeuronMapping::map_input_data(
 			auto const& mapped_vertex = dynamic_cast<signal_flow::vertex::NeuronView const&>(
 			    topology.get(linked_vertex_descriptors.at(mapped_vertex_index)));
 			for (auto const& [compartment_on_neuron, atomic_neurons] : atomic_neurons_on_model) {
+				auto const& compartment_readout_sources =
+				    readout_sources.at(neuron_on_model)
+				        .at(grenade::common::CompartmentOnNeuron(compartment_on_neuron));
 				for (size_t i = 0; i < atomic_neurons.size(); ++i) {
 					if (atomic_neurons.at(i).toNeuronRowOnDLS() == mapped_vertex.row) {
 						size_t const column_index = std::distance(
@@ -102,6 +111,13 @@ CalibratedNeuronMapping::map_input_data(
 						        .at(grenade::common::CompartmentOnNeuron(compartment_on_neuron))
 						        .at(i),
 						    false};
+
+						// Set readout source
+						mapped_configs.at(mapped_vertex_index)
+						    .at(column_index)
+						    .atomic_neuron_config.readout.source =
+						    compartment_readout_sources.at(i);
+
 						if (labels.at(mapped_vertex_index).at(column_index)) {
 							mapped_configs.at(mapped_vertex_index)
 							    .at(column_index)
