@@ -116,9 +116,14 @@ void JITCalibration::operator()(
 	    pyhxcomm_connections;
 	std::map<grenade::common::ConnectionOnExecutor, std::vector<common::ChipOnConnection>>
 	    chips_on_connections;
-	for (auto& [connection_on_executor, connection] : executor.release_connections()) {
+	std::map<grenade::common::ConnectionOnExecutor, execution::backend::StatefulConnection>
+	    stateful_connections;
+	std::map<grenade::common::ConnectionOnExecutor, execution::backend::InitializedConnection>
+	    initialized_connections;
+	stateful_connections = executor.release_connections();
+	for (auto& [connection_on_executor, connection] : stateful_connections) {
 		chips_on_connections.emplace(connection_on_executor, connection.get_chips_on_connection());
-		auto initialized_connection = connection.release();
+		initialized_connections.emplace(connection_on_executor, connection.release());
 		enable_differential_config[connection_on_executor] =
 		    connection.get_enable_differential_config();
 		pyhxcomm_connections.emplace(
@@ -127,7 +132,7 @@ void JITCalibration::operator()(
 		        [](auto&& ic) -> pyhxcomm::vx::ConnectionHandle {
 			        return pyhxcomm::Handle<std::decay_t<decltype(ic)>>{std::move(ic)};
 		        },
-		        initialized_connection.release()));
+		        initialized_connections.at(connection_on_executor).release()));
 	}
 
 	auto pycalix_common = pybind11::module_::import("calix.common");
@@ -438,18 +443,19 @@ void JITCalibration::operator()(
 	}
 
 	// move connection back into executor
-	std::map<grenade::common::ConnectionOnExecutor, execution::backend::StatefulConnection>
-	    connections;
 	for (auto& [connection_on_executor, pyhxcomm_connection] : pyhxcomm_connections) {
-		connections.emplace(
-		    connection_on_executor,
-		    execution::backend::StatefulConnection(
-		        execution::backend::InitializedConnection(std::visit(
-		            [](auto& c) -> hxcomm::vx::ConnectionVariant { return std::move(c.get()); },
-		            pyhxcomm_connection)),
-		        enable_differential_config.at(connection_on_executor)));
+		initialized_connections.at(connection_on_executor)
+		    .capture(std::visit(
+		        [](auto& c) -> hxcomm::vx::ConnectionVariant { return std::move(c.get()); },
+		        pyhxcomm_connection));
+
+		stateful_connections.at(connection_on_executor)
+		    .capture(std::move(initialized_connections.at(connection_on_executor)));
+		/*stateful_connections.at(connection_on_executor) = execution::backend::StatefulConnection(
+		    std::move(initialized_connections.at(connection_on_executor)),
+		    enable_differential_config.at(connection_on_executor));*/
 	}
-	executor = grenade::vx::execution::JITGraphExecutor(std::move(connections));
+	executor.capture_connections(std::move(stateful_connections));
 
 	fixture_calibration(topology, executor);
 }

@@ -88,10 +88,18 @@ struct InitializedConnection
 	hxcomm::vx::ConnectionVariant&& release() SYMBOL_VISIBLE;
 
 	/**
+	 * Take ownership of hxcomm connection.
+	 * @param connection Connection of which to take ownership.
+	 */
+	void capture(hxcomm::vx::ConnectionVariant&& connection) SYMBOL_VISIBLE;
+
+	/**
 	 * Create entry on reinit stack.
 	 * @return Created reinit stack entry
 	 */
 	stadls::vx::v3::ReinitStackEntry create_reinit_stack_entry() SYMBOL_VISIBLE;
+
+	void update_reinit_stack_entry(stadls::vx::v3::ReinitStackEntry& entry) const SYMBOL_VISIBLE;
 
 	/**
 	 * Get whether owned hxcomm connection is QuiggeldyConnection.

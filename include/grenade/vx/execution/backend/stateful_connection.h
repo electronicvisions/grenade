@@ -86,6 +86,17 @@ struct StatefulConnection
 	InitializedConnection&& release() SYMBOL_VISIBLE;
 
 	/**
+	 * Take ownershif of initialized connection.
+	 * @param initialized_connection Connection of which to take ownership.
+	 */
+	void capture(InitializedConnection&& initialized_connection) SYMBOL_VISIBLE;
+
+	/**
+	 * Reset the states of the chip configs.
+	 */
+	void reset_configs();
+
+	/**
 	 * Get whether owned hxcomm connection is QuiggeldyConnection.
 	 * @return Boolean value
 	 */

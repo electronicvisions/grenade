@@ -71,6 +71,14 @@ public:
 	release_connections() SYMBOL_VISIBLE;
 
 	/**
+	 * Take ownership of connections.
+	 * @param connections Connections which are captured.
+	 */
+	void capture_connections(
+	    std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&& connections)
+	    SYMBOL_VISIBLE;
+
+	/**
 	 * Get number of contained connections.
 	 */
 	size_t size() const SYMBOL_VISIBLE;

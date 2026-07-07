@@ -49,6 +49,12 @@ JITGraphExecutor::release_connections()
 	return std::move(m_connections);
 }
 
+void JITGraphExecutor::capture_connections(
+    std::map<grenade::common::ConnectionOnExecutor, backend::StatefulConnection>&& connections)
+{
+	m_connections = std::move(connections);
+}
+
 size_t JITGraphExecutor::size() const
 {
 	return m_connections.size();

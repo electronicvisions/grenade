@@ -84,6 +84,26 @@ InitializedConnection&& StatefulConnection::release()
 	return std::move(m_initialized_connection);
 }
 
+void StatefulConnection::capture(InitializedConnection&& initialized_connection)
+{
+	m_initialized_connection = std::move(initialized_connection);
+	m_initialized_connection.update_reinit_stack_entry(m_reinit_base);
+	m_initialized_connection.update_reinit_stack_entry(m_reinit_differential);
+	m_initialized_connection.update_reinit_stack_entry(m_reinit_schedule_out_replacement);
+	m_initialized_connection.update_reinit_stack_entry(m_reinit_capmem_settling_wait);
+	m_initialized_connection.update_reinit_stack_entry(m_reinit_start_ppus);
+	// FIXME: Resetting the configs here prevents application of differential configs and always
+	// forces applictation of a new base config.
+	reset_configs();
+}
+
+void StatefulConnection::reset_configs()
+{
+	for (auto& [_, config] : m_configs) {
+		config.reset();
+	}
+}
+
 bool StatefulConnection::is_quiggeldy() const
 {
 	return m_initialized_connection.is_quiggeldy();

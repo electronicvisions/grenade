@@ -148,9 +148,20 @@ hxcomm::vx::ConnectionVariant&& InitializedConnection::release()
 	return std::move(get_connection());
 }
 
+void InitializedConnection::capture(hxcomm::vx::ConnectionVariant&& connection)
+{
+	m_connection = std::make_unique<hxcomm::vx::ConnectionVariant>(std::move(connection));
+	m_init.update_connection(*m_connection);
+}
+
 stadls::vx::v3::ReinitStackEntry InitializedConnection::create_reinit_stack_entry()
 {
 	return std::visit([](auto& c) { return stadls::vx::ReinitStackEntry(c); }, get_connection());
+}
+
+void InitializedConnection::update_reinit_stack_entry(stadls::vx::v3::ReinitStackEntry& entry) const
+{
+	entry.update_connection(get_connection());
 }
 
 bool InitializedConnection::is_quiggeldy() const
