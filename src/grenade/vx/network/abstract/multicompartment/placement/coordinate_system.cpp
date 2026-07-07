@@ -539,6 +539,32 @@ NumberTopBottom CoordinateSystem::get_resources(CompartmentOnNeuron const compar
 	return resources;
 }
 
+void CoordinateSystem::clear_compartments()
+{
+	for (size_t y = 0; y < coordinate_system.size(); y++) {
+		for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+			coordinate_system[y][x].compartment = std::nullopt;
+		}
+	}
+}
+
+void CoordinateSystem::assign_compartments()
+{
+	// First remove all assigned compartments
+	clear_compartments();
+	CompartmentOnNeuron compartment;
+	for (size_t y = 0; y < coordinate_system.size(); y++) {
+		for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+			if (!coordinate_system[y][x].compartment &&
+			    (connected_to_shared_line(x, y) || connected_right(x, y) ||
+			     connected_top_bottom(x, y))) {
+				assign_compartment_direct(x, y, compartment);
+				compartment += 1;
+			}
+		}
+	}
+}
+
 
 std::tuple<Neuron, std::map<CompartmentOnNeuron, NumberTopBottom>>
 CoordinateSystem::construct_neuron()

@@ -127,6 +127,21 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	std::vector<std::pair<size_t, size_t>> connected_shared_conductance(size_t x, size_t y) const;
 
 	/**
+	 * Clear all assigned compartments.
+	 */
+	void clear_compartments();
+
+	/**
+	 * Assign compartments on the coordinate system.
+	 *
+	 * Assign a compartment ID to all neuron circuits which are connected to the shared
+	 * line, to the neuron circuit in the opposite row or to the right. Neuron circuits directly
+	 * connected to each other are assigned the same compartment ID.
+	 * Previously assigned compartment IDs are disregarded.
+	 */
+	void assign_compartments();
+
+	/**
 	 * Assign compartment descriptor to the neuron circuit and to all directly connected neuron
 	 * circuits.
 	 * @param x x coordinate of the neuron circuit.
