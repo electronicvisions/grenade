@@ -65,23 +65,19 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_FALSE(coordinates.has_double_connections(255));
 	EXPECT_FALSE(coordinates.short_circuit(255));
 
-	// Test neuron
-	Neuron neuron;
-	Compartment compartment_a;
-	CompartmentOnNeuron compartment_a_on_neuron = neuron.add_compartment(compartment_a);
-
 	// Assigning compartment to connected circuits
-	coordinates.assign_compartment_adjacent(0, 0, compartment_a_on_neuron);
+	CompartmentOnNeuron compartment_id;
+	coordinates.assign_compartment_adjacent(0, 0, compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(0, 0));
-	EXPECT_EQ(coordinates.get_compartment(0, 0).value(), compartment_a_on_neuron);
+	EXPECT_EQ(coordinates.get_compartment(0, 0).value(), compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(0, 1));
-	EXPECT_EQ(coordinates.get_compartment(0, 1).value(), compartment_a_on_neuron);
+	EXPECT_EQ(coordinates.get_compartment(0, 1).value(), compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(1, 0));
-	EXPECT_EQ(coordinates.get_compartment(1, 0).value(), compartment_a_on_neuron);
+	EXPECT_EQ(coordinates.get_compartment(1, 0).value(), compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(1, 1));
-	EXPECT_EQ(coordinates.get_compartment(1, 1).value(), compartment_a_on_neuron);
+	EXPECT_EQ(coordinates.get_compartment(1, 1).value(), compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(2, 0));
-	EXPECT_EQ(coordinates.get_compartment(2, 0).value(), compartment_a_on_neuron);
+	EXPECT_EQ(coordinates.get_compartment(2, 0).value(), compartment_id);
 
 	// Detect and clear empty connection
 	coordinates[0][10].switch_circuit_shared = 1;
@@ -89,6 +85,13 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	coordinates.clear_empty_connections(255);
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
 	EXPECT_FALSE(coordinates.has_empty_connections(255));
+
+	// Test neuron construction
+	coordinates.assign_compartments();
+	auto constructed = coordinates.construct_neuron();
+	auto neuron = std::move(std::get<Neuron>(constructed));
+	EXPECT_EQ(neuron.num_compartments(), 3);
+	EXPECT_EQ(neuron.num_compartment_connections(), 2);
 
 	// New coordinate system to test connection to not adjacent neuron circuits
 	coordinates.clear();
@@ -114,6 +117,13 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).at(0).first, 2);
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).at(0).second, 0);
 
+	// Test neuron construction
+	coordinates.assign_compartments();
+	constructed = coordinates.construct_neuron();
+	neuron = std::move(std::get<Neuron>(constructed));
+	EXPECT_EQ(neuron.num_compartments(), 2);
+	EXPECT_EQ(neuron.num_compartment_connections(), 1);
+
 	/* Check for connections via conductances to multiple different compartments.
 	 _ _ _ _
 	|   &   &
@@ -133,6 +143,14 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).at(1).first, 4);
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).at(1).second, 0);
 
+	// Test neuron construction
+	coordinates.assign_compartments();
+	constructed = coordinates.construct_neuron();
+	neuron = std::move(std::get<Neuron>(constructed));
+	EXPECT_EQ(neuron.num_compartments(), 3);
+	EXPECT_EQ(neuron.num_compartment_connections(), 2);
+	coordinates.clear_compartments(); // we test manual assignment below
+
 	/* Check for connections via conductance to multiple different compartments combined with a
 	short circuit connection to itself.
 	 _ _ _ _
@@ -144,10 +162,17 @@ TEST(MulticompartmentPlacementCoordinates, BaseTest)
 	EXPECT_EQ(coordinates.connected_shared_short(0, 0).size(), 1);
 	EXPECT_EQ(coordinates.connected_shared_conductance(0, 0).size(), 2);
 
-	coordinates.assign_compartment_adjacent(0, 0, compartment_a_on_neuron);
+	coordinates.assign_compartment_adjacent(0, 0, compartment_id);
 	EXPECT_TRUE(coordinates.get_compartment(0, 0));
-	EXPECT_EQ(coordinates.get_compartment(0, 0).value(), compartment_a_on_neuron);
+	EXPECT_EQ(coordinates.get_compartment(0, 0).value(), compartment_id);
 	EXPECT_FALSE(coordinates.get_compartment(2, 0));
+
+	// Test neuron construction
+	coordinates.assign_compartments();
+	constructed = coordinates.construct_neuron();
+	neuron = std::move(std::get<Neuron>(constructed));
+	EXPECT_EQ(neuron.num_compartments(), 3);
+	EXPECT_EQ(neuron.num_compartment_connections(), 2);
 }
 
 
