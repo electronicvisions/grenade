@@ -663,6 +663,39 @@ void CoordinateSystem::align_left()
 	}
 }
 
+
+size_t CoordinateSystem::get_extent() const
+{
+	bool used_circuit_found = false;
+	size_t left_most_used_circuit = coordinate_system[0].size();
+	for (size_t y = 0; y < coordinate_system.size(); y++) {
+		for (size_t x = 0; x < coordinate_system[0].size(); x++) {
+			if (connected(x, y)) {
+				left_most_used_circuit = std::min(x, left_most_used_circuit);
+				used_circuit_found = true;
+				break;
+			}
+		}
+	}
+
+	// if no compartment was found, the coordinate system is empty
+	if (!used_circuit_found) {
+		return 0;
+	}
+
+	size_t right_most_used_circuit = 0;
+	for (size_t y = 0; y < coordinate_system.size(); y++) {
+		for (size_t x = coordinate_system[0].size(); x-- > 0;) {
+			if (connected(x, y)) {
+				right_most_used_circuit = std::max(x, right_most_used_circuit);
+				break;
+			}
+		}
+	}
+
+	return right_most_used_circuit - left_most_used_circuit + 1;
+}
+
 void CoordinateSystem::clear()
 {
 	for (size_t y = 0; y < 2; y++) {

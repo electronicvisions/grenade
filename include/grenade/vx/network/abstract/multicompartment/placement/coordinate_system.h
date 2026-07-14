@@ -231,6 +231,13 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	 **/
 	void align_left();
 
+	/**
+	 * Get extent of coordinate system.
+	 *
+	 * Get the distance of the first and last occupied column.
+	 */
+	size_t get_extent() const;
+
 	// Constructor
 	CoordinateSystem() = default;
 
