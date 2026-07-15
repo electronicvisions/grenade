@@ -3,6 +3,7 @@
 #include "grenade/vx/network/abstract/multicompartment/neuron_generator.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm.h"
 #include "grenade/vx/test_helper/multicompartment_test_result.h"
+#include "halco/hicann-dls/vx/neuron.h"
 #include "hate/timer.h"
 #include <fstream>
 #include <future>
@@ -26,6 +27,8 @@ using namespace grenade::vx::network::abstract;
  * @param parallel If true, excute runs in parallel.
  * @param num_warmup Number of neurons to geenrate before staarting the test. This can be
  * 		helpful to warmup the caches.
+ * @param max_neuron_columns Define the found placement as unsuccessfull if it exceeds this
+ * 		number of neuron columns.
  *
  */
 inline auto test_neuron_placement = [](std::string file_name,
@@ -35,7 +38,9 @@ inline auto test_neuron_placement = [](std::string file_name,
                                        size_t max_num_synaptic_inputs,
                                        std::unique_ptr<PlacementAlgorithm> algorithm,
                                        bool parallel = true,
-                                       size_t num_warmup = 0) {
+                                       size_t num_warmup = 0,
+                                       size_t max_neuron_columns = halco::hicann_dls::vx::
+                                           NeuronColumnOnLogicalNeuron::size) {
 	// File for test result output.
 	std::ofstream file;
 	if (file_name != "") {
@@ -45,10 +50,11 @@ inline auto test_neuron_placement = [](std::string file_name,
 		        "generation of neuron; Time for placement of neuron\n";
 	}
 
-	auto test_neuron_placement_run = [](log4cxx::LoggerPtr logger, size_t num_runs,
-	                                    size_t num_compartments, size_t max_num_synaptic_inputs,
-	                                    std::unique_ptr<PlacementAlgorithm> algorithm,
-	                                    size_t num_warmup) -> std::vector<TestResult> {
+	auto test_neuron_placement_run = [max_neuron_columns](
+	                                     log4cxx::LoggerPtr logger, size_t num_runs,
+	                                     size_t num_compartments, size_t max_num_synaptic_inputs,
+	                                     std::unique_ptr<PlacementAlgorithm> algorithm,
+	                                     size_t num_warmup) -> std::vector<TestResult> {
 		std::vector<TestResult> results;
 		NeuronGenerator neuron_generator;
 
@@ -80,6 +86,11 @@ inline auto test_neuron_placement = [](std::string file_name,
 				placement_result = algorithm->run(coordinates, generated.neuron, resources);
 				result.success = placement_result.finished;
 			} catch (std::runtime_error&) {
+				result.success = false;
+			}
+
+			// Only declare mappings as a success if it fits on the coordinate system
+			if (placement_result.coordinate_system.get_extent() > max_neuron_columns) {
 				result.success = false;
 			}
 
