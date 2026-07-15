@@ -1,6 +1,6 @@
 # !/usr/bin/env python
-# pylint: disable=too-many-locals, too-many-statements, too-many-lines
-from typing import List, Set, Tuple
+# pylint: disable=too-many-locals
+from typing import List, Mapping, Set, Tuple, Optional
 import unittest
 
 import matplotlib.pyplot as plt
@@ -11,34 +11,85 @@ import pygrenade_vx.network.abstract as grenade
 import pygrenade_vx
 
 
-def neuron_from_edgelist(connections: List[Tuple[int, int]]
-                         ) -> Tuple[grenade.Neuron, grenade.ResourceManager]:
+def neuron_from_edgelist(
+        connections: List[Tuple[int, int]],
+        compartments: Optional[Mapping[int, grenade.Compartment]] = None,
+        param_spaces: Optional[
+            Mapping[int, grenade.Compartment.ParameterSpace]] = None,
+) -> Tuple[grenade.Neuron, grenade.Neuron.ParameterSpace]:
     """
-    Create a grenade neuron and its resources from an edgelist.
+    Create a grenade neuron and its parameter space from an edegelist.
 
     :param connections: List defining the connections of different
         compartments.
+    :param compartments: Map (integer id as key) of compartments
+        to add to the morphology builder. If no compartment is provided
+        a compartment with a small capacitance is used per default.
+    :param param_spaces: Map (integer id as key) of parameters spaces
+        belonging to the provided compartments.
     :return: Constructed neuron and resource manager.
     """
 
     neuron = grenade.Neuron()
-    resources = grenade.ResourceManager()
-    environment = grenade.Environment()
 
-    compartment, parameter_space = get_cap_compartment()
+    comp_ids = {}
+    p_spaces_neuron = {}
+    neuron_indices = range(np.max(connections) + 1) if len(connections) > 0 \
+        else [0]
+    for idx in neuron_indices:
+        compartment, parameter_space = get_cap_compartment()
+        if compartments is not None and idx in compartments:
+            compartment = compartments[idx]
+            if param_spaces is None or idx not in param_spaces:
+                raise ValueError(
+                    "You need to provide a parameter space for "
+                    "each index for which a compartment is provided")
+            parameter_space = param_spaces[idx]
+        comp_ids[idx] = neuron.add_compartment(compartment)
+        p_spaces_neuron[comp_ids[idx]] = parameter_space
 
-    compartments = {n: neuron.add_compartment(compartment)
-                    for n in range(np.max(connections) + 1)}
     neuron_parameter_space = grenade.Neuron.ParameterSpace()
-    neuron_parameter_space.compartments = \
-        {comp: parameter_space for comp in compartments.values()}
-    resources.add_config(neuron, neuron_parameter_space, environment)
+    neuron_parameter_space.compartments = p_spaces_neuron
 
     for (parent, child) in connections:
         neuron.add_compartment_connection(
-            compartments[parent],
-            compartments[child],
+            comp_ids[parent],
+            comp_ids[child],
             grenade.CompartmentConnectionConductance())
+    return neuron, neuron_parameter_space
+
+
+def neuron_and_res_from_edgelist(
+        connections: List[Tuple[int, int]],
+        compartments: Optional[Mapping[int, grenade.Compartment]] = None,
+        param_spaces: Optional[
+            Mapping[int, grenade.Compartment.ParameterSpace]] = None,
+) -> Tuple[grenade.Neuron, grenade.ResourceManager]:
+    """
+    Create a grenade neuron and its resources from an edgelist.
+
+    Note, the environment of the resources is default constructed,
+        i.e. it this function can not be used if synaptic inputs
+        are present on the neuron.
+
+    :param connections: List defining the connections of different
+        compartments.
+    :param compartments: Map (integer id as key) of compartments
+        to add to the morphology builder. If no compartment is provided
+        a compartment with a small capacitance is used per default.
+    :param param_spaces: Map (integer id as key) of parameters spaces
+        belonging to the provided compartments.
+    :return: Constructed neuron and resource manager.
+    """
+
+    resources = grenade.ResourceManager()
+    environment = grenade.Environment()
+
+    neuron, neuron_parameter_space = neuron_from_edgelist(
+        connections, compartments, param_spaces)
+
+    resources.add_config(neuron, neuron_parameter_space, environment)
+
     return neuron, resources
 
 
@@ -139,7 +190,7 @@ plt.rcParams['hatch.color'] = 'blue'
 
 
 def plot_grid(*, limits, title="", caption="", step="",
-              coordinate_system, dictionary, directory="", markings=None,
+              coordinate_system, dictionary=None, directory="", markings=None,
               plot_ids=True):
     '''
     Plots a coordinate system that visualizes the placement of
@@ -177,10 +228,12 @@ def plot_grid(*, limits, title="", caption="", step="",
             if plot_ids:
                 if coordinate_system.coordinate_system[1 - i][j].compartment\
                         is not None:
+                    comp_id = coordinate_system.coordinate_system[1 - i][j]\
+                        .compartment
+                    label = dictionary[comp_id] if dictionary is not None else\
+                        comp_id.value()
                     axis.text(j + 0.5, i + 0.5,
-                              dictionary[coordinate_system
-                                         .coordinate_system[1 - i][j]
-                                         .compartment],
+                              label,
                               va='center', ha='center')
             if (coordinate_system.coordinate_system[1 - i][j]
                     .switch_right):
@@ -308,20 +361,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                        "not fully connected.")
 
     def test_single_compartment_one(self):
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment()
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
+        neuron, resources = neuron_and_res_from_edgelist([])
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -330,37 +370,24 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         limits = [120, 160]
         title = "Neuron single compartment with single neuron circuit"
-        dictionary = {compartment_a_on_neuron: "A"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
-
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
 
     def test_multiple_neuron_circuits(self):
         """
         Test a single comaprtment which is made up of several neuron
             circuits.
         """
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
 
         compartment, parameter_space = get_cap_compartment(0, 11)
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
+        neuron, resources = neuron_and_res_from_edgelist(
+            [],
+            {0: compartment},
+            {0: parameter_space})
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -369,41 +396,23 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         limits = [120, 160]
         title = "Neuron single compartment with multiple neuron circuits"
-        dictionary = {compartment_a_on_neuron: "A"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
 
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
-
     def test_two_connected(self):
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
         comp_small, param_space_small = get_cap_compartment()
         comp_big, param_space_big = get_cap_compartment(0, 11)
 
-        compartment_a_on_neuron = neuron.add_compartment(comp_small)
-        compartment_b_on_neuron = neuron.add_compartment(comp_big)
-
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_b_on_neuron,
-            grenade.CompartmentConnectionConductance())
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: param_space_small,
-            compartment_b_on_neuron: param_space_big}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
+        neuron, resources = neuron_and_res_from_edgelist(
+            [(0, 1)],
+            {0: comp_small,
+             1: comp_big},
+            {0: param_space_small,
+             1: param_space_big})
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -412,54 +421,31 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         limits = [120, 160]
         title = "Neuron with two connected compartments"
-        dictionary = {compartment_a_on_neuron: "A",
-                      compartment_b_on_neuron: "B"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
 
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
-
     def test_compartment_chain(self):
         neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
 
         comp_small, param_space_small = get_cap_compartment()
         comp_big, param_space_big = get_cap_compartment(0, 11)
 
-        compartment_a_on_neuron = neuron.add_compartment(comp_small)
-        compartment_b_on_neuron = neuron.add_compartment(comp_big)
-        compartment_c_on_neuron = neuron.add_compartment(comp_big)
-        compartment_d_on_neuron = neuron.add_compartment(comp_small)
-
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_b_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_c_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_c_on_neuron,
-            compartment_d_on_neuron,
-            grenade.CompartmentConnectionConductance())
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: param_space_small,
-            compartment_b_on_neuron: param_space_big,
-            compartment_c_on_neuron: param_space_big,
-            compartment_d_on_neuron: param_space_small}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
+        neuron, resources = neuron_and_res_from_edgelist(
+            [(0, 1),
+             (1, 2),
+             (2, 3)],
+            {0: comp_small,
+             1: comp_big,
+             2: comp_big,
+             3: comp_small},
+            {0: param_space_small,
+             1: param_space_big,
+             2: param_space_big,
+             3: param_space_small})
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -468,38 +454,26 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         title = "Neuron with linearly chained compartments"
         limits = [120, 160]
-        dictionary = {compartment_a_on_neuron: "A",
-                      compartment_b_on_neuron: "B",
-                      compartment_c_on_neuron: "C",
-                      compartment_d_on_neuron: "D"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
 
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
-
     def test_synaptic_input(self):
-        neuron = grenade.Neuron()
         resources = grenade.ResourceManager()
         environment = grenade.Environment()
 
         compartment, parameter_space = get_syn_compartment()
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
+        neuron, neuron_parameter_space = neuron_from_edgelist(
+            [],
+            {0: compartment},
+            {0: parameter_space})
 
         synaptic_input_a = grenade.SynapticInputEnvironmentCurrent(
             True, grenade.NumberTopBottom(1200, 0, 257))
-        environment.add(compartment_a_on_neuron, synaptic_input_a)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space}
+        environment.add(grenade.CompartmentOnNeuron(0), synaptic_input_a)
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
@@ -510,47 +484,22 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         title = "Neuron with synatpic input form both lanes"
         limits = [120, 160]
-        dictionary = {compartment_a_on_neuron: "A"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
-
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
 
     def test_many_neighbors(self):
         '''
         Test that the algorithm can handle a compartment with many neighbors.
         '''
-
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment()
-
-        # Create one center compartment "C" and some neighbors "N"
-        n_comp = 5
-        compartments = [neuron.add_compartment(compartment)
-                        for _ in range(n_comp)]
-        names = ["C"] + [f"N{i}" for i in range(n_comp - 1)]
-        param_dict = dict(zip(compartments, [parameter_space] * n_comp))
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = param_dict
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
-
-        # Connect all compartments to the first compartment
-        for comp in compartments[1:]:
-            neuron.add_compartment_connection(
-                compartments[0], comp,
-                grenade.CompartmentConnectionConductance())
+        connections = [(0, 1),
+                       (0, 2),
+                       (0, 3),
+                       (0, 4)]
+        neuron, resources = neuron_and_res_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -559,80 +508,22 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         title = "Compartment with many neighbors"
         limits = [120, 160]
-        dictionary = dict(zip(compartments, names))
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
 
-        synaptic_input_a = grenade.SynapticInputEnvironmentCurrent(
-            True, grenade.NumberTopBottom(1200, 0, 257))
-        environment.add(compartments[0], synaptic_input_a)
-
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
-
     def test_seven_connections(self):
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment()
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
-        compartment_b_on_neuron = neuron.add_compartment(compartment)
-        compartment_c_on_neuron = neuron.add_compartment(compartment)
-        compartment_d_on_neuron = neuron.add_compartment(compartment)
-        compartment_e_on_neuron = neuron.add_compartment(compartment)
-        compartment_f_on_neuron = neuron.add_compartment(compartment)
-        compartment_g_on_neuron = neuron.add_compartment(compartment)
-        compartment_h_on_neuron = neuron.add_compartment(compartment)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space,
-            compartment_b_on_neuron: parameter_space,
-            compartment_c_on_neuron: parameter_space,
-            compartment_d_on_neuron: parameter_space,
-            compartment_e_on_neuron: parameter_space,
-            compartment_f_on_neuron: parameter_space,
-            compartment_g_on_neuron: parameter_space,
-            compartment_h_on_neuron: parameter_space}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
-
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_b_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_c_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_d_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_e_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_f_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_g_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_h_on_neuron,
-            grenade.CompartmentConnectionConductance())
+        connections = [(0, 1),
+                       (0, 2),
+                       (0, 3),
+                       (0, 4),
+                       (0, 5),
+                       (0, 6),
+                       (0, 7)]
+        neuron, resources = neuron_and_res_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -641,113 +532,27 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         title = "Neuron with central compartment that changes shape"
         limits = [120, 160]
-        dictionary = {compartment_a_on_neuron: "A",
-                      compartment_b_on_neuron: "B",
-                      compartment_c_on_neuron: "C",
-                      compartment_d_on_neuron: "D",
-                      compartment_e_on_neuron: "E",
-                      compartment_f_on_neuron: "F",
-                      compartment_g_on_neuron: "G",
-                      compartment_h_on_neuron: "H"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
 
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
-
     def test_combination(self):
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment()
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
-        compartment_b_on_neuron = neuron.add_compartment(compartment)
-        compartment_c_on_neuron = neuron.add_compartment(compartment)
-        compartment_d_on_neuron = neuron.add_compartment(compartment)
-        compartment_e_on_neuron = neuron.add_compartment(compartment)
-        compartment_f_on_neuron = neuron.add_compartment(compartment)
-        compartment_g_on_neuron = neuron.add_compartment(compartment)
-        compartment_h_on_neuron = neuron.add_compartment(compartment)
-        compartment_i_on_neuron = neuron.add_compartment(compartment)
-        compartment_j_on_neuron = neuron.add_compartment(compartment)
-        compartment_k_on_neuron = neuron.add_compartment(compartment)
-        compartment_l_on_neuron = neuron.add_compartment(compartment)
-        compartment_m_on_neuron = neuron.add_compartment(compartment)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space,
-            compartment_b_on_neuron: parameter_space,
-            compartment_c_on_neuron: parameter_space,
-            compartment_d_on_neuron: parameter_space,
-            compartment_e_on_neuron: parameter_space,
-            compartment_f_on_neuron: parameter_space,
-            compartment_g_on_neuron: parameter_space,
-            compartment_h_on_neuron: parameter_space,
-            compartment_i_on_neuron: parameter_space,
-            compartment_j_on_neuron: parameter_space,
-            compartment_k_on_neuron: parameter_space,
-            compartment_l_on_neuron: parameter_space,
-            compartment_m_on_neuron: parameter_space}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
-
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_b_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_c_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_d_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_d_on_neuron,
-            compartment_e_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_e_on_neuron,
-            compartment_f_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_g_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_h_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_f_on_neuron,
-            compartment_i_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_f_on_neuron,
-            compartment_j_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_f_on_neuron,
-            compartment_k_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_f_on_neuron,
-            compartment_l_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_f_on_neuron,
-            compartment_m_on_neuron,
-            grenade.CompartmentConnectionConductance())
+        connections = [(0, 1),
+                       (1, 2),
+                       (1, 3),
+                       (3, 4),
+                       (4, 5),
+                       (1, 6),
+                       (1, 7),
+                       (5, 8),
+                       (5, 9),
+                       (5, 10),
+                       (5, 11),
+                       (5, 12)]
+        neuron, resources = neuron_and_res_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -756,130 +561,29 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         title = "Neuron with multiple connected branches"
         limits = [120, 160]
-        dictionary = {compartment_a_on_neuron: "A",
-                      compartment_b_on_neuron: "B",
-                      compartment_c_on_neuron: "C",
-                      compartment_d_on_neuron: "D",
-                      compartment_e_on_neuron: "E",
-                      compartment_f_on_neuron: "F",
-                      compartment_g_on_neuron: "G",
-                      compartment_h_on_neuron: "H",
-                      compartment_i_on_neuron: "I",
-                      compartment_j_on_neuron: "J",
-                      compartment_k_on_neuron: "K",
-                      compartment_l_on_neuron: "L",
-                      compartment_m_on_neuron: "M"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
 
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
-
     def test_pyramid(self):
-        neuron = grenade.Neuron()
-        resources = grenade.ResourceManager()
-        environment = grenade.Environment()
-
-        compartment, parameter_space = get_cap_compartment()
-
-        compartment_a_on_neuron = neuron.add_compartment(compartment)
-        compartment_b_on_neuron = neuron.add_compartment(compartment)
-        compartment_c_on_neuron = neuron.add_compartment(compartment)
-        compartment_d_on_neuron = neuron.add_compartment(compartment)
-        compartment_e_on_neuron = neuron.add_compartment(compartment)
-        compartment_f_on_neuron = neuron.add_compartment(compartment)
-        compartment_g_on_neuron = neuron.add_compartment(compartment)
-        compartment_h_on_neuron = neuron.add_compartment(compartment)
-        compartment_i_on_neuron = neuron.add_compartment(compartment)
-        compartment_j_on_neuron = neuron.add_compartment(compartment)
-        compartment_k_on_neuron = neuron.add_compartment(compartment)
-        compartment_l_on_neuron = neuron.add_compartment(compartment)
-        compartment_m_on_neuron = neuron.add_compartment(compartment)
-        compartment_n_on_neuron = neuron.add_compartment(compartment)
-        compartment_o_on_neuron = neuron.add_compartment(compartment)
-
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = {
-            compartment_a_on_neuron: parameter_space,
-            compartment_b_on_neuron: parameter_space,
-            compartment_c_on_neuron: parameter_space,
-            compartment_d_on_neuron: parameter_space,
-            compartment_e_on_neuron: parameter_space,
-            compartment_f_on_neuron: parameter_space,
-            compartment_g_on_neuron: parameter_space,
-            compartment_h_on_neuron: parameter_space,
-            compartment_i_on_neuron: parameter_space,
-            compartment_j_on_neuron: parameter_space,
-            compartment_k_on_neuron: parameter_space,
-            compartment_l_on_neuron: parameter_space,
-            compartment_m_on_neuron: parameter_space,
-            compartment_n_on_neuron: parameter_space,
-            compartment_o_on_neuron: parameter_space}
-
-        resources.add_config(neuron, neuron_parameter_space, environment)
-
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_b_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_b_on_neuron,
-            compartment_c_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_d_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_e_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_f_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_a_on_neuron,
-            compartment_g_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_g_on_neuron,
-            compartment_h_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_h_on_neuron,
-            compartment_i_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_h_on_neuron,
-            compartment_j_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_j_on_neuron,
-            compartment_k_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_j_on_neuron,
-            compartment_l_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_g_on_neuron,
-            compartment_m_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_m_on_neuron,
-            compartment_n_on_neuron,
-            grenade.CompartmentConnectionConductance())
-        neuron.add_compartment_connection(
-            compartment_m_on_neuron,
-            compartment_o_on_neuron,
-            grenade.CompartmentConnectionConductance())
+        connections = [(0, 1),
+                       (1, 2),
+                       (0, 3),
+                       (0, 4),
+                       (0, 5),
+                       (0, 6),
+                       (6, 7),
+                       (7, 8),
+                       (8, 9),
+                       (9, 10),
+                       (9, 11),
+                       (6, 12),
+                       (12, 13),
+                       (12, 14)]
+        neuron, resources = neuron_and_res_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm\
@@ -888,32 +592,12 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         title = "Neuron pyramidal shape"
         limits = [120, 160]
-        dictionary = {compartment_a_on_neuron: "A",
-                      compartment_b_on_neuron: "B",
-                      compartment_c_on_neuron: "C",
-                      compartment_d_on_neuron: "D",
-                      compartment_e_on_neuron: "E",
-                      compartment_f_on_neuron: "F",
-                      compartment_g_on_neuron: "G",
-                      compartment_h_on_neuron: "H",
-                      compartment_i_on_neuron: "I",
-                      compartment_j_on_neuron: "J",
-                      compartment_k_on_neuron: "K",
-                      compartment_l_on_neuron: "L",
-                      compartment_m_on_neuron: "M",
-                      compartment_n_on_neuron: "N",
-                      compartment_o_on_neuron: "O"}
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
-
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
 
     def test_purkinje(self):
         # compartments are numbered from left to right in a depth first
@@ -936,7 +620,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                        (15, 16),
                        (15, 17),
                        (1, 18)]
-        neuron, resources = neuron_from_edgelist(connections)
+        neuron, resources = neuron_and_res_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm.run(
@@ -981,7 +665,7 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
                        (25, 26),
                        (25, 27),
                        (24, 28)]
-        neuron, resources = neuron_from_edgelist(connections)
+        neuron, resources = neuron_and_res_from_edgelist(connections)
 
         placement_algorithm = grenade.PlacementAlgorithmRuleset()
         placement_result = placement_algorithm.run(
@@ -989,7 +673,6 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         self.assert_valid(placement_result.coordinate_system)
 
     def test_spiny_dendrite(self):
-        comp_branch, param_space_branch = get_cap_compartment(0, 1)
         comp_spine = grenade.Compartment()
 
         # Parameter
@@ -1016,7 +699,6 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         param_space_spine.mechanisms.set(syn_on_spine, parameter_space_a)
         param_space_spine.mechanisms.set(cap_on_spine, parameter_space_b)
 
-        neuron = grenade.Neuron()
         resources = grenade.ResourceManager()
         environment = grenade.Environment()
         syn_input = grenade.SynapticInputEnvironmentCurrent(
@@ -1026,28 +708,18 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
         spine_positions = [1, 3]
 
         compartments = {}
-        dictionary = {}
-        branch = []
-        for pos in range(chain_length):
-            comp = neuron.add_compartment(comp_branch)
-            compartments[comp] = param_space_branch
-            dictionary[comp] = f"C{pos}"
-            if pos > 0:
-                neuron.add_compartment_connection(
-                    branch[-1], comp,
-                    grenade.CompartmentConnectionConductance())
-            branch.append(comp)
+        parameter_spaces = {}
 
-        for pos in spine_positions:
-            comp = neuron.add_compartment(comp_spine)
-            compartments[comp] = param_space_spine
-            dictionary[comp] = f"S{pos}"
-            neuron.add_compartment_connection(
-                branch[pos], comp, grenade.CompartmentConnectionConductance())
-            environment.add(comp, syn_input)
+        connections = [(n, n + 1) for n in range(chain_length - 1)]
+        for n_spine, spine_pos in enumerate(spine_positions):
+            comp_idx = chain_length + n_spine
+            compartments[comp_idx] = comp_spine
+            parameter_spaces[comp_idx] = param_space_spine
+            connections.append((spine_pos, comp_idx))
+            environment.add(grenade.CompartmentOnNeuron(comp_idx), syn_input)
 
-        neuron_parameter_space = grenade.Neuron.ParameterSpace()
-        neuron_parameter_space.compartments = compartments
+        neuron, neuron_parameter_space = neuron_from_edgelist(
+            connections, compartments, parameter_spaces)
 
         resources.add_config(neuron, neuron_parameter_space, environment)
 
@@ -1061,14 +733,9 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
 
         if placement_result.finished and self.save_plot:
             plot_grid(limits=limits, title=title,
-                      coordinate_system=placement_result
-                      .coordinate_system, dictionary=dictionary)
+                      coordinate_system=placement_result.coordinate_system)
         if not placement_result.finished:
             print("Placement failed.")
-
-        self.assertEqual(
-            get_compartment_ids(placement_result.coordinate_system),
-            set(dictionary.keys()))
 
 
 if __name__ == "__main__":
