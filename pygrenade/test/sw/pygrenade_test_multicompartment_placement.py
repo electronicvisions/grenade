@@ -344,8 +344,7 @@ def get_compartment_ids(
 class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
     save_plot = False
 
-    @classmethod
-    def assert_valid(cls, coordinate_system: grenade.CoordinateSystem):
+    def assert_valid(self, coordinate_system: grenade.CoordinateSystem):
         '''
         Check if a valid neuron can be constructed from the given
             coordinate system.
@@ -356,9 +355,9 @@ class SwTestPygrenadeVxMulticompartmentPlacement(unittest.TestCase):
             constructed.
         '''
         neuron_placed, _ = coordinate_system.construct_neuron()
-        cls.assertTrue(neuron_placed.compartments_connected(),
-                       "Placment result yields a neuron which is "
-                       "not fully connected.")
+        self.assertTrue(neuron_placed.compartments_connected(),
+                        "Placment result yields a neuron which is "
+                        "not fully connected.")
 
     def test_single_compartment_one(self):
         neuron, resources = neuron_and_res_from_edgelist([])
