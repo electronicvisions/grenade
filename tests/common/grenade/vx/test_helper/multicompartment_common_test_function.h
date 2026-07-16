@@ -22,7 +22,9 @@ using namespace grenade::vx::network::abstract;
  * @param logger Logger for the test.
  * @param num_runs Number of test runs for each neuron size.
  * @param max_num_compartments Upper limit for compartments on a test neuron.
- * @param max_num_synaptic_inputs Upper limit for the number of synaptic inputs on a compartment.
+ * @param mean_synaptic_inputs Mean number of synaptic input per neuron.
+ * 		For each neuron, the number of synaptic inputs is drawn from a uniform distribution
+ * 		between 0 and mean_synaptic_inputs / num_compartments * 2.
  * @param algorithm Placement-Algorithm for testing.
  * @param parallel If true, excute runs in parallel.
  * @param num_warmup Number of neurons to geenrate before staarting the test. This can be
@@ -35,7 +37,7 @@ inline auto test_neuron_placement = [](std::string file_name,
                                        log4cxx::LoggerPtr logger,
                                        size_t num_runs,
                                        size_t max_num_compartments,
-                                       size_t max_num_synaptic_inputs,
+                                       size_t mean_synaptic_inputs,
                                        std::unique_ptr<PlacementAlgorithm> algorithm,
                                        bool parallel = true,
                                        size_t num_warmup = 0,
@@ -50,13 +52,18 @@ inline auto test_neuron_placement = [](std::string file_name,
 		        "generation of neuron; Time for placement of neuron\n";
 	}
 
-	auto test_neuron_placement_run = [max_neuron_columns](
+	auto test_neuron_placement_run = [mean_synaptic_inputs, max_neuron_columns](
 	                                     log4cxx::LoggerPtr logger, size_t num_runs,
-	                                     size_t num_compartments, size_t max_num_synaptic_inputs,
+	                                     size_t num_compartments,
 	                                     std::unique_ptr<PlacementAlgorithm> algorithm,
 	                                     size_t num_warmup) -> std::vector<TestResult> {
 		std::vector<TestResult> results;
 		NeuronGenerator neuron_generator;
+
+		size_t inputs_per_comp = 0;
+		if (mean_synaptic_inputs > 0) {
+			inputs_per_comp = 2 * ((mean_synaptic_inputs - 1) / num_compartments + 1);
+		}
 
 		for (size_t run_count = 0; run_count < num_runs + num_warmup; run_count++) {
 			TestResult result;
@@ -67,7 +74,7 @@ inline auto test_neuron_placement = [](std::string file_name,
 			// Generate neuron
 			hate::Timer timer_generation;
 			NeuronWithEnvironmentAndParameterSpace generated = neuron_generator.generate(
-			    num_compartments, num_compartments - 1, max_num_synaptic_inputs, false, true);
+			    num_compartments, num_compartments - 1, inputs_per_comp, false, true);
 			result.time_generation = timer_generation.get_us();
 
 			// Placement object
@@ -130,8 +137,7 @@ inline auto test_neuron_placement = [](std::string file_name,
 
 		run_results.push_back(std::async(
 		    parallel ? std::launch::async : std::launch::deferred, test_neuron_placement_run,
-		    logger, num_runs, num_compartments, max_num_synaptic_inputs, algorithm->clone(),
-		    num_warmup));
+		    logger, num_runs, num_compartments, algorithm->clone(), num_warmup));
 	}
 
 	if (file_name != "") {
