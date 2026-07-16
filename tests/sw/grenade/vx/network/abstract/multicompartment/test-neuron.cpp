@@ -113,3 +113,84 @@ TEST(multicompartment_neuron, General)
 	neuron.remove_compartment(compartment_c_on_neuron);
 	EXPECT_FALSE(neuron.contains(compartment_c_on_neuron));
 }
+
+
+TEST(multicompartment_neuron, MorphologyComparison)
+{
+	// Create chain of compartments
+	auto create_neuron = []() -> Neuron {
+		Neuron neuron;
+		Compartment compartment;
+
+		auto const comp_id_0 = neuron.add_compartment(compartment);
+		auto const comp_id_1 = neuron.add_compartment(compartment);
+		auto const comp_id_2 = neuron.add_compartment(compartment);
+		auto const comp_id_3 = neuron.add_compartment(compartment);
+
+		CompartmentConnectionConductance connection_conductance;
+
+		neuron.add_compartment_connection(comp_id_0, comp_id_1, connection_conductance);
+		neuron.add_compartment_connection(comp_id_1, comp_id_2, connection_conductance);
+		neuron.add_compartment_connection(comp_id_2, comp_id_3, connection_conductance);
+		return neuron;
+	};
+
+	auto neuron = create_neuron();
+	EXPECT_TRUE(neuron.has_equal_morphology(neuron));
+
+	auto equal_neuron = create_neuron();
+	EXPECT_TRUE(neuron.has_equal_morphology(equal_neuron));
+
+	// empty neuron
+	{
+		Neuron other;
+		EXPECT_FALSE(neuron.has_equal_morphology(other));
+		EXPECT_TRUE(other.has_equal_morphology(other));
+	}
+
+	// isomorphic but different numbering
+	{
+		Neuron other;
+		Compartment compartment;
+
+		auto const comp_id_0 = other.add_compartment(compartment);
+		auto const comp_id_1 = other.add_compartment(compartment);
+		auto const comp_id_2 = other.add_compartment(compartment);
+		auto const comp_id_3 = other.add_compartment(compartment);
+
+		CompartmentConnectionConductance connection_conductance;
+
+		other.add_compartment_connection(comp_id_1, comp_id_2, connection_conductance);
+		other.add_compartment_connection(comp_id_2, comp_id_3, connection_conductance);
+		other.add_compartment_connection(comp_id_3, comp_id_0, connection_conductance);
+		EXPECT_FALSE(neuron.has_equal_morphology(other));
+	}
+
+	// non-isomorphic
+	{
+		Neuron other;
+		Compartment compartment;
+
+		auto const comp_id_0 = other.add_compartment(compartment);
+		auto const comp_id_1 = other.add_compartment(compartment);
+		auto const comp_id_2 = other.add_compartment(compartment);
+		auto const comp_id_3 = other.add_compartment(compartment);
+
+		CompartmentConnectionConductance connection_conductance;
+
+		other.add_compartment_connection(comp_id_0, comp_id_1, connection_conductance);
+		other.add_compartment_connection(comp_id_1, comp_id_2, connection_conductance);
+		other.add_compartment_connection(comp_id_1, comp_id_3, connection_conductance);
+		EXPECT_FALSE(neuron.has_equal_morphology(other));
+	}
+
+	// neuron with just one compartment (no connections)
+	{
+		Neuron other;
+		Compartment compartment;
+
+		other.add_compartment(compartment);
+		EXPECT_FALSE(neuron.has_equal_morphology(other));
+		EXPECT_TRUE(other.has_equal_morphology(other));
+	}
+}

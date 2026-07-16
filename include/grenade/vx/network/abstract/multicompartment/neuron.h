@@ -267,6 +267,14 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Neuron
 	    CompartmentEquivalent&& compartment_equivalent) const;
 
 	/**
+	 * Check whether compartment assignment and connectivity is the same for the given neuron.
+	 *
+	 * We check that each compartment with the same ID in both neurons are connected to the
+	 * same neighbours, i.e. the neighbours have the same ID as well in the different neurons.
+	 */
+	bool has_equal_morphology(Neuron const& other) const;
+
+	/**
 	 * Return a map of each compartment-descriptor to an index.
 	 * */
 	std::map<CompartmentOnNeuron::Value, size_t> get_compartment_index_map() const;

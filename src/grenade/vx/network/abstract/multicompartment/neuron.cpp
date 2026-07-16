@@ -131,6 +131,27 @@ std::map<CompartmentOnNeuron, CompartmentOnNeuron> Neuron::isomorphism(Neuron co
 	return Graph::isomorphism(other);
 }
 
+bool Neuron::has_equal_morphology(Neuron const& other) const
+{
+	if (num_compartments() != other.num_compartments()) {
+		return false;
+	}
+
+	for (auto compartment : compartments()) {
+		auto neighbours = adjacent_compartments(compartment);
+		auto neighbours_other = other.adjacent_compartments(compartment);
+
+		std::set<CompartmentOnNeuron> neighbours_set(neighbours.begin(), neighbours.end());
+		std::set<CompartmentOnNeuron> neighbours_other_set(
+		    neighbours_other.begin(), neighbours_other.end());
+
+		if (neighbours_set != neighbours_other_set) {
+			return false;
+		}
+	}
+	return true;
+}
+
 std::map<CompartmentOnNeuron::Value, size_t> Neuron::get_compartment_index_map() const
 {
 	std::map<CompartmentOnNeuron::Value, size_t> mapping;
