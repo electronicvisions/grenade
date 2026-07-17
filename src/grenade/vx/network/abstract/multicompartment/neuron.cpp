@@ -1,5 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/common/graph_impl.tcc"
+#include "hate/join.h"
 #include <fstream>
 
 namespace grenade::common {
@@ -317,17 +318,35 @@ void Neuron::write_graphviz(std::string filename, std::string name)
 
 std::ostream& operator<<(std::ostream& os, Neuron const& neuron)
 {
-	os << "Neuron(\n";
-	os << "\tCompartments: " << neuron.num_compartments() << "\n";
-	for (auto compartment : neuron.compartments()) {
-		os << "\t\t" << compartment << "\n";
+	hate::IndentingOstream ios(os);
+	ios << "Neuron(\n";
+	ios << hate::Indentation("\t");
+	ios << "Number of compartments: " << neuron.num_compartments() << "\n";
+
+	ios << "Connections: " << neuron.num_compartment_connections() << " ["
+	    << hate::join(
+	           neuron.compartment_connections(), ", ",
+	           [&neuron](auto const& v) {
+		           std::stringstream ss;
+		           ss << "(" << neuron.source(v).value() << ", " << neuron.target(v).value() << ")";
+		           return ss.str();
+	           })
+	    << "]\n";
+
+	// print compartments without connections
+	std::vector<int> isolated;
+	for (auto const& compartment : neuron.compartments()) {
+		if (neuron.get_compartment_degree(compartment) == 0) {
+			isolated.push_back(compartment.value());
+		}
 	}
-	os << "\tConnections: " << neuron.num_compartment_connections() << "\n";
-	;
-	for (auto connection : neuron.compartment_connections()) {
-		os << "\t\t" << connection << "\n";
+	if (!isolated.empty()) {
+		ios << "Without connection: " << isolated.size() << " [" << hate::join(isolated, ", ")
+		    << "]\n";
 	}
-	os << ")\n";
+
+	ios << hate::Indentation();
+	ios << ")";
 
 	return os;
 }
