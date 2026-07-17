@@ -1,5 +1,6 @@
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm_ruleset.h"
 #include "grenade/vx/test_helper/multicompartment_common_test_function.h"
+#include "halco/hicann-dls/vx/neuron.h"
 
 #include <log4cxx/logger.h>
 
@@ -22,5 +23,5 @@ TEST(MulticompartmentNeuron, RandomNeuronsRuleset)
 
 	test_neuron_placement(
 	    file_name, logger, num_runs, max_num_compartments, max_num_synaptic_inputs,
-	    algorithm.clone());
+	    algorithm.clone(), true, 0, halco::hicann_dls::vx::NeuronColumnOnLogicalNeuron::size, true);
 }

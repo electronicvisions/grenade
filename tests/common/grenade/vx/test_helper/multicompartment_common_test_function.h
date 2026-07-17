@@ -1,5 +1,6 @@
 #pragma once
 
+#include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron_generator.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm.h"
 #include "grenade/vx/test_helper/multicompartment_test_result.h"
@@ -31,7 +32,10 @@ using namespace grenade::vx::network::abstract;
  * 		helpful to warmup the caches.
  * @param max_neuron_columns Define the found placement as unsuccessfull if it exceeds this
  * 		number of neuron columns.
- *
+ * @param check_morphology_match Whether to test if the morphology of the mapped neuron agrees
+ * 		with the morphology of the target neuron. This only works for algorithms which
+ * 		preserve the compartment identifiers between the mapped neuron and the target
+ * 		neuron.
  */
 inline auto test_neuron_placement = [](std::string file_name,
                                        log4cxx::LoggerPtr logger,
@@ -41,8 +45,9 @@ inline auto test_neuron_placement = [](std::string file_name,
                                        std::unique_ptr<PlacementAlgorithm> algorithm,
                                        bool parallel = true,
                                        size_t num_warmup = 0,
-                                       size_t max_neuron_columns = halco::hicann_dls::vx::
-                                           NeuronColumnOnLogicalNeuron::size) {
+                                       size_t max_neuron_columns =
+                                           halco::hicann_dls::vx::NeuronColumnOnLogicalNeuron::size,
+                                       bool check_morphology_match = false) {
 	// File for test result output.
 	std::ofstream file;
 	if (file_name != "") {
@@ -52,11 +57,11 @@ inline auto test_neuron_placement = [](std::string file_name,
 		        "generation of neuron; Time for placement of neuron\n";
 	}
 
-	auto test_neuron_placement_run = [mean_synaptic_inputs, max_neuron_columns](
-	                                     log4cxx::LoggerPtr logger, size_t num_runs,
-	                                     size_t num_compartments,
-	                                     std::unique_ptr<PlacementAlgorithm> algorithm,
-	                                     size_t num_warmup) -> std::vector<TestResult> {
+	auto test_neuron_placement_run =
+	    [mean_synaptic_inputs, max_neuron_columns, check_morphology_match](
+	        log4cxx::LoggerPtr logger, size_t num_runs, size_t num_compartments,
+	        std::unique_ptr<PlacementAlgorithm> algorithm,
+	        size_t num_warmup) -> std::vector<TestResult> {
 		std::vector<TestResult> results;
 		NeuronGenerator neuron_generator;
 
@@ -99,6 +104,19 @@ inline auto test_neuron_placement = [](std::string file_name,
 			// Only declare mappings as a success if it fits on the coordinate system
 			if (placement_result.coordinate_system.get_extent() > max_neuron_columns) {
 				result.success = false;
+			}
+
+			// Test if morphology of mapped neuron agrees with target neuron
+			if (check_morphology_match && result.success) {
+				auto mapped = placement_result.coordinate_system.construct_neuron();
+				if (!generated.neuron.has_equal_morphology(std::get<Neuron>(mapped))) {
+					LOG4CXX_ERROR(
+					    logger, "Target neuron and mapped neuron do not match.\n"
+					                << "Target: " << generated.neuron
+					                << "Mapped: " << std::get<Neuron>(mapped));
+					throw std::runtime_error("Morphology of the neuron mapped by the algorithm "
+					                         "does not match the morphology of the target neuron.");
+				}
 			}
 
 			result.time_placement = timer_placement.get_us();
