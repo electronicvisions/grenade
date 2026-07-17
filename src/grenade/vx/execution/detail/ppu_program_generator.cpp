@@ -513,7 +513,7 @@ volatile uint32_t timer_{{i.0}}_{{i.1}}_{{i.2}}_event_drop_count;
 
 namespace {
 
-Scheduler<32> scheduler;
+Scheduler<{{ length(plasticity_rules_i) }}> scheduler;
 auto timers = std::tie({% for i in plasticity_rules_i %}timer_{{i.0}}_{{i.1}}_{{i.2}}{% if not loop.is_last %}, {% endif %}{% endfor %});
 
 } // namespace
