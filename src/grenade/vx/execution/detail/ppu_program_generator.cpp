@@ -340,7 +340,6 @@ extern Recording recorded_scratchpad_memory_{{id}}[{{plasticity_rule.timer.total
 extern Recording recorded_scratchpad_memory_{{id}};
 ## endif
 #include "libnux/vx/helper.h"
-#include "libnux/vx/mailbox.h"
 #include "libnux/scheduling/types.hpp"
 
 ## if has_raw_recording or has_timed_recording
@@ -353,9 +352,6 @@ size_t recorded_scratchpad_memory_period_{{id}} = 0;
 
 void plasticity_rule_{{id}}_{{handles_index}}()
 {
-	libnux::vx::mailbox_write_string("plasticity rule {{id}}_{{handles_index}}: b: ");
-	auto const b = get_time();
-	libnux::vx::mailbox_write_int(b);
 ## if has_raw_recording or has_timed_recording
 ## if has_raw_recording
 	plasticity_rule_{{id}}(
@@ -378,9 +374,6 @@ void plasticity_rule_{{id}}_{{handles_index}}()
 	    synapse_array_view_handle_{{handles_index}},
 	    neuron_view_handle_{{handles_index}});
 ## endif
-	libnux::vx::mailbox_write_string(" d: ");
-	libnux::vx::mailbox_write_int(get_time() - b);
-	libnux::vx::mailbox_write_string("\n");
 })grenadeTemplate";
 			// clang-format on
 			inja::json parameters;
@@ -496,7 +489,6 @@ Timer timer_{{handles_index}}_{{id}}_{{i}} = [](){
 		std::string source_template = R"grenadeTemplate(
 #include "libnux/scheduling/Scheduler.hpp"
 #include "libnux/scheduling/Timer.hpp"
-#include "libnux/vx/mailbox.h"
 #include "libnux/vx/dls.h"
 #include "libnux/vx/time.h"
 #include "grenade/vx/ppu/detail/time.h"
@@ -531,9 +523,6 @@ void scheduling()
 ## for i in plasticity_rules_i
 	timer_{{i.0}}_{{i.1}}_{{i.2}}.set_first_deadline(current + timer_{{i.0}}_{{i.1}}_{{i.2}}.get_first_deadline());
 ## endfor
-	libnux::vx::mailbox_write_string("time:");
-	libnux::vx::mailbox_write_int(current);
-	libnux::vx::mailbox_write_string("\n");
 
 	scheduler.execute(current + runtime, timers);
 
