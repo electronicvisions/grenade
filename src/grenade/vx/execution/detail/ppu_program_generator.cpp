@@ -526,8 +526,8 @@ void scheduling()
 	static_cast<void>(runtime);
 
 ## if length(plasticity_rules_i) > 0
-	auto const current = get_time();
 	grenade::vx::ppu::detail::initialize_time_origin();
+	auto const current = get_time();
 ## for i in plasticity_rules_i
 	timer_{{i.0}}_{{i.1}}_{{i.2}}.set_first_deadline(current + timer_{{i.0}}_{{i.1}}_{{i.2}}.get_first_deadline());
 ## endfor
