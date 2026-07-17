@@ -25,7 +25,7 @@ volatile Status status = Status::initial;
 volatile PPUOnDLS ppu;
 volatile Stopped stopped = Stopped::no;
 
-void scheduling();
+void scheduling() ATTRIB_LINK_TO_INTERNAL;
 
 void perform_periodic_read() ATTRIB_LINK_TO_INTERNAL;
 

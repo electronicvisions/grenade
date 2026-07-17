@@ -518,6 +518,8 @@ auto timers = std::tie({% for i in plasticity_rules_i %}timer_{{i.0}}_{{i.1}}_{{
 
 } // namespace
 
+void scheduling() ATTRIB_LINK_TO_INTERNAL;
+
 void scheduling()
 {
 	static_cast<void>(ppu);
