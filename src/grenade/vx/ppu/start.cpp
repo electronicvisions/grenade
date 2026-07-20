@@ -82,7 +82,6 @@ int start()
 				break;
 			}
 			case Status::scheduler: {
-				mailbox_write_string("bef\n");
 				scheduling();
 				status = Status::idle;
 				break;
