@@ -380,7 +380,7 @@ Graph<Derived, Backend, Vertex, Edge, VertexDescriptor, EdgeDescriptor, Holder>:
     VertexDescriptor const& descriptor)
 {
 	check_contains(descriptor, "get_mutable");
-	return m_vertices.get(descriptor);
+	return m_vertices.get_mutable(descriptor);
 }
 
 template <
