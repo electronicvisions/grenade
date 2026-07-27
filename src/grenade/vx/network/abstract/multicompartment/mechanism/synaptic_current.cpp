@@ -115,7 +115,7 @@ bool MechanismSynapticInputCurrent::valid(Mechanism::ParameterSpace const&) cons
 }
 
 // Return HardwareRessource Requirements
-HardwareResourcesWithConstraints MechanismSynapticInputCurrent::get_hardware(
+HardwareConstraints MechanismSynapticInputCurrent::get_hardware(
     CompartmentOnNeuron const& compartment,
     Mechanism::ParameterSpace const& mechanism_parameter_space,
     Environment const& environment) const
@@ -129,9 +129,7 @@ HardwareResourcesWithConstraints MechanismSynapticInputCurrent::get_hardware(
 	}
 
 	// Return Object and Input
-	HardwareResourcesWithConstraints resources_with_constraints;
-	std::vector<dapr::PropertyHolder<HardwareResource>> resource_list;
-	std::vector<dapr::PropertyHolder<HardwareConstraint>> constraint_list;
+	HardwareConstraints constraints;
 
 	std::vector<dapr::PropertyHolder<SynapticInputEnvironment>> synaptic_inputs =
 	    environment.get(compartment);
@@ -146,77 +144,64 @@ HardwareResourcesWithConstraints MechanismSynapticInputCurrent::get_hardware(
 			continue;
 		}
 		// Calculate Number of Synaptic Circuits required
-		int number_of_inputs = round((*i).number_of_inputs.number_total);
+		int number_of_inputs_total = round((*i).number_of_inputs.number_total);
 
 		// Always request one neuron circuit instead of none
-		if (number_of_inputs == 0) {
-			number_of_inputs = 1;
+		if (number_of_inputs_total == 0) {
+			number_of_inputs_total = 1;
 		}
+
 		// Minimal Numbers in Top and Bottom Row
-		if ((*i).number_of_inputs.number_top != 0 || (*i).number_of_inputs.number_bottom != 0) {
-			int number_of_inputs_top = round((*i).number_of_inputs.number_top);
-			int number_of_inputs_bottom = round((*i).number_of_inputs.number_bottom);
+		int number_of_inputs_top = round((*i).number_of_inputs.number_top);
+		int number_of_inputs_bottom = round((*i).number_of_inputs.number_bottom);
 
-			if ((*i).exitatory) {
-				// Add Exitatory Constraint
-				bool in_list = false;
-				for (auto j : constraint_list) {
-					if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputExitatory)) {
-						(*j).numbers.number_bottom += number_of_inputs_bottom;
-						(*j).numbers.number_top += number_of_inputs_top;
-						(*j).numbers.number_total += number_of_inputs;
-						in_list = true;
-						break;
-					}
-				}
-				if (!in_list) {
-					HardwareConstraint constraint;
-					constraint.resource = HardwareResourceSynapticInputExitatory();
-					constraint.numbers.number_bottom += number_of_inputs_bottom;
-					constraint.numbers.number_top += number_of_inputs_top;
-					constraint.numbers.number_total += number_of_inputs;
-					constraint_list.push_back(constraint);
-				}
-
-
-			} else {
-				// Add Inhibitory Constraint
-				bool in_list = false;
-				for (auto j : constraint_list) {
-					if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputInhibitory)) {
-						(*j).numbers.number_bottom += number_of_inputs_bottom;
-						(*j).numbers.number_top += number_of_inputs_top;
-						(*j).numbers.number_total += number_of_inputs;
-						in_list = true;
-						break;
-					}
-				}
-				if (!in_list) {
-					HardwareConstraint constraint;
-					constraint.resource = HardwareResourceSynapticInputInhibitory();
-					constraint.numbers.number_bottom += number_of_inputs_bottom;
-					constraint.numbers.number_top += number_of_inputs_top;
-					constraint.numbers.number_total += number_of_inputs;
-					constraint_list.push_back(constraint);
+		if ((*i).exitatory) {
+			// Add Exitatory Constraint
+			bool in_list = false;
+			for (auto j : constraints) {
+				if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputExitatory)) {
+					(*j).numbers.number_bottom += number_of_inputs_bottom;
+					(*j).numbers.number_top += number_of_inputs_top;
+					(*j).numbers.number_total += number_of_inputs_total;
+					in_list = true;
+					break;
 				}
 			}
-		}
+			if (!in_list) {
+				HardwareConstraint constraint;
+				constraint.resource = HardwareResourceSynapticInputExitatory();
+				constraint.numbers.number_bottom += number_of_inputs_bottom;
+				constraint.numbers.number_top += number_of_inputs_top;
+				constraint.numbers.number_total += number_of_inputs_total;
+				constraints.push_back(constraint);
+			}
 
 
-		// Add HardwareResource to Vector
-		for (int j = 0; j < number_of_inputs; j++) {
-			if ((*i).exitatory) {
-				resource_list.push_back(HardwareResourceSynapticInputExitatory());
-			} else {
-				resource_list.push_back(HardwareResourceSynapticInputInhibitory());
+		} else {
+			// Add Inhibitory Constraint
+			bool in_list = false;
+			for (auto j : constraints) {
+				if (typeid((*j).resource) == typeid(HardwareResourceSynapticInputInhibitory)) {
+					(*j).numbers.number_bottom += number_of_inputs_bottom;
+					(*j).numbers.number_top += number_of_inputs_top;
+					(*j).numbers.number_total += number_of_inputs_total;
+					in_list = true;
+					break;
+				}
+			}
+			if (!in_list) {
+				HardwareConstraint constraint;
+				constraint.resource = HardwareResourceSynapticInputInhibitory();
+				constraint.numbers.number_bottom += number_of_inputs_bottom;
+				constraint.numbers.number_top += number_of_inputs_top;
+				constraint.numbers.number_total += number_of_inputs_total;
+				constraints.push_back(constraint);
 			}
 		}
 	}
 
 	// Return Resources and Constraints
-	resources_with_constraints.resources = resource_list;
-	resources_with_constraints.constraints = constraint_list;
-	return resources_with_constraints;
+	return constraints;
 }
 
 // Copy

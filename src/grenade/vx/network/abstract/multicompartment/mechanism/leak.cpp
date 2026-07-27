@@ -99,7 +99,7 @@ bool MechanismLeak::valid(Mechanism::ParameterSpace const&) const
 	return true;
 }
 
-HardwareResourcesWithConstraints MechanismLeak::get_hardware(
+HardwareConstraints MechanismLeak::get_hardware(
     CompartmentOnNeuron const&,
     Mechanism::ParameterSpace const& mechanism_parameter_space,
     Environment const&) const
@@ -111,12 +111,15 @@ HardwareResourcesWithConstraints MechanismLeak::get_hardware(
 		throw("Given parameter space does not correspond to a leak-mechanism.");
 	}
 
-	HardwareResourcesWithConstraints resources_with_constraints;
+	HardwareConstraints constraints;
 
 	// Leak mechanism requires a single neuron circuit. Usecases having a higher conductance with
 	// multiple neuron circuits is currently not supported.
-	resources_with_constraints.resources.push_back(HardwareResourceLeak());
-	return resources_with_constraints;
+	HardwareConstraint constraint;
+	constraint.resource = HardwareResourceLeak();
+	constraint.numbers.number_total = 1;
+	constraints.push_back(std::move(constraint));
+	return constraints;
 }
 
 std::unique_ptr<Mechanism> MechanismLeak::copy() const

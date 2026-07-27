@@ -1,9 +1,9 @@
 #pragma once
 
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
+#include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_excitatory.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_inhibitory.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource_with_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
 #include "grenade/vx/network/abstract/multicompartment/synaptic_input_environment/conductance.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
@@ -79,7 +79,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismSynapticInputConductance : pub
 	bool valid(Mechanism::ParameterSpace const& parameter_space) const;
 
 	// Return HardwareRessource Requirements
-	HardwareResourcesWithConstraints get_hardware(
+	HardwareConstraints get_hardware(
 	    CompartmentOnNeuron const& compartment,
 	    Mechanism::ParameterSpace const& mechanism_parameter_space,
 	    Environment const& environment) const;

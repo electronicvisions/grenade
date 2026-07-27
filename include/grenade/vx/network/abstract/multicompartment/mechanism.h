@@ -3,8 +3,8 @@
 #include "dapr/map.h"
 #include "dapr/property.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_constraint.h"
+#include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource_with_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 
 namespace grenade::vx::network {
@@ -42,7 +42,7 @@ struct GENPYBIND(inline_base("*")) SYMBOL_VISIBLE Mechanism : public dapr::Prope
 	virtual bool valid(ParameterSpace const& parameter_space) const = 0;
 
 	virtual bool conflict(Mechanism const& other) const = 0;
-	virtual HardwareResourcesWithConstraints get_hardware(
+	virtual HardwareConstraints get_hardware(
 	    CompartmentOnNeuron const& compartment,
 	    Mechanism::ParameterSpace const& parameter_space,
 	    Environment const& environment) const = 0;

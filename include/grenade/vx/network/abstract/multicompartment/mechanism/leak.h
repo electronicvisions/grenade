@@ -1,8 +1,8 @@
 #pragma once
 
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
+#include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/leak.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource_with_constraint.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
 #include "grenade/vx/network/abstract/parameter_interval.h"
 #include <cmath>
@@ -74,7 +74,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE MechanismLeak : public Mechanism
 	bool valid(Mechanism::ParameterSpace const& parameter_space) const;
 
 	// Return HardwareRessource Requirements
-	HardwareResourcesWithConstraints get_hardware(
+	HardwareConstraints get_hardware(
 	    CompartmentOnNeuron const& compartment,
 	    Mechanism::ParameterSpace const& mechanism_parameter_space,
 	    Environment const& environment) const;

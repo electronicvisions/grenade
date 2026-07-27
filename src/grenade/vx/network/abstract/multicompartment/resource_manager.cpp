@@ -94,9 +94,8 @@ void ResourceManager::add_config_compartment(
     Environment const& environment)
 {
 	// Map with HardwareResources per Mechanism on Compartment
-	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints>
-	    hardware_resources_with_constraints_on_mechanims =
-	        neuron.get(compartment).get_hardware(compartment, parameter_space, environment);
+	std::map<MechanismOnCompartment, HardwareConstraints> hardware_constraints_on_mechanims =
+	    neuron.get(compartment).get_hardware(compartment, parameter_space, environment);
 
 	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
 	// PropertyHolder is neither comparable nor hashable)
@@ -107,23 +106,15 @@ void ResourceManager::add_config_compartment(
 	    NumberTopBottom(0, 0, 0), NumberTopBottom(0, 0, 0), NumberTopBottom(0, 0, 0)};
 
 	// Iterate over all Mechanisms over all Constraints to set Number of Min_Top and Min_Bottom
-	for (auto [Key, Value] : hardware_resources_with_constraints_on_mechanims) {
-		// Iterate over all HardwareResources of a Mechanism
-		for (auto hardware_resource : Value.resources) {
-			// Check which hardware Resource is requested and increase counter
-			for (size_t i = 0; i < resource_request_counter_hardware.size(); i++) {
-				if (typeid(*(resource_request_counter_hardware.at(i))) ==
-				    typeid(*hardware_resource)) {
-					resource_request_counter_numbers.at(i).number_total++;
-				}
-			}
-		}
+	for (auto [Key, Value] : hardware_constraints_on_mechanims) {
 		// Iterate over all HardwareConstraints of a Mechanism
-		for (auto hardware_constraint : Value.constraints) {
+		for (auto hardware_constraint : Value) {
 			// Check which HardwareConstraint is requested and increase counter
 			for (size_t i = 0; i < resource_request_counter_hardware.size(); i++) {
 				if (typeid(*(resource_request_counter_hardware.at(i))) ==
 				    typeid(*((*hardware_constraint).resource))) {
+					resource_request_counter_numbers.at(i).number_total +=
+					    (*hardware_constraint).numbers.number_total;
 					resource_request_counter_numbers.at(i).number_top +=
 					    (*hardware_constraint).numbers.number_top;
 					resource_request_counter_numbers.at(i).number_bottom +=

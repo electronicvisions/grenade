@@ -101,7 +101,7 @@ bool MechanismCapacitance::valid(Mechanism::ParameterSpace const&) const
 }
 
 // Return HardwareRessource Requirements
-HardwareResourcesWithConstraints MechanismCapacitance::get_hardware(
+HardwareConstraints MechanismCapacitance::get_hardware(
     CompartmentOnNeuron const&,
     Mechanism::ParameterSpace const& mechanism_parameter_space,
     Environment const&) const
@@ -114,8 +114,7 @@ HardwareResourcesWithConstraints MechanismCapacitance::get_hardware(
 	}
 
 	double capacity_convert = 5; // TO-DO
-	HardwareResourcesWithConstraints resources_with_constraints;
-	std::vector<dapr::PropertyHolder<HardwareResource>> resource_list;
+	HardwareConstraints constraints;
 
 	double capacitance_model = parameter_space->capacitance_interval.get_upper();
 	int num_of_hardware_resources;
@@ -132,11 +131,11 @@ HardwareResourcesWithConstraints MechanismCapacitance::get_hardware(
 	}
 
 	// Push Number of Required Hardware Ressources into Resource List
-	for (int i = 0; i < num_of_hardware_resources; i++) {
-		resource_list.push_back(HardwareResourceCapacity());
-	}
-	resources_with_constraints.resources = resource_list;
-	return resources_with_constraints;
+	HardwareConstraint constraint;
+	constraint.numbers.number_total = num_of_hardware_resources;
+	constraint.resource = HardwareResourceCapacity();
+	constraints.push_back(std::move(constraint));
+	return constraints;
 }
 
 // Copy

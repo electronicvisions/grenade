@@ -62,12 +62,12 @@ void Compartment::Mechanisms::set(MechanismOnCompartment const& key, Mechanism&&
 }
 
 // Return HardwareRessource Requirements
-std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> Compartment::get_hardware(
+std::map<MechanismOnCompartment, HardwareConstraints> Compartment::get_hardware(
     CompartmentOnNeuron const& compartment,
     Compartment::ParameterSpace const& parameter_space,
     Environment const& environment) const
 {
-	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> hardware_map;
+	std::map<MechanismOnCompartment, HardwareConstraints> hardware_map;
 	for (auto const& [key, value] : mechanisms) {
 		hardware_map.emplace(
 		    key, value.get_hardware(compartment, parameter_space.mechanisms.get(key), environment));

@@ -7,7 +7,7 @@
 #include "grenade/common/detail/graph.h"
 #include "grenade/common/graph.h"
 #include "grenade/vx/genpybind.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource_with_constraint.h"
+#include "grenade/vx/network/abstract/multicompartment/hardware_constraints.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism_on_compartment.h"
 #include <map>
@@ -59,7 +59,7 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) Compartment : public dapr::Pro
 	Mechanisms mechanisms;
 
 	// Return HardwareRessource Requirements
-	std::map<MechanismOnCompartment, HardwareResourcesWithConstraints> get_hardware(
+	std::map<MechanismOnCompartment, HardwareConstraints> get_hardware(
 	    CompartmentOnNeuron const& compartment,
 	    Compartment::ParameterSpace const& parameter_space,
 	    Environment const& environment) const;
