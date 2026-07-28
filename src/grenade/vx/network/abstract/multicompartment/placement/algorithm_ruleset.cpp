@@ -878,13 +878,18 @@ void PlacementAlgorithmRuleset::run_one_step(
 		}
 
 		// Extend the parent compartment if needed.
-		// Only extend if all leafs and two branches/chains have been placed.
+		// Only extend if all leafs have been placed.
+		// We either place a bridge if the left/right side would be blocked
+		// (available_directions < 3) and we still have more than two neighbors to place or
+		// if a single side would be blocked (available_directions < 2) and more than one
+		// neighbor has to be placed.
 		size_t to_place =
 		    (neighbours_classified.branches.size() + neighbours_classified.chains.size());
 		size_t available_directions =
 		    get_available_directions(result.coordinate_system, last_compartment, neighbours);
-		if ((neighbours_classified.leafs.size() == 0) && (to_place > 1) &&
-		    (available_directions < 2)) {
+		if ((neighbours_classified.leafs.size() == 0) &&
+		    (((to_place > 2) && (available_directions < 3)) ||
+		     ((to_place > 1) && (available_directions < 2)))) {
 			add_bridge(result.coordinate_system, last_compartment, neighbours);
 		}
 
