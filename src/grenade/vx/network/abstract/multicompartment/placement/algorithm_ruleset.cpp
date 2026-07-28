@@ -1,4 +1,5 @@
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm_ruleset.h"
+#include <array>
 #include <sstream>
 #include <log4cxx/logger.h>
 
@@ -494,15 +495,15 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 
 	NumberTopBottom placed_resources;
 
-	// If not leaf increase size
-	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total < 2) {
-		required_resources.number_total = 2;
-	}
-
 	LOG4CXX_TRACE(m_logger, "PlacementSize: " << required_resources);
 
-	// Start at x_start and place to right in top row (only bottom if requested explicitly)
-	if (x_start + required_resources.number_top > coordinates_copy.coordinate_system.at(0).size()) {
+	std::array<int, 2> x_positions = {static_cast<int>(x_start), static_cast<int>(x_start)};
+
+	////////////////////////////////////////////////////////
+	// First place in rows required by resource requirements
+	////////////////////////////////////////////////////////
+	if (x_start + required_resources.number_top >=
+	    coordinates_copy.coordinate_system.at(0).size()) {
 		throw std::runtime_error("Placement does not fit on coordinate system.");
 	}
 	for (size_t x = x_start; x < x_start + required_resources.number_top; x++) {
@@ -511,9 +512,12 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 		}
 		coordinates_copy.set_compartment(x, 0, compartment);
 		placed_resources += NumberTopBottom(1, 1, 0);
+		x_positions[0]++;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
 	}
 
-	if (x_start + required_resources.number_bottom >
+	if (x_start + required_resources.number_bottom >=
 	    coordinates_copy.coordinate_system.at(1).size()) {
 		throw std::runtime_error("Placement does not fit on coordinate system.");
 	}
@@ -523,39 +527,62 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 		}
 		coordinates_copy.set_compartment(x, 1, compartment);
 		placed_resources += NumberTopBottom(1, 0, 1);
+		x_positions[1]++;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
 	}
-	if (required_resources.number_total >
-	    required_resources.number_bottom + required_resources.number_top) {
-		if (x_start + required_resources.number_total - required_resources.number_bottom >
-		    coordinates_copy.coordinate_system.at(y).size()) {
+
+	/////////////////////////////////////////////////////
+	// Place at least one neuron circuit in requested row
+	/////////////////////////////////////////////////////
+
+	// Place at least two neuron circuits if compartment is not leaf node.
+	size_t required_in_requested_row = 1;
+	if (neuron.get_compartment_degree(compartment) > 1) {
+		required_in_requested_row++;
+	}
+	while (x_positions[y] - x_start < required_in_requested_row) {
+		if (x_positions[y] < 0 ||
+		    static_cast<size_t>(x_positions[y]) >= coordinates_copy.coordinate_system[y].size()) {
 			throw std::runtime_error("Placement does not fit on coordinate system.");
 		}
-		for (size_t x = x_start + required_resources.number_top;
-		     x < x_start + required_resources.number_total - required_resources.number_bottom;
-		     x++) {
-			if (coordinates_copy.coordinate_system.at(y).at(x).compartment) {
-				throw std::logic_error(
-				    "Overlap During Placement at " + std::to_string(x) + "," + std::to_string(y));
-			}
-			coordinates_copy.set_compartment(x, y, compartment);
-			placed_resources += NumberTopBottom(1, 1 - y, y);
+		size_t x = x_positions[y];
+		if (coordinates_copy.coordinate_system.at(y).at(x).compartment) {
+			throw std::logic_error(
+			    "Overlap During Placement at " + std::to_string(x) + "," + std::to_string(y));
 		}
-	} else if ((y == 0) and (required_resources.number_top == 0)) {
-		// always place at least one circuit in the requested row
-		if (coordinates_copy.coordinate_system.at(0).at(x_start).compartment) {
-			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",0");
-		}
-		coordinates_copy.set_compartment(x_start, 0, compartment);
-		placed_resources += NumberTopBottom(1, 1, 0);
-	} else if ((y == 1) and (required_resources.number_bottom == 0)) {
-		// always place at least one circuit in the requested row
-		if (coordinates_copy.coordinate_system.at(1).at(x_start).compartment) {
-			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",1");
-		}
-		coordinates_copy.set_compartment(x_start, 1, compartment);
-		placed_resources += NumberTopBottom(1, 0, 1);
+		coordinates_copy.set_compartment(x, y, compartment);
+		placed_resources += NumberTopBottom(1, 1 - y, y);
+		x_positions[y]++;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to requested row.");
 	}
-	// Place internal Connections
+
+	//////////////////////////////////////////////////////
+	// Place remaining requirements without row constraint
+	//////////////////////////////////////////////////////
+	while (placed_resources.number_total < required_resources.number_total) {
+		size_t y_next = (x_positions[1 - y] < x_positions[y]) ? 1 - y : y;
+
+		if (x_positions[y] < 0 ||
+		    static_cast<size_t>(x_positions[y]) >= coordinates_copy.coordinate_system[y].size()) {
+			throw std::runtime_error("End of coordinate system reached.");
+		}
+
+		if (coordinates_copy.coordinate_system.at(y_next).at(x_positions[y_next]).compartment) {
+			// skip if circuit is already in use
+			x_positions[y_next]++;
+			continue;
+		}
+
+		coordinates_copy.set_compartment(x_positions[y_next], y_next, compartment);
+		placed_resources += NumberTopBottom(1, 1 - y_next, y_next);
+		x_positions[y_next]++;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x_positions[y_next] << ", " << y_next
+		                                      << ") due to total requirements.");
+	}
+
 	connect_self(coordinates_copy, compartment);
 
 	if (!virtually) {
@@ -563,7 +590,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 		coordinates = coordinates_copy;
 	}
 
-	// Return placed neuron circuit nubmer
 	return placed_resources;
 }
 
@@ -586,14 +612,13 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 
 	NumberTopBottom placed_resources;
 
-	// If not leaf increase size
-	if (neuron.get_compartment_degree(compartment) > 1 && required_resources.number_total < 2) {
-		required_resources.number_total = 2;
-	}
-
 	LOG4CXX_TRACE(m_logger, "PlacementSize: " << required_resources);
 
-	// Start at x_start and place to left in top row (only bottom if requested explicitly)
+	std::array<int, 2> x_positions = {static_cast<int>(x_start), static_cast<int>(x_start)};
+
+	////////////////////////////////////////////////////////
+	// First place in rows required by resource requirements
+	////////////////////////////////////////////////////////
 	if (int(x_start) - int(required_resources.number_top) < 0) {
 		throw std::runtime_error("Placement does not fit on coordinate system.");
 	}
@@ -603,6 +628,9 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 		}
 		coordinates_copy.set_compartment(x, 0, compartment);
 		placed_resources += NumberTopBottom(1, 1, 0);
+		x_positions[0]--;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
 	}
 
 	if (int(x_start) - int(required_resources.number_bottom) < 0) {
@@ -614,41 +642,61 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 		}
 		coordinates_copy.set_compartment(x, 1, compartment);
 		placed_resources += NumberTopBottom(1, 0, 1);
-	}
-	if (required_resources.number_total >
-	    required_resources.number_bottom + required_resources.number_top) {
-		if (int(x_start) - int(required_resources.number_total) +
-		        int(required_resources.number_bottom) <
-		    0) {
-			throw std::runtime_error("Placement does not fit on coordinate system.");
-		}
-		for (size_t x = x_start - required_resources.number_top;
-		     x > x_start - required_resources.number_total + required_resources.number_bottom;
-		     x--) {
-			if (coordinates_copy.coordinate_system.at(y).at(x).compartment) {
-				throw std::logic_error(
-				    "Overlap During Placement at " + std::to_string(x) + "," + std::to_string(y));
-			}
-			coordinates_copy.set_compartment(x, y, compartment);
-			placed_resources += NumberTopBottom(1, 1 - y, y);
-		}
-	} else if ((y == 0) and (required_resources.number_top == 0)) {
-		// always place at least one circuit in the requested row
-		if (coordinates_copy.coordinate_system.at(0).at(x_start).compartment) {
-			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",0");
-		}
-		coordinates_copy.set_compartment(x_start, 0, compartment);
-		placed_resources += NumberTopBottom(1, 1, 0);
-	} else if ((y == 1) and (required_resources.number_bottom == 0)) {
-		// always place at least one circuit in the requested row
-		if (coordinates_copy.coordinate_system.at(1).at(x_start).compartment) {
-			throw std::logic_error("Overlap During Placement at " + std::to_string(x_start) + ",1");
-		}
-		coordinates_copy.set_compartment(x_start, 1, compartment);
-		placed_resources += NumberTopBottom(1, 0, 1);
+		x_positions[1]--;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
 	}
 
-	// Place internal Connections
+	/////////////////////////////////////////////////////
+	// Place at least one neuron circuit in requested row
+	/////////////////////////////////////////////////////
+
+	// Place at least two neuron circuits if compartment is not leaf node.
+	size_t required_in_requested_row = 1;
+	if (neuron.get_compartment_degree(compartment) > 1) {
+		required_in_requested_row++;
+	}
+	while (x_start - x_positions[y] < required_in_requested_row) {
+		if (x_positions[y] < 0) {
+			throw std::runtime_error("Placement does not fit on coordinate system.");
+		}
+		size_t x = x_positions[y];
+		if (coordinates_copy.coordinate_system.at(y).at(x).compartment) {
+			throw std::logic_error(
+			    "Overlap During Placement at " + std::to_string(x) + "," + std::to_string(y));
+		}
+		coordinates_copy.set_compartment(x, y, compartment);
+		placed_resources += NumberTopBottom(1, 1 - y, y);
+		x_positions[y]--;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to requested row.");
+	}
+
+	//////////////////////////////////////////////////////
+	// Place remaining requirements without row constraint
+	//////////////////////////////////////////////////////
+
+	while (placed_resources.number_total < required_resources.number_total) {
+		size_t y_next = (x_positions[1 - y] < x_positions[y]) ? 1 - y : y;
+
+		if (x_positions[y_next] < 0) {
+			throw std::runtime_error("End of coordinate system reached.");
+		}
+
+		if (coordinates_copy.coordinate_system.at(y_next).at(x_positions[y_next]).compartment) {
+			// skip if circuit is already in use
+			x_positions[y_next]--;
+			continue;
+		}
+
+		coordinates_copy.set_compartment(x_positions[y_next], y_next, compartment);
+		placed_resources += NumberTopBottom(1, 1 - y_next, y_next);
+		x_positions[y_next]--;
+		LOG4CXX_TRACE(
+		    m_logger, "\t place circuit at (" << x_positions[y_next] << ", " << y_next
+		                                      << ") due to total requirements.");
+	}
+
 	connect_self(coordinates_copy, compartment);
 
 	if (!virtually) {
@@ -656,7 +704,6 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 		coordinates = coordinates_copy;
 	}
 
-	// Return placed neuron circuit number
 	return placed_resources;
 }
 
