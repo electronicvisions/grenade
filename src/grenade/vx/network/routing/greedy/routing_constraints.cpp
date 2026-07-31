@@ -18,6 +18,7 @@
 #include "grenade/vx/network/abstract/population_cell/external_source.h"
 #include "grenade/vx/network/abstract/population_cell/locally_placed.h"
 #include "grenade/vx/network/abstract/population_cell/poisson_source.h"
+#include "grenade/vx/network/abstract/recorder/spike.h"
 #include "grenade/vx/signal_flow/vertex/background_spike_source.h"
 #include "grenade/vx/signal_flow/vertex/neuron_view.h"
 #include "halco/hicann-dls/vx/v3/neuron.h"
@@ -1338,7 +1339,7 @@ RoutingConstraints::get_neurons_on_event_output() const
 	std::set<halco::hicann_dls::vx::v3::AtomicNeuronOnDLS> neurons;
 	using namespace halco::hicann_dls::vx::v3;
 	for (auto const& partitioned_vertex_descriptor : m_partitioned_vertex_descriptors) {
-		if (auto const* recorder = dynamic_cast<grenade::common::Recorder const*>(
+		if (auto const* recorder = dynamic_cast<abstract::SpikeRecorder const*>(
 		        &m_topology.get_reference().get(partitioned_vertex_descriptor));
 		    recorder) {
 			for (auto const& in_edge_descriptor :
