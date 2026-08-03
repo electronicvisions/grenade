@@ -5,7 +5,7 @@
 namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourceLeak
-    : public dapr::EmptyProperty<HardwareResourceLeak, HardwareResource>
+    : public dapr::EmptyHashableProperty<HardwareResourceLeak, HardwareResource>
 {
 	HardwareResourceLeak() = default;
 };

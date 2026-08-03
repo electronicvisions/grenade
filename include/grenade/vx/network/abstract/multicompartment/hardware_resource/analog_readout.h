@@ -5,7 +5,7 @@
 namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourceAnalogReadout
-    : public dapr::EmptyProperty<HardwareResourceAnalogReadout, HardwareResource>
+    : public dapr::EmptyHashableProperty<HardwareResourceAnalogReadout, HardwareResource>
 {
 	HardwareResourceAnalogReadout() = default;
 };

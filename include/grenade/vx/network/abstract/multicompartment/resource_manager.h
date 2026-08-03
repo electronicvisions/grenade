@@ -3,9 +3,6 @@
 #include "dapr/property_holder.h"
 #include "grenade/vx/network/abstract/multicompartment/compartment_on_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource/capacitance.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_excitatory.h"
-#include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_inhibitory.h"
 #include "grenade/vx/network/abstract/multicompartment/neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/top_bottom.h"
 #include <map>

@@ -5,7 +5,7 @@
 namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourceCapacity
-    : public dapr::EmptyProperty<HardwareResourceCapacity, HardwareResource>
+    : public dapr::EmptyHashableProperty<HardwareResourceCapacity, HardwareResource>
 {
 	HardwareResourceCapacity() = default;
 };

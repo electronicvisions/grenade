@@ -1,4 +1,7 @@
 #include "grenade/vx/network/abstract/multicompartment/resource_manager.h"
+
+#include "dapr/unordered_map.h"
+#include "grenade/vx/network/abstract/multicompartment/hardware_resource.h"
 #include <fstream>
 
 namespace grenade::vx::network::abstract {
@@ -93,54 +96,44 @@ void ResourceManager::add_config_compartment(
     Compartment::ParameterSpace const& parameter_space,
     Environment const& environment)
 {
-	// Map with HardwareResources per Mechanism on Compartment
+	// Map with hardware resources per mechanism on compartment
 	std::map<MechanismOnCompartment, HardwareConstraints> hardware_constraints_on_mechanims =
 	    neuron.get(compartment).get_hardware(parameter_space, environment.get(compartment));
 
-	// Two Vectors to count Requestes Resources to find maximum later (Vectors instead of map since
-	// PropertyHolder is neither comparable nor hashable)
-	std::vector<dapr::PropertyHolder<HardwareResource>> resource_request_counter_hardware = {
-	    HardwareResourceCapacity(), HardwareResourceSynapticInputExitatory(),
-	    HardwareResourceSynapticInputInhibitory()};
-	std::vector<NumberTopBottom> resource_request_counter_numbers = {
-	    NumberTopBottom(0, 0, 0), NumberTopBottom(0, 0, 0), NumberTopBottom(0, 0, 0)};
+	// Map with required resources per hardware constraint type
+	dapr::UnorderedMap<HardwareResource, NumberTopBottom> accumulated_constraints;
 
-	// Iterate over all Mechanisms over all Constraints to set Number of Min_Top and Min_Bottom
-	for (auto [Key, Value] : hardware_constraints_on_mechanims) {
-		// Iterate over all HardwareConstraints of a Mechanism
-		for (auto hardware_constraint : Value) {
-			// Check which HardwareConstraint is requested and increase counter
-			for (size_t i = 0; i < resource_request_counter_hardware.size(); i++) {
-				if (typeid(*(resource_request_counter_hardware.at(i))) ==
-				    typeid(*((*hardware_constraint).resource))) {
-					resource_request_counter_numbers.at(i).number_total +=
-					    (*hardware_constraint).numbers.number_total;
-					resource_request_counter_numbers.at(i).number_top +=
-					    (*hardware_constraint).numbers.number_top;
-					resource_request_counter_numbers.at(i).number_bottom +=
-					    (*hardware_constraint).numbers.number_bottom;
-				}
+	for (auto const& [_, constraints] : hardware_constraints_on_mechanims) {
+		for (auto const& hardware_constraint : constraints) {
+			auto const& resource = *hardware_constraint->resource;
+			NumberTopBottom n_resources;
+			if (accumulated_constraints.contains(resource)) {
+				n_resources = accumulated_constraints.get(resource);
 			}
+			n_resources += hardware_constraint->numbers;
+			accumulated_constraints.set(resource, n_resources);
 		}
 	}
 
-	// Find Number of Reqired Circuits by maximum of requested Hardware-Resources
+	// Find number of required circuits by maximum of requested hardware resources
 	size_t max_request_total = 0;
 	size_t max_request_top = 0;
 	size_t max_request_bottom = 0;
-	for (auto const& Value : resource_request_counter_numbers) {
-		if (Value.number_total > max_request_total) {
-			max_request_total = Value.number_total;
+	for (auto const& [_, value] : accumulated_constraints) {
+		if (value.number_total > max_request_total) {
+			max_request_total = value.number_total;
 		}
-		if (Value.number_bottom > max_request_bottom) {
-			max_request_bottom = Value.number_bottom;
+		if (value.number_bottom > max_request_bottom) {
+			max_request_bottom = value.number_bottom;
 		}
-		if (Value.number_top > max_request_top) {
-			max_request_top = Value.number_top;
+		if (value.number_top > max_request_top) {
+			max_request_top = value.number_top;
 		}
 	}
 
-	// Add Configuration to Resource Map in ResourceManager
+	max_request_total = std::max(max_request_total, max_request_top + max_request_bottom);
+
+	// Add configuration to resource map in ResourceManager
 	resource_map.emplace(
 	    compartment, NumberTopBottom(max_request_total, max_request_top, max_request_bottom));
 }

@@ -5,7 +5,7 @@
 namespace grenade::vx::network::abstract {
 
 struct SYMBOL_VISIBLE HardwareResourceSynapticInputExitatory
-    : public dapr::EmptyProperty<HardwareResourceSynapticInputExitatory, HardwareResource>
+    : public dapr::EmptyHashableProperty<HardwareResourceSynapticInputExitatory, HardwareResource>
 {
 	HardwareResourceSynapticInputExitatory() = default;
 };
