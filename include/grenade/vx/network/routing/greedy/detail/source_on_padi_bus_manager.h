@@ -56,7 +56,8 @@ struct SourceOnPADIBusManager
 	distribute_external_sources_linear(
 	    std::vector<ExternalSource> const& sources,
 	    halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS> const&
-	        used_num_synapse_drivers) SYMBOL_VISIBLE;
+	        used_num_synapse_drivers,
+	    bool external_sources_alternate = false) SYMBOL_VISIBLE;
 
 	/**
 	 * Get allocation requests for filtered internal sources.

@@ -6,6 +6,7 @@
 #include "hate/math.h"
 #include "hate/multidim_iterator.h"
 #include "lola/vx/v3/synapse.h"
+#include <iostream>
 #include <stdexcept>
 
 namespace grenade::vx::network::routing::greedy::detail {
@@ -124,52 +125,152 @@ std::optional<halco::common::typed_array<
 SourceOnPADIBusManager::distribute_external_sources_linear(
     std::vector<ExternalSource> const& sources,
     halco::common::typed_array<size_t, halco::hicann_dls::vx::v3::PADIBusOnDLS> const&
-        used_num_synapse_drivers)
+        used_num_synapse_drivers,
+    bool external_sources_alternate)
 {
 	typed_array<std::vector<std::vector<size_t>>, PADIBusOnDLS> split_external_sources_per_padi_bus;
-	for (auto const padi_bus_block : iter_all<PADIBusBlockOnDLS>()) {
-		size_t i = 0;
-		for (auto const padi_bus : iter_all<PADIBusOnPADIBusBlock>()) {
-			std::vector<size_t> filter;
-			size_t unused_num_synapse_drivers =
-			    SynapseDriverOnPADIBus::size -
-			    used_num_synapse_drivers[PADIBusOnDLS(padi_bus, padi_bus_block)];
-			while (i < sources.size() && get_num_synapse_drivers(sources, filter)[padi_bus_block] <=
-			                                 unused_num_synapse_drivers) {
-				if (filter.size() == lola::vx::v3::SynapseMatrix::Label::size) {
-					unused_num_synapse_drivers -=
-					    get_num_synapse_drivers(sources, filter)[padi_bus_block];
+	if (!external_sources_alternate) {
+		for (auto const padi_bus_block : iter_all<PADIBusBlockOnDLS>()) {
+			size_t i = 0;
+			for (auto const padi_bus : iter_all<PADIBusOnPADIBusBlock>()) {
+				std::vector<size_t> filter;
+				size_t unused_num_synapse_drivers =
+				    SynapseDriverOnPADIBus::size -
+				    used_num_synapse_drivers[PADIBusOnDLS(padi_bus, padi_bus_block)];
+				while (i < sources.size() &&
+				       get_num_synapse_drivers(sources, filter)[padi_bus_block] <=
+				           unused_num_synapse_drivers) {
+					if (filter.size() == lola::vx::v3::SynapseMatrix::Label::size) {
+						unused_num_synapse_drivers -=
+						    get_num_synapse_drivers(sources, filter)[padi_bus_block];
+						split_external_sources_per_padi_bus[PADIBusOnDLS(padi_bus, padi_bus_block)]
+						    .push_back(filter);
+						filter.clear();
+					}
+					// If the source is not used as target
+					// to an internal neuron but is
+					// recorded, we place it onto the top
+					// hemisphere with zero used synapse
+					// drivers. Not placing it but inputting
+					// it into the crossbar is not supported
+					// by the choice of the crossbar routing
+					// used in this greedy router.
+					if (get_num_synapse_drivers(sources, {i})[padi_bus_block] > 0 ||
+					    (((get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::top] == 0) &&
+					      (get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::bottom] ==
+					       0)) &&
+					     padi_bus_block == PADIBusBlockOnDLS::top)) {
+						filter.push_back(i);
+					}
+					i++;
+				}
+				while (get_num_synapse_drivers(sources, filter)[padi_bus_block] >
+				       unused_num_synapse_drivers) {
+					filter.pop_back();
+					i--;
+				}
+				if (!filter.empty()) {
 					split_external_sources_per_padi_bus[PADIBusOnDLS(padi_bus, padi_bus_block)]
 					    .push_back(filter);
-					filter.clear();
 				}
-				// If the source is not used as target to an internal neuron but is recorded, we
-				// place it onto the top hemisphere with zero used synapse drivers. Not placing it
-				// but inputting it into the crossbar is not supported by the choice of the crossbar
-				// routing used in this greedy router.
-				if (get_num_synapse_drivers(sources, {i})[padi_bus_block] > 0 ||
-				    (((get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::top] == 0) &&
-				      (get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::bottom] == 0)) &&
-				     padi_bus_block == PADIBusBlockOnDLS::top)) {
-					filter.push_back(i);
-				}
-				i++;
 			}
-			while (get_num_synapse_drivers(sources, filter)[padi_bus_block] >
-			       unused_num_synapse_drivers) {
-				filter.pop_back();
-				i--;
-			}
-			if (!filter.empty()) {
-				split_external_sources_per_padi_bus[PADIBusOnDLS(padi_bus, padi_bus_block)]
-				    .push_back(filter);
+			if (i != sources.size()) {
+				return std::nullopt;
 			}
 		}
-		if (i != sources.size()) {
-			return std::nullopt;
+
+	} else {
+		for (auto const padi_bus_block : iter_all<PADIBusBlockOnDLS>()) {
+			size_t i = 0;
+			halco::common::typed_array<std::vector<size_t>, PADIBusOnPADIBusBlock> filters;
+			halco::common::typed_array<size_t, PADIBusOnPADIBusBlock> unused_num_synapse_drivers;
+			for (auto const padi_bus : iter_all<PADIBusOnPADIBusBlock>()) {
+				unused_num_synapse_drivers[padi_bus] =
+				    SynapseDriverOnPADIBus::size -
+				    used_num_synapse_drivers[PADIBusOnDLS(padi_bus, padi_bus_block)];
+			}
+			size_t current_bus = 0;
+			auto padi_bus = PADIBusOnPADIBusBlock(current_bus);
+			std::vector<size_t> vector;
+			size_t tracker = 0;
+			size_t last_i = i;
+			auto bus_available = [&]() {
+				for (auto const padi : iter_all<PADIBusOnPADIBusBlock>()) {
+					if (get_num_synapse_drivers(sources, filters[padi])[padi_bus_block] <=
+					    unused_num_synapse_drivers[padi]) {
+						return true;
+					}
+				}
+				return false;
+			};
+			// while runs as long as there are not less unused
+			// synapse drivers than needed synapse drivers and that
+			// not all sources have been assigned yet
+			while (i < sources.size() && bus_available()) {
+				// if there are not less unused synapse drivers
+				// on the current bus than needed drivers
+				if (get_num_synapse_drivers(sources, filters[padi_bus])[padi_bus_block] <=
+				    unused_num_synapse_drivers[padi_bus]) {
+					if (filters[padi_bus].size() == lola::vx::v3::SynapseMatrix::Label::size) {
+						unused_num_synapse_drivers[padi_bus] -=
+						    get_num_synapse_drivers(sources, filters[padi_bus])[padi_bus_block];
+						split_external_sources_per_padi_bus[PADIBusOnDLS(padi_bus, padi_bus_block)]
+						    .push_back(filters[padi_bus]);
+						filters[padi_bus].clear();
+					}
+					// If the source is not used as target
+					// to an internal neuron but is
+					// recorded, we place it onto the top
+					// hemisphere with zero used synapse
+					// drivers. Not placing it but inputting
+					// it into the crossbar is not supported
+					// by the choice of the crossbar routing
+					// used in this greedy router.
+					if (get_num_synapse_drivers(sources, {i})[padi_bus_block] > 0 ||
+					    (((get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::top] == 0) &&
+					      (get_num_synapse_drivers(sources, {i})[PADIBusBlockOnDLS::bottom] ==
+					       0)) &&
+					     padi_bus_block == PADIBusBlockOnDLS::top)) {
+						filters[padi_bus].push_back(i);
+					}
+					i++;
+					if (get_num_synapse_drivers(sources, filters[padi_bus])[padi_bus_block] >
+					    unused_num_synapse_drivers[padi_bus]) {
+						filters[padi_bus].pop_back();
+						i--;
+					}
+				}
+				if (i == last_i) {
+					tracker++;
+					if (tracker > PADIBusOnPADIBusBlock::size) {
+						// ERROR: no padibus available for
+						// remaining external connections
+						return std::nullopt;
+					}
+				} else {
+					last_i = i;
+					tracker = 0;
+				}
+				current_bus = (current_bus + 1) % PADIBusOnPADIBusBlock::size;
+				padi_bus = PADIBusOnPADIBusBlock(current_bus);
+			}
+			for (auto const padi_bus : iter_all<PADIBusOnPADIBusBlock>()) {
+				while (get_num_synapse_drivers(sources, filters[padi_bus])[padi_bus_block] >
+				       unused_num_synapse_drivers[padi_bus]) {
+					filters[padi_bus].pop_back();
+					i--;
+				}
+
+				if (!filters[padi_bus].empty()) {
+					split_external_sources_per_padi_bus[PADIBusOnDLS(padi_bus, padi_bus_block)]
+					    .push_back(filters[padi_bus]);
+				}
+			}
+			if (i != sources.size()) {
+				return std::nullopt;
+			}
 		}
 	}
 	return split_external_sources_per_padi_bus;
 }
-
 } // namespace grenade::vx::network::routing::greedy::detail

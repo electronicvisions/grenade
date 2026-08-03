@@ -11,7 +11,6 @@
 #include <log4cxx/logger.h>
 
 namespace grenade::vx::network::routing::greedy {
-
 using namespace halco::common;
 using namespace halco::hicann_dls::vx::v3;
 
@@ -239,7 +238,7 @@ std::optional<SourceOnPADIBusManager::Partition> SourceOnPADIBusManager::solve(
 	}
 	auto const split_external_sources_per_padi_bus =
 	    detail::SourceOnPADIBusManager::distribute_external_sources_linear(
-	        external_sources, used_num_synapse_drivers);
+	        external_sources, used_num_synapse_drivers, this->external_sources_alternate);
 	if (!split_external_sources_per_padi_bus) {
 		// Not all external sources could be distributed -> return unsuccessful
 		return std::nullopt;

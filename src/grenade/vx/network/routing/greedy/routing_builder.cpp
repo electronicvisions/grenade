@@ -1196,6 +1196,10 @@ RoutingBuilder::Result RoutingBuilder::route(
 
 	// partition sources on PADI-busses
 	SourceOnPADIBusManager source_manager(disabled_internal_routes);
+	source_manager.external_sources_alternate = false;
+	if (options) {
+		source_manager.external_sources_alternate = options->external_sources_alternate;
+	}
 	auto const maybe_source_partition =
 	    source_manager.solve(internal_sources, background_sources, external_sources);
 	if (!maybe_source_partition) {

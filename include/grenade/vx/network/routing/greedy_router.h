@@ -48,6 +48,8 @@ struct SYMBOL_VISIBLE GENPYBIND(
 		 */
 		std::optional<std::chrono::milliseconds> synapse_driver_allocation_timeout;
 
+		bool external_sources_alternate = false; // change default for c++ tests
+
 		GENPYBIND(stringstream)
 		friend std::ostream& operator<<(std::ostream& os, Options const& options) SYMBOL_VISIBLE;
 	};

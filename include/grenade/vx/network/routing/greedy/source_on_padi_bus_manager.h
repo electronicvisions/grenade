@@ -29,6 +29,9 @@ namespace grenade::vx::network::routing::greedy {
  */
 struct SourceOnPADIBusManager
 {
+	bool external_sources_alternate; // SET TO TRUE TO distribute ext sources
+	                                 // across padi busses evenly
+
 	/**
 	 * Label to identify events at synapse driver(s).
 	 */
