@@ -20,21 +20,9 @@ libnux::vx::VectorRow<T> translate_columns(
     HandleO const& output_handle)
 {
 	libnux::vx::VectorRow<T> ret;
-	size_t last_input_index = 0;
-	size_t current_input_index = 0;
-	for (size_t i = 0; i < output_handle.columns.size; ++i) {
-		if (!output_handle.columns.test(i)) {
-			continue;
-		}
-		while (current_input_index < input_handle.columns.size &&
-		       !input_handle.columns.test(current_input_index)) {
-			current_input_index++;
-		}
-		if (current_input_index < input_handle.columns.size) {
-			last_input_index = current_input_index;
-		}
-		ret[i] = input[last_input_index];
-		current_input_index++;
+	for (size_t i = 0; i < output_handle.columns.size(); ++i) {
+		ret[output_handle.columns.at(i)] =
+		    input[input_handle.columns.at(std::min(i + 1, input_handle.columns.size()) - 1)];
 	}
 	return ret;
 }
