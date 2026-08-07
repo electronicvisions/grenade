@@ -318,6 +318,17 @@ void JITCalibration::operator()(
 				        [](CalibratedNeuron::ParameterSpace::CalibrationTarget::
 				               DisabledSynapticInput const&) {}},
 				    target.synaptic_input_inhibitory);
+
+				if (target.inter_atomic_neuron_connectivity.tau_icc) {
+					if (!spiking_calib_target.neuron_target.tau_icc) {
+						spiking_calib_target.neuron_target.tau_icc =
+						    ccalix::NeuronCalibTarget::PerNeuronTimeConstant();
+						// default value to calibrate if not used.
+						spiking_calib_target.neuron_target.tau_icc->fill(ccalix::TimeInS(10e-6));
+					}
+					spiking_calib_target.neuron_target.tau_icc->at(atomic_neuron) =
+					    *target.inter_atomic_neuron_connectivity.tau_icc;
+				}
 			}
 
 			if (synapse_dac_bias.size() > 1) {
@@ -386,13 +397,6 @@ void JITCalibration::operator()(
 			}
 		}
 	}
-
-	// TODO: perform inter-compartment-conductance calibration here
-	std::map<
-	    grenade::common::ExecutionInstanceOnExecutor,
-	    std::map<
-	        halco::hicann_dls::vx::v3::AtomicNeuronOnDLS, lola::vx::v3::AtomicNeuron::AnalogValue>>
-	    inter_compartment_conductances;
 
 	// perform fix-ups for multi-compartment connectivity and disabling of mechanisms
 	for (auto const& inter_graph_hyper_edge_descriptor : topology.inter_graph_hyper_edges()) {

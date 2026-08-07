@@ -29,6 +29,7 @@ GENPYBIND_MANUAL({
 #include "grenade/vx/network/abstract/mapping/external_source_neuron.h"
 #include "grenade/vx/network/abstract/mapping/locally_placed_neuron.h"
 #include "grenade/vx/network/abstract/mapping/madc_recorder.h"
+#include "grenade/vx/network/abstract/mapping/multicompartment_neuron.h"
 #include "grenade/vx/network/abstract/mapping/plasticity_rule.h"
 #include "grenade/vx/network/abstract/mapping/poisson_source_neuron.h"
 #include "grenade/vx/network/abstract/mapping/spike_recorder.h"

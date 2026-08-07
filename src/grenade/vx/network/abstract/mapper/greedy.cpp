@@ -18,6 +18,7 @@
 #include "grenade/vx/network/abstract/clock_cycle_time_domain_runtimes.h"
 #include "grenade/vx/network/abstract/mapped_topology_rewrite/placement.h"
 #include "grenade/vx/network/abstract/mapped_topology_rewrite/routing.h"
+#include "grenade/vx/network/abstract/multicompartment/placement/algorithm_ruleset.h"
 #include "grenade/vx/network/abstract/plasticity_rule.h"
 #include "grenade/vx/network/abstract/population_cell/delay.h"
 #include "grenade/vx/network/abstract/population_cell/external_source.h"
@@ -31,6 +32,7 @@
 #include "grenade/vx/network/abstract/recorder/spike.h"
 #include "grenade/vx/network/abstract/resource_estimator/population.h"
 #include "grenade/vx/network/abstract/topology_rewrite/delay_cell.h"
+#include "grenade/vx/network/abstract/topology_rewrite/multicompartment_neuron.h"
 #include "grenade/vx/network/abstract/topology_rewrite/plasticity_rule.h"
 #include "grenade/vx/network/abstract/topology_rewrite/population_execution_instance_transition.h"
 #include "grenade/vx/network/abstract/topology_rewrite/uncalibrated_signed_synapse.h"
@@ -115,6 +117,13 @@ grenade::common::LinkedTopology GreedyMapper::operator()(
 	{
 		UncalibratedSignedSynapseRewrite uncalibrated_signed_synapse_rewrite(mapped_topology);
 		uncalibrated_signed_synapse_rewrite();
+	}
+
+	// map multi-compartment neurons to locally-placed calibrated neurons
+	{
+		MulticompartmentNeuronRewrite local_placement_rewrite(
+		    mapped_topology, std::make_unique<PlacementAlgorithmRuleset>());
+		local_placement_rewrite();
 	}
 
 	// partitioned topology
