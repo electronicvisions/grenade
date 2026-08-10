@@ -45,9 +45,11 @@ public:
 	/**
 	 * Construct executor with active connections from environment.
 	 * @param enable_differential_config Whether to enable differential configuration writes instead
-	 * of full ones
+	 * of full ones.
+	 * @param connection_size Number of connections grouped to a multiconnection. For 0 all
+	 * connections are grouped in a single multiconnection.
 	 */
-	JITGraphExecutor(bool enable_differential_config = true, size_t connection_size = 1)
+	JITGraphExecutor(bool enable_differential_config = true, size_t connection_size = 0)
 	    SYMBOL_VISIBLE;
 
 	/**
