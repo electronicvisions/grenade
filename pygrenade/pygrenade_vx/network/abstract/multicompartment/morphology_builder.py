@@ -62,8 +62,10 @@ class MorphologyBuilder:
         :return: Newly created subtree containing the subtrees of the
         connected compartments.
         '''
-        children = set()
-        node_connections = set()
+        # Set does not preserve order -> use dict to save list of unique
+        # elements in keys
+        children = {}
+        node_connections = {}
         for connection in connections:
             # Find the top node containing the source compartment.
             source_root = None
@@ -82,9 +84,12 @@ class MorphologyBuilder:
                 raise ValueError("Compartment not found in"
                                  " Morphology-Builder.")
 
-            children.add(source_root)
-            children.add(target_root)
-            node_connections.add(connection)
+            children[source_root] = None
+            children[target_root] = None
+            node_connections[connection] = None
+
+        children = list(children.keys())
+        node_connections = list(node_connections.keys())
 
         # Creates new node and removes all nodes that are contained
         # in the new node.
