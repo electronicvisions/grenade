@@ -7,7 +7,7 @@ from pygrenade_vx.network.abstract.multicompartment.mechanisms import \
 from pygrenade_vx.network.abstract.multicompartment.compartment_builder \
     import CompartmentBuilder
 from pygrenade_vx.network.abstract.multicompartment.tree import \
-    Node, Connection
+    Tree, Connection
 from pygrenade_vx.network.abstract.multicompartment.neuron_components import \
     Compartment
 from pygrenade_vx.network.abstract.multicompartment.morphology_builder import \
@@ -16,33 +16,43 @@ from pygrenade_vx.network.abstract.multicompartment.morphology_builder import \
 
 class SwTestPygrenadeVxMulticompartmentBuilder(unittest.TestCase):
     def test_tree(self):
-        node_10 = Node({10}, label="node_10")
-        node_20 = Node({20}, label="node_20")
-        node_11 = Node({11}, label="node_11")
-        node_22 = Node({22}, label="node_22")
-        node_33 = Node({33}, label="node_33")
-        node_a = Node({node_10, node_20},
-                      [Connection(node_10, node_20)], label="node_a")
-        node_b = Node({node_11, node_22, node_33},
-                      [Connection(node_11, node_22),
-                       Connection(node_22, node_33)], label="node_b")
-        node_c = Node({node_a, node_b},
-                      [Connection(node_10, node_11)], label="node_c")
+        tree_10 = Tree([10], label="tree_10")
+        tree_20 = Tree([20], label="tree_20")
+        tree_11 = Tree([11], label="tree_11")
+        tree_22 = Tree([22], label="tree_22")
+        tree_33 = Tree([33], label="tree_33")
+        tree_a = Tree([tree_10, tree_20],
+                      [Connection(tree_10, tree_20)], label="tree_a")
+        tree_b = Tree({tree_11, tree_22, tree_33},
+                      [Connection(tree_11, tree_22),
+                       Connection(tree_22, tree_33)], label="tree_b")
+        tree_c = Tree({tree_a, tree_b},
+                      [Connection(tree_10, tree_11)], label="tree_c")
 
-        fully_labeled_leafs, _ = node_c.get_fully_labeled_leaf_elements()
+        fully_labeled_leafs, _ = tree_c.get_fully_labeled_leaf_elements()
 
-        self.assertIn("node_c.node_a.node_10", fully_labeled_leafs.values())
-        self.assertIn("node_c.node_a.node_20", fully_labeled_leafs.values())
-        self.assertIn("node_c.node_b.node_11", fully_labeled_leafs.values())
-        self.assertIn("node_c.node_b.node_22", fully_labeled_leafs.values())
-        self.assertIn("node_c.node_b.node_33", fully_labeled_leafs.values())
+        self.assertIn("tree_c.tree_a.tree_10", fully_labeled_leafs.values())
+        self.assertIn("tree_c.tree_a.tree_20", fully_labeled_leafs.values())
+        self.assertIn("tree_c.tree_b.tree_11", fully_labeled_leafs.values())
+        self.assertIn("tree_c.tree_b.tree_22", fully_labeled_leafs.values())
+        self.assertIn("tree_c.tree_b.tree_33", fully_labeled_leafs.values())
 
-        fully_labeled_connections = node_c.get_fully_labeled_connections(
+        fully_labeled_connections = tree_c.get_fully_labeled_connections(
             fully_labeled_leafs, True)
 
         for connection in fully_labeled_connections:
             self.assertIn(connection.source, fully_labeled_leafs.values())
             self.assertIn(connection.target, fully_labeled_leafs.values())
+
+        # Invalid connection
+        with self.assertRaises(ValueError):
+            Tree([tree_10, tree_20], [Connection(tree_10, tree_11)])
+        # Cycles
+        with self.assertRaises(ValueError):
+            Tree([tree_10, tree_20], [Connection(tree_10, tree_10)])
+        with self.assertRaises(ValueError):
+            Tree([tree_10, tree_20], [Connection(tree_10, tree_20),
+                                      Connection(tree_20, tree_10)])
 
     def test_morphology_builder(self):
         builder = MorphologyBuilder()
@@ -59,12 +69,12 @@ class SwTestPygrenadeVxMulticompartmentBuilder(unittest.TestCase):
 
         branch_d = builder.clone(branch_a, label="branch_d")
 
-        comp_a_copy = builder.get_ref_in_node(branch_d, comp_a)
+        comp_a_copy = builder.get_ref_in_tree(branch_d, comp_a)
 
         branch_e = builder.connect([Connection(comp_a, comp_a_copy, 1)],
                                    label="branch_e")
-        self.assertEqual(len(builder.nodes), 1)
-        self.assertIn(branch_e, builder.nodes)
+        self.assertEqual(len(builder.trees), 1)
+        self.assertIn(branch_e, builder.trees)
 
         _, labels = branch_e.get_fully_labeled_leaf_elements()
         self.assertIn("branch_e.branch_c.branch_b.branch_a.comp_a",

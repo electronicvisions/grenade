@@ -6,7 +6,7 @@ from pygrenade_vx.network.abstract.multicompartment.neuron_components\
 from pygrenade_vx.network.abstract.multicompartment.neuron import\
     Neuron
 from pygrenade_vx.network.abstract.multicompartment.tree import\
-    Node, Connection
+    Tree, Connection
 
 
 class MorphologyBuilder:
@@ -26,33 +26,33 @@ class MorphologyBuilder:
         '''
         Builder for multicompartment neuron classes.
 
-        Structures the neuron during the building process in nodes that
+        Structures the neuron during the building process in subtrees that
         form a tree.
         '''
-        self.nodes = []
+        self.trees = []
         self.neuron_type = neuron_type
 
     def add_compartment(self,
                         compartment: Compartment,
-                        label: str) -> Node:
+                        label: str) -> Tree:
         '''
         Add a compartment to the builder.
 
         :param compartment: Compartment to be added.
         :param label: Label of the compartment in the builder.
-        :return: Node in the builder representing the compartment.
+        :return: Tree in the builder representing the compartment.
         '''
-        node = Node([deepcopy(compartment)], label=label)
-        self.nodes.append(node)
-        return node
+        tree = Tree([deepcopy(compartment)], label=label)
+        self.trees.append(tree)
+        return tree
 
     def connect(self,
                 connections: List[Connection],
-                label: Optional[str] = None) -> Node:
+                label: Optional[str] = None) -> Tree:
         '''
         Connect two compartments.
 
-        By connecting two compartments a node that contains the two subtrees,
+        By connecting two compartments a tree that contains the two subtrees,
         that contain the source and target compartment of the connection is
         created.
 
@@ -65,19 +65,19 @@ class MorphologyBuilder:
         # Set does not preserve order -> use dict to save list of unique
         # elements in keys
         children = {}
-        node_connections = {}
+        tree_connections = {}
         for connection in connections:
-            # Find the top node containing the source compartment.
+            # Find the top tree containing the source compartment.
             source_root = None
-            for node in self.nodes:
-                if node.node_in_tree(connection.source):
-                    source_root = node
+            for tree in self.trees:
+                if tree.contains(connection.source):
+                    source_root = tree
                     break
-            # Find the top node containing the target compartment.
+            # Find the top tree containing the target compartment.
             target_root = None
-            for node in self.nodes:
-                if node.node_in_tree(connection.target):
-                    target_root = node
+            for tree in self.trees:
+                if tree.contains(connection.target):
+                    target_root = tree
                     break
 
             if source_root is None or target_root is None:
@@ -86,53 +86,53 @@ class MorphologyBuilder:
 
             children[source_root] = None
             children[target_root] = None
-            node_connections[connection] = None
+            tree_connections[connection] = None
 
         children = list(children.keys())
-        node_connections = list(node_connections.keys())
+        tree_connections = list(tree_connections.keys())
 
-        # Creates new node and removes all nodes that are contained
-        # in the new node.
-        new_node = Node(children, node_connections, label)
-        self.nodes.append(new_node)
+        # Creates new tree and removes all trees that are contained
+        # in the new tree.
+        new_tree = Tree(children, tree_connections, label)
+        self.trees.append(new_tree)
         for child in children:
-            self.nodes.remove(child)
-        return new_node
+            self.trees.remove(child)
+        return new_tree
 
     def clone(self,
-              node: Node,
-              label: Optional[str] = None) -> Node:
+              tree: Tree,
+              label: Optional[str] = None) -> Tree:
         '''
-        Clone an existing node.
+        Clone an existing tree.
 
-        :param node: Node to be cloned.
+        :param tree: Tree to be cloned.
         :param label: Label of the clone.
-        :return: Clone of the given node.
+        :return: Clone of the given tree.
         '''
-        new_node = deepcopy(node)
-        new_node.label = label
-        self.nodes.append(new_node)
-        return new_node
+        new_tree = deepcopy(tree)
+        new_tree.label = label
+        self.trees.append(new_tree)
+        return new_tree
 
-    def get_ref_in_node(self,
-                        target_tree: Node,
-                        subnode: Node) -> Node:
+    def get_ref_in_tree(self,
+                        target_tree: Tree,
+                        subtree: Tree) -> Tree:
         '''
-        Return the reference to a node on a specific subtree.
+        Return the reference to a tree on a specific subtree.
 
-        Intended for getting the reference of a node on a cloned subtree.
-        :param target_tree: The subtree on which the node is searched.
-        :param subnode: The node to be searched.
-        :return: Reference of the node on the given subtree.
+        Intended for getting the reference of a tree on a cloned subtree.
+        :param target_tree: The subtree on which the tree is searched.
+        :param subtree: The tree to be searched.
+        :return: Reference of the tree on the given subtree.
         '''
         full_label = None
-        for node in self.nodes:
-            if node == target_tree:
+        for tree in self.trees:
+            if tree == target_tree:
                 continue
 
-            labels, _ = node.get_fully_labeled_children()
-            if subnode in labels:
-                full_label = labels[subnode]
+            labels, _ = tree.get_fully_labeled_children()
+            if subtree in labels:
+                full_label = labels[subtree]
                 break
 
         _, labels_target = target_tree.get_fully_labeled_children()
@@ -174,16 +174,16 @@ class MorphologyBuilder:
         :param name: Name of the neuron class.
         :return: Neuron class.
         '''
-        if len(self.nodes) != 1:
-            raise ValueError("One root node needs to exist that"
-                             " contains all other nodes. Otherwise the neuron"
+        if len(self.trees) != 1:
+            raise ValueError("One root tree needs to exist that"
+                             " contains all other trees. Otherwise the neuron"
                              " is not fully connected. Instead"
-                             f" {len(self.nodes)} nodes exist.")
+                             f" {len(self.trees)} trees exist.")
 
         # Get full labels for compartments and compartments in connections
         compartments_full_label_inverse, compartments_full_label = self\
-            .nodes[0].get_fully_labeled_leaf_elements()
-        connections_full_label = self.nodes[0]\
+            .trees[0].get_fully_labeled_leaf_elements()
+        connections_full_label = self.trees[0]\
             .get_fully_labeled_connections(compartments_full_label_inverse)
 
         translations, default_parameters = self.build_translation_and_default(
@@ -194,5 +194,5 @@ class MorphologyBuilder:
             "connections": deepcopy(connections_full_label),
             "default_parameters": default_parameters,
             "translations": translations})
-        self.nodes = []
+        self.trees = []
         return new_neuron_class
