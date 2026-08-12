@@ -15,10 +15,8 @@ class Neuron():
     This is not the fully implemented neuron but contains the necessary data to
     construct a neuron in the final implementation from it.
     '''
+    # The following parameters should be provided
     compartments = {}
-    compartment_ids_grenade = {}
-    mechanisms_ids_grenade = {}
-    connection_ids_grenade = {}
     connections = []
 
     # parameters for parameter_space
@@ -26,6 +24,11 @@ class Neuron():
     default_parameters = {}
     # translation of parameters (dummy: key = value)
     translations = {}
+
+    # The following members are set in __init_subclass__
+    compartment_ids_grenade = {}
+    mechanisms_ids_grenade = {}
+    connection_ids_grenade = {}
 
     def translate(self, parameters, copy=True):
         '''
@@ -239,4 +242,9 @@ class Neuron():
         """
         Create grenade neuron.
         """
+        # reset members which are dynamically inferred
+        cls.compartment_ids_grenade = {}
+        cls.mechanisms_ids_grenade = {}
+        cls.connection_ids_grenade = {}
+
         cls.grenade_neuron = cls._to_grenade()
