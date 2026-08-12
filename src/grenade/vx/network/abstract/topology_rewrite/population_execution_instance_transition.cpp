@@ -98,6 +98,8 @@ void PopulationExecutionInstanceTransitionRewrite::operator()() const
 			if (auto const external_source_neuron =
 			        dynamic_cast<ExternalSourceNeuron const*>(&neuron);
 			    external_source_neuron) {
+				bool used_on_original_execution_instance = false;
+
 				auto const population_execution_instance =
 				    population->get_execution_instance_on_executor();
 				std::vector<EdgeOnTopology> out_edges(
@@ -114,6 +116,7 @@ void PopulationExecutionInstanceTransitionRewrite::operator()() const
 
 					if (target_execution_instance == population_execution_instance ||
 					    !target_time_domain) {
+						used_on_original_execution_instance = true;
 						continue;
 					}
 
@@ -161,6 +164,10 @@ void PopulationExecutionInstanceTransitionRewrite::operator()() const
 						    {target_populations.at(target_execution_instance.value())}, references,
 						    get_topology().get(inter_topology_hyper_edge_descriptor));
 					}
+				}
+				if (!used_on_original_execution_instance) {
+					get_topology().clear_vertex(vertex_descriptor);
+					get_topology().remove_vertex(vertex_descriptor);
 				}
 			} else {
 				auto const population_execution_instance =
