@@ -507,9 +507,10 @@ ExecutionInstanceExecutor::operator()(
 		for (size_t c = 0; c < max_num_ppu_finish_builders; ++c) {
 			assembled_builders.push_back({});
 			for (auto const& chip_on_connection : m_chips_on_connection) {
-				auto& local_builders = local_ppu_finish_builders.at(chip_on_connection);
-				if (local_builders.size() > c) {
-					assembled_builders.back()[chip_on_connection] = std::move(local_builders.at(c));
+				if (local_ppu_finish_builders.contains(chip_on_connection) &&
+				    local_ppu_finish_builders.at(chip_on_connection).size() > c) {
+					assembled_builders.back()[chip_on_connection] =
+					    std::move(local_ppu_finish_builders.at(chip_on_connection).at(c));
 				} else {
 					assembled_builders.back()[chip_on_connection] = {};
 				}
@@ -519,10 +520,12 @@ ExecutionInstanceExecutor::operator()(
 			// for the last batch entry, stop the PPU
 			assembled_builders.push_back({});
 			for (auto const& chip_on_connection : m_chips_on_connection) {
-				auto& local_playback_program = playback_program.chips.at(chip_on_connection);
-				if (local_playback_program.ppu_symbols) {
+				if (playback_program.chips.contains(chip_on_connection) &&
+				    playback_program.chips.at(chip_on_connection).ppu_symbols) {
 					assembled_builders.back()[chip_on_connection].merge_back(
-					    generate(generator::PPUStop(*local_playback_program.ppu_symbols)).builder);
+					    generate(generator::PPUStop(
+					                 *playback_program.chips.at(chip_on_connection).ppu_symbols))
+					        .builder);
 				} else {
 					assembled_builders.back()[chip_on_connection] = {};
 				}
