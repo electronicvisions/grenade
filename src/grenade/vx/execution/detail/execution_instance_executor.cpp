@@ -1,5 +1,6 @@
 #include "grenade/vx/execution/detail/execution_instance_executor.h"
 
+#include "fisch/vx/constants.h"
 #include "grenade/common/execution_instance_id.h"
 #include "grenade/common/vertex_on_topology.h"
 #include "grenade/vx/common/chip_on_connection.h"
@@ -16,6 +17,7 @@
 #include "grenade/vx/signal_flow/vertex/pad_readout.h"
 #include "halco/hicann-dls/vx/v3/readout.h"
 #include "haldls/vx/v3/barrier.h"
+#include "haldls/vx/v3/fpga.h"
 #include "haldls/vx/v3/padi.h"
 #include "haldls/vx/v3/readout.h"
 #include "hate/timer.h"
@@ -394,6 +396,12 @@ ExecutionInstanceExecutor::operator()(
 				        return std::holds_alternative<hwdb4cpp::JboaSetupEntry>(
 				            chip_and_hwdb_entry.second);
 			        })) {
+				// Increase FPGA instruction timeout to prevent barrier timeouts.
+				auto timeout = haldls::vx::v3::InstructionTimeoutConfig();
+				timeout.set_value(Timer::Value(int(1 * fisch::vx::fpga_clock_cycles_per_s)));
+				assembled_builder.write(
+				    halco::hicann_dls::vx::InstructionTimeoutConfigOnFPGA(), timeout);
+
 				assembled_builder.block_until(
 				    halco::hicann_dls::vx::BarrierOnFPGA(), Barrier::multi_fpga);
 			}
