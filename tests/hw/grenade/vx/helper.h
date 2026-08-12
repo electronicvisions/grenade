@@ -9,5 +9,5 @@
  * @param size Number of single connctions that are required on each multiconnection. No size
  * specification if emtpy.
  */
-bool is_jboa_setup_of_size(
-    grenade::vx::execution::JITGraphExecutor const& executor, size_t size = 0) SYMBOL_VISIBLE;
+bool is_jboa_setup(grenade::vx::execution::JITGraphExecutor const& executor, size_t size = 0)
+    SYMBOL_VISIBLE;

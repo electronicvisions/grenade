@@ -146,8 +146,8 @@ TEST(InterChipRouting, HwGraphOneToOne)
 	// Execute on hw
 	grenade::vx::execution::JITGraphExecutor executor(true, 4);
 
-	// Only execute test if ony jboa setup
-	if (!is_jboa_setup_of_size(executor, 4)) {
+	// Only execute test if on jboa setup
+	if (!is_jboa_setup(executor, 4)) {
 		GTEST_SKIP() << "Not on Jboa-Multichip Setup";
 	}
 

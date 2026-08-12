@@ -8,8 +8,7 @@ using namespace halco::hicann_dls::vx::v3;
 using namespace lola::vx::v3;
 using namespace haldls::vx::v3;
 
-
-bool is_jboa_setup_of_size(grenade::vx::execution::JITGraphExecutor const& executor, size_t size)
+bool is_jboa_setup(grenade::vx::execution::JITGraphExecutor const& executor, size_t size)
 {
 	auto hwdb_entries = executor.get_hwdb_entry();
 	bool all_jboa =

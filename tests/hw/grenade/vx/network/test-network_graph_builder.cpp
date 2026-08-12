@@ -846,18 +846,27 @@ TEST(Model, SingleChipExternalInternalInternal)
 TEST(Model, MultiSingleChipExternalInternal)
 {
 	grenade::vx::execution::JITGraphExecutor executor;
+	if (is_jboa_setup(executor)) {
+		GTEST_SKIP() << "MultiSingleChip test is skipped on Jboa-Multichip Setup";
+	}
 	test_external_internal(executor, 2 * AtomicNeuronOnDLS::size);
 }
 
 TEST(Model, MultiSingleChipBackgroundInternal)
 {
 	grenade::vx::execution::JITGraphExecutor executor;
+	if (is_jboa_setup(executor)) {
+		GTEST_SKIP() << "MultiSingleChip test is skipped on Jboa-Multichip Setup";
+	}
 	test_background_internal(executor, 2 * AtomicNeuronOnDLS::size);
 }
 
 TEST(Model, MultiSingleChipExternalInternalInternal)
 {
 	grenade::vx::execution::JITGraphExecutor executor;
+	if (is_jboa_setup(executor)) {
+		GTEST_SKIP() << "MultiSingleChip test is skipped on Jboa-Multichip Setup";
+	}
 	test_external_internal_internal(executor, AtomicNeuronOnDLS::size);
 }
 
