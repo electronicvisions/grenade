@@ -513,8 +513,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 		coordinates_copy.set_compartment(x, 0, compartment);
 		placed_resources += NumberTopBottom(1, 1, 0);
 		x_positions[0]++;
-		LOG4CXX_TRACE(
-		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
+		LOG4CXX_TRACE(m_logger, "\t place circuit at (" << x << ", 0) due to row requirement.");
 	}
 
 	if (x_start + required_resources.number_bottom >=
@@ -528,8 +527,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 		coordinates_copy.set_compartment(x, 1, compartment);
 		placed_resources += NumberTopBottom(1, 0, 1);
 		x_positions[1]++;
-		LOG4CXX_TRACE(
-		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
+		LOG4CXX_TRACE(m_logger, "\t place circuit at (" << x << ", 1) due to row requirement.");
 	}
 
 	/////////////////////////////////////////////////////
@@ -564,8 +562,8 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 	while (placed_resources.number_total < required_resources.number_total) {
 		size_t y_next = (x_positions[1 - y] < x_positions[y]) ? 1 - y : y;
 
-		if (x_positions[y] < 0 ||
-		    static_cast<size_t>(x_positions[y]) >= coordinates_copy.coordinate_system[y].size()) {
+		if (x_positions[y_next] < 0 || static_cast<size_t>(x_positions[y_next]) >=
+		                                   coordinates_copy.coordinate_system[y_next].size()) {
 			throw std::runtime_error("End of coordinate system reached.");
 		}
 
@@ -577,10 +575,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_right(
 
 		coordinates_copy.set_compartment(x_positions[y_next], y_next, compartment);
 		placed_resources += NumberTopBottom(1, 1 - y_next, y_next);
-		x_positions[y_next]++;
 		LOG4CXX_TRACE(
 		    m_logger, "\t place circuit at (" << x_positions[y_next] << ", " << y_next
 		                                      << ") due to total requirements.");
+		x_positions[y_next]++;
 	}
 
 	connect_self(coordinates_copy, compartment);
@@ -629,8 +627,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 		coordinates_copy.set_compartment(x, 0, compartment);
 		placed_resources += NumberTopBottom(1, 1, 0);
 		x_positions[0]--;
-		LOG4CXX_TRACE(
-		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
+		LOG4CXX_TRACE(m_logger, "\t place circuit at (" << x << ", 0) due to row requirement.");
 	}
 
 	if (int(x_start) - int(required_resources.number_bottom) < 0) {
@@ -643,8 +640,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 		coordinates_copy.set_compartment(x, 1, compartment);
 		placed_resources += NumberTopBottom(1, 0, 1);
 		x_positions[1]--;
-		LOG4CXX_TRACE(
-		    m_logger, "\t place circuit at (" << x << ", " << y << ") due to row requirement.");
+		LOG4CXX_TRACE(m_logger, "\t place circuit at (" << x << ", 1) due to row requirement.");
 	}
 
 	/////////////////////////////////////////////////////
@@ -677,7 +673,7 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 	//////////////////////////////////////////////////////
 
 	while (placed_resources.number_total < required_resources.number_total) {
-		size_t y_next = (x_positions[1 - y] < x_positions[y]) ? 1 - y : y;
+		size_t y_next = (x_positions[1 - y] > x_positions[y]) ? 1 - y : y;
 
 		if (x_positions[y_next] < 0) {
 			throw std::runtime_error("End of coordinate system reached.");
@@ -691,10 +687,10 @@ NumberTopBottom PlacementAlgorithmRuleset::place_simple_left(
 
 		coordinates_copy.set_compartment(x_positions[y_next], y_next, compartment);
 		placed_resources += NumberTopBottom(1, 1 - y_next, y_next);
-		x_positions[y_next]--;
 		LOG4CXX_TRACE(
 		    m_logger, "\t place circuit at (" << x_positions[y_next] << ", " << y_next
 		                                      << ") due to total requirements.");
+		x_positions[y_next]--;
 	}
 
 	connect_self(coordinates_copy, compartment);
