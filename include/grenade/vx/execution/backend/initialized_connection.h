@@ -110,12 +110,12 @@ struct InitializedConnection
 	/**
 	 * Get chip identifiers on this connection.
 	 */
-	std::vector<common::ChipOnConnection> get_chips_on_connection() const;
+	std::vector<common::ChipOnConnection> get_chips_on_connection() const SYMBOL_VISIBLE;
 
 	/**
 	 * Get number of backends on connection.
 	 */
-	size_t size() const;
+	size_t size() const SYMBOL_VISIBLE;
 
 private:
 	std::unique_ptr<hxcomm::vx::ConnectionVariant> m_connection;
