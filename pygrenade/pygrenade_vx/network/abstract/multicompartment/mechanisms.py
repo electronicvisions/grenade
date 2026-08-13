@@ -71,11 +71,11 @@ class MembraneCapacitance(Mechanism):
     Mechanism that defines the membrane capacitance of a compartment.
     '''
 
-    def __init__(self, capacitance: int = 0):
+    def __init__(self, capacitance: float = 2.2e-12):
         '''
         Initialize membrane capacitance with given capacitance.
 
-        :param capacitance: Capacitance of the membrane.
+        :param capacitance: Membrane capacitance in Farad.
         '''
         super().__init__()
         self.parameters["capacitance"] = capacitance
@@ -124,7 +124,7 @@ class CurrentBasedSynapse(Mechanism):
     Current-based synapse with a synaptic time constant and an input
     strength. If all synaptic inputs on a chip have the same strength, the
     synaptic current injected on the membrane is equalized between
-    different synaptic inputs. Otherewise, the strength is directly
+    different synaptic inputs. Otherwise, the strength is directly
     translated to `i_bias_gm` of the synaptic input.
     '''
     def __init__(self,
@@ -138,7 +138,7 @@ class CurrentBasedSynapse(Mechanism):
 
         :param strength: Strength of the synaptic input.
         :param time_constant: Time constant (in s) of the synaptic input.
-        :param global_strength: Gloabal scaling of the synaptic input
+        :param global_strength: Global scaling of the synaptic input
             strength. Translates to `synapse_dac_bias`. Has to be the same
             for all synaptic inputs on a chip.
         '''
@@ -228,7 +228,12 @@ class ConductanceBasedSynapse(Mechanism):
 
         :param strength: Strength of the synaptic input.
         :param potential: Reversal potential.
-        :param time_constant: Time constant of the synaptic input.
+        :param reference: Potential at which the COBA synapse should have the
+            same strength as a CUBA synapse (with the same strength setting).
+        :param time_constant: Time constant (in s) of the synaptic input.
+        :param global_strength: Global scaling of the synaptic input
+            strength. Translates to `synapse_dac_bias`. Has to be the same
+            for all synaptic inputs on a chip.
         '''
         super().__init__()
 
@@ -317,10 +322,10 @@ class Fire(Mechanism):
     '''
 
     def __init__(self,
-                 v_threshold: int = 110,
-                 v_reset: int = 60,
-                 tau_ref: float = 5e-6,
-                 holdoff_time: float = 1e-6):
+                 v_threshold: int = 125,
+                 v_reset: int = 70,
+                 tau_ref: float = 2e-6,
+                 holdoff_time: float = 0.0):
         '''
         Initialize fire mechanism.
 
@@ -328,7 +333,7 @@ class Fire(Mechanism):
         :param v_reset: Reset potential (in CADC values).
         :param tau_ref: Refractory period (in seconds).
         :param holdoff_time: Time (in s) for which the neuron is no
-            longer clamped to the reset potential but the threhsold
+            longer clamped to the reset potential but the threshold
             comparator is still disabled.
         '''
         super().__init__()
@@ -400,8 +405,8 @@ class Leak(Mechanism):
     '''
 
     def __init__(self,
-                 v_leak: int = 110,
-                 tau_mem: float = 5e-6):
+                 v_leak: int = 80,
+                 tau_mem: float = 10e-6):
         '''
         Initialize leak mechanism.
 
