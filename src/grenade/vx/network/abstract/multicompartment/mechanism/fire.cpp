@@ -1,6 +1,8 @@
 #include "grenade/vx/network/abstract/multicompartment/mechanism/fire.h"
 
 #include "grenade/common/multi_index_sequence/cuboid.h"
+#include "grenade/common/multi_index_sequence/list.h"
+#include "grenade/vx/network/abstract/vertex_port_type/spike.h"
 #include "haldls/vx/v3/cadc.h"
 #include "hate/join.h"
 #include "hate/type_index.h"
@@ -212,7 +214,11 @@ std::vector<grenade::common::Vertex::Port> MechanismFire::get_input_ports() cons
 
 std::vector<grenade::common::Vertex::Port> MechanismFire::get_output_ports() const
 {
-	return {};
+	return {grenade::common::Vertex::Port(
+	    Spike(), grenade::common::Vertex::Port::SumOrSplitSupport::yes,
+	    grenade::common::Vertex::Port::ExecutionInstanceTransitionConstraint::supported,
+	    grenade::common::Vertex::Port::RequiresOrGeneratesData::no,
+	    grenade::common::ListMultiIndexSequence())};
 }
 
 HardwareConstraints MechanismFire::get_hardware(
