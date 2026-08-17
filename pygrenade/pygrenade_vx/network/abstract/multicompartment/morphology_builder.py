@@ -142,11 +142,10 @@ class MorphologyBuilder:
                 return ref_target
         return None
 
-    def build_translation_and_default(self,
-                                      compartments_full_label,
-                                      connections_full_label):
+    def build_defaults(self,
+                       compartments_full_label,
+                       connections_full_label):
         default_parameters = {}
-        translations = {}
         for compartment_label, compartment in compartments_full_label.items():
             for mechanism_label, mechanism in compartment.mechanisms.items():
                 for parameter_label, parameter in mechanism.parameters.items():
@@ -154,16 +153,12 @@ class MorphologyBuilder:
                         + "." + parameter_label
                     default_parameters[full_label] =\
                         parameter
-                    translations[full_label] = {"translated_name": full_label,
-                                                "type": "simple"}
 
         for connection in connections_full_label:
             param_label = connection.get_label() + ".conductance"
             default_parameters[param_label] = connection.strength
-            translations[param_label] = {"translated_name": param_label,
-                                         "type": "simple"}
 
-        return translations, default_parameters
+        return default_parameters
 
     def done(self,
              name: str):
@@ -186,13 +181,12 @@ class MorphologyBuilder:
         connections_full_label = self.trees[0]\
             .get_fully_labeled_connections(compartments_full_label_inverse)
 
-        translations, default_parameters = self.build_translation_and_default(
+        default_parameters = self.build_defaults(
             compartments_full_label, connections_full_label)
 
         new_neuron_class = type(name, (self.neuron_type, ), {
             "compartments": deepcopy(compartments_full_label),
             "connections": deepcopy(connections_full_label),
-            "default_parameters": default_parameters,
-            "translations": translations})
+            "default_parameters": default_parameters})
         self.trees = []
         return new_neuron_class
