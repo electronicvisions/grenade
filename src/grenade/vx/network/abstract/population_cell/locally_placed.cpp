@@ -194,20 +194,20 @@ std::vector<grenade::common::Vertex::Port> LocallyPlacedNeuron::get_output_ports
 	}
 	// try to simplify to cuboid sequence
 	std::unique_ptr<grenade::common::MultiIndexSequence> sequence;
-	if (!compartment_elements.empty()) {
-		auto shape = compartment_elements.back().value;
+	if (!elements.empty()) {
+		auto shape = elements.back().value;
 		for (size_t i = 0; i < shape.size(); ++i) {
-			shape.at(i) -= compartment_elements.at(0).value.at(i); // max - min
-			shape.at(i) += 1;                                      // size = max - min + 1
+			shape.at(i) -= elements.at(0).value.at(i); // max - min
+			shape.at(i) += 1;                          // size = max - min + 1
 		}
 		grenade::common::CuboidMultiIndexSequence cuboid_compartment_sequence(
-		    shape, compartment_elements.at(0),
+		    shape, elements.at(0),
 		    {grenade::common::CompartmentOnNeuronDimensionUnit(),
 		     AtomicNeuronOnCompartmentDimensionUnit()});
 
 		grenade::common::ListMultiIndexSequence list_compartment_sequence(
-		    std::move(compartment_elements), {grenade::common::CompartmentOnNeuronDimensionUnit(),
-		                                      AtomicNeuronOnCompartmentDimensionUnit()});
+		    std::move(elements), {grenade::common::CompartmentOnNeuronDimensionUnit(),
+		                          AtomicNeuronOnCompartmentDimensionUnit()});
 
 		if (cuboid_compartment_sequence.size() == list_compartment_sequence.size() &&
 		    cuboid_compartment_sequence.includes(list_compartment_sequence)) {
