@@ -1196,6 +1196,7 @@ void MulticompartmentNeuronRewrite::operator()() const
 				ResourceManager resource_manager;
 				resource_manager.add_config(*model_neuron, model_parameter_space, environment);
 				assert(m_placement_algorithm);
+				m_placement_algorithm->reset();
 				auto tmp_local_placement =
 				    m_placement_algorithm->run(coordinate_system, *model_neuron, resource_manager);
 

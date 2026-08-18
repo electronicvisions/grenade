@@ -60,7 +60,7 @@ struct GENPYBIND(visible) SYMBOL_VISIBLE PlacementAlgorithm
 	virtual std::unique_ptr<PlacementAlgorithm> clone() const = 0;
 
 	/**
-	 * Reset all members of the algorithm. Used during testing.
+	 * Reset all members of the algorithm.
 	 */
 	virtual void reset() = 0;
 
