@@ -7,6 +7,11 @@
 #include "grenade/vx/network/abstract/population_cell/calibrated.h"
 #include "hate/visibility.h"
 
+namespace log4cxx {
+class Logger;
+typedef std::shared_ptr<Logger> LoggerPtr;
+} // namespace log4cxx
+
 namespace grenade::vx::network::abstract {
 
 /**
@@ -120,6 +125,8 @@ private:
 	    CalibratedNeuron&& calibrated_neuron,
 	    CalibratedNeuron::ParameterSpace&& calibrated_neuron_parameter_space,
 	    MulticompartmentNeuronMapping&& mapping) const;
+
+	log4cxx::LoggerPtr m_logger;
 };
 
 } // namespace grenade::vx::network::abstract

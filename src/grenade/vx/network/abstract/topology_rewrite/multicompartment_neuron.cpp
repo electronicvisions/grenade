@@ -40,13 +40,17 @@
 #include "hate/math.h"
 #include "lola/vx/v3/neuron.h"
 #include <boost/bimap.hpp>
+#include <log4cxx/logger.h>
 
 namespace grenade::vx::network::abstract {
 
 MulticompartmentNeuronRewrite::MulticompartmentNeuronRewrite(
     std::shared_ptr<grenade::common::LinkedTopology> topology,
     std::unique_ptr<PlacementAlgorithm> placement_algorithm) :
-    TopologyRewrite(std::move(topology)), m_placement_algorithm(std::move(placement_algorithm))
+    TopologyRewrite(std::move(topology)),
+    m_placement_algorithm(std::move(placement_algorithm)),
+    m_logger(log4cxx::Logger::getLogger(
+        "grenade.network.abstract.topology_rewrite.MulticompartmentNeuronRewrite"))
 {
 }
 
@@ -305,6 +309,10 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 				mechanism_on_atomic_neuron_placement[grenade::common::CompartmentOnNeuron(
 				    compartment_on_neuron)][mechanism_on_compartment]
 				    .insert(0);
+				LOG4CXX_TRACE(
+				    m_logger, "Placed event output of "
+				                  << mechanism_on_compartment << " (" << compartment_on_neuron
+				                  << ") on atomic neuron 0 of the compartment.");
 			}
 		}
 		// first place readout mechanisms which have top/bottom constraints of readout
@@ -345,14 +353,20 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 						    (hardware_constraint.numbers.number_bottom != 0 &&
 						     atomic_neuron.toNeuronRowOnLogicalNeuron() ==
 						         halco::hicann_dls::vx::v3::NeuronRowOnDLS::bottom)) {
+							size_t const atomic_neuron_on_compartment = std::distance(
+							    atomic_neurons.begin(),
+							    std::find(
+							        atomic_neurons.begin(), atomic_neurons.end(), atomic_neuron));
 							mechanism_on_atomic_neuron_placement
 							    [grenade::common::CompartmentOnNeuron(compartment_on_neuron)]
 							    [mechanism_on_compartment]
-							        .insert(std::distance(
-							            atomic_neurons.begin(),
-							            std::find(
-							                atomic_neurons.begin(), atomic_neurons.end(),
-							                atomic_neuron)));
+							        .insert(atomic_neuron_on_compartment);
+							LOG4CXX_TRACE(
+							    m_logger, "Placed row-constrained analog readout of "
+							                  << mechanism_on_compartment << " ("
+							                  << compartment_on_neuron << ") on atomic neuron "
+							                  << atomic_neuron_on_compartment
+							                  << " of the compartment.");
 							mechanism_readout_placement_on_compartment.left.insert(
 							    {atomic_neuron, mechanism_on_compartment});
 							if (auto const synaptic_input_mechanism =
@@ -405,12 +419,17 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 					    mechanism_readout_placement_on_compartment.left.end()) {
 						continue;
 					}
+					size_t const atomic_neuron_on_compartment = std::distance(
+					    atomic_neurons.begin(),
+					    std::find(atomic_neurons.begin(), atomic_neurons.end(), atomic_neuron));
 					mechanism_on_atomic_neuron_placement[grenade::common::CompartmentOnNeuron(
 					    compartment_on_neuron)][mechanism_on_compartment]
-					    .insert(std::distance(
-					        atomic_neurons.begin(),
-					        std::find(
-					            atomic_neurons.begin(), atomic_neurons.end(), atomic_neuron)));
+					    .insert(atomic_neuron_on_compartment);
+					LOG4CXX_TRACE(
+					    m_logger, "Placed analog readout of "
+					                  << mechanism_on_compartment << " (" << compartment_on_neuron
+					                  << ") on atomic neuron " << atomic_neuron_on_compartment
+					                  << " of the compartment.");
 					mechanism_readout_placement_on_compartment.left.insert(
 					    {atomic_neuron, mechanism_on_compartment});
 					if (auto const synaptic_input_mechanism =
@@ -470,14 +489,20 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 						    !local_receptors.contains(synaptic_input_mechanism->receptor_type)) {
 							local_receptors.emplace(
 							    synaptic_input_mechanism->receptor_type, mechanism_on_compartment);
+							size_t const atomic_neuron_on_compartment = std::distance(
+							    atomic_neurons.begin(),
+							    std::find(
+							        atomic_neurons.begin(), atomic_neurons.end(), atomic_neuron));
 							mechanism_on_atomic_neuron_placement
 							    [grenade::common::CompartmentOnNeuron(compartment_on_neuron)]
 							    [mechanism_on_compartment]
-							        .insert(std::distance(
-							            atomic_neurons.begin(),
-							            std::find(
-							                atomic_neurons.begin(), atomic_neurons.end(),
-							                atomic_neuron)));
+							        .insert(atomic_neuron_on_compartment);
+							LOG4CXX_TRACE(
+							    m_logger, "Placed top-row synaptic input of "
+							                  << mechanism_on_compartment << " ("
+							                  << compartment_on_neuron << ") on atomic neuron "
+							                  << atomic_neuron_on_compartment
+							                  << " of the compartment.");
 							mechanism_placed = true;
 							break;
 						}
@@ -502,14 +527,20 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 						    !local_receptors.contains(synaptic_input_mechanism->receptor_type)) {
 							local_receptors.emplace(
 							    synaptic_input_mechanism->receptor_type, mechanism_on_compartment);
+							size_t const atomic_neuron_on_compartment = std::distance(
+							    atomic_neurons.begin(),
+							    std::find(
+							        atomic_neurons.begin(), atomic_neurons.end(), atomic_neuron));
 							mechanism_on_atomic_neuron_placement
 							    [grenade::common::CompartmentOnNeuron(compartment_on_neuron)]
 							    [mechanism_on_compartment]
-							        .insert(std::distance(
-							            atomic_neurons.begin(),
-							            std::find(
-							                atomic_neurons.begin(), atomic_neurons.end(),
-							                atomic_neuron)));
+							        .insert(atomic_neuron_on_compartment);
+							LOG4CXX_TRACE(
+							    m_logger, "Placed bottom-row synaptic input of "
+							                  << mechanism_on_compartment << " ("
+							                  << compartment_on_neuron << ") on atomic neuron "
+							                  << atomic_neuron_on_compartment
+							                  << " of the compartment.");
 							mechanism_placed = true;
 							break;
 						}
@@ -562,14 +593,20 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 						        synaptic_input_mechanism->receptor_type)) {
 							synaptic_input_usage[atomic_neuron].emplace(
 							    synaptic_input_mechanism->receptor_type, mechanism_on_compartment);
+							size_t const atomic_neuron_on_compartment = std::distance(
+							    atomic_neurons.begin(),
+							    std::find(
+							        atomic_neurons.begin(), atomic_neurons.end(), atomic_neuron));
 							mechanism_on_atomic_neuron_placement
 							    [grenade::common::CompartmentOnNeuron(compartment_on_neuron)]
 							    [mechanism_on_compartment]
-							        .insert(std::distance(
-							            atomic_neurons.begin(),
-							            std::find(
-							                atomic_neurons.begin(), atomic_neurons.end(),
-							                atomic_neuron)));
+							        .insert(atomic_neuron_on_compartment);
+							LOG4CXX_TRACE(
+							    m_logger, "Placed synaptic input of "
+							                  << mechanism_on_compartment << " ("
+							                  << compartment_on_neuron << ") on atomic neuron "
+							                  << atomic_neuron_on_compartment
+							                  << " of the compartment.");
 							mechanism_placed = true;
 							break;
 						}
