@@ -93,7 +93,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) ListMultiIndexSequence : public MultiIn
 	/**
 	 * Get dimension units.
 	 */
-	virtual DimensionUnits get_dimension_units() const override;
+	virtual DimensionUnits get_dimension_units() const GENPYBIND(hidden) override;
 
 	/**
 	 * Set dimension units.

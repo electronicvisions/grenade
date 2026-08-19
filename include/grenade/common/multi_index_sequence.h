@@ -8,6 +8,11 @@
 #include <functional>
 #include <set>
 
+#if defined(__GENPYBIND__) || defined(__GENPYBIND_GENERATED__)
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#endif
+
 namespace cereal {
 struct access;
 } // namespace cereal
@@ -60,7 +65,19 @@ struct SYMBOL_VISIBLE GENPYBIND(inline_base("*")) MultiIndexSequence
 	/**
 	 * Get dimension units.
 	 */
-	virtual DimensionUnits get_dimension_units() const = 0;
+	virtual DimensionUnits get_dimension_units() const GENPYBIND(hidden) = 0;
+
+	GENPYBIND_MANUAL({
+		parent.def("get_dimension_units", [](GENPYBIND_PARENT_TYPE const& self) {
+			std::vector<std::unique_ptr<grenade::common::MultiIndexSequence::DimensionUnit>> result;
+			auto units = self.get_dimension_units();
+			result.reserve(units.size());
+			for (auto& holder : units) {
+				result.push_back(holder->copy());
+			}
+			return result;
+		});
+	})
 
 	/**
 	 * Set dimension units.

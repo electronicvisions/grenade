@@ -129,7 +129,7 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CuboidMultiIndexSequence : public Multi
 	/**
 	 * Get dimension units.
 	 */
-	virtual DimensionUnits get_dimension_units() const override;
+	virtual DimensionUnits get_dimension_units() const GENPYBIND(hidden) override;
 
 	/**
 	 * Set dimension units.
