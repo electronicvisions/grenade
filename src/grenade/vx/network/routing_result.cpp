@@ -61,8 +61,8 @@ std::ostream& operator<<(std::ostream& os, grenade::vx::network::RoutingResult::
 					} else {
 						os << "disabled, ";
 					}
-					os << "\n";
 				}
+				os << "\n";
 			}
 		}
 	}
