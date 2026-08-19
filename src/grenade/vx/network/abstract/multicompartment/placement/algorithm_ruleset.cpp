@@ -1,4 +1,5 @@
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm_ruleset.h"
+#include <algorithm>
 #include <array>
 #include <sstream>
 #include <log4cxx/logger.h>
@@ -914,6 +915,12 @@ void PlacementAlgorithmRuleset::run_one_step(
 		// Classify unplaced neighbours of last placed compartment
 		CompartmentNeighbours neighbours_classified =
 		    neuron.classify_neighbours(last_compartment, neighbours_unplaced);
+
+		// Sort classified neighbours to have deterministic mapping
+		std::ranges::sort(neighbours_classified.branches);
+		std::ranges::sort(neighbours_classified.chains);
+		std::ranges::sort(neighbours_classified.leafs);
+
 		// All neighbours of the last placed compartment.
 		std::set<grenade::common::CompartmentOnNeuron> neighbours;
 		for (auto compartment : neuron.adjacent_compartments(last_compartment)) {
