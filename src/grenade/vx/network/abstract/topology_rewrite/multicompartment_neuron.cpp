@@ -20,7 +20,6 @@
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_excitatory.h"
 #include "grenade/vx/network/abstract/multicompartment/hardware_resource/synaptic_input_inhibitory.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/capacitance.h"
-#include "grenade/vx/network/abstract/multicompartment/mechanism/event_output.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/fire.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/leak.h"
 #include "grenade/vx/network/abstract/multicompartment/mechanism/synaptic_conductance.h"
@@ -296,8 +295,7 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron(
 		}
 
 		for (auto const& [mechanism_on_compartment, mechanism] : model_compartment.mechanisms) {
-			if (auto const event_output_mechanism =
-			        dynamic_cast<MechanismEventOutput const*>(&mechanism);
+			if (auto const event_output_mechanism = dynamic_cast<MechanismFire const*>(&mechanism);
 			    event_output_mechanism) {
 				// choose the first neuron circuit of the compartment to be the spike
 				// master
