@@ -238,6 +238,14 @@ struct SYMBOL_VISIBLE GENPYBIND(visible) CoordinateSystem
 	    const SYMBOL_VISIBLE;
 
 	/**
+	 * Get neuron circuits which are needed to connect compartments but which are not
+	 * themselves part of a compartment.
+	 *
+	 */
+	std::map<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron, UnplacedNeuronCircuit>
+	get_connection_circuits() const SYMBOL_VISIBLE;
+
+	/**
 	 * Align coordinate system to the left, i.e. remove unused circuits on the left.
 	 **/
 	void align_left();

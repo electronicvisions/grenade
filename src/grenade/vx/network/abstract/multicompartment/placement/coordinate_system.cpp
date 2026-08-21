@@ -693,6 +693,31 @@ CoordinateSystem::construct_logical_neuron_compartments() const
 	return halco::hicann_dls::vx::LogicalNeuronCompartments(compartments);
 }
 
+std::map<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron, UnplacedNeuronCircuit>
+CoordinateSystem::get_connection_circuits() const
+{
+	std::map<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron, UnplacedNeuronCircuit> circuits;
+	auto coordinate_system_copy = *this;
+	coordinate_system_copy.align_left();
+	auto const& circuit_grid = coordinate_system_copy.coordinate_system;
+
+	for (size_t y = 0; y < circuit_grid.size(); ++y) {
+		for (size_t x = 0; x < circuit_grid[y].size(); ++x) {
+			// we only need to check if the shared line is connected to the right.
+			// If additional connections are set, the neuron circuit has a compartment assigned.
+			if (!circuit_grid[y][x].compartment && circuit_grid[y][x].switch_shared_right) {
+				circuits.emplace(
+				    halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron(
+				        halco::hicann_dls::vx::NeuronColumnOnLogicalNeuron(x),
+				        halco::hicann_dls::vx::NeuronRowOnLogicalNeuron(y)),
+				    coordinate_system_copy.get_config(x, y));
+			}
+		}
+	}
+
+	return circuits;
+}
+
 void CoordinateSystem::align_left()
 {
 	size_t left_most_used_circuit = coordinate_system[0].size();
