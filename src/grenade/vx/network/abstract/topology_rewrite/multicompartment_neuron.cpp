@@ -9,6 +9,7 @@
 #include "grenade/common/projection.h"
 #include "grenade/common/projection_connector/static.h"
 #include "grenade/common/receptor_on_compartment.h"
+#include "grenade/vx/constants.h"
 #include "grenade/vx/network/abstract/mapping/multicompartment_neuron.h"
 #include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/atomic_neuron_on_compartment.h"
 #include "grenade/vx/network/abstract/multi_index_sequence_dimension_unit/mechanism_on_compartment.h"
@@ -1046,6 +1047,69 @@ MulticompartmentNeuronRewrite::construct_calibrated_neuron_parameter_space(
 	    std::move(calibration_targets), std::move(membrane_capacitances));
 }
 
+void MulticompartmentNeuronRewrite::add_connection_circuits(
+    CalibratedNeuron& neuron,
+    CalibratedNeuron::ParameterSpace& parameter_space,
+    std::map<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron, UnplacedNeuronCircuit> const&
+        neuron_configs) const
+{
+	if (neuron_configs.empty()) {
+		return;
+	}
+	grenade::common::CompartmentOnNeuron const compartment_on_neuron{
+	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron::max};
+
+	std::vector<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron> atomic_neurons;
+	atomic_neurons.reserve(neuron_configs.size());
+	for (auto const& [atomic_neuron, _] : neuron_configs) {
+		atomic_neurons.push_back(atomic_neuron);
+	}
+
+	// add compartment to neuron
+	CalibratedNeuron::Compartment::Receptors receptors;
+	receptors.resize(atomic_neurons.size());
+	neuron.compartments.emplace(
+	    compartment_on_neuron, CalibratedNeuron::Compartment(std::nullopt, std::move(receptors)));
+
+	// update shape
+	auto compartments = neuron.shape.get_compartments();
+	compartments.emplace(
+	    halco::hicann_dls::vx::v3::CompartmentOnLogicalNeuron(compartment_on_neuron.value()),
+	    atomic_neurons);
+	neuron.shape = halco::hicann_dls::vx::v3::LogicalNeuronCompartments(compartments);
+
+	// add compartment to parameter space
+	auto& calibration_targets = parameter_space.calibration_targets;
+	for (size_t neuron_on_population = 0; neuron_on_population < calibration_targets.size();
+	     ++neuron_on_population) {
+		auto& compartment_targets =
+		    calibration_targets.at(neuron_on_population)[compartment_on_neuron];
+		compartment_targets.resize(neuron_configs.size());
+
+		size_t an = 0;
+		for (auto const& [_, unplaced_neuron_circuit] : neuron_configs) {
+			CalibratedNeuron::ParameterSpace::CalibrationTarget::InterAtomicNeuronConnectivity
+			    inter_atomic_neuron_connectivity;
+
+			// set switches
+			inter_atomic_neuron_connectivity.connect_vertical =
+			    unplaced_neuron_circuit.switch_top_bottom;
+			inter_atomic_neuron_connectivity.connect_right = unplaced_neuron_circuit.switch_right;
+			inter_atomic_neuron_connectivity.connect_soma_right =
+			    unplaced_neuron_circuit.switch_shared_right;
+			inter_atomic_neuron_connectivity.connect_soma =
+			    unplaced_neuron_circuit.switch_circuit_shared;
+
+			compartment_targets.at(an).inter_atomic_neuron_connectivity =
+			    inter_atomic_neuron_connectivity;
+			++an;
+		}
+
+		parameter_space.membrane_capacitance.at(neuron_on_population)[compartment_on_neuron] =
+		    ccalix::CapacitanceInFarad(grenade::vx::ideal_capacitance_per_neuron);
+	}
+}
+
 void MulticompartmentNeuronRewrite::replace_vertex(
     grenade::common::VertexOnTopology vertex_on_topology,
     grenade::common::Population const& model_population,
@@ -1262,9 +1326,15 @@ void MulticompartmentNeuronRewrite::operator()() const
 				        calibrated_neuron, logical_neuron_compartments, local_placement,
 				        *model_neuron, model_parameter_space, mechanism_on_atomic_neuron_placement);
 
+				// Add circuits which are only needed for connections
+				auto connection_circuits =
+				    local_placement.coordinate_system.get_connection_circuits();
+				add_connection_circuits(
+				    calibrated_neuron, calibrated_neuron_parameter_space, connection_circuits);
+
 				// construct mapping
 				auto mapping = construct_mapping(
-				    *model_neuron, model_population->size(), logical_neuron_compartments,
+				    *model_neuron, model_population->size(), calibrated_neuron.shape,
 				    mechanism_readout_placement);
 
 				// replace unplaced neuron with locally-placed calibrated neuron population in

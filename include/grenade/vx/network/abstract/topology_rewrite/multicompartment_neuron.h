@@ -4,6 +4,7 @@
 #include "grenade/vx/network/abstract/mapping/multicompartment_neuron.h"
 #include "grenade/vx/network/abstract/multicompartment/environment.h"
 #include "grenade/vx/network/abstract/multicompartment/placement/algorithm.h"
+#include "grenade/vx/network/abstract/multicompartment/unplaced_neuron_circuit.h"
 #include "grenade/vx/network/abstract/population_cell/calibrated.h"
 #include "hate/visibility.h"
 
@@ -104,6 +105,20 @@ private:
 	    std::map<
 	        grenade::common::CompartmentOnNeuron,
 	        std::map<size_t, MechanismOnCompartment>> const& mechanism_readout_placement) const;
+
+	/**
+	 * Add neuron circuits which are needed to connect compartments but are themselves
+	 * not assigned to a compartment. We create a dummy compartment which collect all
+	 * these compartments.
+	 * @param neuron Locally-placed calibrated neuron
+	 * @param parameter_space Parameter space of locally-placed calibrated neuron.
+	 * @param neuron_configs Location and configuration of neuron circuits which are added.
+	 */
+	void add_connection_circuits(
+	    CalibratedNeuron& neuron,
+	    CalibratedNeuron::ParameterSpace& parameter_space,
+	    std::map<halco::hicann_dls::vx::AtomicNeuronOnLogicalNeuron, UnplacedNeuronCircuit> const&
+	        neuron_configs) const;
 
 	/**
 	 * Replace unplaced population by locally-placed population in linked topology.
