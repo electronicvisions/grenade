@@ -118,18 +118,20 @@ class Tree:
         :return: Two dictionaries containing the mapping from leafs to
             their labels and the inverse mapping.
         '''
+        if self.is_leaf():
+            if self.label is None:
+                raise RuntimeError("Leaf nodes have to be labeled.")
+            return {self: self.label}, {self.label: self}
+
         labels = {}
         label_layer_self = ""
         if self.label is not None:
             label_layer_self = self.label + "."
 
         for child in self.children:
-            if child.is_leaf():
-                labels[child] = label_layer_self + child.label
-            else:
-                child_labels, _ = child.get_fully_labeled_children()
-                for child, child_label in child_labels.items():
-                    labels[child] = label_layer_self + child_label
+            child_labels, _ = child.get_fully_labeled_children()
+            for child, child_label in child_labels.items():
+                labels[child] = label_layer_self + child_label
         inverse_labels = {v: k for k, v in labels.items()}
         return labels, inverse_labels
 
