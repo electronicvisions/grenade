@@ -39,7 +39,7 @@ using namespace grenade::common;
 TEST(CADCRecording, General)
 {
 	// Construct connection to HW
-	auto chip = get_chip_config_bypass_excitatory();
+	auto chip = lola::vx::v3::Chip::default_neuron_bypass;
 
 	// CADC sampling shall take between one and {2.5, 7.0} us depending on placement of recording
 	// data
@@ -75,7 +75,7 @@ TEST(CADCRecording, General)
 			all_internal_neurons.push_back(i);
 		}
 		population_internal_input_data.base_configs.emplace_back(
-		    all_internal_neurons, get_chip_config_bypass_excitatory());
+		    all_internal_neurons, lola::vx::v3::Chip::default_neuron_bypass);
 
 		auto const population_internal_descriptor = topology->add_vertex(population_internal);
 

@@ -51,7 +51,7 @@ TEST(OnlyRecordingPlasticityRuleGenerator, weights)
 	auto topology = std::make_shared<Topology>();
 
 	// population at beginning of row
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population_internal{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{

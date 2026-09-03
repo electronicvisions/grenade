@@ -85,7 +85,7 @@ void test_background_spike_source_poisson(
 		all_internal_neurons.push_back(i);
 	}
 	population_internal_input_data.base_configs.emplace_back(
-	    all_internal_neurons, get_chip_config_bypass_excitatory());
+	    all_internal_neurons, lola::vx::v3::Chip::default_neuron_bypass);
 
 	SpikeRecorder spike_recorder(CuboidMultiIndexSequence({64}), TimeDomainOnTopology());
 

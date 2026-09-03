@@ -205,7 +205,7 @@ void test_external_internal(
 	    ExternalSourceNeuron{}, CuboidMultiIndexSequence({2}, {CellOnPopulationDimensionUnit()}),
 	    ExternalSourceNeuron::ParameterSpace(2), TimeDomainOnTopology()};
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population_internal{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
@@ -350,7 +350,7 @@ void test_background_internal(
 	population_external_input_data.rate = BackgroundSpikeSource::Rate(rate);
 	population_external_input_data.seed = BackgroundSpikeSource::Seed(1234);
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population_internal{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
@@ -484,7 +484,7 @@ void test_external_internal_internal(
 	    ExternalSourceNeuron{}, CuboidMultiIndexSequence({2}, {CellOnPopulationDimensionUnit()}),
 	    ExternalSourceNeuron::ParameterSpace(2), TimeDomainOnTopology()};
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population_internal{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
@@ -647,7 +647,7 @@ void test_external_internal_delay_internal(
 	    CuboidMultiIndexSequence({internal_size}, {CellOnPopulationDimensionUnit()}),
 	    ExternalSourceNeuron::ParameterSpace(internal_size), TimeDomainOnTopology()};
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population_internal{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{

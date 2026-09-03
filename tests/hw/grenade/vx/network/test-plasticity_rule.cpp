@@ -54,7 +54,7 @@ TEST(PlasticityRule, RawRecording)
 	// build network
 	auto topology = std::make_shared<Topology>();
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
@@ -194,7 +194,7 @@ TEST(PlasticityRule, RawRecording)
 
 TEST(PlasticityRule, TimedRecordingConfig)
 {
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 
 	InputData input_data;
 	input_data.time_domain_runtimes.set(
@@ -726,7 +726,7 @@ TEST(PlasticityRule, ExecutorInitialState)
 	auto const execute = [&](bool const set_weight) {
 		auto topology = std::make_shared<Topology>();
 
-		auto const chip = get_chip_config_bypass_excitatory();
+		auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 		Population population{
 		    UncalibratedNeuron{
 		        UncalibratedNeuron::Compartments{
@@ -886,7 +886,7 @@ TEST(PlasticityRule, SynapseRowViewHandleRange)
 
 	auto topology = std::make_shared<Topology>();
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
@@ -1012,7 +1012,7 @@ TEST(PlasticityRule, SynapseRowViewHandleSignedRange)
 
 	auto topology = std::make_shared<Topology>();
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
@@ -1167,7 +1167,7 @@ TEST(PlasticityRule, WriteReadPPUSymbol)
 
 	auto topology = std::make_shared<Topology>();
 
-	auto const chip = get_chip_config_bypass_excitatory();
+	auto const chip = lola::vx::v3::Chip::default_neuron_bypass;
 	Population population{
 	    UncalibratedNeuron{
 	        UncalibratedNeuron::Compartments{
