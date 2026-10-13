@@ -13,7 +13,7 @@ namespace vertex {
  * Global inter chip router.
  * Connects output routing tables to input routing tables.
  */
-struct InterChipRouter : public grenade::common::PartitionedVertex
+struct SYMBOL_VISIBLE InterChipRouter : public grenade::common::PartitionedVertex
 {
 	InterChipRouter(
 	    grenade::common::TimeDomainOnTopology const& time_domain,
