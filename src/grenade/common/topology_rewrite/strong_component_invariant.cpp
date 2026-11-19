@@ -36,9 +36,10 @@ void StrongComponentInvariantRewrite::operator()() const
 		if (strong_component_invariant) {
 			StrongComponentInvariantVertex strong_component_invariant_vertex(
 			    std::move(*strong_component_invariant));
-			auto strong_component_invariant_it = std::find_if(
-			    linked_vertices.begin(), linked_vertices.end(),
-			    [&](auto const& pair) { return pair.second == strong_component_invariant_vertex; });
+			auto strong_component_invariant_it =
+			    std::find_if(linked_vertices.begin(), linked_vertices.end(), [&](auto const& pair) {
+				    return pair.second.get() == strong_component_invariant_vertex;
+			    });
 			if (strong_component_invariant_it == linked_vertices.end()) {
 				auto const linked_vertex_descriptor =
 				    topology.add_vertex(std::move(strong_component_invariant_vertex));
